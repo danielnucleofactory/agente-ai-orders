@@ -76,37 +76,217 @@
         <div class="p-8 space-y-10 bg-white rounded-2xl">
             <div class="flex gap-4">
                 <div class="space-y-6 w-full">
-                    <h3 class="text-lg font-bold text-[#7288FF]">Datos generales</h3>
-                    <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
-                        <div class="relative">
+                    <div class="space-y-6">
+                        <h2 class="text-lg font-bold text-blue-600">Datos generales</h2>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+                            {{-- Identificación de la OC --}}
+                            <div class="md:col-span-3">
+                                <h4 class="text-sm font-semibold text-[#7288FF]">Identificación de la OC</h4>
+                            </div>
+
+                            {{-- Cliente (nuevo) --}}
                             <x-form-input>
                                 <x-slot:label>
-                                    Número PO
+                                    Cliente
                                 </x-slot:label>
+                                <x-slot:input
+                                    name="customer_name"
+                                    placeholder="Nombre del cliente"
+                                    wire:model="customer_name"
+                                    class="pr-10"
+                                ></x-slot:input>
+                            </x-form-input>
 
-                                <x-slot:input name="order_number" placeholder="Ingrese número PO" wire:model="order_number" class="pr-10 {{ $errors->has('order_number') ? 'border-red-500 bg-red-50' : '' }}"></x-slot:input>
-
+                            {{-- Número de Orden (PO) --}}
+                            <x-form-input>
+                                <x-slot name="label">Número de Orden (PO)</x-slot>
+                                <x-slot:input
+                                    name="order_number"
+                                    placeholder="Ingrese número de orden"
+                                    wire:model="order_number"
+                                    class="pr-10 {{ $errors->has('order_number') ? 'border-red-500'  : '' }}">
+                                </x-slot:input>
                                 <x-slot:error>
-                                    <div class="flex items-center text-red-600">
-                                        {{ $errors->first('order_number') }}
-                                    </div>
+                                    {{ $errors->first('order_number') }}
                                 </x-slot:error>
                             </x-form-input>
+
+                            {{-- Fecha de creación --}}
+                            <x-form-input>
+                                <x-slot name="label">Fecha de creación</x-slot>
+                                <x-slot:input
+                                    type="date"
+                                    name="order_date"
+                                    wire:model="order_date"
+                                    class="pr-10">
+                                </x-slot:input>
+                                <x-slot:error>
+                                    {{ $errors->first('order-date') }}
+                                </x-slot:error>
+                            </x-form-input>
+
+                            {{-- Condiciones comerciales --}}
+                            <div class="md:col-span-3">
+                                <h4 class="text-sm font-semibold text-[#7288FF]">Condiciones comerciales</h4>
+                            </div>
+
+                            {{-- Moneda --}}
+                            <x-form-select
+                                label="Moneda"
+                                name="currency"
+                                :options="$currencyArray"
+                                wire:model="currency"
+                                :error="$errors->has('currency')"
+                            />
+
+                            {{-- Incoterm Precios --}}
+                            <x-form-select
+                                label="Incoterm Precios"
+                                name="price_incoterm"
+                                :options="$tiposIncotermArray"
+                                wire:model="price_incoterm"
+                                :error="$errors->has('price_incoterm')"
+                            />
+
+                            {{-- Incoterms (Compra) --}}
+                            <x-form-select
+                                label="Incoterms"
+                                name="incoterms"
+                                :options="$tiposIncotermArray"
+                                wire:model="incoterms"
+                                :error="$errors->has('incoterms')"
+                            />
+
+                            {{-- Planificación logística --}}
+                            <div class="md:col-span-3">
+                                <h4 class="text-sm font-semibold text-[#7288FF]">Planificación logística</h4>
+                            </div>
+
+                            {{-- HUB planificado --}}
+                            <x-form-select
+                                label="HUB Planificado"
+                                name="planned_hub_id"
+                                :options="$hubArray"
+                                wire:model="planned_hub_id"
+                                :error="$errors->has('planned_hub_id')"
+                            />
+
+                            {{-- Incoterm logístico --}}
+                            <x-form-select
+                                label="Incoterm logístico"
+                                name="logistics_incoterm"
+                                :options="$tiposIncotermArray"
+                                wire:model="logistics_incoterm"
+                                :error="$errors->has('logistics_incoterm')"
+                            />
+
+                            {{-- HUB real --}}
+                            <x-form-select
+                                label="HUB Real"
+                                name="actual_hub_id"
+                                :options="$hubArray"
+                                wire:model="actual_hub_id"
+                                :error="$errors->has('actual_hub_id')"
+                            />
+
+                            {{-- Clasificación --}}
+                            <div class="md:col-span-3">
+                                <h4 class="text-sm font-semibold text-[#7288FF]">Clasificación</h4>
+                            </div>
+
+                            {{-- Categoría (nuevo) --}}
+                            <x-form-input>
+                                <x-slot:label>
+                                    Categoría
+                                </x-slot:label>
+                                <x-slot:input
+                                    name="category"
+                                    placeholder="Categoría de la OC"
+                                    wire:model="category"
+                                    class="pr-10">
+                                </x-slot:input>
+                            </x-form-input>
+
+                            {{-- Notas / Motivo --}}
+                            <div class="md:col-span-3">
+                                <h4 class="text-sm font-semibold text-[#7288FF]">Notas / Motivo</h4>
+                            </div>
+
+                            {{-- Motivo (nuevo) --}}
+                            <div class="md:col-span-3">
+                                <x-form-input>
+                                    <x-slot:label>
+                                        Motivo
+                                    </x-slot:label>
+                                    <x-slot:input
+                                        name="reason"
+                                        placeholder="Ingrese motivo de la PO"
+                                        wire:model="reason"
+                                        class="pr-10">
+                                    </x-slot:input>
+                                </x-form-input>
+                            </div>
+
                         </div>
+                    </div>
+
+                    <h3 class="text-lg font-bold text-blue-600">Identificadores y transporte</h3>
+                    <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
+
+                        <!-- Itinerario -->
+                        <div class="col-span-3">
+                            <h4 class="text-sm font-semibold text-[#7288FF]">Itinerario</h4>
+                        </div>
+
                         <x-form-input>
-                            <x-slot:label>
-                                Fecha de creación
-                            </x-slot:label>
-                            <x-slot:input name="order_date" type="date" placeholder="Ingrese número PO" wire:model="order_date" class="pr-10 {{ $errors->has('order_date') ? 'border-red-500' : '' }}">
-                            </x-slot:input>
-                            <x-slot:error>
-                                {{ $errors->first('order_date') }}
-                            </x-slot:error>
+                            <x-slot:label>Puerto de salida</x-slot:label>
+                            <x-slot:input name="departure_port" wire:model="departure_port" placeholder="Ingrese puerto de salida"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('departure_port') }}</x-slot:error>
                         </x-form-input>
-                        <x-form-select label="Moneda" name="currency" wireModel="currency" :options="$currencyArray" :error="$errors->has('currency') ? true : false" />
-                        <x-form-select label="Incoterms" name="incoterms" wireModel="incoterms" :options="$tiposIncotermArray" :error="$errors->has('incoterms') ? true : false" />
-                        <x-form-select label="HUB Planificado" name="planned_hub_id" wireModel="planned_hub_id" :options="$hubsArray" :error="$errors->has('planned_hub_id') ? true : false" />
-                        <x-form-select label="HUB Real" name="actual_hub_id" wireModel="actual_hub_id" :options="$hubsArray" :error="$errors->has('actual_hub_id') ? true : false" />
+
+                        <x-form-input>
+                            <x-slot:label>Puerto de llegada</x-slot:label>
+                            <x-slot:input name="arrival_port" wire:model="arrival_port" placeholder="Ingrese puerto de llegada"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('arrival_port') }}</x-slot:error>
+                        </x-form-input>
+
+                        <x-form-input>
+                            <x-slot:label>Línea Naviera</x-slot:label>
+                            <x-slot:input name="shipping_line" wire:model="shipping_line" placeholder="Ingrese naviera"></x-slot:input>
+                        </x-form-input>
+
+                        <!-- Naviera y equipo -->
+                        <div class="col-span-3">
+                            <h4 class="text-sm font-semibold text-[#7288FF]">Naviera y equipo</h4>
+                        </div>
+
+                        <x-form-input>
+                            <x-slot:label>Tipo de Contenedor</x-slot:label>
+                            <x-slot:input name="container_type" wire:model="container_type" placeholder="Tipo de contenedor"></x-slot:input>
+                        </x-form-input>
+
+                        <x-form-input>
+                            <x-slot:label>Número de Contenedor</x-slot:label>
+                            <x-slot:input name="container_number" wire:model="container_number" placeholder="Ingrese número"></x-slot:input>
+                        </x-form-input>
+
+                        <!-- Identificadores de embarque -->
+                        <div class="col-span-3">
+                            <h4 class="text-sm font-semibold text-[#7288FF]">Identificadores de embarque</h4>
+                        </div>
+
+                        <x-form-input>
+                            <x-slot:label>MBL Number</x-slot:label>
+                            <x-slot:input name="mbl_number" wire:model="mbl_number" placeholder="Ingrese número"></x-slot:input>
+                        </x-form-input>
+
+                        <x-form-input>
+                            <x-slot:label>Factory Proforma Number</x-slot:label>
+                            <x-slot:input name="factory_proforma_number" wire:model="factory_proforma_number" placeholder="Ingrese número"></x-slot:input>
+                        </x-form-input>
+
                     </div>
                 </div>
 
@@ -120,7 +300,7 @@
             </div>
 
             <div class="space-y-6 w-full">
-                <h3 class="text-lg font-bold text-[#7288FF]">Datos vendor</h3>
+                <h3 class="text-lg font-bold text-blue-600">Datos vendor</h3>
 
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
                     <x-form-select label="Seleccionar Vendor" name="vendor_id" wireModel="vendor_id"
@@ -129,7 +309,7 @@
             </div>
 
             <div class="space-y-6 w-full">
-                <h3 class="text-lg font-bold text-[#7288FF]">Datos Ship to</h3>
+                <h3 class="text-lg font-bold text-blue-600">Datos Ship to</h3>
 
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
                     <x-form-select label="Seleccionar Ship to" name="ship_to_id" wireModel="ship_to_id"
@@ -138,7 +318,7 @@
             </div>
 
             <div class="space-y-6 w-full">
-                <h3 class="text-lg font-bold text-[#7288FF]">Datos de facturación</h3>
+                <h3 class="text-lg font-bold text-blue-600">Datos de facturación</h3>
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
                     <x-form-select label="Seleccionar Bill to" name="bill_to_id" wireModel="bill_to_id"
                         :options="$billToArray" :error="$errors->has('bill_to_id') ? true : false" />
@@ -146,7 +326,7 @@
             </div>
 
             <div class="space-y-6 w-full">
-                <h3 class="text-lg font-bold text-[#7288FF]">Dimensiones en centímetros</h3>
+                <h3 class="text-lg font-bold text-blue-600">Dimensiones en centímetros</h3>
                 <div class="grid grid-cols-[1fr,1fr,1fr,1fr] gap-x-5 gap-y-6">
                     <x-form-input>
                         <x-slot:label>
@@ -198,7 +378,7 @@
             </div>
 
             <div class="space-y-6 w-full">
-                <h3 class="text-lg font-bold text-[#7288FF]">Dimensiones</h3>
+                <h3 class="text-lg font-bold text-blue-600">Dimensiones</h3>
                 <div class="grid grid-cols-[1fr,1fr,1fr,1fr] gap-x-5 gap-y-6">
                     <x-form-input>
                         <x-slot:label>
@@ -260,119 +440,267 @@
             </div>
 
             <div class="space-y-6 w-full">
-                <h3 class="text-lg font-bold text-[#7288FF]">Fechas</h3>
+                <h3 class="text-lg font-bold text-blue-600">Fechas</h3>
 
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
+
+                    <!-- Booking y coordinación -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Booking y coordinación</h4>
+                    </div>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Fecha requerida en destino
-                        </x-slot:label>
+                        <x-slot:label>Booking Request</x-slot:label>
+                        <x-slot:input type="date" name="date_booking_request" wire:model="date_booking_request"></x-slot:input>
+                    </x-form-input>
 
-                        <x-slot:input type="date" name="date_required_in_destination"
-                            wire:model="date_required_in_destination" class="pr-10 {{ $errors->has('date_required_in_destination') ? 'border-red-500' : '' }}">
+                    <x-form-input>
+                        <x-slot:label>Booking Authorized</x-slot:label>
+                        <x-slot:input type="date" name="date_booking_authorized" wire:model="date_booking_authorized"></x-slot:input>
+                    </x-form-input>
+
+                    <!-- Origen: preparación y carga -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Origen: preparación y carga</h4>
+                    </div>
+
+                    <x-form-input>
+                        <x-slot:label>Fecha Inspección</x-slot:label>
+                        <x-slot:input type="date" wire:model.live="inspection_date"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Fecha Corte VGM</x-slot:label>
+                        <x-slot:input type="date" wire:model.live="vgm_cut_date"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Carga Teórica</x-slot:label>
+                        <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Carga PO</x-slot:label>
+                        <x-slot:input type="date" name="date_carga_po" wire:model="date_carga_po"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Fecha pickup planificada</x-slot:label>
+                        <x-slot:input type="date" name="date_planned_pickup" wire:model="date_planned_pickup"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Fecha pickup real</x-slot:label>
+                        <x-slot:input type="date" name="date_actual_pickup" wire:model="date_actual_pickup"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Fecha de consolidado</x-slot:label>
+                        <x-slot:input type="date" name="date_consolidation" wire:model="date_consolidation"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Fecha de release</x-slot:label>
+                        <x-slot:input type="date" name="release_date" wire:model="release_date"></x-slot:input>
+                    </x-form-input>
+
+                    <!-- Documentos / AF -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Documentos / AF</h4>
+                    </div>
+
+                    <x-form-input>
+                        <x-slot:label>AF IN</x-slot:label>
+                        <x-slot:input type="date" name="date_af_in" wire:model="date_af_in"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>AF OUT</x-slot:label>
+                        <x-slot:input type="date" name="date_af_out" wire:model="date_af_out"></x-slot:input>
+                    </x-form-input>
+
+                    <!-- Salida (origen) -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Salida (origen)</h4>
+                    </div>
+
+                    <x-form-input>
+                        <x-slot:label>ETD Inicial</x-slot:label>
+                        <x-slot:input type="date" wire:model.live="date_etd_initial"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Fecha ETD (Fecha estimada de salida)</x-slot:label>
+                        <x-slot:input type="date" name="date_etd" wire:model="date_etd"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Fecha ATD (Fecha real de salida)</x-slot:label>
+                        <x-slot:input type="date" name="date_atd" wire:model="date_atd"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>ETD actualizada</x-slot:label>
+                        <x-slot:input type="date" name="date_etd_updated" wire:model="date_etd_updated"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Notas ETD</x-slot:label>
+                        <x-slot:input name="etd_notes" wire:model="etd_notes"></x-slot:input>
+                    </x-form-input>
+
+                    <!-- Hub -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Hub</h4>
+                    </div>
+
+                    <x-form-input>
+                        <x-slot:label>Fecha estimada de llegada al hub</x-slot:label>
+                        <x-slot:input type="date" name="date_estimated_hub_arrival" wire:model="date_estimated_hub_arrival"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Fecha de llegada real al hub</x-slot:label>
+                        <x-slot:input type="date" name="date_actual_hub_arrival" wire:model="date_actual_hub_arrival"></x-slot:input>
+                    </x-form-input>
+
+
+                    <!-- Arribo a destino -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Arribo a destino</h4>
+                    </div>
+
+                    <x-form-input>
+                        <x-slot:label>Fecha ETA (Fecha estimada de llegada)</x-slot:label>
+                        <x-slot:input type="date" name="date_eta" wire:model="date_eta"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Fecha ATA (Fecha real de llegada)</x-slot:label>
+                        <x-slot:input type="date" name="date_ata" wire:model="date_ata"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>ETA actualizada</x-slot:label>
+                        <x-slot:input type="date" name="date_eta_updated" wire:model="date_eta_updated"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Fecha requerida en destino</x-slot:label>
+                        <x-slot:input
+                            type="date"
+                            name="date_required_in_destination"
+                            wire:model="date_required_in_destination"
+                            class="pr-10 {{ $errors->has('date_required_in_destination') ? 'border-red-500' : '' }}">
                         </x-slot:input>
-
                         <x-slot:error>
                             {{ $errors->first('date_required_in_destination') }}
                         </x-slot:error>
                     </x-form-input>
-                    <x-form-input>
-                        <x-slot:label>
-                            Fecha pickup planificada
-                        </x-slot:label>
 
-                        <x-slot:input type="date" name="date_planned_pickup"
-                            wire:model="date_planned_pickup">
-                        </x-slot:input>
-                    </x-form-input>
-                    <x-form-input>
-                        <x-slot:label>
-                            Fecha pickup real
-                        </x-slot:label>
+                    <!-- Almacén fiscal y recepción -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Almacén fiscal y recepción</h4>
+                    </div>
 
-                        <x-slot:input type="date" name="date_actual_pickup"
-                            wire:model="date_actual_pickup">
-                        </x-slot:input>
-                    </x-form-input>
                     <x-form-input>
-                        <x-slot:label>
-                            Fecha estimada de llegada al hub
-                        </x-slot:label>
-
-                        <x-slot:input type="date" name="date_estimated_hub_arrival"
-                            wire:model="date_estimated_hub_arrival">
-                        </x-slot:input>
+                        <x-slot:label>Ingreso Almacén Fiscal</x-slot:label>
+                        <x-slot:input type="date" wire:model.live="bonded_warehouse_enter"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Fecha de llegada real al hub
-                        </x-slot:label>
-
-                        <x-slot:input type="date" name="date_actual_hub_arrival"
-                            wire:model="date_actual_hub_arrival">
-                        </x-slot:input>
+                        <x-slot:label>Salida Almacén Fiscal</x-slot:label>
+                        <x-slot:input type="date" wire:model.live="bonded_warehouse_exit"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Fecha ETD (Fecha estimada de salida)
-                        </x-slot:label>
-
-                        <x-slot:input type="date" name="date_etd" wire:model="date_etd">
-                        </x-slot:input>
+                        <x-slot:label>Fecha Recepción</x-slot:label>
+                        <x-slot:input type="date" name="date_received" wire:model="date_received"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Fecha ATD (Fecha real de salida)
-                        </x-slot:label>
-
-                        <x-slot:input type="date" name="date_atd" wire:model="date_atd">
-                        </x-slot:input>
+                        <x-slot:label>Fecha Nota de Recibo</x-slot:label>
+                        <x-slot:input type="date" wire:model.live="receipt_note_date"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Fecha ETA (Fecha estimada de llegada)
-                        </x-slot:label>
-
-                        <x-slot:input type="date" name="date_eta" wire:model="date_eta">
-                        </x-slot:input>
+                        <x-slot:label>Fecha Disp. Estimada en CD</x-slot:label>
+                        <x-slot:input type="date" wire:model.live="estimated_dc_availability_date"></x-slot:input>
                     </x-form-input>
+
+                    <!-- Pagos y cargos -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Pagos y cargos</h4>
+                    </div>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Fecha ATA (Fecha real de llegada)
-                        </x-slot:label>
-
-                        <x-slot:input type="date" name="date_ata" wire:model="date_ata">
-                        </x-slot:input>
+                        <x-slot:label>Fecha Pago Balance</x-slot:label>
+                        <x-slot:input type="date" wire:model.live="balance_payment_date"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Fecha de consolidado
-                        </x-slot:label>
-
-                        <x-slot:input type="date" name="date_consolidation"
-                            wire:model="date_consolidation">
-                        </x-slot:input>
+                        <x-slot:label>Fecha Pago Cargos Locales</x-slot:label>
+                        <x-slot:input type="date" wire:model.live="local_charges_payment_date"></x-slot:input>
                     </x-form-input>
+
+                    <!-- Métricas y varios -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Métricas y varios</h4>
+                    </div>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Fecha de release
-                        </x-slot:label>
-
-                        <x-slot:input type="date" name="release_date" wire:model="release_date">
-                        </x-slot:input>
+                        <x-slot:label>Días Libres Contenedor</x-slot:label>
+                        <x-slot:input type="number" step="1" inputmode="numeric" wire:model.live="container_free_days"></x-slot:input>
                     </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Dif Fechas ETD (días)</x-slot:label>
+                        <x-slot:input type="number" step="1" inputmode="numeric" readonly wire:model.live="etd_dates_difference"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Dif Fechas ETA (días)</x-slot:label>
+                        <x-slot:input type="number" step="1" inputmode="numeric"  readonly wire:model.live="eta_dates_difference"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Variable Date</x-slot:label>
+                        <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date"></x-slot:input>
+                    </x-form-input>
+
                 </div>
             </div>
 
             <div class="space-y-6 w-full">
-                <h3 class="text-lg font-bold text-[#7288FF]">Información Adicional</h3>
+                <h3 class="text-lg font-bold text-blue-600">Información Adicional</h3>
+
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
 
-                    <div>
-                        <label class="text-sm font-medium text-[#565AFF]">
-                            Tipo de Material
-                        </label>
-                        <div class="grid grid-cols-2 gap-2 mt-1">
+                    <!-- Configuración del envío -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Configuración del envío</h4>
+                    </div>
+
+                    <x-form-select label="Modo de transporte" name="mode" wire:model.live="mode" :options="['maritimo' => 'Marítimo', 'aereo' => 'Aéreo']" :error="$errors->has('mode') ? true : false" />
+
+                    <x-form-select label="Seguro" name="ensurence_type" wire:model="ensurence_type" :options="['pending' => 'Pendiente', 'applied' => 'Aplicado']" />
+
+                    <x-form-input>
+                        <x-slot:label>Tracking ID</x-slot:label>
+                        <x-slot:input name="tracking_id" placeholder="Ingrese Tracking ID" wire:model="tracking_id"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Conocimiento de Embarque</x-slot:label>
+                        <x-slot:input type="number" name="bill_of_lading" placeholder="0" wire:model="bill_of_lading"></x-slot:input>
+                    </x-form-input>
+
+                    <!-- Tipo de material -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#565AFF]">Tipo de material</h4>
+
+                        <!-- junto y compacto -->
+                        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-2">
                             @foreach($materialTypeOptions as $value => $label)
                                 <div class="flex items-center">
                                     <input
@@ -388,149 +716,319 @@
                                 </div>
                             @endforeach
                         </div>
+
                         @error('material_type')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
 
-                    <x-form-select label="Seguro" name="ensurence_type" wire:model="ensurence_type" :options="['pending' => 'Pendiente', 'applied' => 'Aplicado']" />
+                    <!-- Opciones / Flags -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#565AFF]">Opciones</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 mt-2">
+                            <div class="flex items-center">
+                                <input id="is_dropship" type="checkbox" wire:model="is_dropship"
+                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                <label for="is_dropship" class="block ml-2 text-sm text-gray-700">Dropship</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="applies_tlc" type="checkbox" wire:model="applies_tlc"
+                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                <label for="applies_tlc" class="block ml-2 text-sm text-gray-700">Aplica TLC</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="applies_af" type="checkbox" wire:model="applies_af"
+                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                <label for="applies_af" class="block ml-2 text-sm text-gray-700">Aplica AF</label>
+                            </div>
 
-                    <x-form-select label="Modo de transporte" name="mode" wire:model.live="mode" :options="['maritimo' => 'Marítimo', 'aereo' => 'Aéreo']" :error="$errors->has('mode') ? true : false" />
+                            <div class="flex items-center">
+                                <input id="has_facture_merca" type="checkbox" wire:model="has_facture_merca"
+                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                <label for="has_facture_merca" class="block ml-2 text-sm text-gray-700">Tiene Factura Mercancía</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="used_rate_ok" type="checkbox" wire:model="used_rate_ok"
+                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                <label for="used_rate_ok" class="block ml-2 text-sm text-gray-700">Tarifa Utilizada OK</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="uses_bonded_warehouse" type="checkbox" wire:model="uses_bonded_warehouse"
+                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                <label for="uses_bonded_warehouse" class="block ml-2 text-sm text-gray-700">Usa Almacén Fiscal</label>
+                            </div>
+
+                            <div class="flex items-center">
+                                <input id="apply_technical_note" type="checkbox" wire:model="apply_technical_note"
+                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                <label for="apply_technical_note" class="block ml-2 text-sm text-gray-700">Aplica Nota Técnica</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="etd_initial_validated" type="checkbox" wire:model="etd_initial_validated"
+                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                <label for="etd_initial_validated" class="block ml-2 text-sm text-gray-700">ETD Inicial Validada</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="port_of_loading_validated" type="checkbox" wire:model="port_of_loading_validated"
+                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                <label for="port_of_loading_validated" class="block ml-2 text-sm text-gray-700">Puerto de Embarque Validado</label>
+                            </div>
+                        </div>
+
+                        @error('is_dropship')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        @error('applies_tlc')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        @error('applies_af')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+
+
+                    <!-- Volúmenes / pallets -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Volúmenes / pallets</h4>
+                    </div>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Tracking ID
-                        </x-slot:label>
-                        <x-slot:input name="tracking_id" placeholder="Ingrese Tracking ID" wire:model="tracking_id">
-                        </x-slot:input>
+                        <x-slot:label>Cantidad estimada de pallets</x-slot:label>
+                        <x-slot:input type="number" name="pallet_quantity" placeholder="0" wire:model.live="pallet_quantity"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Cantidad estimada de pallets
-                        </x-slot:label>
-                        <x-slot:input type="number" name="pallet_quantity" placeholder="0" wire:model.live="pallet_quantity">
-                        </x-slot:input>
+                        <x-slot:label>Cantidad Real de Pallets</x-slot:label>
+                        <x-slot:input type="number" name="pallet_quantity_real" placeholder="0" wire:model.live="pallet_quantity_real"></x-slot:input>
                     </x-form-input>
+
+                    <!-- Costos base -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Costos base</h4>
+                    </div>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Cantidad Real de Pallets
-                        </x-slot:label>
-                        <x-slot:input type="number" name="pallet_quantity_real" placeholder="0" wire:model.live="pallet_quantity_real">
-                        </x-slot:input>
+                        <x-slot:label>Monto Factura</x-slot:label>
+                        <x-slot:input type="number" step="0.01" inputmode="decimal" wire:model.live="Invoice_amount"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Conocimiento de Embarque
-                        </x-slot:label>
-                        <x-slot:input type="number" name="bill_of_lading" placeholder="0" wire:model="bill_of_lading">
-                        </x-slot:input>
+                        <x-slot:label>Monto Flete</x-slot:label>
+                        <x-slot:input type="number" step="0.01" inputmode="decimal" wire:model.live="freight_amount"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Costo Transporte terrestre EWR
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="ground_transport_cost_1" placeholder="0.00" wire:model.live="ground_transport_cost_1">
-                        </x-slot:input>
+                        <x-slot:label>Costo de Seguro</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="insurance_cost" placeholder="0.00" wire:model.live="insurance_cost"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Costo Transporte terrestre MIA
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="ground_transport_cost_2" placeholder="0.00" wire:model.live="ground_transport_cost_2">
-                        </x-slot:input>
+                        <x-slot:label>Otros Gastos</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="other_expenses" placeholder="0.00" wire:model.live="other_expenses"></x-slot:input>
                     </x-form-input>
+
+                    <!-- Costos logísticos -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Costos logísticos</h4>
+                    </div>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Costo de Nacionalización
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="cost_nationalization" placeholder="0.00" wire:model="cost_nationalization">
-                        </x-slot:input>
+                        <x-slot:label>Costo Transporte terrestre EWR</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="ground_transport_cost_1" placeholder="0.00" wire:model.live="ground_transport_cost_1"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Costo OFR Estimado
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="cost_ofr_estimated" placeholder="0.00" wire:model.live="cost_ofr_estimated" disabled>
-                        </x-slot:input>
+                        <x-slot:label>Costo Transporte terrestre MIA</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="ground_transport_cost_2" placeholder="0.00" wire:model.live="ground_transport_cost_2"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Costo OFR Real
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="cost_ofr_real" placeholder="0.00" wire:model.live="cost_ofr_real">
-                        </x-slot:input>
+                        <x-slot:label>Costo de Nacionalización</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="cost_nationalization" placeholder="0.00" wire:model="cost_nationalization"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Costo Estimado de Pallets
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="estimated_pallet_cost" placeholder="0.00" wire:model.live="estimated_pallet_cost">
-                        </x-slot:input>
+                        <x-slot:label>Costo OFR Estimado</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="cost_ofr_estimated" placeholder="0.00" wire:model.live="cost_ofr_estimated" disabled></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Costo Real Estimado PO
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="real_cost_estimated_po" placeholder="0.00" wire:model="real_cost_estimated_po">
-                        </x-slot:input>
+                        <x-slot:label>Costo OFR Real</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="cost_ofr_real" placeholder="0.00" wire:model.live="cost_ofr_real"></x-slot:input>
                     </x-form-input>
+
+                    <!-- Totales y cálculos -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Totales y cálculos</h4>
+                    </div>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Costo Real PO
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="real_cost_real_po" placeholder="0.00" wire:model="real_cost_real_po">
-                        </x-slot:input>
+                        <x-slot:label>Costo Estimado de Pallets</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="estimated_pallet_cost" placeholder="0.00" wire:model.live="estimated_pallet_cost"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Costo de Seguro
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="insurance_cost" placeholder="0.00" wire:model.live="insurance_cost">
-                        </x-slot:input>
+                        <x-slot:label>Costo Real Estimado PO</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="real_cost_estimated_po" placeholder="0.00" wire:model="real_cost_estimated_po"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Otros Gastos
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="other_expenses" placeholder="0.00" wire:model.live="other_expenses">
-                        </x-slot:input>
+                        <x-slot:label>Costo Real PO</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="real_cost_real_po" placeholder="0.00" wire:model="real_cost_real_po"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Peso Variable Calculado
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="variable_calculare_weight" placeholder="0.00" wire:model="variable_calculare_weight">
-                        </x-slot:input>
+                        <x-slot:label>Peso Variable Calculado</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="variable_calculare_weight" placeholder="0.00" wire:model="variable_calculare_weight"></x-slot:input>
                     </x-form-input>
+
+                    <!-- Ahorros -->
+                    <div class="col-span-3">
+                        <h4 class="text-sm font-semibold text-[#7288FF]">Ahorros</h4>
+                    </div>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Ahorros OFR FCL
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="savings_ofr_fcl" placeholder="0.00" wire:model.live="savings_ofr_fcl" disabled>
-                        </x-slot:input>
+                        <x-slot:label>Ahorros OFR FCL</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="savings_ofr_fcl" placeholder="0.00" wire:model.live="savings_ofr_fcl" disabled></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Ahorro en pickup
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="saving_pickup" placeholder="0.00" wire:model="saving_pickup" disabled>
-                        </x-slot:input>
+                        <x-slot:label>Ahorro en pickup</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="saving_pickup" placeholder="0.00" wire:model="saving_pickup" disabled></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Ahorro Ejecutado
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="saving_executed" placeholder="0.00" wire:model="saving_executed">
-                        </x-slot:input>
+                        <x-slot:label>Ahorro Ejecutado</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="saving_executed" placeholder="0.00" wire:model="saving_executed"></x-slot:input>
                     </x-form-input>
+
                     <x-form-input>
-                        <x-slot:label>
-                            Ahorro No Ejecutado
-                        </x-slot:label>
-                        <x-slot:input type="number" step="0.01" name="saving_not_executed" placeholder="0.00" wire:model="saving_not_executed">
-                        </x-slot:input>
+                        <x-slot:label>Ahorro No Ejecutado</x-slot:label>
+                        <x-slot:input type="number" step="0.01" name="saving_not_executed" placeholder="0.00" wire:model="saving_not_executed"></x-slot:input>
+                    </x-form-input>
+
+                </div>
+            </div>
+
+            <div class="space-y-6 w-full">
+                <div class="space-y-6 w-full">
+                    <h3 class="text-lg font-bold text-blue-600">Datos de negocio</h3>
+
+                    <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
+
+                        <!-- Proveedores y contratación -->
+                        <div class="col-span-3">
+                            <h4 class="text-sm font-semibold text-[#7288FF]">Proveedores y contratación</h4>
+                        </div>
+
+                        <x-form-input>
+                            <x-slot:label>Forwarder</x-slot:label>
+                            <x-slot:input name="forwarder_name" wire:model="forwarder_name"></x-slot:input>
+                        </x-form-input>
+
+                        <x-form-input>
+                            <x-slot:label>Proveedor de Servicio</x-slot:label>
+                            <x-slot:input type="text" wire:model.live="service_provider"></x-slot:input>
+                        </x-form-input>
+
+                        <x-form-input>
+                            <x-slot:label>Comercializadora</x-slot:label>
+                            <x-slot:input type="text" wire:model.live="trading_company"></x-slot:input>
+                        </x-form-input>
+
+                        <!-- Tarifas y ruta -->
+                        <div class="col-span-3">
+                            <h4 class="text-sm font-semibold text-[#7288FF]">Tarifas y ruta</h4>
+                        </div>
+
+                        <x-form-input>
+                            <x-slot:label>Tipo Tarifa</x-slot:label>
+                            <x-slot:input name="tariff_type" wire:model="tariff_type"></x-slot:input>
+                        </x-form-input>
+
+                        <x-form-input>
+                            <x-slot:label>Ruta</x-slot:label>
+                            <x-slot:input name="route_label" wire:model="route_label"></x-slot:input>
+                        </x-form-input>
+
+                        <!-- Segmento / cliente -->
+                        <div class="col-span-3">
+                            <h4 class="text-sm font-semibold text-[#7288FF]">Segmento / cliente</h4>
+                        </div>
+
+                        <x-form-input>
+                            <x-slot:label>Grupo Repositor</x-slot:label>
+                            <x-slot:input type="text" wire:model.live="retail_group"></x-slot:input>
+                        </x-form-input>
+
+                        <x-form-input>
+                            <x-slot:label>Tipo Cliente</x-slot:label>
+                            <x-slot:input type="text" wire:model.live="customer_type"></x-slot:input>
+                        </x-form-input>
+
+                        <!-- Documentos y referencias -->
+                        <div class="col-span-3">
+                            <h4 class="text-sm font-semibold text-[#7288FF]">Documentos y referencias</h4>
+                        </div>
+
+                        <x-form-input>
+                            <x-slot:label>Factura</x-slot:label>
+                            <x-slot:input type="text" wire:model.live="invoice"></x-slot:input>
+                        </x-form-input>
+
+                        <x-form-input>
+                            <x-slot:label>Factura Cargo</x-slot:label>
+                            <x-slot:input name="cargo_invoice_number" wire:model="cargo_invoice_number"></x-slot:input>
+                        </x-form-input>
+
+                        <x-form-input>
+                            <x-slot:label>Factura Mercancía</x-slot:label>
+                            <x-slot:input type="text" wire:model.live="factura_merca"></x-slot:input>
+                        </x-form-input>
+
+                        <x-form-input>
+                            <x-slot:label>DUA Internamiento</x-slot:label>
+                            <x-slot:input type="text" wire:model.live="customs_dua"></x-slot:input>
+                        </x-form-input>
+
+                        <x-form-input>
+                            <x-slot:label>Expediente</x-slot:label>
+                            <x-slot:input type="text" wire:model.live="case_number_file"></x-slot:input>
+                        </x-form-input>
+
+                        <x-form-input>
+                            <x-slot:label>Nota de Recibo</x-slot:label>
+                            <x-slot:input type="text" wire:model.live="receipt_note"></x-slot:input>
+                        </x-form-input>
+
+                        <!-- Notas -->
+                        <div class="col-span-3">
+                            <h4 class="text-sm font-semibold text-[#7288FF]">Notas</h4>
+                        </div>
+
+                        <div class="col-span-3">
+                            <x-form-input>
+                                <x-slot:label>Notas de Visibilidad</x-slot:label>
+                                <x-slot:input type="text" wire:model.live="visibility_notes"></x-slot:input>
+                            </x-form-input>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="space-y-6 w-full">
+                <h3 class="text-lg font-bold text-blue-600">Estado de llegada</h3>
+                <div class="grid grid-cols-[1fr,1fr] gap-x-5 gap-y-f6">
+                    <x-form-input>
+                        <x-slot:label>Estado de llegada</x-slot:label>
+                        <x-slot:input name="arrival_status" wire:model="arrival_status" placeholder="Ej: Arribado, En tránsito, Retenido"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
+                        <x-slot:label>Días de retraso</x-slot:label>
+                        <x-slot:input type="number" name="delay_days" wire:model="delay_days" placeholder="0"></x-slot:input>
                     </x-form-input>
                 </div>
             </div>
+
+
+
         </div>
 
         <div class="p-8 space-y-6 w-full bg-white rounded-2xl">
