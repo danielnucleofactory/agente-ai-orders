@@ -139,122 +139,122 @@
                 wire:model.live="newColumnId" />
 
             <div class="mt-4">
-                <!-- Campo para la columna 1 -->
-                <div class="{{ $newColumnId == $columns[0]['id'] ? '' : 'hidden' }}">
-                    <x-form-input class="mb-4">
-                        <x-slot:label>
-                            Ingrese fecha de release
-                        </x-slot:label>
+{{--                <!-- Campo para la columna 1 -->--}}
+{{--                <div class="{{ $newColumnId == $columns[0]['id'] ? '' : 'hidden' }}">--}}
+{{--                    <x-form-input class="mb-4">--}}
+{{--                        <x-slot:label>--}}
+{{--                            Ingrese fecha de release--}}
+{{--                        </x-slot:label>--}}
 
-                        <x-slot:input name="release_date" type="date" placeholder="Ingrese fecha de release" wire:model="release_date" class="pr-10"></x-slot:input>
+{{--                        <x-slot:input name="release_date" type="date" placeholder="Ingrese fecha de release" wire:model="release_date" class="pr-10"></x-slot:input>--}}
 
-                        <x-slot:error>
-                            {{ $errors->first('release_date') }}
-                        </x-slot:error>
-                    </x-form-input>
-                </div>
+{{--                        <x-slot:error>--}}
+{{--                            {{ $errors->first('release_date') }}--}}
+{{--                        </x-slot:error>--}}
+{{--                    </x-form-input>--}}
+{{--                </div>--}}
+{{--                --}}
+{{--                <!-- Campos para la columna 2 -->--}}
+{{--                <div class="{{ $newColumnId == $columns[1]['id'] ? '' : 'hidden' }}"--}}
+{{--                     x-data="{ validating: false }"--}}
+{{--                     x-init="--}}
+{{--                        $watch('validating', value => {--}}
+{{--                            console.log('Estado local de validación cambiado:', value);--}}
+{{--                            $wire.setIsValidating(value);--}}
+{{--                        });--}}
+{{--                        // Sincronizar con el estado de Livewire inicialmente--}}
+{{--                        validating = {{ $isValidating ? 'true' : 'false' }};--}}
 
-                <!-- Campos para la columna 2 -->
-                <div class="{{ $newColumnId == $columns[1]['id'] ? '' : 'hidden' }}"
-                     x-data="{ validating: false }"
-                     x-init="
-                        $watch('validating', value => {
-                            console.log('Estado local de validación cambiado:', value);
-                            $wire.setIsValidating(value);
-                        });
-                        // Sincronizar con el estado de Livewire inicialmente
-                        validating = {{ $isValidating ? 'true' : 'false' }};
+{{--                        // Escuchar cambios en el estado de Livewire--}}
+{{--                        window.addEventListener('validating-state-changed', (event) => {--}}
+{{--                            validating = event.detail.isValidating;--}}
+{{--                            console.log('Estado de Livewire cambió a:', validating);--}}
+{{--                        });--}}
+{{--                     ">--}}
+{{--                    <!-- Alerta informativa para validación de códigos -->--}}
+{{--                    <div class="p-3 mb-4 border border-blue-200 rounded-md bg-blue-50" x-show="!validating">--}}
+{{--                        <p class="text-sm text-blue-700">--}}
+{{--                            <i class="mr-1 fa fa-info-circle"></i>--}}
+{{--                            Debe proporcionar al menos un código de seguimiento (ID de tracking o Master BL o Container).--}}
+{{--                            Ambos códigos serán validados antes de mover el documento.--}}
+{{--                        </p>--}}
+{{--                    </div>--}}
 
-                        // Escuchar cambios en el estado de Livewire
-                        window.addEventListener('validating-state-changed', (event) => {
-                            validating = event.detail.isValidating;
-                            console.log('Estado de Livewire cambió a:', validating);
-                        });
-                     ">
-                    <!-- Alerta informativa para validación de códigos -->
-                    <div class="p-3 mb-4 border border-blue-200 rounded-md bg-blue-50" x-show="!validating">
-                        <p class="text-sm text-blue-700">
-                            <i class="mr-1 fa fa-info-circle"></i>
-                            Debe proporcionar al menos un código de seguimiento (ID de tracking o Master BL o Container).
-                            Ambos códigos serán validados antes de mover el documento.
-                        </p>
-                    </div>
+{{--                    <!-- Indicador de validación en curso -->--}}
+{{--                    <div class="p-3 mb-4 border border-yellow-200 rounded-md bg-yellow-50" x-show="validating">--}}
+{{--                        <div class="flex items-center space-x-2">--}}
+{{--                            <svg class="w-5 h-5 text-yellow-600 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">--}}
+{{--                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>--}}
+{{--                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>--}}
+{{--                            </svg>--}}
+{{--                            <p class="text-sm text-yellow-700">Validando código(s) de seguimiento...</p>--}}
+{{--                        </div>--}}
+{{--                    </div>--}}
 
-                    <!-- Indicador de validación en curso -->
-                    <div class="p-3 mb-4 border border-yellow-200 rounded-md bg-yellow-50" x-show="validating">
-                        <div class="flex items-center space-x-2">
-                            <svg class="w-5 h-5 text-yellow-600 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <p class="text-sm text-yellow-700">Validando código(s) de seguimiento...</p>
-                        </div>
-                    </div>
+{{--                    <x-form-input class="mb-4">--}}
+{{--                        <x-slot:label>--}}
+{{--                            Ingrese ID tracking--}}
+{{--                        </x-slot:label>--}}
 
-                    <x-form-input class="mb-4">
-                        <x-slot:label>
-                            Ingrese ID tracking
-                        </x-slot:label>
+{{--                        <x-slot:input name="tracking_id" placeholder="Ingrese ID tracking" wire:model="tracking_id" class="pr-10"></x-slot:input>--}}
 
-                        <x-slot:input name="tracking_id" placeholder="Ingrese ID tracking" wire:model="tracking_id" class="pr-10"></x-slot:input>
+{{--                        <x-slot:error>--}}
+{{--                            {{ $errors->first('tracking_id') }}--}}
+{{--                        </x-slot:error>--}}
+{{--                    </x-form-input>--}}
 
-                        <x-slot:error>
-                            {{ $errors->first('tracking_id') }}
-                        </x-slot:error>
-                    </x-form-input>
+{{--                    <x-form-input class="mb-4">--}}
+{{--                        <x-slot:label>--}}
+{{--                            Ingrese código booking--}}
+{{--                        </x-slot:label>--}}
 
-                    <x-form-input class="mb-4">
-                        <x-slot:label>
-                            Ingrese código booking
-                        </x-slot:label>
+{{--                        <x-slot:input name="booking_code" placeholder="Ingrese código booking" wire:model="booking_code" class="pr-10"></x-slot:input>--}}
 
-                        <x-slot:input name="booking_code" placeholder="Ingrese código booking" wire:model="booking_code" class="pr-10"></x-slot:input>
+{{--                        <x-slot:error>--}}
+{{--                            {{ $errors->first('booking_code') }}--}}
+{{--                        </x-slot:error>--}}
+{{--                    </x-form-input>--}}
 
-                        <x-slot:error>
-                            {{ $errors->first('booking_code') }}
-                        </x-slot:error>
-                    </x-form-input>
+{{--                    <x-form-input class="mb-4">--}}
+{{--                        <x-slot:label>--}}
+{{--                            Ingrese Contenedor--}}
+{{--                        </x-slot:label>--}}
 
-                    <x-form-input class="mb-4">
-                        <x-slot:label>
-                            Ingrese Contenedor
-                        </x-slot:label>
+{{--                        <x-slot:input name="container_number" placeholder="Ingrese Contenedor" wire:model="container_number" class="pr-10"></x-slot:input>--}}
 
-                        <x-slot:input name="container_number" placeholder="Ingrese Contenedor" wire:model="container_number" class="pr-10"></x-slot:input>
-
-                        <x-slot:error>
-                            {{ $errors->first('container_number') }}
-                        </x-slot:error>
-                    </x-form-input>
+{{--                        <x-slot:error>--}}
+{{--                            {{ $errors->first('container_number') }}--}}
+{{--                        </x-slot:error>--}}
+{{--                    </x-form-input>--}}
 
 
-                    <x-form-input>
-                        <x-slot:label>
-                            Ingrese MBL
-                        </x-slot:label>
+{{--                    <x-form-input>--}}
+{{--                        <x-slot:label>--}}
+{{--                            Ingrese MBL--}}
+{{--                        </x-slot:label>--}}
 
-                        <x-slot:input name="mbl_number" placeholder="Ingrese MBL" wire:model="mbl_number" class="pr-10"></x-slot:input>
+{{--                        <x-slot:input name="mbl_number" placeholder="Ingrese MBL" wire:model="mbl_number" class="pr-10"></x-slot:input>--}}
 
-                        <x-slot:error>
-                            {{ $errors->first('mbl_number') }}
-                        </x-slot:error>
-                    </x-form-input>
-                </div>
+{{--                        <x-slot:error>--}}
+{{--                            {{ $errors->first('mbl_number') }}--}}
+{{--                        </x-slot:error>--}}
+{{--                    </x-form-input>--}}
+{{--                </div>--}}
 
-                <!-- Campo para la columna "Digitaciones" (ID 14) -->
-                <div class="{{ $newColumnId == 14 ? '' : 'hidden' }}">
-                    <x-form-input class="mb-4">
-                        <x-slot:label>
-                            Ingrese fecha de instrucción
-                        </x-slot:label>
+{{--                <!-- Campo para la columna "Digitaciones" (ID 14) -->--}}
+{{--                <div class="{{ $newColumnId == 14 ? '' : 'hidden' }}">--}}
+{{--                    <x-form-input class="mb-4">--}}
+{{--                        <x-slot:label>--}}
+{{--                            Ingrese fecha de instrucción--}}
+{{--                        </x-slot:label>--}}
 
-                        <x-slot:input name="instruction_date" type="date" placeholder="Ingrese fecha de instrucción" wire:model="instruction_date" class="pr-10"></x-slot:input>
+{{--                        <x-slot:input name="instruction_date" type="date" placeholder="Ingrese fecha de instrucción" wire:model="instruction_date" class="pr-10"></x-slot:input>--}}
 
-                        <x-slot:error>
-                            {{ $errors->first('instruction_date') }}
-                        </x-slot:error>
-                    </x-form-input>
-                </div>
+{{--                        <x-slot:error>--}}
+{{--                            {{ $errors->first('instruction_date') }}--}}
+{{--                        </x-slot:error>--}}
+{{--                    </x-form-input>--}}
+{{--                </div>--}}
             </div>
         </div>
 
