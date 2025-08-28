@@ -480,6 +480,11 @@
                     </x-form-input>
 
                     <x-form-input>
+                        <x-slot:label>Carga Variable</x-slot:label>
+                        <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date"></x-slot:input>
+                    </x-form-input>
+
+                    <x-form-input>
                         <x-slot:label>Carga PO</x-slot:label>
                         <x-slot:input type="date" name="date_carga_po" wire:model="date_carga_po"></x-slot:input>
                     </x-form-input>
@@ -662,12 +667,6 @@
                         <x-slot:label>Dif Fechas ETA (días)</x-slot:label>
                         <x-slot:input type="number" step="1" inputmode="numeric"  readonly wire:model.live="eta_dates_difference"></x-slot:input>
                     </x-form-input>
-
-                    <x-form-input>
-                        <x-slot:label>Variable Date</x-slot:label>
-                        <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date"></x-slot:input>
-                    </x-form-input>
-
                 </div>
             </div>
 
