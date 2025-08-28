@@ -691,7 +691,7 @@
 
                     <x-form-input>
                         <x-slot:label>Conocimiento de Embarque</x-slot:label>
-                        <x-slot:input type="number" name="bill_of_lading" placeholder="0" wire:model="bill_of_lading"></x-slot:input>
+                        <x-slot:input name="bill_of_lading" placeholder="Ingrese conocimiento de embarque" wire:model="bill_of_lading"></x-slot:input>
                     </x-form-input>
 
                     <!-- Tipo de material -->
