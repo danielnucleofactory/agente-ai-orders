@@ -246,6 +246,10 @@ class CreatePucharseOrder extends Component
     public $etd_dates_difference;       // int (días)
     public $eta_dates_difference;       // int (días)
 
+    // ===== Documentos (recepción) =====
+    public $date_invoice_received;            // Fecha recepción de factura
+    public $date_vendor_document_received;    // Fecha recepción doc. proveedor
+
     public function mount($id = null)
     {
         $this->id = $id;
@@ -356,6 +360,8 @@ class CreatePucharseOrder extends Component
                 $this->date_ata = $this->purchaseOrder->date_ata ? $this->purchaseOrder->date_ata->format('Y-m-d') : null;
                 $this->date_consolidation = $this->purchaseOrder->date_consolidation ? $this->purchaseOrder->date_consolidation->format('Y-m-d') : null;
                 $this->release_date = $this->purchaseOrder->release_date ? $this->purchaseOrder->release_date->format('Y-m-d') : null;
+                $this->date_invoice_received = $this->purchaseOrder->date_invoice_received ? $this->purchaseOrder->date_invoice_received->format('Y-m-d') : null;
+                $this->date_vendor_document_received = $this->purchaseOrder->date_vendor_document_received ? $this->purchaseOrder->date_vendor_document_received->format('Y-m-d') : null;
 
                 $this->planned_hub_id = $this->purchaseOrder->planned_hub_id;
                 $this->actual_hub_id = $this->purchaseOrder->actual_hub_id;
@@ -755,7 +761,8 @@ class CreatePucharseOrder extends Component
                 'ancho' => 'required|numeric|min:0',
                 'alto' => 'required|numeric|min:0',
                 'material_type' => 'required|array|min:1',
-
+                'date_invoice_received' => 'nullable|date',
+                'date_vendor_document_received' => 'nullable|date',
             ], [
                 'order_number.required' => 'El número de orden es requerido',
                 'order_number.unique' => 'Este número de orden ya existe. Por favor, use un número diferente.',
@@ -931,6 +938,8 @@ class CreatePucharseOrder extends Component
                     'container_free_days'   => $this->container_free_days,
                     'etd_dates_difference'  => $this->etd_dates_difference,
                     'eta_dates_difference'  => $this->eta_dates_difference,
+                    'date_invoice_received'            => $this->date_invoice_received,
+                    'date_vendor_document_received'    => $this->date_vendor_document_received,
 
                 ];
 
@@ -1218,6 +1227,8 @@ class CreatePucharseOrder extends Component
                 'etd_dates_difference'         => $this->etd_dates_difference,
                 'eta_dates_difference'         => $this->eta_dates_difference,
 
+                'date_invoice_received'            => $this->date_invoice_received,
+                'date_vendor_document_received'    => $this->date_vendor_document_received,
             ];
 
             try {

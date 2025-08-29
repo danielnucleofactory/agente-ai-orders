@@ -157,7 +157,9 @@ class PurchaseOrder extends Model implements HasMedia
         'container_free_days',
         'etd_dates_difference',
         'eta_dates_difference',
-        'price_incoterm'
+        'price_incoterm',
+        'date_invoice_received',
+        'date_vendor_document_received'
     ];
 
     /**
@@ -246,6 +248,8 @@ class PurchaseOrder extends Model implements HasMedia
         'container_free_days'   => 'integer',
         'etd_dates_difference'  => 'integer',
         'eta_dates_difference'  => 'integer',
+        'date_invoice_received' => 'datetime',
+        'date_vendor_document_received' => 'datetime',
     ];
 
     /**
