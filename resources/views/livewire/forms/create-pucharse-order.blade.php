@@ -655,17 +655,17 @@
 
                     <x-form-input>
                         <x-slot:label>Días Libres Contenedor</x-slot:label>
-                        <x-slot:input type="number" step="1" inputmode="numeric" wire:model.live="container_free_days"></x-slot:input>
+                        <x-slot:input type="number" step="1" inputmode="numeric" placeholder="0" wire:model.live="container_free_days"></x-slot:input>
                     </x-form-input>
 
                     <x-form-input>
                         <x-slot:label>Dif Fechas ETD (días)</x-slot:label>
-                        <x-slot:input type="number" step="1" inputmode="numeric" readonly wire:model.live="etd_dates_difference"></x-slot:input>
+                        <x-slot:input type="number" step="1" inputmode="numeric" readonly placeholder="0" wire:model.live="etd_dates_difference"></x-slot:input>
                     </x-form-input>
 
                     <x-form-input>
                         <x-slot:label>Dif Fechas ETA (días)</x-slot:label>
-                        <x-slot:input type="number" step="1" inputmode="numeric"  readonly wire:model.live="eta_dates_difference"></x-slot:input>
+                        <x-slot:input type="number" step="1" inputmode="numeric" readonly placeholder="0" wire:model.live="eta_dates_difference"></x-slot:input>
                     </x-form-input>
                 </div>
             </div>
@@ -916,17 +916,17 @@
 
                         <x-form-input>
                             <x-slot:label>Forwarder</x-slot:label>
-                            <x-slot:input name="forwarder_name" wire:model="forwarder_name"></x-slot:input>
+                            <x-slot:input name="forwarder_name" placeholder="Ingrese agente de carga" wire:model="forwarder_name"></x-slot:input>
                         </x-form-input>
 
                         <x-form-input>
                             <x-slot:label>Proveedor de Servicio</x-slot:label>
-                            <x-slot:input type="text" wire:model.live="service_provider"></x-slot:input>
+                            <x-slot:input type="text" placeholder="Ingrese proveedor de servicio" wire:model.live="service_provider"></x-slot:input>
                         </x-form-input>
 
                         <x-form-input>
                             <x-slot:label>Comercializadora</x-slot:label>
-                            <x-slot:input type="text" wire:model.live="trading_company"></x-slot:input>
+                            <x-slot:input type="text" placeholder="Ingrese comercializadora" wire:model.live="trading_company"></x-slot:input>
                         </x-form-input>
 
                         <!-- Tarifas y ruta -->
@@ -936,12 +936,12 @@
 
                         <x-form-input>
                             <x-slot:label>Tipo Tarifa</x-slot:label>
-                            <x-slot:input name="tariff_type" wire:model="tariff_type"></x-slot:input>
+                            <x-slot:input name="tariff_type" placeholder="Ingrese el tipo de tarifa" wire:model="tariff_type"></x-slot:input>
                         </x-form-input>
 
                         <x-form-input>
                             <x-slot:label>Ruta</x-slot:label>
-                            <x-slot:input name="route_label" wire:model="route_label"></x-slot:input>
+                            <x-slot:input name="route_label" placeholder="Ingrese la ruta" wire:model="route_label"></x-slot:input>
                         </x-form-input>
 
                         <!-- Segmento / cliente -->
@@ -951,12 +951,12 @@
 
                         <x-form-input>
                             <x-slot:label>Grupo Repositor</x-slot:label>
-                            <x-slot:input type="text" wire:model.live="retail_group"></x-slot:input>
+                            <x-slot:input type="text" placeholder="Ingrese grupo repositor" wire:model.live="retail_group"></x-slot:input>
                         </x-form-input>
 
                         <x-form-input>
                             <x-slot:label>Tipo Cliente</x-slot:label>
-                            <x-slot:input type="text" wire:model.live="customer_type"></x-slot:input>
+                            <x-slot:input type="text" placeholder="Ingrese tipo de cliente" wire:model.live="customer_type"></x-slot:input>
                         </x-form-input>
 
                         <!-- Documentos y referencias -->
@@ -966,32 +966,32 @@
 
                         <x-form-input>
                             <x-slot:label>Factura</x-slot:label>
-                            <x-slot:input type="text" wire:model.live="invoice"></x-slot:input>
+                            <x-slot:input type="text" placeholder="Ingrese factura" wire:model.live="invoice"></x-slot:input>
                         </x-form-input>
 
                         <x-form-input>
                             <x-slot:label>Factura Cargo</x-slot:label>
-                            <x-slot:input name="cargo_invoice_number" wire:model="cargo_invoice_number"></x-slot:input>
+                            <x-slot:input name="cargo_invoice_number" placeholder="Ingrese factura de cargo" wire:model="cargo_invoice_number"></x-slot:input>
                         </x-form-input>
 
                         <x-form-input>
                             <x-slot:label>Factura Mercancía</x-slot:label>
-                            <x-slot:input type="text" wire:model.live="factura_merca"></x-slot:input>
+                            <x-slot:input type="text" placeholder="Ingrese factura de mercancía" wire:model.live="factura_merca"></x-slot:input>
                         </x-form-input>
 
                         <x-form-input>
                             <x-slot:label>DUA Internamiento</x-slot:label>
-                            <x-slot:input type="text" wire:model.live="customs_dua"></x-slot:input>
+                            <x-slot:input type="text" placeholder="Ingrese DUA Internamiento" wire:model.live="customs_dua"></x-slot:input>
                         </x-form-input>
 
                         <x-form-input>
                             <x-slot:label>Expediente</x-slot:label>
-                            <x-slot:input type="text" wire:model.live="case_number_file"></x-slot:input>
+                            <x-slot:input type="text" placeholder="Ingrese expediente" wire:model.live="case_number_file"></x-slot:input>
                         </x-form-input>
 
                         <x-form-input>
                             <x-slot:label>Nota de Recibo</x-slot:label>
-                            <x-slot:input type="text" wire:model.live="receipt_note"></x-slot:input>
+                            <x-slot:input type="text" placeholder="Ingrese nota de recibo" wire:model.live="receipt_note"></x-slot:input>
                         </x-form-input>
 
                         <!-- Notas -->
@@ -1002,7 +1002,7 @@
                         <div class="col-span-3">
                             <x-form-input>
                                 <x-slot:label>Notas de Visibilidad</x-slot:label>
-                                <x-slot:input type="text" wire:model.live="visibility_notes"></x-slot:input>
+                                <x-slot:input type="text" placeholder="Ingrese notas de visibilidad" wire:model.live="visibility_notes"></x-slot:input>
                             </x-form-input>
                         </div>
 
@@ -1016,7 +1016,7 @@
                 <div class="grid grid-cols-[1fr,1fr] gap-x-5 gap-y-f6">
                     <x-form-input>
                         <x-slot:label>Estado de llegada</x-slot:label>
-                        <x-slot:input name="arrival_status" wire:model="arrival_status" placeholder="Ej: Arribado, En tránsito, Retenido"></x-slot:input>
+                        <x-slot:input name="arrival_status"  wire:model="arrival_status" placeholder="Ej: Arribado, En tránsito, Retenido"></x-slot:input>
                     </x-form-input>
 
                     <x-form-input>
