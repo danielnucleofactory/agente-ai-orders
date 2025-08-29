@@ -794,8 +794,8 @@
 
             <div class="mb-8">
                 <x-form-input>
-                    <x-slot:label>Fecha Nota de Recibo</x-slot:label>
-                    <x-slot:input type="date" wire:model.live="receipt_note_date"></x-slot:input>
+                    <x-slot:label>Nota de Recibo</x-slot:label>
+                    <x-slot:input type="text" placeholder="Ingrese nota de recibo" wire:model.live="receipt_note"></x-slot:input>
                 </x-form-input>
             </div>
 

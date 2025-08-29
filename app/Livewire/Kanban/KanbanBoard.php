@@ -75,7 +75,7 @@ class KanbanBoard extends Component
 
 
     // Ingresada (id 9)
-    public $receipt_note_date;
+    public $receipt_note;
 
 
     public $comments = [];
@@ -600,7 +600,7 @@ class KanbanBoard extends Component
             ], // En transito
             5 => ['date_ata'], // Puerto
             6 => ['bonded_warehouse_enter', 'bonded_warehouse_exit', 'date_ata'], // Alm. Fiscal
-            9 => ['receipt_note_date'], // Ingresada (ANTES estaba 'receipt_note')
+            9 => ['receipt_note'], // Ingresada
         ];
     }
 
@@ -705,7 +705,7 @@ class KanbanBoard extends Component
             // 9) Ingresada (Excel no lo exige)
             9 => [
                 // Si quisieras hacerlo requerido:
-                // 'receipt_note_date' => 'required|date',
+                // 'receipt_note' => 'required|string',
             ],
         ];
     }
@@ -734,7 +734,7 @@ class KanbanBoard extends Component
             'date_ata'               => 'ETA Real',
             'bonded_warehouse_enter' => 'Ingreso a AF',
             'bonded_warehouse_exit'  => 'Salida AF',
-            'receipt_note_date'      => 'Fecha Nota de Recibo',
+            'receipt_note'      => 'Nota de Recibo',
         ];
     }
 
