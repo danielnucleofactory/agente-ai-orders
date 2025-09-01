@@ -476,7 +476,7 @@
                     <div>
                         <x-form-input>
                             <x-slot:label>BL</x-slot:label>
-                            <x-slot:input type="number" name="bill_of_lading" wire:model="bill_of_lading" placeholder="0"
+                            <x-slot:input name="bill_of_lading" wire:model="bill_of_lading" placeholder="Ingrese BL"
                                           class="pr-10 {{ $errors->has('bill_of_lading') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('bill_of_lading') }}</x-slot:error>
                         </x-form-input>
