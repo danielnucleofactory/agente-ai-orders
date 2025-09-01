@@ -970,6 +970,16 @@
                         </x-form-input>
 
                         <x-form-input>
+                            <x-slot:label>Fecha recepción de factura</x-slot:label>
+                            <x-slot:input type="date" name="date_invoice_received" wire:model="date_invoice_received"></x-slot:input>
+                        </x-form-input>
+
+                        <x-form-input>
+                            <x-slot:label>Fecha recepción doc. proveedor</x-slot:label>
+                            <x-slot:input type="date" name="date_vendor_document_received" wire:model="date_vendor_document_received"></x-slot:input>
+                        </x-form-input>
+
+                        <x-form-input>
                             <x-slot:label>Factura Cargo</x-slot:label>
                             <x-slot:input name="cargo_invoice_number" placeholder="Ingrese factura de cargo" wire:model="cargo_invoice_number"></x-slot:input>
                         </x-form-input>
