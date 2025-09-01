@@ -68,6 +68,9 @@ class CreateProducts extends Component {
             'supplying_plant' => 'nullable|string|max:100',
             'unit_of_measure' => 'nullable|string|max:100',
             'plant' => 'nullable|string|max:100',
+        ],[
+            'material_id.required' => 'El campo Material es obligatorio',
+            'short_text.required' => 'El campo Descripción es obligatorio',
         ]);
 
         // Create product
