@@ -164,6 +164,92 @@ class CreatePucharseOrder extends Component
         'billToSelected' => 'onBillToSelected'
     ];
 
+    // ===== Campos nuevos para OLO =====
+    // Identificadores y transporte
+    public $factory_proforma_number;
+    public $mbl_number;
+    public $container_type;
+    public $container_number;
+    public $shipping_line;
+    public $port_of_loading_validated = false;
+
+// Flags / opciones
+    public $is_dropship = false;
+    public $applies_tlc = false;
+    public $applies_af = false;
+    public $has_facture_merca = false;
+    public $used_rate_ok = false;
+    public $uses_bonded_warehouse = false;
+    public $apply_technical_note = false;
+    public $etd_initial_validated = false;
+
+// Fechas/hitos
+    public $date_booking_request;
+    public $date_booking_authorized;
+    public $date_theorical_load;
+    public $date_variable_date;
+    public $date_carga_po;
+    public $date_received;
+    public $date_af_in;
+    public $date_af_out;
+    public $date_etd_initial;
+    public $inspection_date;
+    public $vgm_cut_date;
+    public $balance_payment_date;
+    public $local_charges_payment_date;
+    public $bonded_warehouse_enter;
+    public $bonded_warehouse_exit;
+    public $receipt_note_date;
+    public $estimated_dc_availability_date;
+
+// Datos de negocio
+    public $logistics_incoterm;
+    public $price_incoterm;
+    public $reason;
+    public $category;
+    public $etd_notes;
+    public $forwarder_name;
+    public $customer_name;
+    public $cargo_invoice_number;
+    public $tariff_type;
+    public $route_label;
+    public $retail_group;
+    public $customer_type;
+    public $trading_company;
+    public $service_provider;
+    public $customs_dua;
+    public $invoice;
+    public $factura_merca;
+    public $case_number_file;
+    public $receipt_note;
+    public $visibility_notes;
+
+// Puertos
+    public $departure_port;
+    public $arrival_port;
+
+// Estado de llegada
+    public $arrival_status;
+    public $delay_days;
+
+// Versiones actualizadas ETA/ETD
+    public $date_etd_updated;
+    public $date_eta_updated;
+
+    // Costos
+    public $po_amount = 0.0;        // Monto PO “declarado” (si lo usas)
+    public $Invoice_amount = 0.0;   // Monto de la factura (mantengo el nombre exacto)
+    public $freight_amount = 0.0;   // Monto flete
+
+// Métricas / contadores
+    public $container_free_days;        // int
+    public $etd_dates_difference;       // int (días)
+    public $eta_dates_difference;       // int (días)
+
+    // ===== Documentos (recepción) =====
+    public $date_invoice_received;            // Fecha recepción de factura
+    public $date_vendor_document_received;    // Fecha recepción doc. proveedor
+
     public function mount($id = null)
     {
         $this->id = $id;
@@ -210,6 +296,7 @@ class CreatePucharseOrder extends Component
                 $this->currency = $this->purchaseOrder->currency;
                 $this->incoterms = $this->purchaseOrder->incoterms;
                 $this->payment_terms = $this->purchaseOrder->payment_terms;
+                $this->price_incoterm = $this->purchaseOrder->price_incoterm;
                 $this->order_place = $this->purchaseOrder->order_place;
                 $this->email_agent = $this->purchaseOrder->email_agent;
 
@@ -273,6 +360,8 @@ class CreatePucharseOrder extends Component
                 $this->date_ata = $this->purchaseOrder->date_ata ? $this->purchaseOrder->date_ata->format('Y-m-d') : null;
                 $this->date_consolidation = $this->purchaseOrder->date_consolidation ? $this->purchaseOrder->date_consolidation->format('Y-m-d') : null;
                 $this->release_date = $this->purchaseOrder->release_date ? $this->purchaseOrder->release_date->format('Y-m-d') : null;
+                $this->date_invoice_received = $this->purchaseOrder->date_invoice_received ? $this->purchaseOrder->date_invoice_received->format('Y-m-d') : null;
+                $this->date_vendor_document_received = $this->purchaseOrder->date_vendor_document_received ? $this->purchaseOrder->date_vendor_document_received->format('Y-m-d') : null;
 
                 $this->planned_hub_id = $this->purchaseOrder->planned_hub_id;
                 $this->actual_hub_id = $this->purchaseOrder->actual_hub_id;
@@ -285,6 +374,83 @@ class CreatePucharseOrder extends Component
 
                 // Cargar el tipo de seguro
                 $this->ensurence_type = $this->purchaseOrder->ensurence_type ?? 'pending';
+
+                //=== Datos nuevos para OLO ===
+                $this->factory_proforma_number = $this->purchaseOrder->factory_proforma_number;
+                $this->mbl_number = $this->purchaseOrder->mbl_number;
+                $this->container_type = $this->purchaseOrder->container_type;
+                $this->container_number = $this->purchaseOrder->container_number;
+                $this->shipping_line = $this->purchaseOrder->shipping_line;
+                $this->port_of_loading_validated = (bool) $this->purchaseOrder->port_of_loading_validated;
+
+                $this->is_dropship = $this->purchaseOrder->is_dropship;
+                $this->applies_tlc = $this->purchaseOrder->applies_tlc;
+                $this->applies_af = $this->purchaseOrder->applies_af;
+                $this->has_facture_merca = (bool) $this->purchaseOrder->has_facture_merca;
+                $this->used_rate_ok = (bool) $this->purchaseOrder->used_rate_ok;
+                $this->uses_bonded_warehouse = (bool) $this->purchaseOrder->uses_bonded_warehouse;
+                $this->apply_technical_note = (bool) $this->purchaseOrder->apply_technical_note;
+                $this->etd_initial_validated = (bool) $this->purchaseOrder->etd_initial_validated;
+
+                $this->date_booking_request = optional($this->purchaseOrder->date_booking_request)?->format('Y-m-d');
+                $this->date_booking_authorized = optional($this->purchaseOrder->date_booking_authorized)?->format('Y-m-d');
+                $this->date_theorical_load = optional($this->purchaseOrder->date_theorical_load)?->format('Y-m-d');
+                $this->date_variable_date = optional($this->purchaseOrder->date_variable_date)?->format('Y-m-d');
+                $this->date_carga_po = optional($this->purchaseOrder->date_carga_po)?->format('Y-m-d');
+                $this->date_received = optional($this->purchaseOrder->date_received)?->format('Y-m-d');
+                $this->date_af_in = optional($this->purchaseOrder->date_af_in)?->format('Y-m-d');
+                $this->date_af_out = optional($this->purchaseOrder->date_af_out)?->format('Y-m-d');
+                $this->date_etd_initial               = optional($this->purchaseOrder->date_etd_initial)?->format('Y-m-d');
+                $this->inspection_date                = optional($this->purchaseOrder->inspection_date)?->format('Y-m-d');
+                $this->vgm_cut_date                   = optional($this->purchaseOrder->vgm_cut_date)?->format('Y-m-d');
+                $this->balance_payment_date           = optional($this->purchaseOrder->balance_payment_date)?->format('Y-m-d');
+                $this->local_charges_payment_date     = optional($this->purchaseOrder->local_charges_payment_date)?->format('Y-m-d');
+                $this->bonded_warehouse_enter         = optional($this->purchaseOrder->bonded_warehouse_enter)?->format('Y-m-d');
+                $this->bonded_warehouse_exit          = optional($this->purchaseOrder->bonded_warehouse_exit)?->format('Y-m-d');
+                $this->receipt_note_date              = optional($this->purchaseOrder->receipt_note_date)?->format('Y-m-d');
+                $this->estimated_dc_availability_date = optional($this->purchaseOrder->estimated_dc_availability_date)?->format('Y-m-d');
+
+                $this->logistics_incoterm = $this->purchaseOrder->logistics_incoterm;
+                $this->reason = $this->purchaseOrder->reason;
+                $this->category = $this->purchaseOrder->category;
+                $this->etd_notes = $this->purchaseOrder->etd_notes;
+                $this->forwarder_name = $this->purchaseOrder->forwarder_name;
+                $this->customer_name = $this->purchaseOrder->customer_name;
+                $this->cargo_invoice_number = $this->purchaseOrder->cargo_invoice_number;
+                $this->tariff_type = $this->purchaseOrder->tariff_type;
+                $this->route_label = $this->purchaseOrder->route_label;
+                $this->retail_group     = $this->purchaseOrder->retail_group;
+                $this->customer_type    = $this->purchaseOrder->customer_type;
+                $this->trading_company  = $this->purchaseOrder->trading_company;
+                $this->service_provider = $this->purchaseOrder->service_provider;
+                $this->customs_dua      = $this->purchaseOrder->customs_dua;
+                $this->invoice          = $this->purchaseOrder->invoice;
+                $this->factura_merca    = $this->purchaseOrder->factura_merca;
+                $this->case_number_file = $this->purchaseOrder->case_number_file;
+                $this->receipt_note     = $this->purchaseOrder->receipt_note;
+                $this->visibility_notes = $this->purchaseOrder->visibility_notes;
+
+                $this->departure_port = $this->purchaseOrder->departure_port;
+                $this->arrival_port = $this->purchaseOrder->arrival_port;
+
+                $this->arrival_status = $this->purchaseOrder->arrival_status;
+                $this->delay_days = $this->purchaseOrder->delay_days;
+
+                // Costos
+                $this->po_amount       = (float) $this->purchaseOrder->po_amount;
+                $this->Invoice_amount  = (float) $this->purchaseOrder->Invoice_amount;
+                $this->freight_amount  = (float) $this->purchaseOrder->freight_amount;
+
+                // Métricas / contadores
+                $this->container_free_days  = $this->purchaseOrder->container_free_days;
+                $this->etd_dates_difference = $this->purchaseOrder->etd_dates_difference;
+                $this->eta_dates_difference = $this->purchaseOrder->eta_dates_difference;
+
+                $this->date_etd_updated = optional($this->purchaseOrder->date_etd_updated)?->format('Y-m-d');
+                $this->date_eta_updated = optional($this->purchaseOrder->date_eta_updated)?->format('Y-m-d');
+
+                //Recalcular las fechas
+                $this->computeDateDiffs();
 
                 // Cargar productos
                 $this->orderProducts = [];
@@ -492,20 +658,31 @@ class CreatePucharseOrder extends Component
 
     public function calculateTotals()
     {
-        // Calcular el total neto sumando los subtotales de todos los productos
+        // Neto basado en productos
         $this->net_total = 0;
         foreach ($this->orderProducts as $product) {
             $this->net_total += floatval($product['subtotal']);
         }
 
-        // Calcular el additional_cost como Costo OFR Real + Total Neto
-        $this->additional_cost = floatval($this->cost_ofr_real) + floatval($this->other_expenses);
+        // Costo adicional = OFR real + flete + transportes + nacionalización + otros gastos
+        $this->additional_cost =
+            floatval($this->cost_ofr_real) +
+            floatval($this->freight_amount) +
+            floatval($this->ground_transport_cost_1) +
+            floatval($this->ground_transport_cost_2) +
+            floatval($this->cost_nationalization) +
+            floatval($this->other_expenses);
 
-        // Calcular el total final (neto + adicionales)
-        $this->total = floatval($this->net_total) + floatval($this->additional_cost) + floatval($this->insurance_cost);
+        // Total final
+        $this->total = floatval($this->net_total)
+            + floatval($this->additional_cost)
+            + floatval($this->insurance_cost);
 
-        // Calcular los ahorros
+        // Ahorros (mantiene tu lógica)
         $this->calculateSavings();
+
+        // Diferencias de fechas ETD/ETA (por si cambió algo)
+        $this->computeDateDiffs();
     }
 
     public function updatedAdditionalCost()
@@ -556,7 +733,13 @@ class CreatePucharseOrder extends Component
         // Get company ID for validation
         $companyId = auth()->user()->company_id ?? 1;
 
+        // Normalizaciones previas a guardar
+        $this->computeDateDiffs();
+
         try {
+            //Para validar incoterms
+            $allowedIncoterms = implode(',', array_keys($this->tiposIncotermArray));
+
             // Validación básica
             $this->validate([
                 'order_number' => [
@@ -564,7 +747,9 @@ class CreatePucharseOrder extends Component
                     'unique:purchase_orders,order_number,NULL,id,company_id,' . $companyId
                 ],
                 'currency' => 'required',
-                'incoterms' => 'required',
+                'incoterms' => "required|string|in:$allowedIncoterms",
+                'logistics_incoterm' => "nullable|string|in:$allowedIncoterms",
+                'price_incoterm' => "nullable|string|in:$allowedIncoterms",
                 'vendor_id' => 'required',
                 'ship_to_id' => 'required',
                 'bill_to_id' => 'required',
@@ -576,6 +761,8 @@ class CreatePucharseOrder extends Component
                 'ancho' => 'required|numeric|min:0',
                 'alto' => 'required|numeric|min:0',
                 'material_type' => 'required|array|min:1',
+                'date_invoice_received' => 'nullable|date',
+                'date_vendor_document_received' => 'nullable|date',
             ], [
                 'order_number.required' => 'El número de orden es requerido',
                 'order_number.unique' => 'Este número de orden ya existe. Por favor, use un número diferente.',
@@ -675,6 +862,85 @@ class CreatePucharseOrder extends Component
                     'length_cm' => $this->length_cm,
                     'width_cm' => $this->width_cm,
                     'height_cm' => $this->height_cm,
+
+                    //=== Campos nuevos para OLO ===
+                    'factory_proforma_number' => $this->factory_proforma_number,
+                    'mbl_number' => $this->mbl_number,
+                    'container_type' => $this->container_type,
+                    'container_number' => $this->container_number,
+                    'shipping_line' => $this->shipping_line,
+
+                    'is_dropship'  => (bool) ($this->is_dropship ?? false),
+                    'applies_tlc'  => (bool) ($this->applies_tlc ?? false),
+                    'applies_af'   => (bool) ($this->applies_af ?? false),
+
+                    'date_booking_request' => $this->date_booking_request,
+                    'date_booking_authorized' => $this->date_booking_authorized,
+                    'date_theorical_load' => $this->date_theorical_load,
+                    'date_variable_date' => $this->date_variable_date,
+                    'date_carga_po' => $this->date_carga_po,
+                    'date_received' => $this->date_received,
+                    'date_af_in' => $this->date_af_in,
+                    'date_af_out' => $this->date_af_out,
+
+                    'logistics_incoterm' => $this->logistics_incoterm,
+                    'price_incoterm' => $this->price_incoterm,
+                    'reason' => $this->reason,
+                    'category' => $this->category,
+                    'etd_notes' => $this->etd_notes,
+                    'forwarder_name' => $this->forwarder_name,
+                    'customer_name' => $this->customer_name,
+                    'cargo_invoice_number' => $this->cargo_invoice_number,
+                    'tariff_type' => $this->tariff_type,
+                    'route_label' => $this->route_label,
+
+                    'departure_port' => $this->departure_port,
+                    'arrival_port' => $this->arrival_port,
+
+                    'arrival_status' => $this->arrival_status,
+                    'delay_days' => $this->delay_days,
+
+                    'date_etd_updated' => $this->date_etd_updated,
+                    'date_eta_updated' => $this->date_eta_updated,
+
+                    'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
+                    'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
+                    'used_rate_ok'              => (bool) ($this->used_rate_ok ?? false),
+                    'uses_bonded_warehouse'     => (bool) ($this->uses_bonded_warehouse ?? false),
+                    'apply_technical_note'      => (bool) ($this->apply_technical_note ?? false),
+                    'etd_initial_validated'     => (bool) ($this->etd_initial_validated ?? false),
+
+                    'date_etd_initial'               => $this->date_etd_initial,
+                    'inspection_date'                => $this->inspection_date,
+                    'vgm_cut_date'                   => $this->vgm_cut_date,
+                    'balance_payment_date'           => $this->balance_payment_date,
+                    'local_charges_payment_date'     => $this->local_charges_payment_date,
+                    'bonded_warehouse_enter'         => $this->bonded_warehouse_enter,
+                    'bonded_warehouse_exit'          => $this->bonded_warehouse_exit,
+                    'receipt_note_date'              => $this->receipt_note_date,
+                    'estimated_dc_availability_date' => $this->estimated_dc_availability_date,
+
+                    'retail_group'     => $this->retail_group,
+                    'customer_type'    => $this->customer_type,
+                    'trading_company'  => $this->trading_company,
+                    'service_provider' => $this->service_provider,
+                    'customs_dua'      => $this->customs_dua,
+                    'invoice'          => $this->invoice,
+                    'factura_merca'    => $this->factura_merca,
+                    'case_number_file' => $this->case_number_file,
+                    'receipt_note'     => $this->receipt_note,
+                    'visibility_notes' => $this->visibility_notes,
+
+                    'po_amount'       => $this->po_amount,
+                    'Invoice_amount'  => $this->Invoice_amount,
+                    'freight_amount'  => $this->freight_amount,
+
+                    'container_free_days'   => $this->container_free_days,
+                    'etd_dates_difference'  => $this->etd_dates_difference,
+                    'eta_dates_difference'  => $this->eta_dates_difference,
+                    'date_invoice_received'            => $this->date_invoice_received,
+                    'date_vendor_document_received'    => $this->date_vendor_document_received,
+
                 ];
 
                 // Filtrar valores nulos o vacíos para evitar errores
@@ -823,6 +1089,8 @@ class CreatePucharseOrder extends Component
     }
 
     public function updatePurchaseOrder($id) {
+
+        $this->computeDateDiffs();
             $poData = [
                 'order_number' => $this->order_number,
                 'status' => $this->id ? $this->status : 'draft',
@@ -886,6 +1154,81 @@ class CreatePucharseOrder extends Component
                 'length_cm' => $this->length_cm,
                 'width_cm' => $this->width_cm,
                 'height_cm' => $this->height_cm,
+
+                //=== Campos nuevos para OLO ===
+                'factory_proforma_number' => $this->factory_proforma_number,
+                'mbl_number' => $this->mbl_number,
+                'container_type' => $this->container_type,
+                'container_number' => $this->container_number,
+                'shipping_line' => $this->shipping_line,
+
+                'is_dropship'  => (bool) ($this->is_dropship ?? false),
+                'applies_tlc'  => (bool) ($this->applies_tlc ?? false),
+                'applies_af'   => (bool) ($this->applies_af ?? false),
+
+                'date_booking_request' => $this->date_booking_request,
+                'date_booking_authorized' => $this->date_booking_authorized,
+                'date_theorical_load' => $this->date_theorical_load,
+                'date_variable_date' => $this->date_variable_date,
+                'date_carga_po' => $this->date_carga_po,
+                'date_received' => $this->date_received,
+                'date_af_in' => $this->date_af_in,
+                'date_af_out' => $this->date_af_out,
+
+                'logistics_incoterm' => $this->logistics_incoterm,
+                'price_incoterm' => $this->price_incoterm,
+                'reason' => $this->reason,
+                'category' => $this->category,
+                'etd_notes' => $this->etd_notes,
+                'forwarder_name' => $this->forwarder_name,
+                'customer_name' => $this->customer_name,
+                'cargo_invoice_number' => $this->cargo_invoice_number,
+                'tariff_type' => $this->tariff_type,
+                'route_label' => $this->route_label,
+
+                'departure_port' => $this->departure_port,
+                'arrival_port' => $this->arrival_port,
+
+                'arrival_status' => $this->arrival_status,
+                'delay_days' => $this->delay_days,
+
+                'date_etd_updated' => $this->date_etd_updated,
+                'date_eta_updated' => $this->date_eta_updated,
+
+                'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
+                'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
+                'used_rate_ok'              => (bool) ($this->used_rate_ok ?? false),
+                'uses_bonded_warehouse'     => (bool) ($this->uses_bonded_warehouse ?? false),
+                'apply_technical_note'      => (bool) ($this->apply_technical_note ?? false),
+                'etd_initial_validated'     => (bool) ($this->etd_initial_validated ?? false),
+                'date_etd_initial'             => $this->date_etd_initial,
+                'inspection_date'              => $this->inspection_date,
+                'vgm_cut_date'                 => $this->vgm_cut_date,
+                'balance_payment_date'         => $this->balance_payment_date,
+                'local_charges_payment_date'   => $this->local_charges_payment_date,
+                'bonded_warehouse_enter'       => $this->bonded_warehouse_enter,
+                'bonded_warehouse_exit'        => $this->bonded_warehouse_exit,
+                'receipt_note_date'            => $this->receipt_note_date,
+                'estimated_dc_availability_date'=> $this->estimated_dc_availability_date,
+                'retail_group'                 => $this->retail_group,
+                'customer_type'                => $this->customer_type,
+                'trading_company'              => $this->trading_company,
+                'service_provider'             => $this->service_provider,
+                'customs_dua'                  => $this->customs_dua,
+                'invoice'                      => $this->invoice,
+                'factura_merca'                => $this->factura_merca,
+                'case_number_file'             => $this->case_number_file,
+                'receipt_note'                 => $this->receipt_note,
+                'visibility_notes'             => $this->visibility_notes,
+                'po_amount'                    => $this->po_amount,
+                'Invoice_amount'               => $this->Invoice_amount,
+                'freight_amount'               => $this->freight_amount,
+                'container_free_days'          => $this->container_free_days,
+                'etd_dates_difference'         => $this->etd_dates_difference,
+                'eta_dates_difference'         => $this->eta_dates_difference,
+
+                'date_invoice_received'            => $this->date_invoice_received,
+                'date_vendor_document_received'    => $this->date_vendor_document_received,
             ];
 
             try {
@@ -1026,4 +1369,25 @@ class CreatePucharseOrder extends Component
             $this->cost_ofr_estimated = floatval($this->estimated_pallet_cost) * floatval($this->pallet_quantity_real);
         }
     }
+    public function updatedFreightAmount()         { $this->calculateTotals(); }
+    public function updatedCostNationalization()   { $this->calculateTotals(); }
+    public function updatedOtherCosts()            { $this->calculateTotals(); }
+    protected function computeDateDiffs(): void
+    {
+        // Usamos Carbon para diferencias con signo
+        $etdInitial = $this->date_etd_initial ? \Carbon\Carbon::parse($this->date_etd_initial) : null;
+        $etdUpdated = $this->date_etd_updated ? \Carbon\Carbon::parse($this->date_etd_updated) : null;
+
+        $etaBase    = $this->date_eta ? \Carbon\Carbon::parse($this->date_eta) : null;
+        $etaUpdated = $this->date_eta_updated ? \Carbon\Carbon::parse($this->date_eta_updated) : null;
+
+        $this->etd_dates_difference = ($etdInitial && $etdUpdated)
+            ? $etdInitial->diffInDays($etdUpdated, true) //
+            : null;
+
+        $this->eta_dates_difference = ($etaBase && $etaUpdated)
+            ? $etaBase->diffInDays($etaUpdated, true)
+            : null;
+    }
+
 }

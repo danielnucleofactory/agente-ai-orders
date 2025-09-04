@@ -35,18 +35,29 @@
                                 <x-slot:label>
                                     Material ID
                                 </x-slot:label>
-                                <x-slot:input name="material_id" placeholder="Ingrese ID del material"
-                                    wire:model="material_id">
+                                <x-slot:input
+                                    name="material_id" placeholder="Ingrese ID del material"
+                                    wire:model="material_id"
+                                    class="pr-10 {{ $errors->has('material_id') ? 'border-red-500'  : '' }}">
                                 </x-slot:input>
+                                <x-slot:error>
+                                    {{ $errors->first('material_id') }}
+                                </x-slot:error>
                             </x-form-input>
                         </div>
                         <x-form-input class="grow">
                             <x-slot:label>
                                 Descripción
                             </x-slot:label>
-                            <x-slot:input name="short_text" placeholder="Ingrese short text"
-                                wire:model="short_text">
+                            <x-slot:input
+                                name="short_text"
+                                placeholder="Ingrese short text"
+                                wire:model="short_text"
+                                class="pr-10 {{ $errors->has('short_text') ? 'border-red-500'  : '' }}">
                             </x-slot:input>
+                            <x-slot:error>
+                                {{ $errors->first('short_text') }}
+                            </x-slot:error>
                         </x-form-input>
                     </div>
                 </div>

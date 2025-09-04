@@ -74,31 +74,31 @@
                                     const taskId = evt.item.getAttribute('data-task-id');
                                     const newColumn = evt.to.getAttribute('data-column-id');
 
-                                    console.log(taskId, newColumn);
                                     if (evt.from.getAttribute('data-column-id') !== newColumn) {
-                                        console.log(newColumn);
-
-                                        // Guardar referencia de la tarjeta actual para poder moverla después
+                                        // Guardamos la tarjeta actual para moverla si el usuario confirma
                                         window.kanbanCurrentTask = evt.item;
 
-                                        if(newColumn == 1) {
-                                            $dispatch('open-modal', 'modal-hub-teorico');
+                                        // Abrimos el modal según la etapa (id en BD)
+                                        if (newColumn == 1) {
+                                            $dispatch('open-modal', 'modal-nuevo');
                                         } else if (newColumn == 2) {
-                                            $dispatch('open-modal', 'modal-hub-teorico');
+                                            $dispatch('open-modal', 'modal-produccion');
                                         } else if (newColumn == 3) {
-                                            $dispatch('open-modal', 'modal-validacion-operativa');
+                                            $dispatch('open-modal', 'modal-booking');
                                         } else if (newColumn == 4) {
-                                            $dispatch('open-modal', 'modal-pickup');
-                                        } else if (newColumn == 5) {
                                             $dispatch('open-modal', 'modal-en-transito');
+                                        } else if (newColumn == 5) {
+                                            $dispatch('open-modal', 'modal-puerto');
                                         } else if (newColumn == 6) {
-                                            $dispatch('open-modal', 'modal-llegada-a-hub');
+                                            $dispatch('open-modal', 'modal-alm-fiscal');
                                         } else if (newColumn == 7) {
-                                            $dispatch('open-modal', 'modal-validacion-operativa-cliente');
+                                            $dispatch('open-modal', 'modal-en-otra-zf');
                                         } else if (newColumn == 8) {
-                                            $dispatch('open-modal', 'modal-consolidacion-hub-real');
+                                            $dispatch('open-modal', 'modal-recibiendo-cdi');
                                         } else if (newColumn == 9) {
-                                            $dispatch('open-modal', 'modal-gestion-documental');
+                                            $dispatch('open-modal', 'modal-ingresada');
+                                        } else if (newColumn == 10) {
+                                            $dispatch('open-modal', 'modal-anulada');
                                         }
 
                                         $wire.setCurrentTask(taskId, newColumn);
@@ -126,587 +126,743 @@
         </div>
     </x-modal-success>
 
-    <x-modal name="modal-hub-teorico" maxWidth="lg">
-        <h3 class="mb-2 text-lg font-bold text-center text-light-blue">
-            ¿Cambiar la Orden de compra de etapa?
-        </h3>
+        {{-- 1) NUEVO (id: 1) --}}
+        <x-modal name="modal-nuevo" maxWidth="lg">
+            <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
 
-        @if ($currentTask)
-            <div class="mb-5 text-center">
-                <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
+            @if ($currentTask)
+                <div class="mb-5 text-center">
+                    <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
+                </div>
+            @endif
+
+            <div class="mb-8">
+                <x-form-select label="" name="etapa"
+                               :options="collect($columns)->pluck('name','id')->toArray()"
+                               optionPlaceholder="Seleccionar etapa"
+                               :value="$newColumnId" wire:model.live="newColumnId"
+                               x-on:change="moveTaskToColumn($event.target.value)" />
             </div>
-        @endif
 
-        <div class="mb-8">
-            <x-form-select label="" name="etapa" :options="collect($columns)->pluck('name', 'id')->toArray()" optionPlaceholder="Seleccionar etapa"
-                :value="$newColumnId" wire:model.live="newColumnId"
-                x-on:change="moveTaskToColumn($event.target.value)" />
-        </div>
+            <div class="mb-8">
+                <x-form-textarea label="" name="comment_stage_01" wireModel="comment" placeholder="Comentarios" />
+            </div>
 
-        <div class="mb-8">
-            <x-form-select label="HUB Planificado" name="actual_hub_id" wireModel="actual_hub_id" :options="$hubArray" />
-        </div>
+            <div class="mb-12 space-y-2">
+                <input type="file" wire:model="attachment" class="hidden" x-ref="fileInput" id="file-upload-nuevo">
+                <x-secondary-button onclick="document.getElementById('file-upload-nuevo').click()" class="group flex w-full items-center justify-center gap-[0.625rem]">
+                    @svg('heroicon-o-paper-clip', 'w-5 h-5')
+                    <span>Adjuntar documentación...</span>
+                </x-secondary-button>
+                @if($attachment)
+                    <div class="text-sm text-gray-600">Archivo seleccionado: {{ $attachment->getClientOriginalName() }}</div>
+                @endif
+                <div class="flex flex-col text-sm text-[#A5A3A3]">
+                    <span>Tipo de formato .xls .xlsx .pdf</span><span>Tamaño máximo 5MB</span>
+                </div>
+            </div>
 
-        <div class="mb-8">
-            <x-form-textarea label="" name="comment_stage_01" wireModel="comment" placeholder="Comentarios" />
-        </div>
+            <div class="flex gap-[1.875rem]">
+                <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-nuevo')" class="w-full">Cancelar</x-secondary-button>
+                <x-primary-button wire:click="saveAndMove" class="w-full">Continuar</x-primary-button>
+            </div>
+        </x-modal>
 
-        <div class="mb-12 space-y-2">
-            <div class="space-y-4">
-                <div class="flex flex-col gap-4 items-start">
-                    <input
-                        type="file"
-                        wire:model="attachment"
-                        class="hidden"
-                        x-ref="fileInput"
-                        id="file-upload-hub-teorico">
-                    <x-secondary-button
-                        onclick="document.getElementById('file-upload-hub-teorico').click()"
-                        class="group flex w-full items-center justify-center gap-[0.625rem]">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="21" height="22" viewBox="0 0 21 22"
-                            fill="none">
-                            <path
-                                d="M19.1525 9.89897L10.1369 18.9146C8.08662 20.9648 4.7625 20.9648 2.71225 18.9146C0.661997 16.8643 0.661998 13.5402 2.71225 11.49L11.7279 2.47435C13.0947 1.10751 15.3108 1.10751 16.6776 2.47434C18.0444 3.84118 18.0444 6.05726 16.6776 7.42409L8.01555 16.0862C7.33213 16.7696 6.22409 16.7696 5.54068 16.0862C4.85726 15.4027 4.85726 14.2947 5.54068 13.6113L13.1421 6.00988"
-                                stroke="#565AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
-                        </svg>
+        {{-- 2) PRODUCCIÓN (id: 2) --}}
+        <x-modal name="modal-produccion" maxWidth="lg">
+            <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
+            @if ($currentTask)
+                <div class="mb-5 text-center">
+                    <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
+                </div>
+            @endif
 
-                        <span>Adjuntar documentación...</span>
-                    </x-secondary-button>
+            <div class="mb-8">
+                <x-form-select label="" name="etapa"
+                               :options="collect($columns)->pluck('name','id')->toArray()"
+                               optionPlaceholder="Seleccionar etapa"
+                               :value="$newColumnId" wire:model.live="newColumnId"
+                               x-on:change="moveTaskToColumn($event.target.value)" />
+            </div>
 
-                    @if($attachment)
-                        <div class="text-sm text-gray-600">
-                            Archivo seleccionado: {{ $attachment->getClientOriginalName() }}
+            <div class="mb-8">
+                <x-form-input>
+                    <x-slot:label>Carga Lista Variable</x-slot:label>
+                    <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500'  : '' }}">
+                    </x-slot:input>
+                    <x-slot:error>
+                        {{ $errors->first('date_variable_date') }}
+                    </x-slot:error></x-form-input>
+            </div>
+            <div class="mb-8">
+                <x-form-input>
+                    <x-slot:label>Carga Lista Teórica</x-slot:label>
+                    <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load"></x-slot:input>
+                </x-form-input>
+            </div>
+            <div class="mb-8">
+                <x-form-input>
+                    <x-slot:label>Proveedor de Servicio</x-slot:label>
+                    <x-slot:input type="text" wire:model.live="service_provider" class="pr-10 {{ $errors->has('service_provider') ? 'border-red-500'  : '' }}">
+                    </x-slot:input>
+                    <x-slot:error>
+                        {{ $errors->first('service_provider') }}
+                    </x-slot:error>
+                </x-form-input>
+            </div>
+            <div class="mb-8">
+                <x-form-input>
+                    <x-slot:label>Agente de Carga</x-slot:label>
+                    <x-slot:input type="text" name="forwarder_name" wire:model="forwarder_name" class="pr-10 {{ $errors->has('service_provider') ? 'border-red-500'  : '' }}">
+                    </x-slot:input>
+                    <x-slot:error>
+                        {{ $errors->first('service_provider') }}
+                    </x-slot:error>
+                </x-form-input>
+            </div>
+
+            <div class="mb-8">
+                <x-form-textarea label="" name="comment_stage_02" wireModel="comment" placeholder="Comentarios" />
+            </div>
+
+            <div class="mb-12 space-y-2">
+                <input type="file" wire:model="attachment" class="hidden" id="file-upload-produccion">
+                <x-secondary-button onclick="document.getElementById('file-upload-produccion').click()" class="group flex w-full items-center justify-center gap-[0.625rem]">
+                    @svg('heroicon-o-paper-clip', 'w-5 h-5') <span>Adjuntar documentación...</span>
+                </x-secondary-button>
+                @if($attachment)
+                    <div class="text-sm text-gray-600">Archivo seleccionado: {{ $attachment->getClientOriginalName() }}</div>
+                @endif
+                <div class="flex flex-col text-sm text-[#A5A3A3]">
+                    <span>Tipo de formato .xls .xlsx .pdf</span><span>Tamaño máximo 5MB</span>
+                </div>
+            </div>
+
+            <div class="flex gap-[1.875rem]">
+                <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-produccion')" class="w-full">Cancelar</x-secondary-button>
+                <x-primary-button wire:click="saveAndMove" class="w-full">Continuar</x-primary-button>
+            </div>
+        </x-modal>
+
+        {{-- 3) BOOKING (id: 3) --}}
+        <x-modal name="modal-booking" maxWidth="lg">
+            <div class="space-y-4 sm:space-y-6">
+                <h3 class="text-center text-lg font-bold text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
+
+                @if ($currentTask)
+                    <div class="text-center">
+                        <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
+                    </div>
+                @endif
+
+                <!-- Contenedor scrollable suave dentro del modal -->
+                <div class="max-h-[70vh] overflow-y-auto px-1 sm:px-0">
+                    <!-- Etapa -->
+                    <div class="mb-6">
+                        <x-form-select
+                            label=""
+                            name="etapa"
+                            :options="collect($columns)->pluck('name','id')->toArray()"
+                            optionPlaceholder="Seleccionar etapa"
+                            :value="$newColumnId"
+                            wire:model.live="newColumnId"
+                            x-on:change="moveTaskToColumn($event.target.value)" />
+                    </div>
+
+                    <!-- Grid principal -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        <!-- Solicitud de Booking -->
+                        <div>
+                            <x-form-input>
+                                <x-slot:label>Solicitud de Booking</x-slot:label>
+                                <x-slot:input
+                                    type="date"
+                                    name="date_booking_request"
+                                    wire:model="date_booking_request"
+                                    class="w-full pr-10 {{ $errors->has('date_booking_request') ? 'border-red-500'  : '' }}">
+                                </x-slot:input>
+                                <x-slot:error>
+                                    {{ $errors->first('date_booking_request') }}
+                                </x-slot:error>
+                            </x-form-input>
                         </div>
-                    @endif
 
-                    <div class="flex flex-col text-sm text-[#A5A3A3]">
-                        <span>Tipo de formato .xls .xlsx .pdf</span>
-                        <span>Tamaño máximo 5MB</span>
+                        <!-- Autorizacion de Booking -->
+                        <div>
+                            <x-form-input>
+                                <x-slot:label>Autorización de Booking</x-slot:label>
+                                <x-slot:input
+                                    type="date"
+                                    name="date_booking_authorized"
+                                    wire:model="date_booking_authorized"
+                                    class="w-full pr-10 {{ $errors->has('date_booking_authorized') ? 'border-red-500'  : '' }}">
+                                </x-slot:input>
+                                <x-slot:error>
+                                    {{ $errors->first('date_booking_authorized') }}
+                                </x-slot:error>
+                            </x-form-input>
+                        </div>
+
+                        <!-- ETD Inicial -->
+                        <div>
+                            <x-form-input>
+                                <x-slot:label>ETD Inicial</x-slot:label>
+                                <x-slot:input
+                                    type="date"
+                                    wire:model.live="date_etd_initial"
+                                    class="w-full pr-10 {{ $errors->has('date_etd_initial') ? 'border-red-500'  : '' }}">
+                                </x-slot:input>
+                                <x-slot:error>
+                                    {{ $errors->first('date_etd_initial') }}
+                                </x-slot:error>
+                            </x-form-input>
+                        </div>
+
+                        <!-- ETD Variable -->
+                        <div>
+                            <x-form-input>
+                                <x-slot:label>ETD Variable</x-slot:label>
+                                <x-slot:input
+                                    type="date"
+                                    name="date_etd_updated"
+                                    wire:model="date_etd_updated"
+                                    class="w-full pr-10 {{ $errors->has('date_etd_updated') ? 'border-red-500'  : '' }}">
+                                </x-slot:input>
+                                <x-slot:error>
+                                    {{ $errors->first('date_etd_updated') }}
+                                </x-slot:error>
+                            </x-form-input>
+                        </div>
+
+                        <!-- Tipo de Contenedor -->
+                        <div>
+                            <x-form-input>
+                                <x-slot:label>Tipo de Contenedor</x-slot:label>
+                                <x-slot:input
+                                    name="container_type"
+                                    wire:model="container_type"
+                                    class="w-full"
+                                    placeholder="Tipo de contenedor">
+                                </x-slot:input>
+                            </x-form-input>
+                        </div>
+
+                        <!-- Modo de transporte -->
+                        <div>
+                            <x-form-select
+                                label="Modo de transporte"
+                                name="mode"
+                                wire:model.live="mode"
+                                :options="['maritimo' => 'Marítimo', 'aereo' => 'Aéreo']" />
+                        </div>
+
+                        <!-- Comentarios (a lo ancho) -->
+                        <div class="sm:col-span-2">
+                            <x-form-textarea
+                                label=""
+                                name="comment_stage_03"
+                                wireModel="comment"
+                                class="w-full"
+                                placeholder="Comentarios" />
+                        </div>
+
+                        <!-- Adjuntos (a lo ancho) -->
+                        <div class="sm:col-span-2">
+                            <div class="rounded-lg border border-gray-200 p-4 space-y-3">
+                                <input type="file" wire:model="attachment" class="hidden" id="file-upload-booking">
+                                <x-secondary-button
+                                    onclick="document.getElementById('file-upload-booking').click()"
+                                    class="group flex w-full items-center justify-center gap-2">
+                                    @svg('heroicon-o-paper-clip', 'w-5 h-5')
+                                    <span>Adjuntar documentación...</span>
+                                </x-secondary-button>
+
+                                @if($attachment)
+                                    <div class="text-sm text-gray-700 dark:text-gray-300">
+                                        Archivo seleccionado: {{ $attachment->getClientOriginalName() }}
+                                    </div>
+                                @endif
+
+                                <div class="text-xs sm:text-sm text-[#A5A3A3]">
+                                    <span>Formatos aceptados: .xls .xlsx .pdf</span>
+                                    <span class="mx-1">•</span>
+                                    <span>Tamaño máximo 5MB</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Acciones -->
+                    <div class="mt-6 flex flex-col-reverse sm:flex-row gap-3 sm:gap-4">
+                        <x-secondary-button
+                            x-on:click="$dispatch('close-modal', 'modal-booking')"
+                            class="w-full sm:w-auto sm:flex-1">
+                            Cancelar
+                        </x-secondary-button>
+
+                        <x-primary-button
+                            wire:click="saveAndMove"
+                            class="w-full sm:w-auto sm:flex-1">
+                            Continuar
+                        </x-primary-button>
                     </div>
                 </div>
-
-                @error('attachment')
-                    <span class="text-sm text-red-600">{{ $message }}</span>
-                @enderror
             </div>
-        </div>
+        </x-modal>
 
-        <div class="flex gap-[1.875rem]">
-            <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-hub-teorico')" class="w-full">
-                Cancelar
-            </x-secondary-button>
-
-            <x-primary-button
-                x-on:click="
-                    $wire.setComments($wire.currentTaskId, document.querySelector('textarea[name=comment_stage_01]').value);
-                    $wire.setActualHubId($wire.currentTaskId, document.querySelector('select[name=etapa]').value);
-                    $wire.moveTask($wire.currentTaskId, document.querySelector('select[name=etapa]').value);
-                    $dispatch('close-modal', 'modal-hub-teorico')"
-                class="w-full">
-                Continuar
-            </x-primary-button>
-        </div>
-    </x-modal>
-
-    <x-modal name="modal-validacion-operativa" maxWidth="lg">
-        <h3 class="mb-2 text-lg font-bold text-center text-light-blue">
-            ¿Cambiar la Orden de compra de etapa?
-        </h3>
-
-        @if ($currentTask)
-            <div class="mb-5 text-center">
-                <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
-            </div>
-        @endif
-
-        <div class="mb-8">
-            <x-form-select label="" name="etapa" :options="collect($columns)->pluck('name', 'id')->toArray()" optionPlaceholder="Seleccionar etapa"
-                :value="$newColumnId" wire:model.live="newColumnId"
-                x-on:change="moveTaskToColumn($event.target.value)" />
-        </div>
-
-        <div class="mb-8">
-            <x-form-textarea label="" name="comment_stage_02" wireModel="comment" placeholder="Comentarios" />
-        </div>
-
-        <div class="mb-12 space-y-2">
-            <input
-                type="file"
-                wire:model="attachment"
-                class="hidden"
-                x-ref="fileInput"
-                id="file-upload-validacion-operativa">
-            <x-secondary-button
-                onclick="document.getElementById('file-upload-validacion-operativa').click()"
-                class="group flex w-full items-center justify-center gap-[0.625rem]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="22" viewBox="0 0 21 22"
-                    fill="none">
-                    <path
-                        d="M19.1525 9.89897L10.1369 18.9146C8.08662 20.9648 4.7625 20.9648 2.71225 18.9146C0.661997 16.8643 0.661998 13.5402 2.71225 11.49L11.7279 2.47435C13.0947 1.10751 15.3108 1.10751 16.6776 2.47434C18.0444 3.84118 18.0444 6.05726 16.6776 7.42409L8.01555 16.0862C7.33213 16.7696 6.22409 16.7696 5.54068 16.0862C4.85726 15.4027 4.85726 14.2947 5.54068 13.6113L13.1421 6.00988"
-                        stroke="#565AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
-                </svg>
-
-                <span>Adjuntar documentación...</span>
-            </x-secondary-button>
-
-            @if($attachment)
-                <div class="text-sm text-gray-600">
-                    Archivo seleccionado: {{ $attachment->getClientOriginalName() }}
+        {{-- 4) EN TRÁNSITO (id: 4) --}}
+        <x-modal name="modal-en-transito" maxWidth="lg">
+            <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
+            @if ($currentTask)
+                <div class="mb-5 text-center">
+                    <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
                 </div>
             @endif
 
-            <div class="flex flex-col text-sm text-[#A5A3A3]">
-                <span>Tipo de formato .xls .xlsx .pdf</span>
-                <span>Tamaño máximo 5MB</span>
+            <div class="mb-8">
+                <x-form-select label="" name="etapa"
+                               :options="collect($columns)->pluck('name','id')->toArray()"
+                               optionPlaceholder="Seleccionar etapa"
+                               :value="$newColumnId" wire:model.live="newColumnId"
+                               x-on:change="moveTaskToColumn($event.target.value)" />
             </div>
-        </div>
 
-        <div class="flex gap-[1.875rem]">
-            <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-validacion-operativa')" class="w-full">
-                Cancelar
-            </x-secondary-button>
+            {{-- Fechas tránsito --}}
+            <div class="mb-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-6">
+                    <div>
+                        <x-form-input>
+                            <x-slot:label>ETD Real (ATD)</x-slot:label>
+                            <x-slot:input type="date" name="date_atd" wire:model="date_atd"
+                                          class="pr-10 {{ $errors->has('date_atd') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('date_atd') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
-            <x-primary-button
-                x-on:click="
-                    $wire.setComments($wire.currentTaskId, document.querySelector('textarea[name=comment_stage_02]').value);
-                    $wire.moveTask($wire.currentTaskId, 3);
-                    $dispatch('close-modal', 'modal-validacion-operativa')"
-                class="w-full">
-                Continuar
-            </x-primary-button>
-        </div>
-    </x-modal>
+                    <div>
+                        <x-form-input>
+                            <x-slot:label>ETA Inicial</x-slot:label>
+                            <x-slot:input type="date" name="date_eta" wire:model="date_eta"
+                                          class="pr-10 {{ $errors->has('date_eta') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('date_eta') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
-    <x-modal name="modal-pickup" maxWidth="lg">
-        <h3 class="mb-2 text-lg font-bold text-center text-light-blue">
-            ¿Cambiar la Orden de compra de etapa?
-        </h3>
-
-        @if ($currentTask)
-            <div class="mb-5 text-center">
-                <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
+                    <div>
+                        <x-form-input>
+                            <x-slot:label>ETA Variable</x-slot:label>
+                            <x-slot:input type="date" name="date_eta_updated" wire:model="date_eta_updated"
+                                          class="pr-10 {{ $errors->has('date_eta_updated') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('date_eta_updated') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
+                </div>
             </div>
-        @endif
 
-        <div class="mb-8">
-            <x-form-select label="" name="etapa" :options="collect($columns)->pluck('name', 'id')->toArray()" optionPlaceholder="Seleccionar etapa"
-                :value="$newColumnId" wire:model.live="newColumnId"
-                x-on:change="moveTaskToColumn($event.target.value)" />
-        </div>
+            {{-- Equipo / BL / Naviera + nuevos campos --}}
+            <div class="mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-6">
+                    {{-- Número de Contenedor - requerido --}}
+                    <div>
+                        <x-form-input>
+                            <x-slot:label>Número de Contenedor</x-slot:label>
+                            <x-slot:input name="container_number" wire:model="container_number"
+                                          class="pr-10 {{ $errors->has('container_number') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('container_number') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
-        <div class="mb-8">
-            <x-form-input>
-                <x-slot:label>
-                    Ingrese fecha de pick up
-                </x-slot:label>
+                    {{-- BL - requerido --}}
+                    <div>
+                        <x-form-input>
+                            <x-slot:label>BL</x-slot:label>
+                            <x-slot:input name="bill_of_lading" wire:model="bill_of_lading" placeholder="Ingrese BL"
+                                          class="pr-10 {{ $errors->has('bill_of_lading') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('bill_of_lading') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
-                <x-slot:input name="pickup_date" type="date" placeholder="Ingrese fecha de pickup" wire:model="pickup_date" class="pr-10"></x-slot:input>
-            </x-form-input>
-        </div>
+                    {{-- Monto - requerido --}}
+                    <div>
+                        <x-form-input>
+                            <x-slot:label>Monto</x-slot:label>
+                            <x-slot:input type="number" step="0.01" inputmode="decimal" name="shipment_amount" wire:model="shipment_amount"
+                                          class="pr-10 {{ $errors->has('shipment_amount') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('shipment_amount') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
-        <div class="mb-8">
-            <x-form-textarea label="" name="comment_stage_03" wireModel="comment" placeholder="Comentarios" />
-        </div>
+                    {{-- Naviera - requerido --}}
+                    <div>
+                        <x-form-input>
+                            <x-slot:label>Línea Naviera</x-slot:label>
+                            <x-slot:input name="shipping_line" wire:model="shipping_line"
+                                          class="pr-10 {{ $errors->has('shipping_line') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('shipping_line') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
-        <div class="mb-12 space-y-2">
-            <input
-                type="file"
-                wire:model="attachment"
-                class="hidden"
-                x-ref="fileInput"
-                id="file-upload-pickup">
-            <x-secondary-button
-                onclick="document.getElementById('file-upload-pickup').click()"
-                class="group flex w-full items-center justify-center gap-[0.625rem]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="22" viewBox="0 0 21 22"
-                    fill="none">
-                    <path
-                        d="M19.1525 9.89897L10.1369 18.9146C8.08662 20.9648 4.7625 20.9648 2.71225 18.9146C0.661997 16.8643 0.661998 13.5402 2.71225 11.49L11.7279 2.47435C13.0947 1.10751 15.3108 1.10751 16.6776 2.47434C18.0444 3.84118 18.0444 6.05726 16.6776 7.42409L8.01555 16.0862C7.33213 16.7696 6.22409 16.7696 5.54068 16.0862C4.85726 15.4027 4.85726 14.2947 5.54068 13.6113L13.1421 6.00988"
-                        stroke="#565AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
-                </svg>
+                    {{-- Estado - requerido --}}
+                    <div>
+                        <x-form-input>
+                            <x-slot:label>Estado</x-slot:label>
+                            <x-slot:input name="shipment_status" wire:model="shipment_status"
+                                          class="pr-10 {{ $errors->has('shipment_status') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('shipment_status') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
-                <span>Adjuntar documentación...</span>
-            </x-secondary-button>
+                    {{-- Factura de mercancía (N°) - requerido --}}
+                    <div>
+                        <x-form-input>
+                            <x-slot:label>Factura de Mercancía</x-slot:label>
+                            <x-slot:input name="merchandise_invoice" wire:model="merchandise_invoice"
+                                          class="pr-10 {{ $errors->has('merchandise_invoice') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('merchandise_invoice') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
+                </div>
+            </div>
 
-            @if($attachment)
-                <div class="text-sm text-gray-600">
-                    Archivo seleccionado: {{ $attachment->getClientOriginalName() }}
+            {{-- Tracking y Puertos --}}
+            <div class="mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-6">
+                    <div class="md:col-span-2">
+                        <x-form-input>
+                            <x-slot:label>Tracking ID</x-slot:label>
+                            <x-slot:input name="tracking_id" wire:model="tracking_id"
+                                          class="pr-10 {{ $errors->has('tracking_id') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('tracking_id') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
+
+                    <div>
+                        <x-form-input>
+                            <x-slot:label>Puerto de Embarque</x-slot:label>
+                            <x-slot:input name="departure_port" wire:model="departure_port"
+                                          class="pr-10 {{ $errors->has('departure_port') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('departure_port') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
+
+                    <div>
+                        <x-form-input>
+                            <x-slot:label>Puerto de Arribo</x-slot:label>
+                            <x-slot:input name="arrival_port" wire:model="arrival_port"
+                                          class="pr-10 {{ $errors->has('arrival_port') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('arrival_port') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <x-form-textarea label="" name="comment_stage_04" wireModel="comment" placeholder="Comentarios" />
+            </div>
+
+            <div class="mb-12 space-y-2">
+                <input type="file" wire:model="attachment" class="hidden" id="file-upload-en-transito">
+                <x-secondary-button onclick="document.getElementById('file-upload-en-transito').click()" class="group flex w-full items-center justify-center gap-[0.625rem]">
+                    @svg('heroicon-o-paper-clip', 'w-5 h-5') <span>Adjuntar documentación...</span>
+                </x-secondary-button>
+                @if($attachment)
+                    <div class="text-sm text-gray-600">Archivo seleccionado: {{ $attachment->getClientOriginalName() }}</div>
+                @endif
+                <div class="flex flex-col text-sm text-[#A5A3A3]">
+                    <span>Tipo de formato .xls .xlsx .pdf</span><span>Tamaño máximo 5MB</span>
+                </div>
+            </div>
+
+            <div class="flex gap-[1.875rem]">
+                <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-en-transito')" class="w-full">Cancelar</x-secondary-button>
+                <x-primary-button wire:click="saveAndMove" class="w-full">Continuar</x-primary-button>
+            </div>
+        </x-modal>
+
+        {{-- 5) PUERTO (id: 5) --}}
+        <x-modal name="modal-puerto" maxWidth="lg">
+            <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
+            @if ($currentTask)
+                <div class="mb-5 text-center">
+                    <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
                 </div>
             @endif
 
-            <div class="flex flex-col text-sm text-[#A5A3A3]">
-                <span>Tipo de formato .xls .xlsx .pdf</span>
-                <span>Tamaño máximo 5MB</span>
+            <div class="mb-8">
+                <x-form-select label="" name="etapa"
+                               :options="collect($columns)->pluck('name','id')->toArray()"
+                               optionPlaceholder="Seleccionar etapa"
+                               :value="$newColumnId" wire:model.live="newColumnId"
+                               x-on:change="moveTaskToColumn($event.target.value)" />
             </div>
-        </div>
 
-        <div class="flex gap-[1.875rem]">
-            <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-pickup')" class="w-full">
-                Cancelar
-            </x-secondary-button>
-
-            <x-primary-button
-                x-on:click="
-                    $wire.setComments($wire.currentTaskId, document.querySelector('textarea[name=comment_stage_03]').value);
-                    $wire.moveTask($wire.currentTaskId, 4);
-                    $wire.setPickupDate($wire.currentTaskId, document.querySelector('input[name=pickup_date]').value);
-                    $dispatch('close-modal', 'modal-pickup')"
-                class="w-full">
-                Continuar
-            </x-primary-button>
-        </div>
-    </x-modal>
-
-    <x-modal name="modal-en-transito" maxWidth="lg">
-        <h3 class="mb-2 text-lg font-bold text-center text-light-blue">
-            ¿Cambiar la Orden de compra de etapa?
-        </h3>
-
-        @if ($currentTask)
-            <div class="mb-5 text-center">
-                <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
+            <div class="mb-8">
+                <x-form-input>
+                    <x-slot:label>ETA Real (ATA)</x-slot:label>
+                    <x-slot:input type="date" name="date_ata" wire:model="date_ata"
+                                  class="pr-10 {{ $errors->has('date_ata') ? 'border-red-500' : '' }}"></x-slot:input>
+                    <x-slot:error>{{ $errors->first('date_ata') }}</x-slot:error>
+                </x-form-input>
             </div>
-        @endif
 
-        <div class="mb-8">
-            <x-form-select label="" name="etapa" :options="collect($columns)->pluck('name', 'id')->toArray()" optionPlaceholder="Seleccionar etapa"
-                :value="$newColumnId" wire:model.live="newColumnId"
-                x-on:change="moveTaskToColumn($event.target.value)" />
-        </div>
+            <div class="mb-8">
+                <x-form-textarea label="" name="comment_stage_05" wireModel="comment" placeholder="Comentarios" />
+            </div>
 
-        <div class="mb-8">
-            <x-form-input>
-                <x-slot:label>
-                    Ingrese ID Tracking
-                </x-slot:label>
+            <div class="mb-12 space-y-2">
+                <input type="file" wire:model="attachment" class="hidden" id="file-upload-puerto">
+                <x-secondary-button onclick="document.getElementById('file-upload-puerto').click()" class="group flex w-full items-center justify-center gap-[0.625rem]">
+                    @svg('heroicon-o-paper-clip', 'w-5 h-5') <span>Adjuntar documentación...</span>
+                </x-secondary-button>
+                @if($attachment)
+                    <div class="text-sm text-gray-600">Archivo seleccionado: {{ $attachment->getClientOriginalName() }}</div>
+                @endif
+                <div class="flex flex-col text-sm text-[#A5A3A3]">
+                    <span>Tipo de formato .xls .xlsx .pdf</span><span>Tamaño máximo 5MB</span>
+                </div>
+            </div>
 
-                <x-slot:input name="tracking_id" type="text" placeholder="Ingrese ID Tracking" wire:model="tracking_id" class="pr-10"></x-slot:input>
-            </x-form-input>
-        </div>
+            <div class="flex gap-[1.875rem]">
+                <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-puerto')" class="w-full">Cancelar</x-secondary-button>
+                <x-primary-button wire:click="saveAndMove" class="w-full">Continuar</x-primary-button>
+            </div>
+        </x-modal>
 
-        <div class="mb-8">
-            <x-form-textarea label="" name="comment_stage_04" wireModel="comment" placeholder="Comentarios" />
-        </div>
-
-        <div class="mb-12 space-y-2">
-            <input
-                type="file"
-                wire:model="attachment"
-                class="hidden"
-                x-ref="fileInput"
-                id="file-upload-en-transito">
-            <x-secondary-button
-                onclick="document.getElementById('file-upload-en-transito').click()"
-                class="group flex w-full items-center justify-center gap-[0.625rem]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="22" viewBox="0 0 21 22"
-                    fill="none">
-                    <path
-                        d="M19.1525 9.89897L10.1369 18.9146C8.08662 20.9648 4.7625 20.9648 2.71225 18.9146C0.661997 16.8643 0.661998 13.5402 2.71225 11.49L11.7279 2.47435C13.0947 1.10751 15.3108 1.10751 16.6776 2.47434C18.0444 3.84118 18.0444 6.05726 16.6776 7.42409L8.01555 16.0862C7.33213 16.7696 6.22409 16.7696 5.54068 16.0862C4.85726 15.4027 4.85726 14.2947 5.54068 13.6113L13.1421 6.00988"
-                        stroke="#565AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
-                </svg>
-
-                <span>Adjuntar documentación...</span>
-            </x-secondary-button>
-
-            @if($attachment)
-                <div class="text-sm text-gray-600">
-                    Archivo seleccionado: {{ $attachment->getClientOriginalName() }}
+        {{-- 6) ALM FISCAL (id: 6) --}}
+        <x-modal name="modal-alm-fiscal" maxWidth="lg">
+            <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
+            @if ($currentTask)
+                <div class="mb-5 text-center">
+                    <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
                 </div>
             @endif
 
-            <div class="flex flex-col text-sm text-[#A5A3A3]">
-                <span>Tipo de formato .xls .xlsx .pdf</span>
-                <span>Tamaño máximo 5MB</span>
+            <div class="mb-8">
+                <x-form-select label="" name="etapa"
+                               :options="collect($columns)->pluck('name','id')->toArray()"
+                               optionPlaceholder="Seleccionar etapa"
+                               :value="$newColumnId" wire:model.live="newColumnId"
+                               x-on:change="moveTaskToColumn($event.target.value)" />
             </div>
-        </div>
 
-        <div class="flex gap-[1.875rem]">
-            <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-pickup')" class="w-full">
-                Cancelar
-            </x-secondary-button>
-
-            <x-primary-button
-                x-on:click="
-                    $wire.setComments($wire.currentTaskId, document.querySelector('textarea[name=comment_stage_04]').value);
-                    $wire.setTrackingId($wire.currentTaskId, document.querySelector('input[name=tracking_id]').value);
-                    $wire.moveTask($wire.currentTaskId, 5);
-                    $dispatch('close-modal', 'modal-en-transito')"
-                class="w-full">
-                Continuar
-            </x-primary-button>
-        </div>
-    </x-modal>
-
-    <x-modal name="modal-llegada-a-hub" maxWidth="lg">
-        <h3 class="mb-2 text-lg font-bold text-center text-light-blue">
-            ¿Cambiar la Orden de compra de etapa?
-        </h3>
-
-        @if ($currentTask)
-            <div class="mb-5 text-center">
-                <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
+            <div class="mb-8">
+                <x-form-input>
+                    <x-slot:label>Ingreso Almacén Fiscal</x-slot:label>
+                    <x-slot:input type="date" name="bonded_warehouse_enter" wire:model.live="bonded_warehouse_enter"
+                                  class="pr-10 {{ $errors->has('bonded_warehouse_enter') ? 'border-red-500' : '' }}"></x-slot:input>
+                    <x-slot:error>{{ $errors->first('bonded_warehouse_enter') }}</x-slot:error>
+                </x-form-input>
             </div>
-        @endif
 
-        <div class="mb-8">
-            <x-form-select label="" name="etapa" :options="collect($columns)->pluck('name', 'id')->toArray()" optionPlaceholder="Seleccionar etapa"
-                :value="$newColumnId" wire:model.live="newColumnId"
-                x-on:change="moveTaskToColumn($event.target.value)" />
-        </div>
+            <div class="mb-8">
+                <x-form-input>
+                    <x-slot:label>Salida Almacén Fiscal</x-slot:label>
+                    <x-slot:input type="date" name="bonded_warehouse_exit" wire:model.live="bonded_warehouse_exit"
+                                  class="pr-10 {{ $errors->has('bonded_warehouse_exit') ? 'border-red-500' : '' }}"></x-slot:input>
+                    <x-slot:error>{{ $errors->first('bonded_warehouse_exit') }}</x-slot:error>
+                </x-form-input>
+            </div>
 
-        <div class="mb-8">
-            <x-form-textarea label="" name="comment_stage_05" wireModel="comment" placeholder="Comentarios" />
-        </div>
+            <div class="mb-8">
+                <x-form-input>
+                    <x-slot:label>ETA Real (ATA)</x-slot:label>
+                    <x-slot:input type="date" name="date_ata" wire:model="date_ata"
+                                  class="pr-10 {{ $errors->has('date_ata') ? 'border-red-500' : '' }}"></x-slot:input>
+                    <x-slot:error>{{ $errors->first('date_ata') }}</x-slot:error>
+                </x-form-input>
+            </div>
 
-        <div class="mb-12 space-y-2">
-            <input
-                type="file"
-                wire:model="attachment"
-                class="hidden"
-                x-ref="fileInput"
-                id="file-upload-llegada-a-hub">
-            <x-secondary-button
-                onclick="document.getElementById('file-upload-llegada-a-hub').click()"
-                class="group flex w-full items-center justify-center gap-[0.625rem]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="22" viewBox="0 0 21 22"
-                    fill="none">
-                    <path
-                        d="M19.1525 9.89897L10.1369 18.9146C8.08662 20.9648 4.7625 20.9648 2.71225 18.9146C0.661997 16.8643 0.661998 13.5402 2.71225 11.49L11.7279 2.47435C13.0947 1.10751 15.3108 1.10751 16.6776 2.47434C18.0444 3.84118 18.0444 6.05726 16.6776 7.42409L8.01555 16.0862C7.33213 16.7696 6.22409 16.7696 5.54068 16.0862C4.85726 15.4027 4.85726 14.2947 5.54068 13.6113L13.1421 6.00988"
-                        stroke="#565AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
-                </svg>
+            <div class="mb-8">
+                <x-form-textarea label="" name="comment_stage_06" wireModel="comment" placeholder="Comentarios" />
+            </div>
 
-                <span>Adjuntar documentación...</span>
-            </x-secondary-button>
+            <div class="mb-12 space-y-2">
+                <input type="file" wire:model="attachment" class="hidden" id="file-upload-alm-fiscal">
+                <x-secondary-button onclick="document.getElementById('file-upload-alm-fiscal').click()" class="group flex w-full items-center justify-center gap-[0.625rem]">
+                    @svg('heroicon-o-paper-clip', 'w-5 h-5') <span>Adjuntar documentación...</span>
+                </x-secondary-button>
+                @if($attachment)
+                    <div class="text-sm text-gray-600">Archivo seleccionado: {{ $attachment->getClientOriginalName() }}</div>
+                @endif
+                <div class="flex flex-col text-sm text-[#A5A3A3]">
+                    <span>Tipo de formato .xls .xlsx .pdf</span><span>Tamaño máximo 5MB</span>
+                </div>
+            </div>
 
-            @if($attachment)
-                <div class="text-sm text-gray-600">
-                    Archivo seleccionado: {{ $attachment->getClientOriginalName() }}
+            <div class="flex gap-[1.875rem]">
+                <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-alm-fiscal')" class="w-full">Cancelar</x-secondary-button>
+                <x-primary-button wire:click="saveAndMove" class="w-full">Continuar</x-primary-button>
+            </div>
+        </x-modal>
+
+        {{-- 7) EN OTRA ZF (id: 7) --}}
+        <x-modal name="modal-en-otra-zf" maxWidth="lg">
+            <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
+            @if ($currentTask)
+                <div class="mb-5 text-center">
+                    <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
                 </div>
             @endif
 
-            <div class="flex flex-col text-sm text-[#A5A3A3]">
-                <span>Tipo de formato .xls .xlsx .pdf</span>
-                <span>Tamaño máximo 5MB</span>
+            <div class="mb-8">
+                <x-form-select label="" name="etapa"
+                               :options="collect($columns)->pluck('name','id')->toArray()"
+                               optionPlaceholder="Seleccionar etapa"
+                               :value="$newColumnId" wire:model.live="newColumnId"
+                               x-on:change="moveTaskToColumn($event.target.value)" />
             </div>
-        </div>
 
-        <div class="flex gap-[1.875rem]">
-            <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-llegada-a-hub')" class="w-full">
-                Cancelar
-            </x-secondary-button>
-
-            <x-primary-button
-                x-on:click="
-                    $wire.setComments($wire.currentTaskId, document.querySelector('textarea[name=comment_stage_05]').value);
-                    $wire.moveTask($wire.currentTaskId, 6);
-                    $dispatch('close-modal', 'modal-llegada-a-hub')"
-                class="w-full">
-                Continuar
-            </x-primary-button>
-        </div>
-    </x-modal>
-
-    <x-modal name="modal-validacion-operativa-cliente" maxWidth="lg">
-        <h3 class="mb-2 text-lg font-bold text-center text-light-blue">
-            ¿Cambiar la Orden de compra de etapa?
-        </h3>
-
-        @if ($currentTask)
-            <div class="mb-5 text-center">
-                <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
+            <div class="mb-8">
+                <x-form-textarea label="" name="comment_stage_07" wireModel="comment" placeholder="Comentarios" />
             </div>
-        @endif
 
-        <div class="mb-8">
-            <x-form-select label="" name="etapa" :options="collect($columns)->pluck('name', 'id')->toArray()" optionPlaceholder="Seleccionar etapa"
-                :value="$newColumnId" wire:model.live="newColumnId"
-                x-on:change="moveTaskToColumn($event.target.value)" />
-        </div>
+            <div class="mb-12 space-y-2">
+                <input type="file" wire:model="attachment" class="hidden" id="file-upload-en-otra-zf">
+                <x-secondary-button onclick="document.getElementById('file-upload-en-otra-zf').click()" class="group flex w-full items-center justify-center gap-[0.625rem]">
+                    @svg('heroicon-o-paper-clip', 'w-5 h-5') <span>Adjuntar documentación...</span>
+                </x-secondary-button>
+                @if($attachment)
+                    <div class="text-sm text-gray-600">Archivo seleccionado: {{ $attachment->getClientOriginalName() }}</div>
+                @endif
+                <div class="flex flex-col text-sm text-[#A5A3A3]">
+                    <span>Tipo de formato .xls .xlsx .pdf</span><span>Tamaño máximo 5MB</span>
+                </div>
+            </div>
 
-        <div class="mb-8">
-            <x-form-textarea label="" name="comment_stage_06" wireModel="comment" placeholder="Comentarios" />
-        </div>
+            <div class="flex gap-[1.875rem]">
+                <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-en-otra-zf')" class="w-full">Cancelar</x-secondary-button>
+                <x-primary-button wire:click="saveAndMove" class="w-full">Continuar</x-primary-button>
+            </div>
+        </x-modal>
 
-        <div class="mb-12 space-y-2">
-            <input
-                type="file"
-                wire:model="attachment"
-                class="hidden"
-                x-ref="fileInput"
-                id="file-upload-validacion-operativa-cliente">
-            <x-secondary-button
-                onclick="document.getElementById('file-upload-validacion-operativa-cliente').click()"
-                class="group flex w-full items-center justify-center gap-[0.625rem]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="22" viewBox="0 0 21 22"
-                    fill="none">
-                    <path
-                        d="M19.1525 9.89897L10.1369 18.9146C8.08662 20.9648 4.7625 20.9648 2.71225 18.9146C0.661997 16.8643 0.661998 13.5402 2.71225 11.49L11.7279 2.47435C13.0947 1.10751 15.3108 1.10751 16.6776 2.47434C18.0444 3.84118 18.0444 6.05726 16.6776 7.42409L8.01555 16.0862C7.33213 16.7696 6.22409 16.7696 5.54068 16.0862C4.85726 15.4027 4.85726 14.2947 5.54068 13.6113L13.1421 6.00988"
-                        stroke="#565AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
-                </svg>
-
-                <span>Adjuntar documentación...</span>
-            </x-secondary-button>
-
-            @if($attachment)
-                <div class="text-sm text-gray-600">
-                    Archivo seleccionado: {{ $attachment->getClientOriginalName() }}
+        {{-- 8) RECIBIENDO CDI (id: 8) --}}
+        <x-modal name="modal-recibiendo-cdi" maxWidth="lg">
+            <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
+            @if ($currentTask)
+                <div class="mb-5 text-center">
+                    <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
                 </div>
             @endif
 
-            <div class="flex flex-col text-sm text-[#A5A3A3]">
-                <span>Tipo de formato .xls .xlsx .pdf</span>
-                <span>Tamaño máximo 5MB</span>
+            <div class="mb-8">
+                <x-form-select label="" name="etapa"
+                               :options="collect($columns)->pluck('name','id')->toArray()"
+                               optionPlaceholder="Seleccionar etapa"
+                               :value="$newColumnId" wire:model.live="newColumnId"
+                               x-on:change="moveTaskToColumn($event.target.value)" />
             </div>
-        </div>
 
-        <div class="flex gap-[1.875rem]">
-            <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-validacion-operativa-cliente')" class="w-full">
-                Cancelar
-            </x-secondary-button>
-
-            <x-primary-button
-                x-on:click="
-                    $wire.setComments($wire.currentTaskId, document.querySelector('textarea[name=comment_stage_06]').value);
-                    $wire.moveTask($wire.currentTaskId, 7);
-                    $dispatch('close-modal', 'modal-validacion-operativa-cliente')"
-                class="w-full">
-                Continuar
-            </x-primary-button>
-        </div>
-    </x-modal>
-
-    <x-modal name="modal-consolidacion-hub-real" maxWidth="lg">
-        <h3 class="mb-2 text-lg font-bold text-center text-light-blue">
-            ¿Cambiar la Orden de compra de etapa?
-        </h3>
-
-        @if ($currentTask)
-            <div class="mb-5 text-center">
-                <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
+            <div class="mb-8">
+                <x-form-textarea label="" name="comment_stage_08" wireModel="comment" placeholder="Comentarios" />
             </div>
-        @endif
 
-        <div class="mb-8">
-            <x-form-select label="" name="etapa" :options="collect($columns)->pluck('name', 'id')->toArray()" optionPlaceholder="Seleccionar etapa"
-                :value="$newColumnId" wire:model.live="newColumnId"
-                x-on:change="moveTaskToColumn($event.target.value)" />
-        </div>
+            <div class="mb-12 space-y-2">
+                <input type="file" wire:model="attachment" class="hidden" id="file-upload-recibiendo-cdi">
+                <x-secondary-button onclick="document.getElementById('file-upload-recibiendo-cdi').click()" class="group flex w-full items-center justify-center gap-[0.625rem]">
+                    @svg('heroicon-o-paper-clip', 'w-5 h-5') <span>Adjuntar documentación...</span>
+                </x-secondary-button>
+                @if($attachment)
+                    <div class="text-sm text-gray-600">Archivo seleccionado: {{ $attachment->getClientOriginalName() }}</div>
+                @endif
+                <div class="flex flex-col text-sm text-[#A5A3A3]">
+                    <span>Tipo de formato .xls .xlsx .pdf</span><span>Tamaño máximo 5MB</span>
+                </div>
+            </div>
 
-        <div class="mb-8">
-            <x-form-textarea label="" name="comment_stage_07" wireModel="comment" placeholder="Comentarios" />
-        </div>
+            <div class="flex gap-[1.875rem]">
+                <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-recibiendo-cdi')" class="w-full">Cancelar</x-secondary-button>
+                <x-primary-button wire:click="saveAndMove" class="w-full">Continuar</x-primary-button>
+            </div>
+        </x-modal>
 
-        <div class="mb-12 space-y-2">
-            <input
-                type="file"
-                wire:model="attachment"
-                class="hidden"
-                x-ref="fileInput"
-                id="file-upload-consolidacion-hub-real">
-            <x-secondary-button
-                onclick="document.getElementById('file-upload-consolidacion-hub-real').click()"
-                class="group flex w-full items-center justify-center gap-[0.625rem]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="22" viewBox="0 0 21 22"
-                    fill="none">
-                    <path
-                        d="M19.1525 9.89897L10.1369 18.9146C8.08662 20.9648 4.7625 20.9648 2.71225 18.9146C0.661997 16.8643 0.661998 13.5402 2.71225 11.49L11.7279 2.47435C13.0947 1.10751 15.3108 1.10751 16.6776 2.47434C18.0444 3.84118 18.0444 6.05726 16.6776 7.42409L8.01555 16.0862C7.33213 16.7696 6.22409 16.7696 5.54068 16.0862C4.85726 15.4027 4.85726 14.2947 5.54068 13.6113L13.1421 6.00988"
-                        stroke="#565AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
-                </svg>
-
-                <span>Adjuntar documentación...</span>
-            </x-secondary-button>
-
-            @if($attachment)
-                <div class="text-sm text-gray-600">
-                    Archivo seleccionado: {{ $attachment->getClientOriginalName() }}
+        {{-- 9) INGRESADA (id: 9) --}}
+        <x-modal name="modal-ingresada" maxWidth="lg">
+            <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
+            @if ($currentTask)
+                <div class="mb-5 text-center">
+                    <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
                 </div>
             @endif
 
-            <div class="flex flex-col text-sm text-[#A5A3A3]">
-                <span>Tipo de formato .xls .xlsx .pdf</span>
-                <span>Tamaño máximo 5MB</span>
+            <div class="mb-8">
+                <x-form-select label="" name="etapa"
+                               :options="collect($columns)->pluck('name','id')->toArray()"
+                               optionPlaceholder="Seleccionar etapa"
+                               :value="$newColumnId" wire:model.live="newColumnId"
+                               x-on:change="moveTaskToColumn($event.target.value)" />
             </div>
-        </div>
 
-        <div class="flex gap-[1.875rem]">
-            <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-consolidacion-hub-real')" class="w-full">
-                Cancelar
-            </x-secondary-button>
-
-            <x-primary-button
-                x-on:click="
-                    $wire.setComments($wire.currentTaskId, document.querySelector('textarea[name=comment_stage_07]').value);
-                    $wire.moveTask($wire.currentTaskId, 8);
-                    $dispatch('close-modal', 'modal-consolidacion-hub-real')"
-                class="w-full">
-                Continuar
-            </x-primary-button>
-        </div>
-    </x-modal>
-
-    <x-modal name="modal-gestion-documental" maxWidth="lg">
-        <h3 class="mb-2 text-lg font-bold text-center text-light-blue">
-            ¿Cambiar la Orden de compra de etapa?
-        </h3>
-
-        @if ($currentTask)
-            <div class="mb-5 text-center">
-                <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
+            <div class="mb-8">
+                <x-form-input>
+                    <x-slot:label>Nota de Recibo</x-slot:label>
+                    <x-slot:input type="text" placeholder="Ingrese nota de recibo" wire:model.live="receipt_note"></x-slot:input>
+                </x-form-input>
             </div>
-        @endif
 
-        <div class="mb-8">
-            <x-form-select label="" name="etapa" :options="collect($columns)->pluck('name', 'id')->toArray()" optionPlaceholder="Seleccionar etapa"
-                :value="$newColumnId" wire:model.live="newColumnId"
-                x-on:change="moveTaskToColumn($event.target.value)" />
-        </div>
-
-        <div class="mb-8">
-            <x-form-textarea label="" name="comment_stage_08" wireModel="comment_stage_08" placeholder="Comentarios" />
-        </div>
-
-        <div class="mb-12 space-y-2">
-            <x-secondary-button class="group flex w-full items-center justify-center gap-[0.625rem]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="22" viewBox="0 0 21 22"
-                    fill="none">
-                    <path
-                        d="M19.1525 9.89897L10.1369 18.9146C8.08662 20.9648 4.7625 20.9648 2.71225 18.9146C0.661997 16.8643 0.661998 13.5402 2.71225 11.49L11.7279 2.47435C13.0947 1.10751 15.3108 1.10751 16.6776 2.47434C18.0444 3.84118 18.0444 6.05726 16.6776 7.42409L8.01555 16.0862C7.33213 16.7696 6.22409 16.7696 5.54068 16.0862C4.85726 15.4027 4.85726 14.2947 5.54068 13.6113L13.1421 6.00988"
-                        stroke="#565AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
-                </svg>
-
-                <span>Adjuntar documentación...</span>
-            </x-secondary-button>
-            <div class="flex flex-col text-sm text-[#A5A3A3]">
-                <span>Tipo de formato .xls .xlsx .pdf</span>
-                <span>Tamaño máximo 5MB</span>
+            <div class="mb-8">
+                <x-form-textarea label="" name="comment_stage_09" wireModel="comment" placeholder="Comentarios" />
             </div>
-        </div>
 
-        <div class="flex gap-[1.875rem]">
-            <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-gestion-documental')" class="w-full">
-                Cancelar
-            </x-secondary-button>
+            <div class="mb-12 space-y-2">
+                <input type="file" wire:model="attachment" class="hidden" id="file-upload-ingresada">
+                <x-secondary-button onclick="document.getElementById('file-upload-ingresada').click()" class="group flex w-full items-center justify-center gap-[0.625rem]">
+                    @svg('heroicon-o-paper-clip', 'w-5 h-5') <span>Adjuntar documentación...</span>
+                </x-secondary-button>
+                @if($attachment)
+                    <div class="text-sm text-gray-600">Archivo seleccionado: {{ $attachment->getClientOriginalName() }}</div>
+                @endif
+                <div class="flex flex-col text-sm text-[#A5A3A3]">
+                    <span>Tipo de formato .xls .xlsx .pdf</span><span>Tamaño máximo 5MB</span>
+                </div>
+            </div>
 
-            <x-primary-button
-                x-on:click="
-                    $wire.setComments($wire.currentTaskId, document.querySelector('textarea[name=comment_stage_08]').value);
-                    $wire.moveTask($wire.currentTaskId, 9);
-                    $dispatch('close-modal', 'modal-gestion-documental')"
-                class="w-full">
-                Continuar
-            </x-primary-button>
-        </div>
-    </x-modal>
+            <div class="flex gap-[1.875rem]">
+                <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-ingresada')" class="w-full">Cancelar</x-secondary-button>
+                <x-primary-button wire:click="saveAndMove" class="w-full">Continuar</x-primary-button>
+            </div>
+        </x-modal>
 
-    <style>
+        {{-- 10) ANULADA (id: 10) --}}
+        <x-modal name="modal-anulada" maxWidth="lg">
+            <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
+            @if ($currentTask)
+                <div class="mb-5 text-center">
+                    <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
+                </div>
+            @endif
+
+            <div class="mb-8">
+                <x-form-select label="" name="etapa"
+                               :options="collect($columns)->pluck('name','id')->toArray()"
+                               optionPlaceholder="Seleccionar etapa"
+                               :value="$newColumnId" wire:model.live="newColumnId"
+                               x-on:change="moveTaskToColumn($event.target.value)" />
+            </div>
+
+            <div class="mb-8">
+                <x-form-textarea label="" name="comment_stage_10" wireModel="comment" placeholder="Comentarios" />
+            </div>
+
+            <div class="mb-12 space-y-2">
+                <input type="file" wire:model="attachment" class="hidden" id="file-upload-anulada">
+                <x-secondary-button onclick="document.getElementById('file-upload-anulada').click()" class="group flex w-full items-center justify-center gap-[0.625rem]">
+                    @svg('heroicon-o-paper-clip', 'w-5 h-5') <span>Adjuntar documentación...</span>
+                </x-secondary-button>
+                @if($attachment)
+                    <div class="text-sm text-gray-600">Archivo seleccionado: {{ $attachment->getClientOriginalName() }}</div>
+                @endif
+                <div class="flex flex-col text-sm text-[#A5A3A3]">
+                    <span>Tipo de formato .xls .xlsx .pdf</span><span>Tamaño máximo 5MB</span>
+                </div>
+            </div>
+
+            <div class="flex gap-[1.875rem]">
+                <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-anulada')" class="w-full">Cancelar</x-secondary-button>
+                <x-primary-button wire:click="saveAndMove" class="w-full">Continuar</x-primary-button>
+            </div>
+        </x-modal>
+
+        <style>
         .kanban-container {
             display: flex;
             overflow-x: auto;

@@ -30,15 +30,55 @@ class ShippingDocument extends Model implements HasMedia
         'container_number',
         'mbl_number',
         'hbl_number',
+
+        // --- Nuevos campos por etapas ---
+        // Producción
+        'date_theorical_load',
+        'date_variable_date',
+        'service_provider',
+        'forwarder_name',
+        // Booking
+        'date_booking_request',
+        'date_booking_authorized',
+        'date_etd_updated',   // ETD variable
+        'container_type',
+        'mode',
+        // En Tránsito
+        'date_eta_updated',   // ETA variable
+        'shipping_line',
+        'arrival_status',
+        'factura_merca',
+        'tracking_id',
+        'departure_port',
+        'arrival_port',
+        'Invoice_amount',
+        'bill_of_lading',
+        // Almacén Fiscal
+        'bonded_warehouse_enter',
+        'bonded_warehouse_exit',
+        // Ingresada
+        'receipt_note',
     ];
 
     protected $casts = [
+        // existentes
         'creation_date' => 'date',
         'estimated_departure_date' => 'date',
         'estimated_arrival_date' => 'date',
         'actual_departure_date' => 'date',
         'actual_arrival_date' => 'date',
         'release_date' => 'date',
+
+        // nuevos
+        'date_theorical_load' => 'datetime',
+        'date_variable_date' => 'datetime',
+        'date_booking_request' => 'datetime',
+        'date_booking_authorized' => 'datetime',
+        'date_etd_updated' => 'datetime',
+        'date_eta_updated' => 'datetime',
+        'bonded_warehouse_enter' => 'datetime',
+        'bonded_warehouse_exit' => 'datetime',
+        'Invoice_amount' => 'decimal:2',
     ];
 
     /**

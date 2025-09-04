@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Livewire\WithFileUploads;
 
-class KanbanBoard extends Component {
+class KanbanBoard extends Component
+{
     use WithFileUploads;
 
     public $boardId;
@@ -26,14 +27,57 @@ class KanbanBoard extends Component {
 
     public $actual_hub_id;
 
+    // === Campos por etapa ===
     public $comment_stage_01;
+
+    // Producción (id 2)
+    public $date_variable_date;
+    public $date_theorical_load;
+    public $service_provider;
+    public $forwarder_name;
     public $comment_stage_02;
+
+    // Booking (id 3)
+    public $date_booking_request;
+    public $date_booking_authorized;
+    public $date_etd_initial;
+    public $date_etd_updated;
+    public $container_type;
+    public $mode;
     public $comment_stage_03;
+
+
+    // En Tránsito (id 4)
+    public $date_atd;
+    public $date_eta;
+    public $date_eta_updated;
+    public $container_number;
+    public $bill_of_lading;
+    public $shipping_line;
+    public $tracking_id;
+    public $departure_port;
+    public $arrival_port;
     public $comment_stage_04;
+
+    // Puerto (id 5)
+    public $date_ata;
     public $comment_stage_05;
+
+
+    // Almacén Fiscal (id 6)
+    public $bonded_warehouse_enter;
+    public $bonded_warehouse_exit;
     public $comment_stage_06;
+
+
     public $comment_stage_07;
     public $comment_stage_08;
+
+
+    // Ingresada (id 9)
+    public $receipt_note;
+
+
     public $comments = [];
     public $showCommentModal = false;
 
@@ -51,7 +95,8 @@ class KanbanBoard extends Component {
         'kanbanFiltersChanged' => 'applyFilters'
     ];
 
-    public function mount($boardId = null) {
+    public function mount($boardId = null)
+    {
         // Determinar el tipo de tablero según la ruta actual
         $currentRoute = Route::currentRouteName();
 
@@ -85,13 +130,15 @@ class KanbanBoard extends Component {
         $this->loadData();
     }
 
-    public function loadData() {
+    public function loadData()
+    {
         $this->loadColumns();
         $this->loadTasks();
         $this->organizeTasksByColumn();
     }
 
-    public function loadColumns() {
+    public function loadColumns()
+    {
         if (!$this->board) {
             $this->columns = [];
             return;
@@ -100,7 +147,7 @@ class KanbanBoard extends Component {
         // Cargar las columnas (estados) del tablero
         $statuses = $this->board->statuses()->orderBy('position')->get();
 
-        $this->columns = $statuses->map(function($status) {
+        $this->columns = $statuses->map(function ($status) {
             return [
                 'id' => $status->id,
                 'slug' => $status->slug,
@@ -111,7 +158,8 @@ class KanbanBoard extends Component {
         })->toArray();
     }
 
-    public function loadTasks() {
+    public function loadTasks()
+    {
         if (!$this->board) {
             $this->tasks = [];
             return;
@@ -191,9 +239,9 @@ class KanbanBoard extends Component {
             $query->where('actual_hub_id', $this->activeFilters['actual_hub_id']);
         }
 
-                        if (isset($this->activeFilters['material_type'])) {
+        if (isset($this->activeFilters['material_type'])) {
             $materialType = $this->activeFilters['material_type'];
-            $query->where(function($q) use ($materialType) {
+            $query->where(function ($q) use ($materialType) {
                 // Los datos están como: "[\"general\",\"dangerous\"]"
                 // Buscar sin comillas ya que están escapadas en el JSON
                 $searchPatterns = [
@@ -212,19 +260,19 @@ class KanbanBoard extends Component {
         // Nuevo filtro de búsqueda de texto case-insensitive
         if (isset($this->activeFilters['search_text'])) {
             $searchText = $this->activeFilters['search_text'];
-            $query->where(function($q) use ($searchText) {
+            $query->where(function ($q) use ($searchText) {
                 $q->whereRaw('LOWER(order_number) LIKE LOWER(?)', ["%{$searchText}%"])
-                  ->orWhereRaw('LOWER(currency) LIKE LOWER(?)', ["%{$searchText}%"])
-                  ->orWhereRaw('LOWER(incoterms) LIKE LOWER(?)', ["%{$searchText}%"])
-                  ->orWhereRaw('LOWER(CAST(total AS CHAR)) LIKE LOWER(?)', ["%{$searchText}%"])
-                  ->orWhereRaw('LOWER(tracking_id) LIKE LOWER(?)', ["%{$searchText}%"])
-                  ->orWhereRaw('LOWER(material_type::text) LIKE LOWER(?)', ["%{$searchText}%"])
-                  ->orWhereHas('company', function($companyQuery) use ($searchText) {
-                      $companyQuery->whereRaw('LOWER(name) LIKE LOWER(?)', ["%{$searchText}%"]);
-                  })
-                  ->orWhereHas('vendor', function($vendorQuery) use ($searchText) {
-                      $vendorQuery->whereRaw('LOWER(name) LIKE LOWER(?)', ["%{$searchText}%"]);
-                  });
+                    ->orWhereRaw('LOWER(currency) LIKE LOWER(?)', ["%{$searchText}%"])
+                    ->orWhereRaw('LOWER(incoterms) LIKE LOWER(?)', ["%{$searchText}%"])
+                    ->orWhereRaw('LOWER(CAST(total AS CHAR)) LIKE LOWER(?)', ["%{$searchText}%"])
+                    ->orWhereRaw('LOWER(tracking_id) LIKE LOWER(?)', ["%{$searchText}%"])
+                    ->orWhereRaw('LOWER(material_type::text) LIKE LOWER(?)', ["%{$searchText}%"])
+                    ->orWhereHas('company', function ($companyQuery) use ($searchText) {
+                        $companyQuery->whereRaw('LOWER(name) LIKE LOWER(?)', ["%{$searchText}%"]);
+                    })
+                    ->orWhereHas('vendor', function ($vendorQuery) use ($searchText) {
+                        $vendorQuery->whereRaw('LOWER(name) LIKE LOWER(?)', ["%{$searchText}%"]);
+                    });
             });
         }
     }
@@ -238,7 +286,8 @@ class KanbanBoard extends Component {
         $this->dispatch('refreshKanban');
     }
 
-    public function organizeTasksByColumn() {
+    public function organizeTasksByColumn()
+    {
         $this->tasksByColumn = [];
 
         // Inicializar un array vacío para cada columna
@@ -255,13 +304,14 @@ class KanbanBoard extends Component {
 
         // Ordenar las tareas por fecha de creación (de más nueva a más antigua) en cada columna
         foreach ($this->tasksByColumn as $columnId => $tasks) {
-            usort($this->tasksByColumn[$columnId], function($a, $b) {
+            usort($this->tasksByColumn[$columnId], function ($a, $b) {
                 return $b['created_at'] <=> $a['created_at'];
             });
         }
     }
 
-    public function moveTask($taskId, $newStatus) {
+    public function moveTask($taskId, $newStatus)
+    {
         // Log para depuración
         \Log::info("Moving task $taskId to status $newStatus");
 
@@ -314,7 +364,63 @@ class KanbanBoard extends Component {
         }
     }
 
-    public function setCurrentTask($taskId, $newColumnId) {
+    //Metodo para guardar datos y luego mover de etapa
+    public function saveAndMove(): void
+    {
+        $poId = (int)($this->currentTaskId ?? 0);
+        $stage = (int)($this->newColumnId ?? 0);
+
+        if (!$poId || !$stage) {
+            session()->flash('message', 'Falta la PO o la etapa.');
+            return;
+        }
+
+        $this->validateStageRequirements($stage);
+
+        // 1) Guardar comentario + adjunto si existen
+        $hasComment = is_string($this->comment ?? '') && trim($this->comment) !== '';
+        if ($hasComment || $this->attachment) {
+            $this->setComments($poId, (string)($this->comment ?? ''));
+        }
+
+        // 2) Guardar campos del formulario de la etapa
+        $this->saveDataByModal(); // ya maneja transacción y payload por etapa
+
+        // 3) Mover a la etapa nueva (y notificar)
+        $this->moveTask($poId, $stage);
+
+        // 4) Limpiar inputs de la etapa y UI
+        foreach (($this->fieldsByStage()[$stage] ?? []) as $f) {
+            if (property_exists($this, $f)) {
+                $this->$f = null;
+            }
+        }
+        $this->comment = '';
+        $this->attachment = null;
+
+        // 5) Cerrar el modal desde Livewire (sin Alpine extra)
+        $this->dispatch('close-modal', $this->modalName($stage));
+    }
+
+    private function modalName(int $stage): string
+    {
+        return match ($stage) {
+            1 => 'modal-nuevo',
+            2 => 'modal-produccion',
+            3 => 'modal-booking',
+            4 => 'modal-en-transito',
+            5 => 'modal-puerto',
+            6 => 'modal-alm-fiscal',
+            7 => 'modal-en-otra-zf',
+            8 => 'modal-recibiendo-cdi',
+            9 => 'modal-ingresada',
+            10 => 'modal-anulada',
+            default => 'success-modal',
+        };
+    }
+
+    public function setCurrentTask($taskId, $newColumnId)
+    {
         $this->currentTaskId = $taskId;
         $this->newColumnId = $newColumnId;
 
@@ -327,7 +433,8 @@ class KanbanBoard extends Component {
         }
     }
 
-    public function saveAttachment($poId) {
+    public function saveAttachment($poId)
+    {
         $this->validate([
             'attachment' => 'required|file|max:10240', // 10MB max
         ]);
@@ -346,7 +453,8 @@ class KanbanBoard extends Component {
         $this->loadData();
     }
 
-    public function setActualHubId($taskId, $hubId) {
+    public function setActualHubId($taskId, $hubId)
+    {
         \Log::info("Actual Hub ID updated: " . $this->actual_hub_id);
 
         DB::table('purchase_orders')
@@ -403,24 +511,28 @@ class KanbanBoard extends Component {
     }
 
     // Método helper para obtener el nombre de la operación
+    // KanbanBoard.php
     private function getOperacionName($columnId)
     {
         $operaciones = [
-            1 => 'Hub Teórico',
-            2 => 'Hub Teórico',
-            3 => 'Validación Operativa',
-            4 => 'Pickup',
-            5 => 'En Tránsito',
-            6 => 'Llegada a Hub',
-            7 => 'Validación Operativa Cliente',
-            8 => 'Consolidación Hub Real',
-            9 => 'Gestión Documental'
+            1 => 'Nuevo',
+            2 => 'Producción',
+            3 => 'Booking',
+            4 => 'En Tránsito',
+            5 => 'Puerto',
+            6 => 'Alm Fiscal',
+            7 => 'En otra ZF',
+            8 => 'Recibiendo CDI',
+            9 => 'Ingresada',
+            10 => 'Anulada',
         ];
 
         return $operaciones[$columnId] ?? 'Operación no especificada';
     }
 
-    public function getCommentsWithAttachments($taskId) {
+
+    public function getCommentsWithAttachments($taskId)
+    {
         return PurchaseOrderComment::with(['user', 'media'])
             ->where('purchase_order_id', $taskId)
             ->orderBy('created_at', 'desc')
@@ -439,7 +551,8 @@ class KanbanBoard extends Component {
             });
     }
 
-    public function setPickupDate($taskId, $pickupDate) {
+    public function setPickupDate($taskId, $pickupDate)
+    {
         \Log::info("Setting pickup date for task $taskId: " . $pickupDate);
 
         try {
@@ -451,7 +564,8 @@ class KanbanBoard extends Component {
         }
     }
 
-    public function setTrackingId($taskId, $trackingId) {
+    public function setTrackingId($taskId, $trackingId)
+    {
         \Log::info("Setting tracking ID for task $taskId: " . $trackingId);
 
         try {
@@ -471,4 +585,178 @@ class KanbanBoard extends Component {
             'hasActiveFilters' => !empty($this->activeFilters)
         ])->layout('layouts.app');
     }
+
+    //Guardado de datos
+    private function fieldsByStage(): array
+    {
+        return [
+            2 => ['date_variable_date', 'date_theorical_load', 'service_provider', 'forwarder_name'], // Producción
+            3 => ['date_booking_request', 'date_booking_authorized', 'date_etd_initial', 'date_etd_updated', 'container_type', 'mode'], // Booking
+            4 => [
+                'date_atd', 'date_eta', 'date_eta_updated',
+                'container_number', 'bill_of_lading',
+                'shipment_amount', 'shipping_line', 'shipment_status', 'merchandise_invoice',
+                'tracking_id', 'departure_port', 'arrival_port',
+            ], // En transito
+            5 => ['date_ata'], // Puerto
+            6 => ['bonded_warehouse_enter', 'bonded_warehouse_exit', 'date_ata'], // Alm. Fiscal
+            9 => ['receipt_note'], // Ingresada
+        ];
+    }
+
+    public function saveDataByModal(): array
+    {
+        $poId = (int)($this->currentTaskId ?? 0);
+        $stage = (int)($this->newColumnId ?? 0);
+
+        if (!$poId || !$stage) {
+            return ['ok' => false, 'message' => 'Falta la PO o la etapa seleccionada.'];
+        }
+
+        $fields = $this->fieldsByStage()[$stage] ?? [];
+        if (empty($fields)) {
+            // Esta etapa no tiene campos a persistir
+            return ['ok' => true, 'updated' => 0];
+        }
+
+        // Armar payload solo con props existentes y con valor
+        $payload = [];
+        foreach ($fields as $name) {
+            if (property_exists($this, $name)) {
+                $val = $this->$name;
+                if (!is_null($val) && (!(is_string($val)) || trim($val) !== '')) {
+                    $payload[$name] = $val;
+                }
+            }
+        }
+
+        if (empty($payload)) {
+            return ['ok' => true, 'updated' => 0];
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $updated = DB::table('purchase_orders')
+                ->where('id', $poId)
+                ->update($payload);
+
+            // si quieres, puedes verificar que exista la PO
+             if ($updated === 0) { throw new \RuntimeException('PO no encontrada'); }
+
+            DB::commit();
+            return ['ok' => true, 'updated' => $updated];
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            \Log::error('[KanbanBoard] saveDataByModal error', [
+                'po' => $poId, 'stage' => $stage, 'msg' => $e->getMessage()
+            ]);
+            return ['ok' => false, 'message' => 'No se pudo guardar los datos de la etapa.'];
+        }
+    }
+
+    //Validación de datos requeridos
+    private function requiredRulesByStage(): array
+    {
+        return [
+            // 2) Producción
+            2 => [
+                'date_variable_date' => 'required|date',
+                'service_provider'   => 'required|string',
+                'forwarder_name'     => 'required|string',
+                // Si más adelante decides exigir la teórica:
+                // 'date_theorical_load' => 'required|date',
+            ],
+
+            // 3) Booking
+            3 => [
+                'date_booking_request'    => 'required|date',
+                'date_booking_authorized' => 'required|date',
+                'date_etd_initial'        => 'required|date',
+                'date_etd_updated'        => 'required|date',
+            ],
+
+            // 4) En Tránsito
+            4 => [
+                'date_atd'         => 'required|date',
+                'date_eta'         => 'required|date',
+                'date_eta_updated' => 'required|date',
+                'container_number' => 'required|string',
+                'bill_of_lading'   => 'required',   // puede ser numérico o string según tu BD
+                'shipping_line'    => 'required|string',
+                'tracking_id'      => 'required|string',
+                'departure_port'   => 'required|string',
+                'arrival_port'     => 'required|string',
+                // 'container_type' no está como requerido en el Excel
+            ],
+
+            // 5) Puerto
+            5 => [
+                'date_ata' => 'required|date',
+            ],
+
+            // 6) Almacén Fiscal
+            6 => [
+                'bonded_warehouse_enter' => 'required|date',
+                'bonded_warehouse_exit'  => 'required|date',
+                'date_ata'               => 'required|date',
+            ],
+
+            // 9) Ingresada (Excel no lo exige)
+            9 => [
+                // Si quisieras hacerlo requerido:
+                // 'receipt_note' => 'required|string',
+            ],
+        ];
+    }
+
+    private function fieldAttributeLabels(): array
+    {
+        return [
+            'date_variable_date'     => 'Carga Lista Variable',
+            'date_theorical_load'    => 'Carga Lista Teórica',
+            'service_provider'       => 'Proveedor de Servicio',
+            'forwarder_name'         => 'Agente de Carga',
+            'date_booking_request'   => 'Solicitud de booking',
+            'date_booking_authorized'=> 'Aut. Booking',
+            'date_etd_initial'       => 'ETD Inicial',
+            'date_etd_updated'       => 'ETD Variable',
+            'date_atd'               => 'ETD Real',
+            'date_eta'               => 'ETA inicial',
+            'date_eta_updated'       => 'ETA variable',
+            'container_number'       => 'Contenedor',
+            'container_type'         => 'Tipo de contenedor',
+            'bill_of_lading'         => 'BL',
+            'shipping_line'          => 'Naviera',
+            'tracking_id'            => 'Tracking',
+            'departure_port'         => 'Puerto de embarque',
+            'arrival_port'           => 'Puerto de arribo',
+            'date_ata'               => 'ETA Real',
+            'bonded_warehouse_enter' => 'Ingreso a AF',
+            'bonded_warehouse_exit'  => 'Salida AF',
+            'receipt_note'      => 'Nota de Recibo',
+        ];
+    }
+
+    private function validateStageRequirements(int $stage): void
+    {
+        $rules = $this->requiredRulesByStage()[$stage] ?? [];
+
+        if (empty($rules)) {
+            return; // no hay requeridos para esta etapa
+        }
+
+        $messages = [
+            'required' => 'El campo es requerido.',
+            'date'     => 'El campo debe ser una fecha válida.',
+            'string'   => 'El campo debe ser texto.',
+            'numeric'  => 'El campo debe ser numérico.',
+        ];
+
+        $this->validate($rules, $messages, $this->fieldAttributeLabels());
+    }
+
 }
+
+
+
