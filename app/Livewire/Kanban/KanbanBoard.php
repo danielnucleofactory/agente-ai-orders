@@ -173,7 +173,10 @@ class KanbanBoard extends Component
 
         // Cargar las órdenes de compra de la compañía del usuario
         $companyId = auth()->user()->company_id ?? null;
+
+        // excluir soft-deleted
         $query = PurchaseOrder::with(['company', 'kanbanStatus', 'vendor'])
+            ->withoutTrashed()
             ->where('company_id', $companyId);
 
         // Aplicar filtros si están activos
