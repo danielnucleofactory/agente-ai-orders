@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Traits\SoftCascadeDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -16,7 +18,7 @@ use App\Traits\HasPOConfirmationWrapper;
 
 class PurchaseOrder extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia, HasAuthorizations, HasPOConfirmationWrapper;
+    use HasFactory, InteractsWithMedia, HasAuthorizations, HasPOConfirmationWrapper, SoftDeletes, SoftCascadeDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -250,6 +252,14 @@ class PurchaseOrder extends Model implements HasMedia
         'eta_dates_difference'  => 'integer',
         'date_invoice_received' => 'datetime',
         'date_vendor_document_received' => 'datetime',
+    ];
+
+    protected array $softCascade = [
+        'comments',
+        'shippingDocuments',
+        'products',
+        'boardingDocuments',
+        'trackingData'
     ];
 
     /**
