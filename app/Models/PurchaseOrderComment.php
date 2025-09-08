@@ -4,13 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use App\Models\Traits\HasAuthorizations;
 
 class PurchaseOrderComment extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia, HasAuthorizations;
+    use HasFactory, InteractsWithMedia, HasAuthorizations, softDeletes;
 
     public $timestamps = true;
 

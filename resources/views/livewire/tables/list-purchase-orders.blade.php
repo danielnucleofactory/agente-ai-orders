@@ -261,6 +261,11 @@
                             <td class="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
                                 <a href="{{ route('purchase-orders.detail', $order->id) }}" class="text-indigo-600 hover:text-indigo-900">Ver</a>
                                 <a href="{{ route('purchase-orders.edit', $order->id) }}" class="ml-4 text-indigo-600 hover:text-indigo-900">Editar</a>
+                                <button type="button"
+                                        wire:click="confirmDelete({{ $order->id }})"
+                                        class="ml-4 text-red-600 hover:text-red-800">
+                                    Eliminar
+                                </button>
                             </td>
                             @endif
                         </tr>
@@ -364,4 +369,37 @@
             </div>
         </div>
     </div>
+    {{-- Flash message simple (opcional) --}}
+    @if (session('message'))
+        <div class="mt-4 rounded-md bg-green-50 p-4 text-green-800">
+            {{ session('message') }}
+        </div>
+    @endif
+
+    {{-- NUEVO: Modal de confirmación de borrado (Livewire puro) --}}
+    @if ($confirmingDeleteId)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div class="w-full max-w-md p-6 bg-white rounded-lg shadow-lg">
+                <h3 class="text-lg font-semibold text-gray-900">Eliminar Orden de compra</h3>
+                <p class="mt-2 text-sm text-gray-600">
+                    ¿Seguro que deseas eliminar la Orden de Compra N°
+                    <span class="font-semibold">#{{ $confirmingDeleteOrderNumber }}</span>?
+
+                </p>
+                <div class="flex justify-end mt-6 space-x-3">
+                    <button type="button"
+                            wire:click="cancelDelete"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                        Cancelar
+                    </button>
+                    <button type="button"
+                            wire:click="deleteConfirmed"
+                            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
 </div>
