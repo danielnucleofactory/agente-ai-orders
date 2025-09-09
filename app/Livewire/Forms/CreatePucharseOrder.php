@@ -190,8 +190,6 @@ class CreatePucharseOrder extends Component
     public $date_variable_date;
     public $date_carga_po;
     public $date_received;
-    public $date_af_in;
-    public $date_af_out;
     public $date_etd_initial;
     public $inspection_date;
     public $vgm_cut_date;
@@ -207,9 +205,7 @@ class CreatePucharseOrder extends Component
     public $price_incoterm;
     public $reason;
     public $category;
-    public $etd_notes;
     public $forwarder_name;
-    public $customer_name;
     public $cargo_invoice_number;
     public $tariff_type;
     public $route_label;
@@ -249,6 +245,14 @@ class CreatePucharseOrder extends Component
     // ===== Documentos (recepción) =====
     public $date_invoice_received;            // Fecha recepción de factura
     public $date_vendor_document_received;    // Fecha recepción doc. proveedor
+
+    //Campos extras que faltaban
+    public $cbm;
+    public $dif_load_date;
+    public $consolidator_name;
+    public $vendor_number;
+    public $emision_date_po;
+    public $forwader_date;
 
     public function mount($id = null)
     {
@@ -398,8 +402,6 @@ class CreatePucharseOrder extends Component
                 $this->date_variable_date = optional($this->purchaseOrder->date_variable_date)?->format('Y-m-d');
                 $this->date_carga_po = optional($this->purchaseOrder->date_carga_po)?->format('Y-m-d');
                 $this->date_received = optional($this->purchaseOrder->date_received)?->format('Y-m-d');
-                $this->date_af_in = optional($this->purchaseOrder->date_af_in)?->format('Y-m-d');
-                $this->date_af_out = optional($this->purchaseOrder->date_af_out)?->format('Y-m-d');
                 $this->date_etd_initial               = optional($this->purchaseOrder->date_etd_initial)?->format('Y-m-d');
                 $this->inspection_date                = optional($this->purchaseOrder->inspection_date)?->format('Y-m-d');
                 $this->vgm_cut_date                   = optional($this->purchaseOrder->vgm_cut_date)?->format('Y-m-d');
@@ -413,9 +415,7 @@ class CreatePucharseOrder extends Component
                 $this->logistics_incoterm = $this->purchaseOrder->logistics_incoterm;
                 $this->reason = $this->purchaseOrder->reason;
                 $this->category = $this->purchaseOrder->category;
-                $this->etd_notes = $this->purchaseOrder->etd_notes;
                 $this->forwarder_name = $this->purchaseOrder->forwarder_name;
-                $this->customer_name = $this->purchaseOrder->customer_name;
                 $this->cargo_invoice_number = $this->purchaseOrder->cargo_invoice_number;
                 $this->tariff_type = $this->purchaseOrder->tariff_type;
                 $this->route_label = $this->purchaseOrder->route_label;
@@ -448,6 +448,15 @@ class CreatePucharseOrder extends Component
 
                 $this->date_etd_updated = optional($this->purchaseOrder->date_etd_updated)?->format('Y-m-d');
                 $this->date_eta_updated = optional($this->purchaseOrder->date_eta_updated)?->format('Y-m-d');
+
+                //Campos extras que faltaban
+                $this->cbm               = $this->purchaseOrder->cbm;
+                $this->consolidator_name = $this->purchaseOrder->consolidator_name;
+                $this->vendor_number     = $this->purchaseOrder->vendor_number;
+
+                $this->dif_load_date     = optional($this->purchaseOrder->dif_load_date)?->format('Y-m-d');
+                $this->emision_date_po   = optional($this->purchaseOrder->emision_date_po)?->format('Y-m-d');
+                $this->forwader_date     = optional($this->purchaseOrder->forwader_date)?->format('Y-m-d');
 
                 //Recalcular las fechas
                 $this->computeDateDiffs();
@@ -746,55 +755,30 @@ class CreatePucharseOrder extends Component
                     'required',
                     'unique:purchase_orders,order_number,NULL,id,company_id,' . $companyId
                 ],
-                'currency' => 'required',
                 'incoterms' => "required|string|in:$allowedIncoterms",
-                'logistics_incoterm' => "nullable|string|in:$allowedIncoterms",
-                'price_incoterm' => "nullable|string|in:$allowedIncoterms",
+                'logistics_incoterm' => "required|string|in:$allowedIncoterms",
+                'price_incoterm' => "required|string|in:$allowedIncoterms",
                 'vendor_id' => 'required',
-                'ship_to_id' => 'required',
-                'bill_to_id' => 'required',
-                'date_required_in_destination' => 'required',
-                'planned_hub_id' => 'required',
-                'mode' => 'required',
-                'peso_kg' => 'required|numeric|min:0',
-                'largo' => 'required|numeric|min:0',
-                'ancho' => 'required|numeric|min:0',
-                'alto' => 'required|numeric|min:0',
-                'material_type' => 'required|array|min:1',
-                'date_invoice_received' => 'nullable|date',
-                'date_vendor_document_received' => 'nullable|date',
+                'bonded_warehouse_exit' => 'required|date',
+                'bonded_warehouse_enter' => 'required|date',
+                'category'               => 'required|string',
+                'factory_proforma_number'=> 'required|string',
+                'route_label'            => 'required|string',
+                'date_theorical_load'    => 'required|date',
+                'reason'                 => 'required|string',
             ], [
                 'order_number.required' => 'El número de orden es requerido',
                 'order_number.unique' => 'Este número de orden ya existe. Por favor, use un número diferente.',
-                'currency.required' => 'La moneda es requerida',
-                'incoterms.required' => 'El incoterm es requerido',
+                'incoterms.required' => 'El incoterm de compra es requerido',
+                'logistics_incoterms.required' => 'El incoterms de logística es requerido',
+                'price_incoterm.required' => 'El incoterm de precio es requerido',
                 'vendor_id.required' => 'El vendor es requerido',
-                'ship_to_id.required' => 'El ship to es requerido',
-                'bill_to_id.required' => 'El bill to es requerido',
-                'date_required_in_destination.required' => 'La fecha de entrega es requerida',
-                'planned_hub_id.required' => 'El hub es requerido',
-                'mode.required' => 'El modo es requerido',
-                'peso_kg.required' => 'El peso es requerido',
-                'peso_kg.numeric' => 'El peso debe ser un número',
-                'peso_kg.min' => 'El peso debe ser mayor a 0',
-                'largo.required' => 'El largo es requerido',
-                'largo.numeric' => 'El largo debe ser un número',
-                'largo.min' => 'El largo debe ser mayor a 0',
-                'ancho.required' => 'El ancho es requerido',
-                'ancho.numeric' => 'El ancho debe ser un número',
-                'ancho.min' => 'El ancho debe ser mayor a 0',
-                'alto.required' => 'El alto es requerido',
-                'alto.numeric' => 'El alto debe ser un número',
-                'alto.min' => 'El alto debe ser mayor a 0',
-                'material_type.required' => 'Debe seleccionar al menos un tipo de material',
-                'material_type.min' => 'Debe seleccionar al menos un tipo de material',
+                'category.required'               => 'La categoria es requerida',
+                'factory_proforma_number.required'=> 'El Proforma de Fabrica es requerido',
+                'route_label.required'            => 'La ruta es requerida',
+                'date_theorical_load.required'    => 'La fecha de Carga Lista Teorica es requerida',
+                'reason.required'                 => 'El motivo es requerido',
             ]);
-
-            // Validar que tenga al menos un producto
-            if (empty($this->orderProducts) || count($this->orderProducts) < 1) {
-                $this->addError('products', 'Debe agregar al menos un producto a la orden de compra');
-                return;
-            }
 
             try {
                 // Usar transacción para asegurar integridad
@@ -880,16 +864,12 @@ class CreatePucharseOrder extends Component
                     'date_variable_date' => $this->date_variable_date,
                     'date_carga_po' => $this->date_carga_po,
                     'date_received' => $this->date_received,
-                    'date_af_in' => $this->date_af_in,
-                    'date_af_out' => $this->date_af_out,
 
                     'logistics_incoterm' => $this->logistics_incoterm,
                     'price_incoterm' => $this->price_incoterm,
                     'reason' => $this->reason,
                     'category' => $this->category,
-                    'etd_notes' => $this->etd_notes,
                     'forwarder_name' => $this->forwarder_name,
-                    'customer_name' => $this->customer_name,
                     'cargo_invoice_number' => $this->cargo_invoice_number,
                     'tariff_type' => $this->tariff_type,
                     'route_label' => $this->route_label,
@@ -940,6 +920,13 @@ class CreatePucharseOrder extends Component
                     'eta_dates_difference'  => $this->eta_dates_difference,
                     'date_invoice_received'            => $this->date_invoice_received,
                     'date_vendor_document_received'    => $this->date_vendor_document_received,
+
+                    'cbm'               => $this->cbm,
+                    'consolidator_name' => $this->consolidator_name,
+                    'vendor_number'     => $this->vendor_number,
+                    'dif_load_date'     => $this->dif_load_date,
+                    'emision_date_po'   => $this->emision_date_po,
+                    'forwader_date'     => $this->forwader_date,
 
                 ];
 
@@ -1172,16 +1159,12 @@ class CreatePucharseOrder extends Component
                 'date_variable_date' => $this->date_variable_date,
                 'date_carga_po' => $this->date_carga_po,
                 'date_received' => $this->date_received,
-                'date_af_in' => $this->date_af_in,
-                'date_af_out' => $this->date_af_out,
 
                 'logistics_incoterm' => $this->logistics_incoterm,
                 'price_incoterm' => $this->price_incoterm,
                 'reason' => $this->reason,
                 'category' => $this->category,
-                'etd_notes' => $this->etd_notes,
                 'forwarder_name' => $this->forwarder_name,
-                'customer_name' => $this->customer_name,
                 'cargo_invoice_number' => $this->cargo_invoice_number,
                 'tariff_type' => $this->tariff_type,
                 'route_label' => $this->route_label,
@@ -1229,6 +1212,12 @@ class CreatePucharseOrder extends Component
 
                 'date_invoice_received'            => $this->date_invoice_received,
                 'date_vendor_document_received'    => $this->date_vendor_document_received,
+                'cbm'               => $this->cbm,
+                'consolidator_name' => $this->consolidator_name,
+                'vendor_number'     => $this->vendor_number,
+                'dif_load_date'     => $this->dif_load_date,
+                'emision_date_po'   => $this->emision_date_po,
+                'forwader_date'     => $this->forwader_date,
             ];
 
             try {
