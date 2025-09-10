@@ -31,6 +31,8 @@ class Users extends Component
 
         if ($user) {
             $user->delete();
+            $this->id = null;
+            $this->user = null;
             $this->dispatch('close-modal', 'modal-delete-user');
         }
     }
@@ -39,6 +41,12 @@ class Users extends Component
         $this->id = $id;
         $this->user = User::find($id);
         $this->dispatch('open-modal', 'modal-delete-user');
+    }
+
+    public function closeModal() {
+        $this->id = null;
+        $this->user = null;
+        $this->dispatch('close-modal', 'modal-delete-user');
     }
 
     public function render()

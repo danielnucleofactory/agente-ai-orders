@@ -101,7 +101,11 @@
 
     <x-modal-warning name="modal-delete-user">
         <x-slot:title>
-            Estás seguro de querer eliminar el usuario {{ $user->name }}?
+            @if($id)
+                Estás seguro de querer eliminar el usuario {{ \App\Models\User::find($id)->name ?? 'este usuario' }}?
+            @else
+                Estás seguro de querer eliminar este usuario?
+            @endif
         </x-slot:title>
 
         <div class="flex space-x-2">
