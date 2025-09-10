@@ -81,6 +81,11 @@ class User extends Authenticatable implements HasMedia, CanResetPassword
         return $this->hasMany(UserFrequency::class);
     }
 
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
     public function setNotificationPreference($type, $channel, $enabled, $frequency = 'immediate')
     {
         $notificationType = NotificationType::where('key', $type)->firstOrFail();

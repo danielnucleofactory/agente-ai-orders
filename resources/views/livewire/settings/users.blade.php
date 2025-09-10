@@ -1,5 +1,5 @@
 <div class="p-8 space-y-6 bg-white rounded-2xl">
-    <div class="flex items-center justify-between">
+    <div class="flex justify-between items-center">
         <h2 class="text-lg font-bold text-[#7288FF]">Lista de usuarios</h2>
 
         <div class="flex space-x-4">
@@ -66,7 +66,7 @@
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                             <div class="flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                                 </svg>
                                 {{ $user->roles->first()?->name ?? 'Sin rol' }}
