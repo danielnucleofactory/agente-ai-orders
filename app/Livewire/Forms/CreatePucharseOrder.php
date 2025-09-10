@@ -790,12 +790,6 @@ class CreatePucharseOrder extends Component
                 'material_type.min' => 'Debe seleccionar al menos un tipo de material',
             ]);
 
-            // Validar que tenga al menos un producto
-            if (empty($this->orderProducts) || count($this->orderProducts) < 1) {
-                $this->addError('products', 'Debe agregar al menos un producto a la orden de compra');
-                return;
-            }
-
             try {
                 // Usar transacción para asegurar integridad
                 \DB::beginTransaction();
