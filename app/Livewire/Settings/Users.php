@@ -9,7 +9,7 @@ use Spatie\Permission\Models\Role;
 class Users extends Component
 {
     public $id;
-    public $user;
+    public $userToDelete;
     public $search = '';
     public $headers = [
         'user' => 'Usuario',
@@ -32,20 +32,20 @@ class Users extends Component
         if ($user) {
             $user->delete();
             $this->id = null;
-            $this->user = null;
+            $this->userToDelete = null;
             $this->dispatch('close-modal', 'modal-delete-user');
         }
     }
 
     public function openModal($id) {
         $this->id = $id;
-        $this->user = User::find($id);
+        $this->userToDelete = User::find($id);
         $this->dispatch('open-modal', 'modal-delete-user');
     }
 
     public function closeModal() {
         $this->id = null;
-        $this->user = null;
+        $this->userToDelete = null;
         $this->dispatch('close-modal', 'modal-delete-user');
     }
 
