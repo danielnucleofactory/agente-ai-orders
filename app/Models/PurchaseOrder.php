@@ -112,14 +112,10 @@ class PurchaseOrder extends Model implements HasMedia
         'date_variable_date',
         'date_carga_po',
         'date_received',
-        'date_af_in',
-        'date_af_out',
         'logistics_incoterm',
         'reason',
         'category',
-        'etd_notes',
         'forwarder_name',
-        'customer_name',
         'cargo_invoice_number',
         'tariff_type',
         'route_label',
@@ -161,7 +157,13 @@ class PurchaseOrder extends Model implements HasMedia
         'eta_dates_difference',
         'price_incoterm',
         'date_invoice_received',
-        'date_vendor_document_received'
+        'date_vendor_document_received',
+        'cbm',
+        'dif_load_date',
+        'emision_date_po',
+        'vendor_number',
+        'consolidator_name',
+        'forwader_date'
     ];
 
     /**
@@ -200,6 +202,7 @@ class PurchaseOrder extends Model implements HasMedia
         'update_date_po' => 'date',
         'confirm_update_date_po' => 'boolean',
 
+
         //New casts for OLO
         'is_dropship' => 'boolean',
         'applies_tlc' => 'boolean',
@@ -211,8 +214,6 @@ class PurchaseOrder extends Model implements HasMedia
         'date_variable_date' => 'datetime',
         'date_carga_po' => 'datetime',
         'date_received' => 'datetime',
-        'date_af_in' => 'datetime',
-        'date_af_out' => 'datetime',
 
         'delay_days' => 'integer',
 
@@ -252,6 +253,10 @@ class PurchaseOrder extends Model implements HasMedia
         'eta_dates_difference'  => 'integer',
         'date_invoice_received' => 'datetime',
         'date_vendor_document_received' => 'datetime',
+        'forwader_date' => 'datetime',
+        'cbm' => 'decimal:2',
+        'dif_load_date' => 'datetime',
+        'emision_date_po' => 'date',
     ];
 
     protected array $softCascade = [

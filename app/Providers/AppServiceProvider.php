@@ -28,11 +28,7 @@ class AppServiceProvider extends ServiceProvider
         Blade::component('breadcrumb', Breadcrumb::class);
 
         // Asegurarnos de que el componente breadcrumb esté disponible en todos los entornos
-        try {
-            // Intentar registrar el componente, si falla, registrar el error
-            \Illuminate\Support\Facades\Log::info('Registrando componente breadcrumb');
-
-            // Registro de componentes Livewire
+        try {            // Registro de componentes Livewire
             Livewire::component('tables.purchase-orders-table', PurchaseOrdersTable::class);
             Livewire::component('ui.purchase-order-card', PurchaseOrderCard::class);
             Livewire::component('tables.vendors-table', \App\Livewire\Tables\VendorsTable::class);
