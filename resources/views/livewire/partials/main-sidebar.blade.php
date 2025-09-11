@@ -44,7 +44,7 @@
     </div>
 
     <nav class="flex w-full flex-col items-center space-y-2 p-6 text-[#898989]">
-        <a href="{{ route('settings.profile') }}" class="flex items-center mb-10 overflow-hidden profile-container">
+        <a href="{{ route('settings.profile') }}" class="flex overflow-hidden items-center mb-10 profile-container">
             <div class="avatar-container h-[2.625rem] w-[2.625rem] overflow-hidden rounded-full bg-[#190FDB] flex items-center justify-center text-white font-medium"
                  x-data="{
                      name: '{{ auth()->user()->name }}',
@@ -69,12 +69,12 @@
 
         <span class="text-[0.625rem] font-medium uppercase hidden">Main</span>
 
-        <ul class="w-full space-y-2">
+        <ul class="space-y-2 w-full">
             @can('has_view_dashboard')
             <li>
                 <x-sidebar-link href="{{ route('dashboard') }}"
                     class="{{ request()->routeIs('dashboard') ? 'bg-[#E0E5FF]' : '' }}">
-                    <div class="flex items-center justify-center w-5 h-5" onclick="document.querySelector('.main-sidebar').classList.toggle('sidebar-expanded'); localStorage.setItem('sidebarExpanded', document.querySelector('.main-sidebar').classList.contains('sidebar-expanded'));">
+                    <div class="flex justify-center items-center w-5 h-5" onclick="document.querySelector('.main-sidebar').classList.toggle('sidebar-expanded'); localStorage.setItem('sidebarExpanded', document.querySelector('.main-sidebar').classList.contains('sidebar-expanded'));">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 17"
                             fill="none">
                             <path
@@ -276,7 +276,7 @@
 
                         @if(config('po-confirmation.enabled', false))
                         <li>
-                            <x-sidebar-dropdown-item href="{{ route('settings.po-confirmation') }}" :active="request()->routeIs('settings.po-confirmation')">
+                            <x-sidebar-dropdown-item href="{{ route('po.confirmation.settings') }}" :active="request()->routeIs('settings.po-confirmation')">
                                 Confirmación PO
                             </x-sidebar-dropdown-item>
                         </li>

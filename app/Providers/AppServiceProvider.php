@@ -24,6 +24,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Cargar vistas del módulo PO Confirmation manualmente
+        if (class_exists('RagaOrders\POConfirmation\POConfirmationServiceProvider')) {
+            $this->loadViewsFrom(base_path('internal_modules/laravel-po-confirmation/resources/views'), 'po-confirmation');
+        }
+
         // Registrar componente de breadcrumb explícitamente
         Blade::component('breadcrumb', Breadcrumb::class);
 
