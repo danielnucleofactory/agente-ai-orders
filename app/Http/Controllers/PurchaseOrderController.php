@@ -76,17 +76,16 @@ class PurchaseOrderController extends Controller
                 $rules = [
                     // Requeridos
                     'order_number'           => ['required','string'],
-                    'net_total'              => ['required','numeric'],
                     'category'               => ['required','string'],
                     'factory_proforma_number'=> ['required','string'],
                     'route_label'            => ['required','string'],
                     'date_theorical_load'    => ['required','date'],
-                    'date_af_in'             => ['required','date'],
-                    'date_af_out'            => ['required','date'],
                     'reason'                 => ['required','string'],
                     'incoterms'              => ['required','string'],
                     'logistics_incoterm'     => ['required','string'],
                     'price_incoterm'         => ['required','string'],
+                    'bonded_warehouse_exit ' => ['required','date'],
+                    'bonded_warehouse_enter' => ['required','date'],
 
                     // Proveedor: al menos UNA de estas 3
                     'vendor_id'   => ['required_without_all:vendor,vendor_name'],
@@ -102,14 +101,14 @@ class PurchaseOrderController extends Controller
                     'route_label.required'             => 'El campo "Ruta Logística" es obligatorio.',
                     'date_theorical_load.required'     => 'El campo "Carga Lista Teórica" es obligatorio.',
                     'date_theorical_load.date'         => 'El campo "Carga Lista Teórica" debe ser una fecha válida.',
-                    'date_af_in.required'              => 'El campo "Ingreso AF" es obligatorio.',
-                    'date_af_in.date'                  => 'El campo "Ingreso AF" debe ser una fecha válida.',
-                    'date_af_out.required'             => 'El campo "Salida AF" es obligatorio.',
-                    'date_af_out.date'                 => 'El campo "Salida AF" debe ser una fecha válida.',
                     'reason.required'                  => 'El campo "Motivo" es obligatorio.',
                     'incoterms.required'               => 'El "Incoterm de compra" es obligatorio.',
                     'logistics_incoterm.required'      => 'El "Incoterm de logística" es obligatorio.',
                     'price_incoterm.required'          => 'El "Incoterm de precios" es obligatorio.',
+                    'bonded_warehouse_exit.required' => 'El campo "Salida Almacen Fiscal" es obligatorio.',
+                    'bonded_warehouse_exit.date' => 'El campo "Salida Almacen Fiscal" debe ser una fecha',
+                    'bonded_warehouse_enter.required' => 'El campo "Entrada Almacen Fiscal" es obligatorio.',
+                    'bonded_warehouse_enter.date' => 'El campo "Entrada Almacen Fiscal" debe ser una fecha',
 
                     'vendor_id.required_without_all'   => 'Debe enviar al menos uno de: vendor_id, vendor o vendor_name.',
                     'vendor.required_without_all'      => 'Debe enviar al menos uno de: vendor_id, vendor o vendor_name.',
@@ -187,10 +186,10 @@ class PurchaseOrderController extends Controller
                 // 8) ===== NEW FIELDS FOR OLO (string) =====
                 foreach ([
                              'factory_proforma_number','mbl_number','container_type','container_number','shipping_line',
-                             'logistics_incoterm','reason','category','etd_notes','forwarder_name','customer_name',
+                             'logistics_incoterm','reason','category','forwarder_name',
                              'cargo_invoice_number','tariff_type','route_label','arrival_status','arrival_port','departure_port',
                              'retail_group','customer_type','trading_company','service_provider','customs_dua','invoice',
-                             'factura_merca','case_number_file','receipt_note','visibility_notes','price_incoterm',
+                             'factura_merca','case_number_file','receipt_note','visibility_notes','price_incoterm','consolidator_name','vendor_number',
                          ] as $f) {
                     if (array_key_exists($f, $general)) {
                         $poData[$f] = $general[$f];
@@ -213,7 +212,7 @@ class PurchaseOrderController extends Controller
                 }
 
                 // 11) ===== NEW FIELDS FOR OLO (decimal) =====
-                foreach (['Invoice_amount','freight_amount'] as $f) {
+                foreach (['Invoice_amount','freight_amount','cbm'] as $f) {
                     if (($v = data_get($general, $f)) !== null && $v !== '') {
                         $poData[$f] = (float) $v;
                     }
@@ -222,13 +221,13 @@ class PurchaseOrderController extends Controller
                 // 12) ===== Fechas OLO y Fechas del Formulario =====
                 foreach ([
                              'date_booking_request','date_booking_authorized','date_theorical_load','date_variable_date',
-                             'date_carga_po','date_received','date_af_in','date_af_out',
+                             'date_carga_po','date_received',
                              'date_etd_initial','date_etd_updated','date_eta_updated',
                              'date_etd', 'date_atd', 'date_eta', 'date_ata',
                              'date_estimated_hub_arrival', 'date_actual_hub_arrival',
                              'inspection_date','vgm_cut_date','balance_payment_date','local_charges_payment_date',
                              'bonded_warehouse_enter','bonded_warehouse_exit','receipt_note_date',
-                             'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received',
+                             'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','dif_load_date','emision_date_po','forwader_date',
                          ] as $f) {
                     if (array_key_exists($f, $general)) {
                         $poData[$f] = $parseDate($general[$f]);
