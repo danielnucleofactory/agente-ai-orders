@@ -1071,7 +1071,7 @@
             </div>
         </div>
 
-        <div class="p-8 space-y-6 w-full bg-white rounded-2xl">
+        <div class="p-8 space-y-6 w-full bg-white rounded-2xl hidden">
             <h3 class="w-fit border-b-2 border-[#190FDB] pb-2 text-lg font-bold text-[#190FDB]">Carga / Contenido</h3>
 
             <div class="flex flex-col space-y-4">
