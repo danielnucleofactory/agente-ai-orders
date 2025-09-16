@@ -321,4 +321,15 @@ class PurchaseOrderController extends Controller
             ], 400);
         }
     }
+
+    public function deleteFromApi(Request $request, string $order_number): JsonResponse
+    {
+        $po = \App\Models\PurchaseOrder::where('order_number', $order_number)->firstOrFail();
+        $po->delete(); // soft delete
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Orden de compra anulada con éxito.',
+        ]);
+    }
 }
