@@ -43,6 +43,7 @@ class ModuleServiceProvider extends ServiceProvider
      */
         public function register(): void
     {
+        \Log::info('ModuleServiceProvider: Iniciando registro de módulos');
         foreach ($this->getModulesConfig() as $moduleName => $moduleConfig) {
             $modulePath = base_path($moduleConfig['path']);
 
@@ -95,6 +96,7 @@ class ModuleServiceProvider extends ServiceProvider
 
         // Registrar el Service Provider del módulo
         if (isset($config['provider']) && class_exists($config['provider'])) {
+            \Log::info("ModuleServiceProvider: Registrando {$config['provider']} para módulo {$moduleName}");
             $this->app->register($config['provider']);
         }
 
@@ -106,8 +108,8 @@ class ModuleServiceProvider extends ServiceProvider
             }
         }
 
-        // Cargar vistas del módulo
-        if ($config['views'] ?? false) {
+        // Cargar vistas del módulo solo si no tiene su propio ServiceProvider
+        if (($config['views'] ?? false) && !isset($config['provider'])) {
             $viewsPath = "{$modulePath}/resources/views";
             if (File::exists($viewsPath)) {
                 $this->loadViewsFrom($viewsPath, $moduleName);
