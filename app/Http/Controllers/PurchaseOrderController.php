@@ -84,7 +84,7 @@ class PurchaseOrderController extends Controller
                     'incoterms'              => ['required','string'],
                     'logistics_incoterm'     => ['required','string'],
                     'price_incoterm'         => ['required','string'],
-                    'bonded_warehouse_exit ' => ['required','date'],
+                    'bonded_warehouse_exit' => ['required','date'],
                     'bonded_warehouse_enter' => ['required','date'],
 
                     // Proveedor: al menos UNA de estas 3
