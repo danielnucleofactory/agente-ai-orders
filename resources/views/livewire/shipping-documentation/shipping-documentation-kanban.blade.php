@@ -1,9 +1,9 @@
 <div>
-    <div class="w-full px-0 mx-0">
+    <div class="px-0 mx-0 w-full">
         @if($hasActiveFilters)
-        <div class="flex items-center justify-between p-3 mb-4 rounded-md bg-blue-50">
+        <div class="flex justify-between items-center p-3 mb-4 bg-blue-50 rounded-md">
             <div class="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 w-5 h-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
                 </svg>
                 <span class="text-sm font-medium text-blue-700">Mostrando documentos filtrados. Los resultados que estás viendo están limitados por los filtros activos.</span>
@@ -17,7 +17,7 @@
         </div>
         @endif
 
-        <div class="flex w-full gap-4 pb-4 overflow-x-auto kanban-container" wire:poll.10s>
+        <div class="flex overflow-x-auto gap-4 pb-4 w-full kanban-container" wire:poll.10s>
             @if(!$board)
                 <div class="p-6 bg-white rounded-lg shadow-md">
                     <h3 class="text-lg font-semibold text-gray-700">No hay tableros Kanban disponibles</h3>
@@ -141,7 +141,7 @@
             <div class="mt-4">
 
                 <!-- Nueva -->
-                <div class="{{ $newColumnId == $columns[0]['id'] ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[0]) && $newColumnId == $columns[0]['id']) ? '' : 'hidden' }}">
                     <x-form-input class="mb-4">
                         <x-slot:label>
                             Ingrese fecha de release
@@ -156,12 +156,12 @@
                 </div>
 
                 {{-- Consolidador --}}
-                <div class="{{ $newColumnId == $columns[1]['id'] ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[1]) && $newColumnId == $columns[1]['id']) ? '' : 'hidden' }}">
                     {{-- sin campos definidos en hoja Etapas --}}
                 </div>
 
                 {{-- Producción (ID: 2) --}}
-                <div class="{{ $newColumnId == $columns[2]['id'] ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[2]) && $newColumnId == $columns[2]['id']) ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {{-- 1) Carga Lista Variable --}}
                         <x-form-input class="mb-4">
@@ -194,7 +194,7 @@
                 </div>
 
                 {{-- Booking (ID: 3) --}}
-                <div class="{{ $newColumnId == $columns[3]['id'] ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[3]) && $newColumnId == $columns[3]['id']) ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <x-form-input class="mb-4">
                             <x-slot:label>Solicitud de Booking</x-slot:label>
@@ -236,7 +236,7 @@
                 </div>
 
                 {{-- Tránsito (ID: 4) --}}
-                <div class="{{ $newColumnId == $columns[4]['id'] ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[4]) && $newColumnId == $columns[4]['id']) ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {{-- Fechas --}}
                         <x-form-input class="mb-4">
@@ -315,7 +315,7 @@
                 </div>
 
                 {{-- Puerto (ID: 5) --}}
-                <div class="{{ $newColumnId == $columns[5]['id'] ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[5]) && $newColumnId == $columns[5]['id']) ? '' : 'hidden' }}">
                     <x-form-input class="mb-4">
                         <x-slot:label>ETA Real (ATA)</x-slot:label>
                         <x-slot:input type="date" wire:model="actual_arrival_date" class="pr-10 {{ $errors->has('actual_arrival_date') ? 'border-red-500'  : '' }}"></x-slot:input>
@@ -324,7 +324,7 @@
                 </div>
 
                 {{-- Almacén Fiscal (ID: 6) --}}
-                <div class="{{ $newColumnId == $columns[6]['id'] ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[6]) && $newColumnId == $columns[6]['id']) ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <x-form-input class="mb-4">
                             <x-slot:label>Ingreso Almacén Fiscal</x-slot:label>
@@ -341,7 +341,7 @@
                 </div>
 
                 {{-- Ingresada (ID: 7) --}}
-                <div class="{{ $newColumnId == $columns[7]['id'] ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[7]) && $newColumnId == $columns[7]['id']) ? '' : 'hidden' }}">
                     <x-form-input class="mb-4">
                         <x-slot:label>Nota de Recibo</x-slot:label>
                         <x-slot:input type="text" wire:model="receipt_note" placeholder="Ingrese nota de recibo" class="pr-10 {{ $errors->has('receipt_note') ? 'border-red-500'  : '' }}"></x-slot:input>
@@ -350,17 +350,17 @@
                 </div>
 
                 {{-- En otra ZF (ID: 8) --}}
-                <div class="{{ $newColumnId == $columns[8]['id'] ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[8]) && $newColumnId == $columns[8]['id']) ? '' : 'hidden' }}">
                     {{-- sin campos definidos en hoja Etapas --}}
                 </div>
 
                 {{-- Recibiendo CDI (ID: 9) --}}
-                <div class="{{ $newColumnId == $columns[9]['id'] ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[9]) && $newColumnId == $columns[9]['id']) ? '' : 'hidden' }}">
                     {{-- sin campos definidos en hoja Etapas --}}
                 </div>
 
                 {{-- Anulada (ID: 10) --}}
-                <div class="{{ $newColumnId == $columns[10]['id'] ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[10]) && $newColumnId == $columns[10]['id']) ? '' : 'hidden' }}">
                     {{-- sin campos definidos en hoja Etapas --}}
                 </div>
 
