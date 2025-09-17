@@ -99,15 +99,13 @@ class ShippingDocumentationKanban extends Component
             'attachment' => 'nullable|file|max:5120', // 5MB
         ];
 
-        // Columna 0: Consolidador
-        if ($this->newColumnId == $this->columns[0]['id']) {
+        if ($this->newColumnId == $this->columns[1]['id']) {
             return $common + [
                     'release_date' => 'nullable|date',
                 ];
         }
 
-        // Columna 1: Producción
-        if ($this->newColumnId == $this->columns[1]['id']) {
+        if ($this->newColumnId == $this->columns[2]['id']) {
             return $common + [
                     // Necesarios (no obligatorios): fecha teórica
                     'date_theorical_load' => 'nullable|date',
@@ -118,8 +116,7 @@ class ShippingDocumentationKanban extends Component
                 ];
         }
 
-        // Columna 2: Booking
-        if ($this->newColumnId == $this->columns[2]['id']) {
+        if ($this->newColumnId == $this->columns[3]['id']) {
             return $common + [
                     // Requeridos
                     'date_booking_request'     => 'required|date',
@@ -132,8 +129,7 @@ class ShippingDocumentationKanban extends Component
                 ];
         }
 
-        // Columna 3: Tránsito
-        if ($this->newColumnId == $this->columns[3]['id']) {
+        if ($this->newColumnId == $this->columns[4]['id']) {
             return $common + [
                     // Requeridos
                     'actual_departure_date'  => 'required|date', // ETD real
@@ -152,29 +148,24 @@ class ShippingDocumentationKanban extends Component
                 ];
         }
 
-        // Columna 4: Puerto
-        if ($this->newColumnId == $this->columns[4]['id']) {
+        if ($this->newColumnId == $this->columns[5]['id']) {
             return $common + [
                     'actual_arrival_date' => 'required|date', // ETA real
                 ];
         }
 
-        // Columna 5: Almacén Fiscal
-        if ($this->newColumnId == $this->columns[5]['id']) {
+        if ($this->newColumnId == $this->columns[6]['id']) {
             return $common + [
                     'bonded_warehouse_enter' => 'required|date',
                     'bonded_warehouse_exit'  => 'required|date',
                 ];
         }
 
-        // Columna 6: Ingresada (necesario, no requerido)
-        if ($this->newColumnId == $this->columns[6]['id']) {
+        if ($this->newColumnId == $this->columns[7]['id']) {
             return $common + [
                     'receipt_note' => 'nullable|string|max:255',
                 ];
         }
-
-        // Otras columnas (7, 8, 9…): solo comunes
         return $common;
     }
 

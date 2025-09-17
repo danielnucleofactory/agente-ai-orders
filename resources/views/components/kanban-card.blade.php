@@ -10,53 +10,59 @@
 ])
 
 @php
-    $purchaseOrder = App\Models\PurchaseOrder::find($id);
-    $hubId = $purchaseOrder->actual_hub_id;
-    $hub =  $purchaseOrder->actualHub->name ?? 'Sin Hub';
-    $leadTime = \Carbon\Carbon::parse($purchaseOrder->date_required_in_destination)->format('d/m/Y');
-    $recolectaTime = \Carbon\Carbon::parse($purchaseOrder->date_estimated_hub_arrival)->format('d/m/Y');
-    $pickupTime = \Carbon\Carbon::parse($purchaseOrder->date_planned_pickup)->format('d/m/Y');
-    $totalWeight = $purchaseOrder->total_weight;
-    $dangerLevel = $purchaseOrder->material_type;
-    $materialType = $purchaseOrder->material_type;
-    $trackingIdCode = $purchaseOrder->tracking_id ?? 'N/A';
+    use App\Models\PurchaseOrder;
 
-    // Calcular expectedLeadTime = date_required_in_destination - date_planned_pickup (en días)
-    $expectedLeadTime = 0;
-    if ($purchaseOrder->date_required_in_destination && $purchaseOrder->date_planned_pickup) {
-        $dateRequired = \Carbon\Carbon::parse($purchaseOrder->date_required_in_destination);
-        $datePlannedPickup = \Carbon\Carbon::parse($purchaseOrder->date_planned_pickup);
-        $expectedLeadTime = $datePlannedPickup->diffInDays($dateRequired);
-    }
+    // Trae también las anuladas (soft-deleted)
+    $purchaseOrder = PurchaseOrder::withTrashed()
+        ->with(['actualHub']) // si no existe la relación, quítala
+        ->find($id);
 
-    $eta = \Carbon\Carbon::parse($purchaseOrder->date_eta)->format('d/m/Y');
-    $ata = \Carbon\Carbon::parse($purchaseOrder->date_ata)->format('d/m/Y');
+    $isTrashed = $purchaseOrder?->trashed() ?? false;
 
-    // Calcular realLeadTime (Lead en transito) = ETA - pickup real (en días)
-    $realLeadTime = 0;
-    if ($purchaseOrder->date_eta && $purchaseOrder->date_actual_pickup) {
-        $etaDate = \Carbon\Carbon::parse($purchaseOrder->date_eta);
-        $actualPickupDate = \Carbon\Carbon::parse($purchaseOrder->date_actual_pickup);
-        $realLeadTime = $actualPickupDate->diffInDays($etaDate);
-    }
+    // Helper para formatear fechas solo si existen
+    $fmt = function ($date) {
+        return $date ? \Carbon\Carbon::parse($date)->format('d/m/Y') : null;
+    };
 
-    // Calcular días de atraso (ATA - ETA) para referencia si se necesita
-    $delayDays = 0;
-    if ($purchaseOrder->date_eta && $purchaseOrder->date_ata) {
-        $etaDate = \Carbon\Carbon::parse($purchaseOrder->date_eta);
-        $ataDate = \Carbon\Carbon::parse($purchaseOrder->date_ata);
-        $delayDays = $etaDate->diffInDays($ataDate, false); // ATA - ETA (invertir parámetros)
-    }
+    // Valores seguros
+    $hubId          = $purchaseOrder?->actual_hub_id;
+    $hub            = $purchaseOrder?->actualHub?->name ?? 'Sin Hub';
 
-    // Calcular actualLeadTime (Lead time real) = ATA - fecha pick planificada (en días)
-    $actualLeadTime = 0;
-    if ($purchaseOrder->date_ata && $purchaseOrder->date_planned_pickup) {
-        $ataDate = \Carbon\Carbon::parse($purchaseOrder->date_ata);
-        $plannedPickupDate = \Carbon\Carbon::parse($purchaseOrder->date_planned_pickup);
-        $actualLeadTime = $plannedPickupDate->diffInDays($ataDate);
-    }
+    $leadTime       = $fmt($purchaseOrder?->date_required_in_destination);
+    $recolectaTime  = $fmt($purchaseOrder?->date_estimated_hub_arrival);
+    $pickupTime     = $fmt($purchaseOrder?->date_planned_pickup);
 
+    $totalWeight    = $purchaseOrder?->total_weight ?? null;
+    $dangerLevel    = $purchaseOrder?->material_type ?? null;
+    $materialTypeRaw = $purchaseOrder?->material_type ?? '';
+    $materialType    = strtolower(trim((string) $materialTypeRaw));
+    $trackingIdCode = $purchaseOrder?->tracking_id ?? 'N/A';
+
+    $eta            = $fmt($purchaseOrder?->date_eta);
+    $ata            = $fmt($purchaseOrder?->date_ata);
+
+    // Cálculos con guardas
+    $expectedLeadTime = ($purchaseOrder?->date_required_in_destination && $purchaseOrder?->date_planned_pickup)
+        ? \Carbon\Carbon::parse($purchaseOrder->date_planned_pickup)
+            ->diffInDays(\Carbon\Carbon::parse($purchaseOrder->date_required_in_destination))
+        : null;
+
+    $realLeadTime = ($purchaseOrder?->date_eta && $purchaseOrder?->date_actual_pickup)
+        ? \Carbon\Carbon::parse($purchaseOrder->date_actual_pickup)
+            ->diffInDays(\Carbon\Carbon::parse($purchaseOrder->date_eta))
+        : null;
+
+    $delayDays = ($purchaseOrder?->date_eta && $purchaseOrder?->date_ata)
+        ? \Carbon\Carbon::parse($purchaseOrder->date_eta)
+            ->diffInDays(\Carbon\Carbon::parse($purchaseOrder->date_ata), false) // ATA - ETA (con signo)
+        : null;
+
+    $actualLeadTime = ($purchaseOrder?->date_ata && $purchaseOrder?->date_planned_pickup)
+        ? \Carbon\Carbon::parse($purchaseOrder->date_planned_pickup)
+            ->diffInDays(\Carbon\Carbon::parse($purchaseOrder->date_ata))
+        : null;
 @endphp
+
 
 <li class="kanban-card relative flex justify-between min-h-[180px] w-full gap-5 rounded-[0.625rem] border-2 border-[#E0E5FF] bg-white px-4 py-2 text-xs"
     x-data x-init="$el.addEventListener('click', () => {
@@ -69,87 +75,21 @@
         <div class="flex gap-4">
             <div class="space-y-1 text-sm">
                 <p>
-                    <a class="text-[#190FDB] underline underline-offset-4" href="/purchase-orders/{{ $trackingId }}/detail">
-                        PO: {{ $po }}
-                    </a>
+                    @if (!$isTrashed)
+                        <a class="text-[#190FDB] underline underline-offset-4"
+                           href="/purchase-orders/{{ $trackingId }}/detail">
+                            PO: {{ $po }}
+                        </a>
+                    @else
+                        <span class="text-gray-400 cursor-not-allowed select-none"
+                              title="PO anulada: detalle bloqueado">
+                            PO: {{ $po }}
+                        </span>
+                    @endif
                 </p>
-                <p>ID Tracking: {{ $trackingIdCode }}</p>
+
+                <p>ID Tracking: {{ $trackingIdCode ?? 'N/A' }}</p>
             </div>
-        </div>
-
-        <div class="flex flex-col justify-between space-y-[0.875rem]"
-            @if (str_contains($materialType, 'dangerous'))
-            <x-label class="bg-danger">
-                <span>Producto peligroso</span>
-
-                <x-slot:icon>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="18" viewBox="0 0 20 18"
-                        fill="none">
-                        <path
-                            d="M9.99979 6.50019V9.83353M9.99979 13.1669H10.0081M8.84588 2.24329L1.99181 14.0821C1.61164 14.7388 1.42156 15.0671 1.44965 15.3366C1.47416 15.5716 1.5973 15.7852 1.78843 15.9242C2.00756 16.0835 2.38695 16.0835 3.14572 16.0835H16.8539C17.6126 16.0835 17.992 16.0835 18.2111 15.9242C18.4023 15.7852 18.5254 15.5716 18.5499 15.3366C18.578 15.0671 18.3879 14.7388 18.0078 14.0821L11.1537 2.24329C10.7749 1.58899 10.5855 1.26184 10.3384 1.15196C10.1228 1.05612 9.87675 1.05612 9.6612 1.15196C9.4141 1.26184 9.22469 1.58899 8.84588 2.24329Z"
-                            stroke="#F7F7F7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </x-slot:icon>
-            </x-label>
-            @endif
-
-            @if (str_contains($materialType, 'general'))
-            <x-label class="bg-gray-500">
-                <span>Producto general</span>
-
-                <x-slot:icon>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="18" viewBox="0 0 20 18"
-                        fill="none">
-                        <path
-                            d="M9 2.25H3C2.17157 2.25 1.5 2.92157 1.5 3.75V14.25C1.5 15.0784 2.17157 15.75 3 15.75H17C17.8284 15.75 18.5 15.0784 18.5 14.25V7.5C18.5 6.67157 17.8284 6 17 6H10.5L9 2.25Z"
-                            stroke="#F7F7F7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </x-slot:icon>
-            </x-label>
-            @endif
-
-            @if (str_contains($materialType, 'estibable'))
-            <x-label class="bg-success">
-                <span>Producto estibable</span>
-
-                <x-slot:icon>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="18" viewBox="0 0 20 18"
-                        fill="none">
-                        <path
-                            d="M1 13.5L1 14.25C1 15.4926 2.00736 16.5 3.25 16.5H16.75C17.9926 16.5 19 15.4926 19 14.25V13.5M14.5 9L10 13.5M10 13.5L5.5 9M10 13.5V1.5"
-                            stroke="#F7F7F7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </x-slot:icon>
-            </x-label>
-            @endif
-
-            @if (str_contains($materialType, 'exclusive'))
-            <x-label class="bg-warning">
-                <span>Producto exclusivo</span>
-
-                <x-slot:icon>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="18" viewBox="0 0 20 18"
-                        fill="none">
-                        <path
-                            d="M6 16.5V8.25M6 8.25V1.5L14 8.25L10 10.5L6 8.25Z"
-                            stroke="#F7F7F7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </x-slot:icon>
-            </x-label>
-            @endif
-
-            <x-label class="bg-[#E0E5FF] py-[0.625rem] text-neutral-blue">
-                <p class="text-base">Hub: <span>{{ $hub }}</span></p>
-
-                <x-slot:icon>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="19" viewBox="0 0 18 19"
-                        fill="none">
-                        <path
-                            d="M5.66667 14.1663H12.3333M8.18141 2.30297L2.52949 6.6989C2.15168 6.99275 1.96278 7.13968 1.82669 7.32368C1.70614 7.48667 1.61633 7.67029 1.56169 7.86551C1.5 8.0859 1.5 8.32521 1.5 8.80384V14.833C1.5 15.7664 1.5 16.2331 1.68166 16.5896C1.84144 16.9032 2.09641 17.1582 2.41002 17.318C2.76654 17.4996 3.23325 17.4996 4.16667 17.4996H13.8333C14.7668 17.4996 15.2335 17.4996 15.59 17.318C15.9036 17.1582 16.1586 16.9032 16.3183 16.5896C16.5 16.2331 16.5 15.7664 16.5 14.833V8.80384C16.5 8.32521 16.5 8.0859 16.4383 7.86551C16.3837 7.67029 16.2939 7.48667 16.1733 7.32368C16.0372 7.13968 15.8483 6.99275 15.4705 6.69891L9.81859 2.30297C9.52582 2.07526 9.37943 1.9614 9.21779 1.91763C9.07516 1.87902 8.92484 1.87902 8.78221 1.91763C8.62057 1.9614 8.47418 2.07526 8.18141 2.30297Z"
-                            stroke="#7288FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </x-slot:icon>
-            </x-label>
         </div>
     </div>
 
@@ -165,8 +105,8 @@
             </svg>
 
             <div class="space-y-1">
-                <p class="whitespace-nowrap">Lead requerido: <span>{{ $expectedLeadTime }}</span></p>
-                <p class="whitespace-nowrap">Lead en transito: <span>{{ $realLeadTime }}</span></p>
+                <p class="whitespace-nowrap">Lead requerido: <span>{{ $expectedLeadTime ?? 'N/A' }}</span></p>
+                <p class="whitespace-nowrap">Lead en transito: <span>{{ $realLeadTime ?? 'N/A '}}</span></p>
             </div>
         </div>
 

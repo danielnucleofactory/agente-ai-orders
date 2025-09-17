@@ -143,7 +143,7 @@
                         @endcan
 
                         @can('has_view_forecast_graph')
-                        <li>
+                        <li class="hidden">
                             <x-sidebar-dropdown-item href="{{ route('products.forecast-graph') }}"
                                 :active="request()->routeIs('products.forecast-graph')">
                                 Forecast de materiales
@@ -152,7 +152,7 @@
                         @endcan
 
                         @can('has_view_forecast_table')
-                        <li>
+                        <li class="hidden">
                             <x-sidebar-dropdown-item href="{{ route('products.forecast') }}"
                                 :active="request()->routeIs('products.forecast')">
                                 Tabla de forecast
@@ -161,7 +161,7 @@
                         @endcan
 
                         @can('has_view_products')
-                        <li>
+                        <li class="hidden">
                             <x-sidebar-dropdown-item href="{{ route('products.index') }}"
                                 :active="request()->routeIs('products.index')">
                                 Productos
@@ -218,7 +218,7 @@
                         </li>
 
                         <li>
-                            <x-sidebar-dropdown-item href="{{ route('settings.stages') }}" :active="request()->routeIs('settings.stages')">
+                            <x-sidebar-dropdown-item href="{{ route('settings.kanban') }}" :active="request()->routeIs('settings.kanban')">
                                 Etapas
                             </x-sidebar-dropdown-item>
                         </li>
@@ -237,7 +237,7 @@
                             </x-sidebar-dropdown-item>
                         </li>
 
-                        <li>
+                        <li class="hidden">
                             <x-sidebar-dropdown-item href="{{ route('hub.index') }}"
                                 :active="request()->routeIs('hub.index')">
                                 Hubs
