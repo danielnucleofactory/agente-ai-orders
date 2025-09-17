@@ -94,6 +94,9 @@ class PurchaseOrder extends Model implements HasMedia
         'hash_expires_at',
         'confirmation_email_sent',
         'confirmation_email_sent_at',
+        'last_email_type_sent',
+        'last_email_sent_at',
+        'email_sent_history',
         'update_date_po',
         'confirm_update_date_po',
 

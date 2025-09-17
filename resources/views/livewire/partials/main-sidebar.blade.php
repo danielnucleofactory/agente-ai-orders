@@ -276,7 +276,7 @@
 
                         @if(config('po-confirmation.enabled', false))
                         <li>
-                            <x-sidebar-dropdown-item href="{{ route('po.confirmation.settings') }}" :active="request()->routeIs('settings.po-confirmation')">
+                            <x-sidebar-dropdown-item href="{{ route('po-confirmation.settings.index') }}" :active="request()->routeIs('po-confirmation.settings.index')">
                                 Confirmación PO
                             </x-sidebar-dropdown-item>
                         </li>
