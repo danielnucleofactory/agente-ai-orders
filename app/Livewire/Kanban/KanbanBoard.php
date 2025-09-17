@@ -188,7 +188,7 @@ class KanbanBoard extends Component
             ->where('company_id', $companyId);
 
         // Aplicar filtros si están activos
-        $this->applyQueryFilters($query);
+        $this->applyQueryFilters($activeQuery);
 
         $activeOrders = $activeQuery->get();
 
