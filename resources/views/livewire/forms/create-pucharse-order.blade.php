@@ -573,18 +573,13 @@
                     </x-form-input>
 
                     <x-form-input>
-                        <x-slot:label>ETD</x-slot:label>
+                        <x-slot:label>ETD </x-slot:label>
                         <x-slot:input type="date" name="date_etd" wire:model="date_etd"></x-slot:input>
                     </x-form-input>
 
                     <x-form-input>
-                        <x-slot:label>ATD</x-slot:label>
+                        <x-slot:label>ATD </x-slot:label>
                         <x-slot:input type="date" name="date_atd" wire:model="date_atd"></x-slot:input>
-                    </x-form-input>
-
-                    <x-form-input>
-                        <x-slot:label>ETD actualizada</x-slot:label>
-                        <x-slot:input type="date" name="date_etd_updated" wire:model="date_etd_updated"></x-slot:input>
                     </x-form-input>
 
                     <x-form-input class="hidden">
@@ -608,14 +603,14 @@
                         <x-slot:input type="date" name="date_eta" wire:model="date_eta"></x-slot:input>
                     </x-form-input>
 
-                    <x-form-input class="hidden">
-                        <x-slot:label>Fecha ATA (Fecha real de llegada)</x-slot:label>
-                        <x-slot:input type="date" name="date_ata" wire:model="date_ata"></x-slot:input>
+                    <x-form-input>
+                        <x-slot:label>ETA Inicial</x-slot:label>
+                        <x-slot:input type="date" name="date_eta_updated" wire:model="date_eta_updated"></x-slot:input>
                     </x-form-input>
 
                     <x-form-input>
-                        <x-slot:label>ETA actualizada</x-slot:label>
-                        <x-slot:input type="date" name="date_eta_updated" wire:model="date_eta_updated"></x-slot:input>
+                        <x-slot:label>ATA</x-slot:label>
+                        <x-slot:input type="date" name="date_ata" wire:model="date_ata"></x-slot:input>
                     </x-form-input>
 
                     <x-form-input class="hidden">
@@ -718,7 +713,7 @@
 
                     <x-form-input>
                         <x-slot:label>Número de Booking</x-slot:label>
-                        <x-slot:input name="tracking_id" placeholder="Ingrese Tracking ID" wire:model="tracking_id"></x-slot:input>
+                        <x-slot:input name="tracking_id" placeholder="Ingrese número de booking" wire:model="tracking_id"></x-slot:input>
                     </x-form-input>
 
                     <x-form-input class="hidden">
