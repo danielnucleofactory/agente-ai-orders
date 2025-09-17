@@ -161,14 +161,11 @@ class ShippingDocumentationKanban extends Component
                 ];
         }
 
-        // Columna 6: Ingresada (necesario, no requerido)
-        if ($this->newColumnId == $this->columns[6]['id']) {
+        if ($this->newColumnId == $this->columns[7]['id']) {
             return $common + [
                     'receipt_note' => 'nullable|string|max:255',
                 ];
         }
-
-        // Otras columnas (7, 8, 9…): solo comunes
         return $common;
     }
 
