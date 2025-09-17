@@ -10,53 +10,59 @@
 ])
 
 @php
-    $purchaseOrder = App\Models\PurchaseOrder::find($id);
-    $hubId = $purchaseOrder->actual_hub_id;
-    $hub =  $purchaseOrder->actualHub->name ?? 'Sin Hub';
-    $leadTime = \Carbon\Carbon::parse($purchaseOrder->date_required_in_destination)->format('d/m/Y');
-    $recolectaTime = \Carbon\Carbon::parse($purchaseOrder->date_estimated_hub_arrival)->format('d/m/Y');
-    $pickupTime = \Carbon\Carbon::parse($purchaseOrder->date_planned_pickup)->format('d/m/Y');
-    $totalWeight = $purchaseOrder->total_weight;
-    $dangerLevel = $purchaseOrder->material_type;
-    $materialType = $purchaseOrder->material_type;
-    $trackingIdCode = $purchaseOrder->tracking_id ?? 'N/A';
+    use App\Models\PurchaseOrder;
 
-    // Calcular expectedLeadTime = date_required_in_destination - date_planned_pickup (en días)
-    $expectedLeadTime = 0;
-    if ($purchaseOrder->date_required_in_destination && $purchaseOrder->date_planned_pickup) {
-        $dateRequired = \Carbon\Carbon::parse($purchaseOrder->date_required_in_destination);
-        $datePlannedPickup = \Carbon\Carbon::parse($purchaseOrder->date_planned_pickup);
-        $expectedLeadTime = $datePlannedPickup->diffInDays($dateRequired);
-    }
+    // Trae también las anuladas (soft-deleted)
+    $purchaseOrder = PurchaseOrder::withTrashed()
+        ->with(['actualHub']) // si no existe la relación, quítala
+        ->find($id);
 
-    $eta = \Carbon\Carbon::parse($purchaseOrder->date_eta)->format('d/m/Y');
-    $ata = \Carbon\Carbon::parse($purchaseOrder->date_ata)->format('d/m/Y');
+    $isTrashed = $purchaseOrder?->trashed() ?? false;
 
-    // Calcular realLeadTime (Lead en transito) = ETA - pickup real (en días)
-    $realLeadTime = 0;
-    if ($purchaseOrder->date_eta && $purchaseOrder->date_actual_pickup) {
-        $etaDate = \Carbon\Carbon::parse($purchaseOrder->date_eta);
-        $actualPickupDate = \Carbon\Carbon::parse($purchaseOrder->date_actual_pickup);
-        $realLeadTime = $actualPickupDate->diffInDays($etaDate);
-    }
+    // Helper para formatear fechas solo si existen
+    $fmt = function ($date) {
+        return $date ? \Carbon\Carbon::parse($date)->format('d/m/Y') : null;
+    };
 
-    // Calcular días de atraso (ATA - ETA) para referencia si se necesita
-    $delayDays = 0;
-    if ($purchaseOrder->date_eta && $purchaseOrder->date_ata) {
-        $etaDate = \Carbon\Carbon::parse($purchaseOrder->date_eta);
-        $ataDate = \Carbon\Carbon::parse($purchaseOrder->date_ata);
-        $delayDays = $etaDate->diffInDays($ataDate, false); // ATA - ETA (invertir parámetros)
-    }
+    // Valores seguros
+    $hubId          = $purchaseOrder?->actual_hub_id;
+    $hub            = $purchaseOrder?->actualHub?->name ?? 'Sin Hub';
 
-    // Calcular actualLeadTime (Lead time real) = ATA - fecha pick planificada (en días)
-    $actualLeadTime = 0;
-    if ($purchaseOrder->date_ata && $purchaseOrder->date_planned_pickup) {
-        $ataDate = \Carbon\Carbon::parse($purchaseOrder->date_ata);
-        $plannedPickupDate = \Carbon\Carbon::parse($purchaseOrder->date_planned_pickup);
-        $actualLeadTime = $plannedPickupDate->diffInDays($ataDate);
-    }
+    $leadTime       = $fmt($purchaseOrder?->date_required_in_destination);
+    $recolectaTime  = $fmt($purchaseOrder?->date_estimated_hub_arrival);
+    $pickupTime     = $fmt($purchaseOrder?->date_planned_pickup);
 
+    $totalWeight    = $purchaseOrder?->total_weight ?? null;
+    $dangerLevel    = $purchaseOrder?->material_type ?? null;
+    $materialTypeRaw = $purchaseOrder?->material_type ?? '';
+    $materialType    = strtolower(trim((string) $materialTypeRaw));
+    $trackingIdCode = $purchaseOrder?->tracking_id ?? 'N/A';
+
+    $eta            = $fmt($purchaseOrder?->date_eta);
+    $ata            = $fmt($purchaseOrder?->date_ata);
+
+    // Cálculos con guardas
+    $expectedLeadTime = ($purchaseOrder?->date_required_in_destination && $purchaseOrder?->date_planned_pickup)
+        ? \Carbon\Carbon::parse($purchaseOrder->date_planned_pickup)
+            ->diffInDays(\Carbon\Carbon::parse($purchaseOrder->date_required_in_destination))
+        : null;
+
+    $realLeadTime = ($purchaseOrder?->date_eta && $purchaseOrder?->date_actual_pickup)
+        ? \Carbon\Carbon::parse($purchaseOrder->date_actual_pickup)
+            ->diffInDays(\Carbon\Carbon::parse($purchaseOrder->date_eta))
+        : null;
+
+    $delayDays = ($purchaseOrder?->date_eta && $purchaseOrder?->date_ata)
+        ? \Carbon\Carbon::parse($purchaseOrder->date_eta)
+            ->diffInDays(\Carbon\Carbon::parse($purchaseOrder->date_ata), false) // ATA - ETA (con signo)
+        : null;
+
+    $actualLeadTime = ($purchaseOrder?->date_ata && $purchaseOrder?->date_planned_pickup)
+        ? \Carbon\Carbon::parse($purchaseOrder->date_planned_pickup)
+            ->diffInDays(\Carbon\Carbon::parse($purchaseOrder->date_ata))
+        : null;
 @endphp
+
 
 <li class="kanban-card relative flex justify-between min-h-[180px] w-full gap-5 rounded-[0.625rem] border-2 border-[#E0E5FF] bg-white px-4 py-2 text-xs"
     x-data x-init="$el.addEventListener('click', () => {
@@ -69,11 +75,20 @@
         <div class="flex gap-4">
             <div class="space-y-1 text-sm">
                 <p>
-                    <a class="text-[#190FDB] underline underline-offset-4" href="/purchase-orders/{{ $trackingId }}/detail">
-                        PO: {{ $po }}
-                    </a>
+                    @if (!$isTrashed)
+                        <a class="text-[#190FDB] underline underline-offset-4"
+                           href="/purchase-orders/{{ $trackingId }}/detail">
+                            PO: {{ $po }}
+                        </a>
+                    @else
+                        <span class="text-gray-400 cursor-not-allowed select-none"
+                              title="PO anulada: detalle bloqueado">
+                            PO: {{ $po }}
+                        </span>
+                    @endif
                 </p>
-                <p>ID Tracking: {{ $trackingIdCode }}</p>
+
+                <p>ID Tracking: {{ $trackingIdCode ?? 'N/A' }}</p>
             </div>
         </div>
 
@@ -165,8 +180,8 @@
             </svg>
 
             <div class="space-y-1">
-                <p class="whitespace-nowrap">Lead requerido: <span>{{ $expectedLeadTime }}</span></p>
-                <p class="whitespace-nowrap">Lead en transito: <span>{{ $realLeadTime }}</span></p>
+                <p class="whitespace-nowrap">Lead requerido: <span>{{ $expectedLeadTime ?? 'N/A' }}</span></p>
+                <p class="whitespace-nowrap">Lead en transito: <span>{{ $realLeadTime ?? 'N/A '}}</span></p>
             </div>
         </div>
 

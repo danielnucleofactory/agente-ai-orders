@@ -14,20 +14,32 @@ use Illuminate\Support\Facades\Schema;
 
 trait SoftCascadeDeletes
 {
-    protected function softCascadeList(): array
-    {
-        return (property_exists($this, 'softCascade') && is_array($this->softCascade))
-            ? $this->softCascade
-            : [];
-    }
-
+    /**
+     * El modelo que use este trait debe definir:
+     *   protected array $softCascade = ['items', 'documents', ...];
+     * con los nombres de sus relaciones a cascadear.
+     */
     public static function bootSoftCascadeDeletes(): void
     {
-        // SOFT DELETE en cascada (hijos y pivots)
+        /**
+         * ---- Cascade al ELIMINAR (soft delete) ----
+         */
         static::deleting(function (Model $model) {
-            foreach ($model->softCascadeList() as $relationName) {
-                if (!method_exists($model, $relationName)) continue;
-                $relation = $model->{$relationName}();
+            // Si no es soft delete, no tocamos nada aquí.
+            if (method_exists($model, 'isForceDeleting') && $model->isForceDeleting()) {
+                return;
+            }
+
+            $relations = property_exists($model, 'softCascade') && is_array($model->softCascade)
+                ? $model->softCascade
+                : [];
+
+            foreach (array_unique($relations) as $name) {
+                if (!method_exists($model, $name)) {
+                    continue;
+                }
+
+                $relation = $model->{$name}();
 
                 // hasOne / morphOne
                 if ($relation instanceof HasOne || $relation instanceof MorphOne) {
@@ -57,6 +69,54 @@ trait SoftCascadeDeletes
                         DB::table($pivotTable)
                             ->where($foreignKey, $model->getKey())
                             ->update(['deleted_at' => now()]);
+                    }
+                }
+            }
+        });
+
+        /**
+         * ---- Cascade al RESTAURAR (soft restore) ----
+         */
+        static::restoring(function (Model $model) {
+            $relations = property_exists($model, 'softCascade') && is_array($model->softCascade)
+                ? $model->softCascade
+                : [];
+
+            foreach (array_unique($relations) as $name) {
+                if (!method_exists($model, $name)) {
+                    continue;
+                }
+
+                $relation = $model->{$name}();
+
+                // hasOne / morphOne
+                if ($relation instanceof HasOne || $relation instanceof MorphOne) {
+                    $child = $relation->withTrashed()->first();
+                    if ($child && in_array(SoftDeletes::class, class_uses_recursive($child))) {
+                        $child->restore();
+                    }
+                    continue;
+                }
+
+                // hasMany / morphMany
+                if ($relation instanceof HasMany || $relation instanceof MorphMany) {
+                    $relation->withTrashed()->get()->each(function ($child) {
+                        if ($child && in_array(SoftDeletes::class, class_uses_recursive($child))) {
+                            $child->restore();
+                        }
+                    });
+                    continue;
+                }
+
+                // belongsToMany -> limpiar deleted_at en la pivot si existe
+                if ($relation instanceof BelongsToMany) {
+                    $pivotTable = $relation->getTable();
+                    $foreignKey = $relation->getForeignPivotKeyName();
+
+                    if (Schema::hasTable($pivotTable) && Schema::hasColumn($pivotTable, 'deleted_at')) {
+                        DB::table($pivotTable)
+                            ->where($foreignKey, $model->getKey())
+                            ->update(['deleted_at' => null]);
                     }
                 }
             }

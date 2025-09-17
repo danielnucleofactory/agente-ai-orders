@@ -31,6 +31,12 @@ class ListPurchaseOrders extends Component
     public ?int $confirmingDeleteId = null;
     public ?string $confirmingDeleteOrderNumber = null;
 
+    // --- propiedades de confirmación para restauración de una PO ---
+    public bool $showConfirmModal = false;
+    public ?string $confirmMode = null;          // 'restore' o 'delete'
+    public ?int $confirmId = null;
+    public ?string $confirmOrderNumber = null;
+
     protected $queryString = [
         'search' => ['except' => ''],
         'sortField' => ['except' => 'created_at', 'updated_at'],
@@ -98,8 +104,8 @@ class ListPurchaseOrders extends Component
 
     public function render()
     {
-        $purchaseOrders = PurchaseOrder::query()
-            ->withoutTrashed() // 👈 añade esto
+        $purchaseOrders = \App\Models\PurchaseOrder::query()
+            ->withTrashed() // incluye activas + anuladas
             ->when($this->search, function ($query) {
                 $searchTerm = strtolower($this->search);
                 $query->where(function ($query) use ($searchTerm) {
@@ -108,7 +114,13 @@ class ListPurchaseOrders extends Component
                         ->orWhereRaw('LOWER(notes) LIKE ?', ['%' . $searchTerm . '%']);
                 });
             })
-            ->when($this->statusFilter, fn($q) => $q->where('status', $this->statusFilter))
+            ->when($this->statusFilter === '__trashed', function ($q) {
+                $q->onlyTrashed(); // ⬅️ muestra solo anuladas
+            })
+            ->when(in_array($this->statusFilter, ['draft','pending','approved','shipped','delivered']), function ($q) {
+                // filtra por status solo en órdenes activas
+                $q->whereNull('deleted_at')->where('status', $this->statusFilter);
+            })
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
 
@@ -116,4 +128,52 @@ class ListPurchaseOrders extends Component
             'purchaseOrders' => $purchaseOrders
         ]);
     }
+
+    // == Flujo de restauración de una PO ==
+
+    public function confirmRestore(int $id): void
+    {
+        $po = \App\Models\PurchaseOrder::withTrashed()
+            ->select('id','order_number')
+            ->findOrFail($id);
+
+        $this->confirmId = $po->id;
+        $this->confirmOrderNumber = $po->order_number;
+        $this->confirmMode = 'restore';
+        $this->showConfirmModal = true;
+    }
+
+    // Cierra/cancela
+    public function cancelConfirm(): void
+    {
+        $this->reset(['showConfirmModal','confirmMode','confirmId','confirmOrderNumber']);
+    }
+
+    // Click en “Restaurar” dentro del modal
+    public function restoreConfirmed(): void
+    {
+        $id = $this->confirmId;
+        $this->cancelConfirm();      // cerrar modal de inmediato
+        $this->restore($id);         // reutiliza tu método restore() existente
+    }
+    public function restore(int $id): void
+    {
+        $po = PurchaseOrder::withTrashed()->findOrFail($id);
+
+        if (! $po->trashed()) {
+            session()->flash('message', 'La orden no está anulada.');
+            return;
+        }
+
+        \DB::transaction(function () use ($po) {
+            $po->restore(); // ← el trait SoftCascadeDeletes restaurará hijos/pivots
+        });
+
+        session()->flash('message', "Orden #{$po->order_number} restaurada con éxito.");
+        $this->resetPage(); // refresca la paginación de la tabla
+    }
+
+
+
+
 }

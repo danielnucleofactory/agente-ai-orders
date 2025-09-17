@@ -60,6 +60,11 @@
                         </span>
                     </h3>
                     <div class="max-h-[600px] overflow-y-scroll h-full scrollbar-thin scrollbar-thumb-gray-transparent scrollbar-track-gray-100">
+                        @php
+                            $isAnuladaCol = (int)($column['id'] ?? 0) === 10
+                                || strtolower($column['name'] ?? '') === 'anulada'
+                                || strtolower($column['slug'] ?? '') === 'anulada';
+                        @endphp
                         <div id="column-{{ $column['id'] }}" data-column-id="{{ $column['id'] }}" class="space-y-3 min-h-40"
                             x-data x-init="new Sortable($el, {
                                 group: 'tasks',
@@ -70,6 +75,7 @@
                                 forceFallback: true,
                                 fallbackClass: 'sortable-fallback',
                                 fallbackOnBody: true,
+                                draggable: '.task-card:not(.is-trashed)',
                                 onEnd: function(evt) {
                                     const taskId = evt.item.getAttribute('data-task-id');
                                     const newColumn = evt.to.getAttribute('data-column-id');
@@ -108,8 +114,13 @@
                                 }
                             })">
                             @foreach ($tasksByColumn[$column['id']] as $task)
-                                <div class="cursor-move task-card" data-task-id="{{ $task['id'] }}">
-                                    <x-kanban-card :id="$task['id']" :purchaseOrder="$task" :po="$task['po']" :trackingId="$task['id']" :hubLocation="$task['company']" :leadTime="$task['order_date'] ?? 'N/A'"
+                                <div
+                                    class="task-card {{ $isAnuladaCol ? 'is-trashed opacity-60 cursor-not-allowed select-none' : 'cursor-move' }}"
+                                    data-task-id="{{ $task['id'] }}"
+                                    @if($isAnuladaCol) title="PO anulada: no se puede mover" @endif
+                                >
+
+                                <x-kanban-card :id="$task['id']" :purchaseOrder="$task" :po="$task['po']" :trackingId="$task['id']" :hubLocation="$task['company']" :leadTime="$task['order_date'] ?? 'N/A'"
                                         :recolectaTime="$task['requested_delivery_date'] ?? 'N/A'" :pickupTime="$task['requested_delivery_date'] ?? 'N/A'" :totalWeight="number_format($task['total'] ?? 0, 2)" />
                                 </div>
                             @endforeach
@@ -555,7 +566,7 @@
                     <div>
                         <x-form-input>
                             <x-slot:label>Factura de Mercancía</x-slot:label>
-                            <x-slot:input name="merchandise_invoice" wire:model="merchandise_invoice"
+                            <x-slot:input name="merchandise_invoice" wire:model="merchandise_invoice" placeholder="Ingrese factura de mercancia"
                                           class="pr-10 {{ $errors->has('merchandise_invoice') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('merchandise_invoice') }}</x-slot:error>
                         </x-form-input>

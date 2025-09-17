@@ -17,8 +17,10 @@
 
                 <div>
                     <label for="statusFilter" class="sr-only">Filtrar por estado</label>
-                    <select wire:model.live="statusFilter" id="statusFilter" class="block w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <select wire:model.live="statusFilter" id="statusFilter"
+                            class="block w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                         <option value="">Todos los estados</option>
+                        <option value="__trashed">Anuladas</option> {{-- ⬅️ nuevo --}}
                         <option value="draft">Borrador</option>
                         <option value="pending">Pendiente</option>
                         <option value="approved">Aprobada</option>
@@ -204,10 +206,10 @@
                         @endif
 
                         @if($visibleColumns['actions'])
-                        <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-right text-gray-500 uppercase">
-                            Acciones
-                        </th>
-                        @endif
+                                <th scope="col" class="px-6 py-3 text-xs font-bold text-black uppercase tracking-wider text-center">
+                                    ACCIONES
+                                </th>
+                            @endif
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -226,17 +228,23 @@
                             @endif
 
                             @if($visibleColumns['status'])
-                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                <span class="inline-flex rounded-full px-2 text-xs font-semibold leading-5
-                                    {{ $order->status === 'draft' ? 'bg-gray-100 text-gray-800' : '' }}
-                                    {{ $order->status === 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                    {{ $order->status === 'approved' ? 'bg-green-100 text-green-800' : '' }}
-                                    {{ $order->status === 'shipped' ? 'bg-blue-100 text-blue-800' : '' }}
-                                    {{ $order->status === 'delivered' ? 'bg-purple-100 text-purple-800' : '' }}
-                                ">
-                                    {{ ucfirst($order->status) }}
-                                </span>
-                            </td>
+                                <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                    @if(!empty($order->deleted_at))  {{-- PO soft-deleted --}}
+                                        <span class="inline-flex rounded-full px-2 text-xs font-semibold leading-5 bg-red-100 text-red-800">
+                                            Anulado
+                                        </span>
+                                    @else
+                                        <span class="inline-flex rounded-full px-2 text-xs font-semibold leading-5
+                                            {{ $order->status === 'draft' ? 'bg-gray-100 text-gray-800' : '' }}
+                                            {{ $order->status === 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                                            {{ $order->status === 'approved' ? 'bg-green-100 text-green-800' : '' }}
+                                            {{ $order->status === 'shipped' ? 'bg-blue-100 text-blue-800' : '' }}
+                                            {{ $order->status === 'delivered' ? 'bg-purple-100 text-purple-800' : '' }}
+                                        ">
+                                            {{ ucfirst($order->status) }}
+                                        </span>
+                                    @endif
+                                </td>
                             @endif
 
                             @if($visibleColumns['order_date'])
@@ -256,18 +264,29 @@
                                 {{ $order->updated_at ? $order->updated_at->format('d/m/Y / H:i') : 'N/A' }}
                             </td>
                             @endif
+                                @if($visibleColumns['actions'])
+                                    <td class="px-6 py-4 text-sm font-medium whitespace-nowrap text-center">
+                                        <div class="inline-flex items-center justify-center gap-4">
+                                            @if(!empty($order->deleted_at))
+                                                <button type="button"
+                                                        wire:click="confirmRestore({{ $order->id }})"
+                                                        class="text-green-700 hover:text-green-900">Restaurar</button>
+                                            @else
+                                                <a href="{{ route('purchase-orders.detail', $order->id) }}"
+                                                   class="text-indigo-600 hover:text-indigo-900">Ver</a>
 
-                            @if($visibleColumns['actions'])
-                            <td class="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
-                                <a href="{{ route('purchase-orders.detail', $order->id) }}" class="text-indigo-600 hover:text-indigo-900">Ver</a>
-                                <a href="{{ route('purchase-orders.edit', $order->id) }}" class="ml-4 text-indigo-600 hover:text-indigo-900">Editar</a>
-                                <button type="button"
-                                        wire:click="confirmDelete({{ $order->id }})"
-                                        class="ml-4 text-red-600 hover:text-red-800">
-                                    Eliminar
-                                </button>
-                            </td>
-                            @endif
+                                                <a href="{{ route('purchase-orders.edit', $order->id) }}"
+                                                   class="text-indigo-600 hover:text-indigo-900">Editar</a>
+
+                                                @can('has_delete_orders')
+                                                    <button type="button"
+                                                            wire:click="confirmDelete({{ $order->id }})"
+                                                            class="text-red-600 hover:text-red-800">Eliminar</button>
+                                                @endcan
+                                            @endif
+                                        </div>
+                                    </td>
+                                @endif
                         </tr>
                     @empty
                         <tr>
@@ -376,30 +395,47 @@
         </div>
     @endif
 
-    {{-- NUEVO: Modal de confirmación de borrado (Livewire puro) --}}
-    @if ($confirmingDeleteId)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div class="w-full max-w-md p-6 bg-white rounded-lg shadow-lg">
-                <h3 class="text-lg font-semibold text-gray-900">Eliminar Orden de compra</h3>
-                <p class="mt-2 text-sm text-gray-600">
-                    ¿Seguro que deseas eliminar la Orden de Compra N°
-                    <span class="font-semibold">#{{ $confirmingDeleteOrderNumber }}</span>?
+    {{-- Modal de confirmación --}}
+    @if($showConfirmModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/30"></div>
 
-                </p>
-                <div class="flex justify-end mt-6 space-x-3">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+                <div class="px-6 pt-6">
+                    <h3 class="text-lg font-semibold">
+                        {{ $confirmMode === 'restore' ? 'Restaurar Orden de compra' : 'Eliminar Orden de compra' }}
+                    </h3>
+                    <p class="mt-2 text-sm text-gray-600">
+                        @if($confirmMode === 'restore')
+                            ¿Seguro que deseas restaurar la Orden de Compra N° #{{ $confirmOrderNumber }}?
+                        @else
+                            ¿Seguro que deseas eliminar la Orden de Compra N° #{{ $confirmOrderNumber }}?
+                        @endif
+                    </p>
+                </div>
+
+                <div class="flex justify-end gap-3 px-6 py-4">
                     <button type="button"
-                            wire:click="cancelDelete"
-                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                            wire:click="cancelConfirm"
+                            class="px-4 py-2 text-sm font-medium bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
                         Cancelar
                     </button>
-                    <button type="button"
-                            wire:click="deleteConfirmed"
-                            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">
-                        Eliminar
-                    </button>
+
+                    @if($confirmMode === 'restore')
+                        <button type="button"
+                                wire:click="restoreConfirmed"
+                                class="px-4 py-2 text-sm font-semibold text-white rounded-md bg-green-600 hover:bg-green-700">
+                            Restaurar
+                        </button>
+                    @else
+                        <button type="button"
+                                wire:click="deleteConfirmed"
+                                class="px-4 py-2 text-sm font-semibold text-white rounded-md bg-red-600 hover:bg-red-700">
+                            Eliminar
+                        </button>
+                    @endif
                 </div>
             </div>
         </div>
     @endif
-
 </div>

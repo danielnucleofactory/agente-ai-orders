@@ -165,36 +165,44 @@ class KanbanBoard extends Component
             return;
         }
 
-        // Obtener el estado por defecto
+        // Columnas del tablero actual
+        $this->loadColumns();
         $defaultStatus = $this->board->statuses()->where('is_default', true)->first();
 
         // Obtener los IDs de los estados de este tablero
         $statusIds = collect($this->columns)->pluck('id')->toArray();
 
-        // Cargar las órdenes de compra de la compañía del usuario
+        // Detectar el ID de la columna "Anulada" en este tablero (fallback 10 si no la encuentra)
+        $anuladaStatusId = optional(
+            collect($this->columns)->first(function ($c) {
+                return (isset($c['slug']) && strtolower($c['slug']) === 'anulada')
+                    || strtolower($c['name']) === 'anulada';
+            })
+        )['id'] ?? 10;
+
         $companyId = auth()->user()->company_id ?? null;
 
-        // excluir soft-deleted
-        $query = PurchaseOrder::with(['company', 'kanbanStatus', 'vendor'])
+        // === 1) PO activas (NO borradas) -> van a su columna actual ===
+        $activeQuery = \App\Models\PurchaseOrder::with(['company', 'kanbanStatus', 'vendor'])
             ->withoutTrashed()
             ->where('company_id', $companyId);
 
         // Aplicar filtros si están activos
         $this->applyQueryFilters($query);
 
-        $purchaseOrders = $query->get();
+        $activeOrders = $activeQuery->get();
 
         // Limpiar el array de tareas
         $this->tasks = [];
 
-        foreach ($purchaseOrders as $order) {
-            // Si la orden no tiene un estado de Kanban asignado, asignarle el estado por defecto
+        foreach ($activeOrders as $order) {
+            // Asignar estado por defecto si no tiene
             if (!$order->kanban_status_id && $defaultStatus) {
                 $order->update(['kanban_status_id' => $defaultStatus->id]);
                 $order->refresh();
             }
 
-            // Si después de intentar asignar un estado, sigue sin tenerlo, o si el estado no pertenece a este tablero, continuar
+            // Saltar si no tiene estado o no pertenece a este tablero
             if (!$order->kanban_status_id || !in_array($order->kanban_status_id, $statusIds)) {
                 continue;
             }
@@ -218,6 +226,39 @@ class KanbanBoard extends Component
                 'material_type' => $order->material_type,
             ];
         }
+
+        // === 2) PO ANULADAS = soft-deleted -> SIEMPRE a la columna "Anulada" ===
+        $trashedQuery = \App\Models\PurchaseOrder::onlyTrashed()
+            ->with(['company', 'kanbanStatus', 'vendor'])
+            ->where('company_id', $companyId);
+
+        $this->applyQueryFilters($trashedQuery); // respeta filtros activos
+
+        $trashedOrders = $trashedQuery->get();
+
+        foreach ($trashedOrders as $order) {
+            $this->tasks[] = [
+                'id' => $order->id,
+                'po' => $order->order_number,
+                'vendor' => $order->vendor->name ?? 'N/A',
+                'vendor_id' => $order->vendor_id,
+                'status' => $anuladaStatusId,          // <- forzamos columna "Anulada"
+                'status_slug' => 'anulada',
+                'order_date' => $order->order_date ? $order->order_date->format('Y-m-d') : null,
+                'requested_delivery_date' => $order->requested_delivery_date ? $order->requested_delivery_date->format('Y-m-d') : null,
+                'total' => $order->total,
+                'company' => $order->company->name ?? 'N/A',
+                'created_at' => $order->created_at,    // para mantener el orden cronológico
+                'currency' => $order->currency,
+                'incoterms' => $order->incoterms,
+                'planned_hub_id' => $order->planned_hub_id,
+                'actual_hub_id' => $order->actual_hub_id,
+                'material_type' => $order->material_type,
+            ];
+        }
+
+        // Finalmente organizar en columnas y ordenar por created_at desc
+        $this->organizeTasksByColumn();
     }
 
     protected function applyQueryFilters($query)
@@ -319,46 +360,45 @@ class KanbanBoard extends Component
         \Log::info("Moving task $taskId to status $newStatus");
 
         try {
+            // Trae también anuladas y bloquéalo si está soft-deleted
+            $task = \App\Models\PurchaseOrder::withTrashed()->findOrFail($taskId);
+
+            if ($task->trashed()) {
+                \Log::warning("Intento de mover PO anulada {$task->order_number} ({$task->id})");
+                // Refresca el kanban para devolver visualmente la tarjeta a su columna
+                $this->dispatch('refreshKanban');
+                session()->flash('message', 'Esta orden está anulada y no puede cambiar de etapa.');
+                return;
+            }
+
             // Obtener el estado anterior
-            $task = PurchaseOrder::findOrFail($taskId);
             $oldStatus = $task->kanban_status_id;
 
             // Obtener nombres de columnas para el mensaje
-            $oldColumnName = KanbanStatus::find($oldStatus)->name ?? 'desconocido';
-            $newColumnName = KanbanStatus::find($newStatus)->name ?? 'desconocido';
+            $oldColumnName = \App\Models\KanbanStatus::find($oldStatus)->name ?? 'desconocido';
+            $newColumnName = \App\Models\KanbanStatus::find($newStatus)->name ?? 'desconocido';
 
             // Actualizar directamente en la base de datos
-            DB::table('purchase_orders')
+            \Illuminate\Support\Facades\DB::table('purchase_orders')
                 ->where('id', $taskId)
                 ->update(['kanban_status_id' => $newStatus]);
 
-            // Crear notificación para todos los usuarios
+            // Crear notificación para todos los usuarios (tu servicio actual)
             $notificationService = app(\App\Services\NotificationService::class);
             $notificationService->notifyAll(
                 'task_moved',
                 'Tarea Movida',
                 "La orden de compra {$task->order_number} fue movida de '{$oldColumnName}' a '{$newColumnName}' por " . auth()->user()->name,
                 [
-                    'task_id' => $task->id,
+                    'task_id'   => $task->id,
                     'po_number' => $task->order_number,
-                    'old_status' => $oldColumnName,
-                    'new_status' => $newColumnName,
-                    'moved_by' => auth()->user()->name
+                    'old_status'=> $oldColumnName,
+                    'new_status'=> $newColumnName,
                 ]
             );
 
-            // Log para depuración
-            \Log::info("Task moved successfully");
-
-            // Recargar los datos
+            // Recargar datos y refrescar vista
             $this->loadData();
-
-            // Limpiar los datos temporales
-            $this->currentTaskId = null;
-            $this->newColumnId = null;
-            $this->currentTask = null;
-
-            // Forzar la actualización de la vista
             $this->dispatch('refreshKanban');
             $this->dispatch('purchaseOrderStatusUpdated');
             $this->dispatch('notificationsUpdated');
@@ -372,6 +412,13 @@ class KanbanBoard extends Component
     {
         $poId = (int)($this->currentTaskId ?? 0);
         $stage = (int)($this->newColumnId ?? 0);
+
+        $po = PurchaseOrder::withTrashed()->find($poId);
+        if ($po && $po->trashed()) {
+            session()->flash('message', 'Esta orden está anulada y no puede cambiar de etapa.');
+            $this->dispatch('refreshKanban'); // revierte visualmente el movimiento
+            return;
+        }
 
         if (!$poId || !$stage) {
             session()->flash('message', 'Falta la PO o la etapa.');
