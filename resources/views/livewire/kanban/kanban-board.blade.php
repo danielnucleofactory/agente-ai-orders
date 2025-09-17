@@ -82,22 +82,24 @@
                                         if (newColumn == 1) {
                                             $dispatch('open-modal', 'modal-nuevo');
                                         } else if (newColumn == 2) {
-                                            $dispatch('open-modal', 'modal-produccion');
+                                            $dispatch('open-modal','modal-consolidador');
                                         } else if (newColumn == 3) {
-                                            $dispatch('open-modal', 'modal-booking');
+                                            $dispatch('open-modal', 'modal-produccion');
                                         } else if (newColumn == 4) {
-                                            $dispatch('open-modal', 'modal-en-transito');
+                                            $dispatch('open-modal', 'modal-booking');
                                         } else if (newColumn == 5) {
-                                            $dispatch('open-modal', 'modal-puerto');
+                                            $dispatch('open-modal', 'modal-en-transito');
                                         } else if (newColumn == 6) {
-                                            $dispatch('open-modal', 'modal-alm-fiscal');
+                                            $dispatch('open-modal', 'modal-puerto');
                                         } else if (newColumn == 7) {
-                                            $dispatch('open-modal', 'modal-en-otra-zf');
+                                            $dispatch('open-modal', 'modal-alm-fiscal');
                                         } else if (newColumn == 8) {
-                                            $dispatch('open-modal', 'modal-recibiendo-cdi');
+                                            $dispatch('open-modal', 'modal-en-otra-zf');
                                         } else if (newColumn == 9) {
-                                            $dispatch('open-modal', 'modal-ingresada');
+                                            $dispatch('open-modal', 'modal-recibiendo-cdi');
                                         } else if (newColumn == 10) {
+                                            $dispatch('open-modal', 'modal-ingresada');
+                                        } else if (newColumn == 11) {
                                             $dispatch('open-modal', 'modal-anulada');
                                         }
 
@@ -126,7 +128,6 @@
         </div>
     </x-modal-success>
 
-        {{-- 1) NUEVO (id: 1) --}}
         <x-modal name="modal-nuevo" maxWidth="lg">
             <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
 
@@ -168,7 +169,47 @@
             </div>
         </x-modal>
 
-        {{-- 2) PRODUCCIÓN (id: 2) --}}
+        <x-modal name="modal-consolidador" maxWidth="lg">
+            <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
+
+            @if ($currentTask)
+                <div class="mb-5 text-center">
+                    <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
+                </div>
+            @endif
+
+            <div class="mb-8">
+                <x-form-select label="" name="etapa"
+                               :options="collect($columns)->pluck('name','id')->toArray()"
+                               optionPlaceholder="Seleccionar etapa"
+                               :value="$newColumnId" wire:model.live="newColumnId"
+                               x-on:change="moveTaskToColumn($event.target.value)" />
+            </div>
+
+            <div class="mb-8">
+                <x-form-textarea label="" name="comment_stage_01" wireModel="comment" placeholder="Comentarios" />
+            </div>
+
+            <div class="mb-12 space-y-2">
+                <input type="file" wire:model="attachment" class="hidden" x-ref="fileInput" id="file-upload-nuevo">
+                <x-secondary-button onclick="document.getElementById('file-upload-nuevo').click()" class="group flex w-full items-center justify-center gap-[0.625rem]">
+                    @svg('heroicon-o-paper-clip', 'w-5 h-5')
+                    <span>Adjuntar documentación...</span>
+                </x-secondary-button>
+                @if($attachment)
+                    <div class="text-sm text-gray-600">Archivo seleccionado: {{ $attachment->getClientOriginalName() }}</div>
+                @endif
+                <div class="flex flex-col text-sm text-[#A5A3A3]">
+                    <span>Tipo de formato .xls .xlsx .pdf</span><span>Tamaño máximo 5MB</span>
+                </div>
+            </div>
+
+            <div class="flex gap-[1.875rem]">
+                <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-nuevo')" class="w-full">Cancelar</x-secondary-button>
+                <x-primary-button wire:click="saveAndMove" class="w-full">Continuar</x-primary-button>
+            </div>
+        </x-modal>
+
         <x-modal name="modal-produccion" maxWidth="lg">
             <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
             @if ($currentTask)
@@ -203,7 +244,7 @@
             <div class="mb-8">
                 <x-form-input>
                     <x-slot:label>Proveedor de Servicio</x-slot:label>
-                    <x-slot:input type="text" wire:model.live="service_provider" class="pr-10 {{ $errors->has('service_provider') ? 'border-red-500'  : '' }}">
+                    <x-slot:input type="text" wire:model.live="service_provider" placeholder="Ingrese proveedor de servicio" class="pr-10 {{ $errors->has('service_provider') ? 'border-red-500'  : '' }}">
                     </x-slot:input>
                     <x-slot:error>
                         {{ $errors->first('service_provider') }}
@@ -213,7 +254,7 @@
             <div class="mb-8">
                 <x-form-input>
                     <x-slot:label>Agente de Carga</x-slot:label>
-                    <x-slot:input type="text" name="forwarder_name" wire:model="forwarder_name" class="pr-10 {{ $errors->has('service_provider') ? 'border-red-500'  : '' }}">
+                    <x-slot:input type="text" name="forwarder_name" placeholder="Ingrese agente de carga" wire:model="forwarder_name" class="pr-10 {{ $errors->has('service_provider') ? 'border-red-500'  : '' }}">
                     </x-slot:input>
                     <x-slot:error>
                         {{ $errors->first('service_provider') }}
@@ -244,7 +285,6 @@
             </div>
         </x-modal>
 
-        {{-- 3) BOOKING (id: 3) --}}
         <x-modal name="modal-booking" maxWidth="lg">
             <div class="space-y-4 sm:space-y-6">
                 <h3 class="text-center text-lg font-bold text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
@@ -410,7 +450,6 @@
             </div>
         </x-modal>
 
-        {{-- 4) EN TRÁNSITO (id: 4) --}}
         <x-modal name="modal-en-transito" maxWidth="lg">
             <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
             @if ($currentTask)
@@ -466,7 +505,7 @@
                     <div>
                         <x-form-input>
                             <x-slot:label>Número de Contenedor</x-slot:label>
-                            <x-slot:input name="container_number" wire:model="container_number"
+                            <x-slot:input name="container_number" wire:model="container_number" placeholder="Ingrese número de contenedor"
                                           class="pr-10 {{ $errors->has('container_number') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('container_number') }}</x-slot:error>
                         </x-form-input>
@@ -475,8 +514,8 @@
                     {{-- BL - requerido --}}
                     <div>
                         <x-form-input>
-                            <x-slot:label>BL</x-slot:label>
-                            <x-slot:input name="bill_of_lading" wire:model="bill_of_lading" placeholder="Ingrese BL"
+                            <x-slot:label>MBL</x-slot:label>
+                            <x-slot:input name="bill_of_lading" wire:model="bill_of_lading" placeholder="Ingrese MBL"
                                           class="pr-10 {{ $errors->has('bill_of_lading') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('bill_of_lading') }}</x-slot:error>
                         </x-form-input>
@@ -486,7 +525,7 @@
                     <div>
                         <x-form-input>
                             <x-slot:label>Monto</x-slot:label>
-                            <x-slot:input type="number" step="0.01" inputmode="decimal" name="shipment_amount" wire:model="shipment_amount"
+                            <x-slot:input type="number" step="0.01" inputmode="decimal" name="shipment_amount" placeholder="0" wire:model="shipment_amount"
                                           class="pr-10 {{ $errors->has('shipment_amount') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('shipment_amount') }}</x-slot:error>
                         </x-form-input>
@@ -496,7 +535,7 @@
                     <div>
                         <x-form-input>
                             <x-slot:label>Línea Naviera</x-slot:label>
-                            <x-slot:input name="shipping_line" wire:model="shipping_line"
+                            <x-slot:input name="shipping_line" wire:model="shipping_line" placeholder="Ingrese línea naviera"
                                           class="pr-10 {{ $errors->has('shipping_line') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('shipping_line') }}</x-slot:error>
                         </x-form-input>
@@ -506,7 +545,7 @@
                     <div>
                         <x-form-input>
                             <x-slot:label>Estado</x-slot:label>
-                            <x-slot:input name="shipment_status" wire:model="shipment_status"
+                            <x-slot:input name="shipment_status" wire:model="shipment_status" placeholder="Ingrese estado"
                                           class="pr-10 {{ $errors->has('shipment_status') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('shipment_status') }}</x-slot:error>
                         </x-form-input>
@@ -529,8 +568,8 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-6">
                     <div class="md:col-span-2">
                         <x-form-input>
-                            <x-slot:label>Tracking ID</x-slot:label>
-                            <x-slot:input name="tracking_id" wire:model="tracking_id"
+                            <x-slot:label>Número de Booking</x-slot:label>
+                            <x-slot:input name="tracking_id" wire:model="tracking_id" placeholder="Ingrese número de booking"
                                           class="pr-10 {{ $errors->has('tracking_id') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('tracking_id') }}</x-slot:error>
                         </x-form-input>
@@ -539,7 +578,7 @@
                     <div>
                         <x-form-input>
                             <x-slot:label>Puerto de Embarque</x-slot:label>
-                            <x-slot:input name="departure_port" wire:model="departure_port"
+                            <x-slot:input name="departure_port" wire:model="departure_port" placeholder="Ingrese puerto de embarque"
                                           class="pr-10 {{ $errors->has('departure_port') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('departure_port') }}</x-slot:error>
                         </x-form-input>
@@ -548,7 +587,7 @@
                     <div>
                         <x-form-input>
                             <x-slot:label>Puerto de Arribo</x-slot:label>
-                            <x-slot:input name="arrival_port" wire:model="arrival_port"
+                            <x-slot:input name="arrival_port" wire:model="arrival_port" placeholder="Ingrese puerto de arribo"
                                           class="pr-10 {{ $errors->has('arrival_port') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('arrival_port') }}</x-slot:error>
                         </x-form-input>
@@ -579,7 +618,6 @@
             </div>
         </x-modal>
 
-        {{-- 5) PUERTO (id: 5) --}}
         <x-modal name="modal-puerto" maxWidth="lg">
             <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
             @if ($currentTask)
@@ -628,7 +666,6 @@
             </div>
         </x-modal>
 
-        {{-- 6) ALM FISCAL (id: 6) --}}
         <x-modal name="modal-alm-fiscal" maxWidth="lg">
             <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
             @if ($currentTask)
@@ -695,7 +732,6 @@
             </div>
         </x-modal>
 
-        {{-- 7) EN OTRA ZF (id: 7) --}}
         <x-modal name="modal-en-otra-zf" maxWidth="lg">
             <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
             @if ($currentTask)
@@ -735,7 +771,6 @@
             </div>
         </x-modal>
 
-        {{-- 8) RECIBIENDO CDI (id: 8) --}}
         <x-modal name="modal-recibiendo-cdi" maxWidth="lg">
             <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
             @if ($currentTask)
@@ -775,7 +810,6 @@
             </div>
         </x-modal>
 
-        {{-- 9) INGRESADA (id: 9) --}}
         <x-modal name="modal-ingresada" maxWidth="lg">
             <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
             @if ($currentTask)
@@ -822,7 +856,6 @@
             </div>
         </x-modal>
 
-        {{-- 10) ANULADA (id: 10) --}}
         <x-modal name="modal-anulada" maxWidth="lg">
             <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
             @if ($currentTask)

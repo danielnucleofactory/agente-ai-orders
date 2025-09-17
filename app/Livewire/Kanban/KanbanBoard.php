@@ -409,15 +409,16 @@ class KanbanBoard extends Component
     {
         return match ($stage) {
             1 => 'modal-nuevo',
-            2 => 'modal-produccion',
-            3 => 'modal-booking',
-            4 => 'modal-en-transito',
-            5 => 'modal-puerto',
-            6 => 'modal-alm-fiscal',
-            7 => 'modal-en-otra-zf',
-            8 => 'modal-recibiendo-cdi',
-            9 => 'modal-ingresada',
-            10 => 'modal-anulada',
+            2 => 'modal-consolidador',
+            3 => 'modal-produccion',
+            4 => 'modal-booking',
+            5 => 'modal-en-transito',
+            6 => 'modal-puerto',
+            7 => 'modal-alm-fiscal',
+            8 => 'modal-en-otra-zf',
+            9 => 'modal-recibiendo-cdi',
+            10 => 'modal-ingresada',
+            11 => 'modal-anulada',
             default => 'success-modal',
         };
     }
@@ -519,15 +520,16 @@ class KanbanBoard extends Component
     {
         $operaciones = [
             1 => 'Nuevo',
-            2 => 'Producción',
-            3 => 'Booking',
-            4 => 'En Tránsito',
-            5 => 'Puerto',
-            6 => 'Alm Fiscal',
-            7 => 'En otra ZF',
-            8 => 'Recibiendo CDI',
-            9 => 'Ingresada',
-            10 => 'Anulada',
+            2 => 'Consolidador',
+            3 => 'Producción',
+            4 => 'Booking',
+            5 => 'En Tránsito',
+            6 => 'Puerto',
+            7 => 'Alm Fiscal',
+            8 => 'En otra ZF',
+            9 => 'Recibiendo CDI',
+            10 => 'Ingresada',
+            11 => 'Anulada',
         ];
 
         return $operaciones[$columnId] ?? 'Operación no especificada';
@@ -593,17 +595,17 @@ class KanbanBoard extends Component
     private function fieldsByStage(): array
     {
         return [
-            2 => ['date_variable_date', 'date_theorical_load', 'service_provider', 'forwarder_name'], // Producción
-            3 => ['date_booking_request', 'date_booking_authorized', 'date_etd_initial', 'date_etd_updated', 'container_type', 'mode'], // Booking
-            4 => [
+            3 => ['date_variable_date', 'date_theorical_load', 'service_provider', 'forwarder_name'], // Producción
+            4 => ['date_booking_request', 'date_booking_authorized', 'date_etd_initial', 'date_etd_updated', 'container_type', 'mode'], // Booking
+            5 => [
                 'date_atd', 'date_eta', 'date_eta_updated',
                 'container_number', 'bill_of_lading',
                 'shipment_amount', 'shipping_line', 'shipment_status', 'merchandise_invoice',
                 'tracking_id', 'departure_port', 'arrival_port',
             ], // En transito
-            5 => ['date_ata'], // Puerto
-            6 => ['bonded_warehouse_enter', 'bonded_warehouse_exit', 'date_ata'], // Alm. Fiscal
-            9 => ['receipt_note'], // Ingresada
+            6 => ['date_ata'], // Puerto
+            7 => ['bonded_warehouse_enter', 'bonded_warehouse_exit', 'date_ata'], // Alm. Fiscal
+            8 => ['receipt_note'], // Ingresada
         ];
     }
 
@@ -662,8 +664,7 @@ class KanbanBoard extends Component
     private function requiredRulesByStage(): array
     {
         return [
-            // 2) Producción
-            2 => [
+            3 => [
                 'date_variable_date' => 'required|date',
                 'service_provider'   => 'required|string',
                 'forwarder_name'     => 'required|string',
@@ -671,16 +672,14 @@ class KanbanBoard extends Component
                 // 'date_theorical_load' => 'required|date',
             ],
 
-            // 3) Booking
-            3 => [
+            4 => [
                 'date_booking_request'    => 'required|date',
                 'date_booking_authorized' => 'required|date',
                 'date_etd_initial'        => 'required|date',
                 'date_etd_updated'        => 'required|date',
             ],
 
-            // 4) En Tránsito
-            4 => [
+            5 => [
                 'date_atd'         => 'required|date',
                 'date_eta'         => 'required|date',
                 'date_eta_updated' => 'required|date',
@@ -693,20 +692,17 @@ class KanbanBoard extends Component
                 // 'container_type' no está como requerido en el Excel
             ],
 
-            // 5) Puerto
-            5 => [
+            6 => [
                 'date_ata' => 'required|date',
             ],
 
-            // 6) Almacén Fiscal
-            6 => [
+            7 => [
                 'bonded_warehouse_enter' => 'required|date',
                 'bonded_warehouse_exit'  => 'required|date',
                 'date_ata'               => 'required|date',
             ],
 
-            // 9) Ingresada (Excel no lo exige)
-            9 => [
+            8 => [
                 // Si quisieras hacerlo requerido:
                 // 'receipt_note' => 'required|string',
             ],
