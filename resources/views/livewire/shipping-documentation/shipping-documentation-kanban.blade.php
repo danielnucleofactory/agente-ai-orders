@@ -140,7 +140,7 @@
 
             <div class="mt-4">
 
-                <!-- Campo para la columna 1 -->
+                <!-- Nueva -->
                 <div class="{{ $newColumnId == $columns[0]['id'] ? '' : 'hidden' }}">
                     <x-form-input class="mb-4">
                         <x-slot:label>
@@ -155,8 +155,13 @@
                     </x-form-input>
                 </div>
 
-                {{-- Producción (ID: 2) --}}
+                {{-- Consolidador --}}
                 <div class="{{ $newColumnId == $columns[1]['id'] ? '' : 'hidden' }}">
+                    {{-- sin campos definidos en hoja Etapas --}}
+                </div>
+
+                {{-- Producción (ID: 2) --}}
+                <div class="{{ $newColumnId == $columns[2]['id'] ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {{-- 1) Carga Lista Variable --}}
                         <x-form-input class="mb-4">
@@ -189,7 +194,7 @@
                 </div>
 
                 {{-- Booking (ID: 3) --}}
-                <div class="{{ $newColumnId == $columns[2]['id'] ? '' : 'hidden' }}">
+                <div class="{{ $newColumnId == $columns[3]['id'] ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <x-form-input class="mb-4">
                             <x-slot:label>Solicitud de Booking</x-slot:label>
@@ -231,7 +236,7 @@
                 </div>
 
                 {{-- Tránsito (ID: 4) --}}
-                <div class="{{ $newColumnId == $columns[3]['id'] ? '' : 'hidden' }}">
+                <div class="{{ $newColumnId == $columns[4]['id'] ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {{-- Fechas --}}
                         <x-form-input class="mb-4">
@@ -260,8 +265,8 @@
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>BL</x-slot:label>
-                            <x-slot:input type="text" wire:model="bill_of_lading" placeholder="Ingrese BL" class="pr-10 {{ $errors->has('bill_of_lading') ? 'border-red-500'  : '' }}"></x-slot:input>
+                            <x-slot:label>MBL</x-slot:label>
+                            <x-slot:input type="text" wire:model="bill_of_lading" placeholder="Ingrese MBL" class="pr-10 {{ $errors->has('bill_of_lading') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('bill_of_lading') }}</x-slot:error>
                         </x-form-input>
 
@@ -290,8 +295,8 @@
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>Tracking ID</x-slot:label>
-                            <x-slot:input type="text" wire:model="tracking_id" placeholder="Ingrese ID de trackeo" class="pr-10 {{ $errors->has('tracking_id') ? 'border-red-500'  : '' }}"></x-slot:input>
+                            <x-slot:label>Número de Booking</x-slot:label>
+                            <x-slot:input type="text" wire:model="tracking_id" placeholder="Ingrese número de booking" class="pr-10 {{ $errors->has('tracking_id') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('tracking_id') }}</x-slot:error>
                         </x-form-input>
 
@@ -310,7 +315,7 @@
                 </div>
 
                 {{-- Puerto (ID: 5) --}}
-                <div class="{{ $newColumnId == $columns[4]['id'] ? '' : 'hidden' }}">
+                <div class="{{ $newColumnId == $columns[5]['id'] ? '' : 'hidden' }}">
                     <x-form-input class="mb-4">
                         <x-slot:label>ETA Real (ATA)</x-slot:label>
                         <x-slot:input type="date" wire:model="actual_arrival_date" class="pr-10 {{ $errors->has('actual_arrival_date') ? 'border-red-500'  : '' }}"></x-slot:input>
@@ -319,7 +324,7 @@
                 </div>
 
                 {{-- Almacén Fiscal (ID: 6) --}}
-                <div class="{{ $newColumnId == $columns[5]['id'] ? '' : 'hidden' }}">
+                <div class="{{ $newColumnId == $columns[6]['id'] ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <x-form-input class="mb-4">
                             <x-slot:label>Ingreso Almacén Fiscal</x-slot:label>
@@ -336,7 +341,7 @@
                 </div>
 
                 {{-- Ingresada (ID: 7) --}}
-                <div class="{{ $newColumnId == $columns[6]['id'] ? '' : 'hidden' }}">
+                <div class="{{ $newColumnId == $columns[7]['id'] ? '' : 'hidden' }}">
                     <x-form-input class="mb-4">
                         <x-slot:label>Nota de Recibo</x-slot:label>
                         <x-slot:input type="text" wire:model="receipt_note" placeholder="Ingrese nota de recibo" class="pr-10 {{ $errors->has('receipt_note') ? 'border-red-500'  : '' }}"></x-slot:input>
@@ -345,17 +350,17 @@
                 </div>
 
                 {{-- En otra ZF (ID: 8) --}}
-                <div class="{{ $newColumnId == $columns[7]['id'] ? '' : 'hidden' }}">
-                    {{-- sin campos definidos en hoja Etapas --}}
-                </div>
-
-                {{-- Recibiendo CDI (ID: 9) --}}
                 <div class="{{ $newColumnId == $columns[8]['id'] ? '' : 'hidden' }}">
                     {{-- sin campos definidos en hoja Etapas --}}
                 </div>
 
-                {{-- Anulada (ID: 10) --}}
+                {{-- Recibiendo CDI (ID: 9) --}}
                 <div class="{{ $newColumnId == $columns[9]['id'] ? '' : 'hidden' }}">
+                    {{-- sin campos definidos en hoja Etapas --}}
+                </div>
+
+                {{-- Anulada (ID: 10) --}}
+                <div class="{{ $newColumnId == $columns[10]['id'] ? '' : 'hidden' }}">
                     {{-- sin campos definidos en hoja Etapas --}}
                 </div>
 
