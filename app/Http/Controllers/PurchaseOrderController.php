@@ -189,11 +189,16 @@ class PurchaseOrderController extends Controller
                              'logistics_incoterm','reason','category','forwarder_name',
                              'cargo_invoice_number','tariff_type','route_label','arrival_status','arrival_port','departure_port',
                              'retail_group','customer_type','trading_company','service_provider','customs_dua','invoice',
-                             'factura_merca','case_number_file','receipt_note','visibility_notes','price_incoterm','consolidator_name','vendor_number',
+                             'factura_merca','receipt_note','visibility_notes','price_incoterm','consolidator_name','vendor_number',
                          ] as $f) {
                     if (array_key_exists($f, $general)) {
                         $poData[$f] = $general[$f];
                     }
+                }
+
+                // Mapeo especial para case_number_file (expediente en el JSON)
+                if (array_key_exists('expediente', $general)) {
+                    $poData['case_number_file'] = $general['expediente'];
                 }
 
                 // 9) ===== NEW FIELDS FOR OLO (boolean) =====
