@@ -84,8 +84,6 @@ class PurchaseOrderController extends Controller
                     'incoterms'              => ['required','string'],
                     'logistics_incoterm'     => ['required','string'],
                     'price_incoterm'         => ['required','string'],
-                    'bonded_warehouse_exit' => ['required','date'],
-                    'bonded_warehouse_enter' => ['required','date'],
 
                     // Proveedor: al menos UNA de estas 3
                     'vendor_id'   => ['required_without_all:vendor,vendor_name'],
@@ -105,10 +103,6 @@ class PurchaseOrderController extends Controller
                     'incoterms.required'               => 'El "Incoterm de compra" es obligatorio.',
                     'logistics_incoterm.required'      => 'El "Incoterm de logística" es obligatorio.',
                     'price_incoterm.required'          => 'El "Incoterm de precios" es obligatorio.',
-                    'bonded_warehouse_exit.required' => 'El campo "Salida Almacen Fiscal" es obligatorio.',
-                    'bonded_warehouse_exit.date' => 'El campo "Salida Almacen Fiscal" debe ser una fecha',
-                    'bonded_warehouse_enter.required' => 'El campo "Entrada Almacen Fiscal" es obligatorio.',
-                    'bonded_warehouse_enter.date' => 'El campo "Entrada Almacen Fiscal" debe ser una fecha',
 
                     'vendor_id.required_without_all'   => 'Debe enviar al menos uno de: vendor_id, vendor o vendor_name.',
                     'vendor.required_without_all'      => 'Debe enviar al menos uno de: vendor_id, vendor o vendor_name.',
