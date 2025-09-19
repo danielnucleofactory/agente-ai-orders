@@ -126,16 +126,70 @@ class PurchaseOrderController extends Controller
                     ], 422);
                 }
 
-                // 4) Relaciones (se buscan por nombre/código como venías usando)
-                $vendorName = data_get($general, 'vendor_id') ?? data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
-                $shipToName = data_get($general, 'ship_to_id') ?? data_get($general, 'ship_to');
-                $billToName = data_get($general, 'bill_to_id') ?? data_get($general, 'bill_to');
-                $hubCode    = data_get($general, 'planned_hub_id') ?? data_get($general, 'hub');
+                // 4) Relaciones (se buscan por nombre/código y se crean si no existen)
+                $vendorId = data_get($general, 'vendor_id');
+                $vendorName = data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
+                $shipToName = data_get($general, 'ship_to_id') ?? data_get($general, 'ship_to') ?? 'Ship To con falta de datos';
+                $billToName = data_get($general, 'bill_to_id') ?? data_get($general, 'bill_to') ?? 'Bill To con falta de datos';
+                $hubCode    = data_get($general, 'planned_hub_id') ?? data_get($general, 'hub') ?? 'HUB_DEFAULT';
 
-                $vendor = Vendor::where('name', $vendorName)->firstOrFail();
-                $shipTo = ShipTo::where('name', $shipToName)->firstOrFail();
-                $billTo = BillTo::where('name', $billToName)->firstOrFail();
-                $hub    = Hub::where('code', $hubCode)->firstOrFail();
+                // Buscar o crear vendor
+                if ($vendorId) {
+                    $vendor = Vendor::where('vendo_code', $vendorId)->first();
+                    if (!$vendor) {
+                        // Crear vendor con vendo_code y nombre por defecto
+                        $vendor = Vendor::create([
+                            'company_id' => 1, // Usar company_id por defecto, se actualizará después
+                            'vendo_code' => $vendorId,
+                            'name' => 'Proveedor con falta de datos ' . $vendorId,
+                            'status' => 'active'
+                        ]);
+                    }
+                } else {
+                    $vendor = Vendor::where('name', $vendorName)->first();
+                    if (!$vendor) {
+                        // Crear vendor con nombre
+                        $vendor = Vendor::create([
+                            'company_id' => 1, // Usar company_id por defecto, se actualizará después
+                            'name' => $vendorName,
+                            'vendo_code' => 'VENDOR_' . time(), // Generar código único
+                            'status' => 'active'
+                        ]);
+                    }
+                }
+
+                // Obtener company_id del vendor
+                $companyId = $vendor->company_id;
+
+                // Buscar o crear ShipTo
+                $shipTo = ShipTo::where('name', $shipToName)->first();
+                if (!$shipTo) {
+                    $shipTo = ShipTo::create([
+                        'company_id' => $companyId,
+                        'name' => $shipToName,
+                        'status' => 'active'
+                    ]);
+                }
+
+                // Buscar o crear BillTo
+                $billTo = BillTo::where('name', $billToName)->first();
+                if (!$billTo) {
+                    $billTo = BillTo::create([
+                        'company_id' => $companyId,
+                        'name' => $billToName
+                    ]);
+                }
+
+                // Buscar o crear Hub
+                $hub = Hub::where('code', $hubCode)->first();
+                if (!$hub) {
+                    $hub = Hub::create([
+                        'code' => $hubCode,
+                        'name' => 'Hub con falta de datos ' . $hubCode,
+                        'country' => 'Unknown',
+                        'operation_days' => 0
+                    ]);
+                }
 
                 // 5) Totales
                 $totalWeight = 0;
@@ -143,7 +197,6 @@ class PurchaseOrderController extends Controller
                     $totalWeight += (float) data_get($item, 'peso_kg', data_get($item, 'kgs', 0));
                 }
                 $netTotal  = (float) (data_get($general, 'netValue', data_get($general, 'net_total', 0)));
-                $companyId = $vendor->company_id;
 
                 // 6) (Opcional) Kanban inicial
                 $kanbanStatusId = null;
