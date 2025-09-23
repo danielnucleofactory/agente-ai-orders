@@ -398,7 +398,7 @@ class PurchaseOrderController extends Controller
             DB::beginTransaction();
 
             // 1) Verificar que la PO existe
-            $purchaseOrder = PurchaseOrder::findOrFail($po_id);
+            $purchaseOrder = PurchaseOrder::where('order_number', $po_id)->firstOrFail();
 
             // 2) Verificar estado editable
             $nonEditableStatuses = ['shipped', 'delivered', 'cancelled'];
@@ -490,7 +490,7 @@ class PurchaseOrderController extends Controller
     private function processUpdateChanges(PurchaseOrder $po, array $payload): array
     {
         $changes = [];
-        
+
         // Mapeo de campos de la API a campos del modelo
         $fieldMapping = [
             // Campos básicos
@@ -525,7 +525,7 @@ class PurchaseOrderController extends Controller
             'APLICA_NOTA_TECNICA' => 'apply_technical_note',
             'MOTIVO' => 'reason',
             'TIPO_CLIENTE' => 'customer_type',
-            
+
             // Campos adicionales OLO
             'GRUPO_REPOSITOR' => 'retail_group',
             'CANT_COMENTARIOS' => 'comments_count', // Campo calculado
