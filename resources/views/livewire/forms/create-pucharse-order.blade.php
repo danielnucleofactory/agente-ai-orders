@@ -707,7 +707,7 @@
                         <h4 class="text-sm font-semibold text-[#7288FF]">Configuración del envío</h4>
                     </div>
 
-                    <x-form-select label="Tipo de Transporte" name="mode" wire:model.live="mode" :options="['maritimo' => 'Marítimo', 'aereo' => 'Aéreo']" :error="$errors->has('mode') ? true : false" />
+                    <x-form-select label="Tipo de Transporte" name="mode" wire:model.live="mode" :options="['maritimo' => 'Marítimo', 'aereo' => 'Aéreo', 'terrestre' => 'Terrestre']" :error="$errors->has('mode') ? true : false" />
 
                     <x-form-select class="hidden" label="Seguro" name="ensurence_type" wire:model="ensurence_type" :options="['pending' => 'Pendiente', 'applied' => 'Aplicado']" />
 

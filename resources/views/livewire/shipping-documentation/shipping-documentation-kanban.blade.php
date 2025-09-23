@@ -221,17 +221,13 @@
                             <x-slot:error>{{ $errors->first('date_etd_updated') }}</x-slot:error>
                         </x-form-input>
 
-                        <x-form-input class="mb-4">
-                            <x-slot:label>Tipo de Contenedor</x-slot:label>
-                            <x-slot:input type="text" wire:model="container_type" placeholder="Ingrese tipo de contenedor" class="pr-10 {{ $errors->has('container_type') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('container_type') }}</x-slot:error>
-                        </x-form-input>
-
-                        <x-form-input class="mb-4">
-                            <x-slot:label>Modo de transporte</x-slot:label>
-                            <x-slot:input type="text" wire:model="mode" placeholder="Ingrese modo de transporte" class="pr-10 {{ $errors->has('mode') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('mode') }}</x-slot:error>
-                        </x-form-input>
+                        <div>
+                            <x-form-select
+                                label="Modo de transporte"
+                                name="mode"
+                                wire:model.live="mode"
+                                :options="['maritimo' => 'Marítimo', 'aereo' => 'Aéreo','terrestre' => 'Terrestre']" />
+                        </div>
                     </div>
                 </div>
 
@@ -262,6 +258,12 @@
                             <x-slot:label>Número de Contenedor</x-slot:label>
                             <x-slot:input type="text" wire:model="container_number" placeholder="Ingrese número de contenedor" class="pr-10 {{ $errors->has('container_number') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('container_number') }}</x-slot:error>
+                        </x-form-input>
+
+                        <x-form-input class="mb-4">
+                            <x-slot:label>Tipo de Contenedor</x-slot:label>
+                            <x-slot:input type="text" wire:model="container_type" placeholder="Ingrese tipo de contenedor" class="pr-10 {{ $errors->has('container_type') ? 'border-red-500'  : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('container_type') }}</x-slot:error>
                         </x-form-input>
 
                         <x-form-input class="mb-4">

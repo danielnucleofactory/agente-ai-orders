@@ -124,7 +124,6 @@ class ShippingDocumentationKanban extends Component
                     'estimated_departure_date' => 'required|date', // ETD inicial (reusado)
                     'date_etd_updated'         => 'required|date', // ETD variable
                     // Necesarios/optativos
-                    'container_type' => 'nullable|string|max:100',
                     'mode'           => 'nullable|string|max:100',
                 ];
         }
@@ -145,6 +144,7 @@ class ShippingDocumentationKanban extends Component
                     'Invoice_amount' => 'nullable|numeric|min:0',
                     'arrival_status' => 'nullable|string|max:100',
                     'factura_merca'  => 'nullable|string|max:100',
+                    'container_type' => 'nullable|string|max:100',
                 ];
         }
 
@@ -711,7 +711,6 @@ class ShippingDocumentationKanban extends Component
             $shippingDoc->date_booking_authorized  = $this->date_booking_authorized;
             $shippingDoc->estimated_departure_date = $this->estimated_departure_date; // ETD inicial
             $shippingDoc->date_etd_updated         = $this->date_etd_updated;         // ETD variable
-            $shippingDoc->container_type           = $this->container_type;
             $shippingDoc->mode                     = $this->mode;
             return $shippingDoc;
         }
@@ -724,6 +723,7 @@ class ShippingDocumentationKanban extends Component
 
             $shippingDoc->container_number     = $this->container_number;
             $shippingDoc->bill_of_lading       = $this->bill_of_lading;
+            $shippingDoc->container_type       = $this->container_type;
 
 
             $shippingDoc->Invoice_amount = $this->Invoice_amount;

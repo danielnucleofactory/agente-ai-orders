@@ -643,9 +643,9 @@ class KanbanBoard extends Component
     {
         return [
             3 => ['date_variable_date', 'date_theorical_load', 'service_provider', 'forwarder_name'], // Producción
-            4 => ['date_booking_request', 'date_booking_authorized', 'date_etd_initial', 'date_etd_updated', 'container_type', 'mode'], // Booking
+            4 => ['date_booking_request', 'date_booking_authorized', 'date_etd_initial', 'date_etd_updated', 'mode'], // Booking
             5 => [
-                'date_atd', 'date_eta', 'date_eta_updated',
+                'date_atd', 'date_eta', 'date_eta_updated', 'container_type',
                 'container_number', 'bill_of_lading',
                 'shipment_amount', 'shipping_line', 'shipment_status', 'merchandise_invoice',
                 'tracking_id', 'departure_port', 'arrival_port',

@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\PurchaseOrder;
-use App\Models\ShipTo;
-use App\Models\BillTo;
 use App\Models\Vendor;
-use App\Models\Hub;
 use App\Models\Product;
 use App\Models\KanbanBoard;
 use Illuminate\Http\Request;
@@ -84,11 +81,6 @@ class PurchaseOrderController extends Controller
                     'incoterms'              => ['required','string'],
                     'logistics_incoterm'     => ['required','string'],
                     'price_incoterm'         => ['required','string'],
-
-                    // Proveedor: al menos UNA de estas 3
-                    'vendor_id'   => ['required_without_all:vendor,vendor_name'],
-                    'vendor'      => ['required_without_all:vendor_id,vendor_name'],
-                    'vendor_name' => ['required_without_all:vendor_id,vendor'],
                 ];
 
                 $messages = [
@@ -103,10 +95,6 @@ class PurchaseOrderController extends Controller
                     'incoterms.required'               => 'El "Incoterm de compra" es obligatorio.',
                     'logistics_incoterm.required'      => 'El "Incoterm de logística" es obligatorio.',
                     'price_incoterm.required'          => 'El "Incoterm de precios" es obligatorio.',
-
-                    'vendor_id.required_without_all'   => 'Debe enviar al menos uno de: vendor_id, vendor o vendor_name.',
-                    'vendor.required_without_all'      => 'Debe enviar al menos uno de: vendor_id, vendor o vendor_name.',
-                    'vendor_name.required_without_all' => 'Debe enviar al menos uno de: vendor_id, vendor o vendor_name.',
                 ];
 
                 $validator = Validator::make($general, $rules, $messages);
@@ -123,67 +111,34 @@ class PurchaseOrderController extends Controller
                 // 4) Relaciones (se buscan por nombre/código y se crean si no existen)
                 $vendorId = data_get($general, 'vendor_id');
                 $vendorName = data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
-                $shipToName = data_get($general, 'ship_to_id') ?? data_get($general, 'ship_to') ?? 'Ship To con falta de datos';
-                $billToName = data_get($general, 'bill_to_id') ?? data_get($general, 'bill_to') ?? 'Bill To con falta de datos';
-                $hubCode    = data_get($general, 'planned_hub_id') ?? data_get($general, 'hub') ?? 'HUB_DEFAULT';
 
-                // Buscar o crear vendor
-                if ($vendorId) {
-                    $vendor = Vendor::where('vendo_code', $vendorId)->first();
-                    if (!$vendor) {
-                        // Crear vendor con vendo_code y nombre por defecto
-                        $vendor = Vendor::create([
-                            'company_id' => 1, // Usar company_id por defecto, se actualizará después
-                            'vendo_code' => $vendorId,
-                            'name' => 'Proveedor con falta de datos ' . $vendorId,
-                            'status' => 'active'
-                        ]);
-                    }
-                } else {
-                    $vendor = Vendor::where('name', $vendorName)->first();
-                    if (!$vendor) {
-                        // Crear vendor con nombre
-                        $vendor = Vendor::create([
-                            'company_id' => 1, // Usar company_id por defecto, se actualizará después
-                            'name' => $vendorName,
-                            'vendo_code' => 'VENDOR_' . time(), // Generar código único
-                            'status' => 'active'
-                        ]);
-                    }
-                }
-
-                // Obtener company_id del vendor
-                $companyId = $vendor->company_id;
-
-                // Buscar o crear ShipTo
-                $shipTo = ShipTo::where('name', $shipToName)->first();
-                if (!$shipTo) {
-                    $shipTo = ShipTo::create([
-                        'company_id' => $companyId,
-                        'name' => $shipToName,
-                        'status' => 'active'
-                    ]);
-                }
-
-                // Buscar o crear BillTo
-                $billTo = BillTo::where('name', $billToName)->first();
-                if (!$billTo) {
-                    $billTo = BillTo::create([
-                        'company_id' => $companyId,
-                        'name' => $billToName
-                    ]);
-                }
-
-                // Buscar o crear Hub
-                $hub = Hub::where('code', $hubCode)->first();
-                if (!$hub) {
-                    $hub = Hub::create([
-                        'code' => $hubCode,
-                        'name' => 'Hub con falta de datos ' . $hubCode,
-                        'country' => 'Unknown',
-                        'operation_days' => 0
-                    ]);
-                }
+//                // Buscar o crear vendor
+//                if ($vendorId) {
+//                    $vendor = Vendor::where('vendo_code', $vendorId)->first();
+//                    if (!$vendor) {
+//                        // Crear vendor con vendo_code y nombre por defecto
+//                        $vendor = Vendor::create([
+//                            'company_id' => 1, // Usar company_id por defecto, se actualizará después
+//                            'vendo_code' => $vendorId,
+//                            'name' => 'Proveedor con falta de datos ' . $vendorId,
+//                            'status' => 'active'
+//                        ]);
+//                    }
+//                } else {
+//                    $vendor = Vendor::where('name', $vendorName)->first();
+//                    if (!$vendor) {
+//                        // Crear vendor con nombre
+//                        $vendor = Vendor::create([
+//                            'company_id' => 1, // Usar company_id por defecto, se actualizará después
+//                            'name' => $vendorName,
+//                            'vendo_code' => 'VENDOR_' . time(), // Generar código único
+//                            'status' => 'active'
+//                        ]);
+//                    }
+//                }
+//
+//                // Obtener company_id del vendor
+//                $companyId = $vendor->company_id;
 
                 // 5) Totales
                 $totalWeight = 0;
@@ -194,7 +149,7 @@ class PurchaseOrderController extends Controller
 
                 // 6) (Opcional) Kanban inicial
                 $kanbanStatusId = null;
-                $kanbanBoard = KanbanBoard::where('company_id', $companyId)
+                $kanbanBoard = KanbanBoard::where('company_id', 1) //De momento, queda como 1. Hay que modificarlo
                     ->where('type', 'po_stages')
                     ->where('is_active', true)
                     ->first();
@@ -207,19 +162,15 @@ class PurchaseOrderController extends Controller
 
                 // 7) Campos base
                 $poData = [
-                    'company_id'   => $companyId,
+                    'company_id'   => 1,
                     'order_number' => data_get($general, 'order_number') ?? \Illuminate\Support\Str::uuid()->toString(),
                     'status'       => 'draft',
-                    'vendor_id'    => $vendor->id,
-                    'ship_to_id'   => $shipTo->id,
-                    'bill_to_id'   => $billTo->id,
                     'order_date'   => now(),
                     'currency'     => data_get($general, 'currency', 'USD'),
                     'incoterms'    => data_get($general, 'incoterms', 'EXW'),
                     'net_total'    => $netTotal,
                     'total'        => $netTotal,
                     'weight_kg'    => $totalWeight,
-                    'planned_hub_id' => $hub->id,
                     'material_type'  => json_encode(['Standard']),
                     'ensurence_type' => 'pending',
                     'mode'           => data_get($general, 'mode', 'AIR'),
