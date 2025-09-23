@@ -384,4 +384,287 @@ class PurchaseOrderController extends Controller
             'message' => 'Orden de compra anulada con éxito.',
         ]);
     }
+
+    /**
+     * Update an existing purchase order from external API
+     *
+     * @param Request $request
+     * @param int $po_id
+     * @return JsonResponse
+     */
+    public function updateFromApi(Request $request, int $po_id): JsonResponse
+    {
+        try {
+            DB::beginTransaction();
+
+            // 1) Verificar que la PO existe
+            $purchaseOrder = PurchaseOrder::findOrFail($po_id);
+
+            // 2) Verificar estado editable
+            $nonEditableStatuses = ['shipped', 'delivered', 'cancelled'];
+            if (in_array($purchaseOrder->status, $nonEditableStatuses)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede actualizar una orden en estado: ' . $purchaseOrder->status,
+                    'error_code' => 'STATUS_NOT_EDITABLE'
+                ], 409);
+            }
+
+            // 3) Verificar idempotencia si se proporciona
+            $idempotencyKey = $request->header('Idempotency-Key');
+            if ($idempotencyKey) {
+                $existingUpdate = \Cache::get("po_update_{$idempotencyKey}");
+                if ($existingUpdate) {
+                    return response()->json($existingUpdate, 200);
+                }
+            }
+
+            // 4) Obtener payload
+            $payload = $request->json()->all();
+            if (empty($payload)) {
+                $payload = $request->all();
+            }
+
+            // 5) Validar que hay al menos un cambio
+            if (empty($payload)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debe proporcionar al menos un campo para actualizar',
+                    'error_code' => 'NO_CHANGES'
+                ], 422);
+            }
+
+            // 6) Procesar cambios
+            $changes = $this->processUpdateChanges($purchaseOrder, $payload);
+
+            // 7) Guardar cambios
+            $purchaseOrder->save();
+
+            // 8) Preparar respuesta
+            $response = [
+                'success' => true,
+                'message' => 'Purchase order updated successfully',
+                'data' => [
+                    'id' => $purchaseOrder->id,
+                    'order_number' => $purchaseOrder->order_number,
+                    'status' => $purchaseOrder->status,
+                    'updated_at' => $purchaseOrder->updated_at->toISOString(),
+                    'changes' => $changes
+                ]
+            ];
+
+            // 9) Cachear respuesta para idempotencia
+            if ($idempotencyKey) {
+                \Cache::put("po_update_{$idempotencyKey}", $response, 3600); // 1 hora
+            }
+
+            // 10) Registrar auditoría
+            $this->logAudit($purchaseOrder, $changes, $request);
+
+            DB::commit();
+
+            return response()->json($response, 200);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Purchase order not found',
+                'error_code' => 'PO_NOT_FOUND'
+            ], 404);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            \Log::error('Error al actualizar orden de compra desde API: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error_code' => 'UPDATE_ERROR'
+            ], 400);
+        }
+    }
+
+    /**
+     * Process update changes for purchase order
+     */
+    private function processUpdateChanges(PurchaseOrder $po, array $payload): array
+    {
+        $changes = [];
+        
+        // Mapeo de campos de la API a campos del modelo
+        $fieldMapping = [
+            // Campos básicos
+            'PO' => 'order_number',
+            'PROVEEDOR_NO' => 'vendor_number',
+            'PROVEEDOR_NOMBRE' => 'vendor_name',
+            'RUTA_LOGISTICA' => 'route_label',
+            'MONTO_PO' => 'net_total',
+            'MONEDA_PO' => 'currency',
+            'FECHA_EMISION_PO' => 'emision_date_po',
+            'CATEGORIA' => 'category',
+            'INCOTERM_COMPRA' => 'incoterms',
+            'INCOTERM_LOGISTICA' => 'logistics_incoterm',
+            'INCOTERM_PRECIOS' => 'price_incoterm',
+            'FECHA_CARGOLIST' => 'date_theorical_load',
+            'DIF_FECHA_CARGA' => 'dif_load_date',
+            'ETD_ESTIMADO' => 'date_etd',
+            'DIF_FECHAS_ETD' => 'etd_dates_difference',
+            'ETA_ESTIMADO' => 'date_eta',
+            'DIF_FECHAS_ETA' => 'eta_dates_difference',
+            'EXPEDIENTE' => 'case_number_file',
+            'ESTADO' => 'status',
+            'PUERTO_EMBARQUE' => 'departure_port',
+            'PUERTO_ARRIBO' => 'arrival_port',
+            'DUA_INTERNAMIENTO' => 'customs_dua',
+            'NOTA_RECIBO' => 'receipt_note',
+            'FECHA_NR' => 'receipt_note_date',
+            'PROFORMA_FABRICA' => 'factory_proforma_number',
+            'FACTURA' => 'invoice',
+            'MONTO_FACTURA' => 'Invoice_amount',
+            'APLICA_TLC' => 'applies_tlc',
+            'APLICA_NOTA_TECNICA' => 'apply_technical_note',
+            'MOTIVO' => 'reason',
+            'TIPO_CLIENTE' => 'customer_type',
+            
+            // Campos adicionales OLO
+            'GRUPO_REPOSITOR' => 'retail_group',
+            'CANT_COMENTARIOS' => 'comments_count', // Campo calculado
+        ];
+
+        // Procesar cada campo del payload
+        foreach ($payload as $apiField => $value) {
+            if (!isset($fieldMapping[$apiField])) {
+                continue; // Ignorar campos no mapeados
+            }
+
+            $modelField = $fieldMapping[$apiField];
+            $oldValue = $po->$modelField;
+
+            // Procesar campos especiales
+            switch ($apiField) {
+                case 'PROVEEDOR_NOMBRE':
+                    // Buscar vendor por nombre
+                    $vendor = Vendor::where('name', $value)->first();
+                    if ($vendor) {
+                        $po->vendor_id = $vendor->id;
+                        $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->name];
+                    } else {
+                        throw new \Exception("Vendor not found: {$value}");
+                    }
+                    break;
+
+                case 'PROVEEDOR_NO':
+                    // Buscar vendor por código
+                    $vendor = Vendor::where('vendo_code', $value)->first();
+                    if ($vendor) {
+                        $po->vendor_id = $vendor->id;
+                        $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->vendo_code];
+                    } else {
+                        throw new \Exception("Vendor not found with code: {$value}");
+                    }
+                    break;
+
+                case 'FECHA_EMISION_PO':
+                case 'FECHA_CARGOLIST':
+                case 'FECHA_NR':
+                    // Procesar fechas
+                    $po->$modelField = \Carbon\Carbon::parse($value);
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
+                    break;
+
+                case 'ETD_ESTIMADO':
+                case 'ETA_ESTIMADO':
+                    // Procesar fechas ETD/ETA
+                    $po->$modelField = \Carbon\Carbon::parse($value);
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
+                    break;
+
+                case 'MONTO_PO':
+                case 'MONTO_FACTURA':
+                    // Procesar montos
+                    $po->$modelField = (float) $value;
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => (float) $value];
+                    break;
+
+                case 'APLICA_TLC':
+                case 'APLICA_NOTA_TECNICA':
+                    // Procesar booleanos
+                    $po->$modelField = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => (bool) $value];
+                    break;
+
+                case 'DIF_FECHAS_ETD':
+                case 'DIF_FECHAS_ETA':
+                    // Procesar diferencias de fechas
+                    $po->$modelField = (int) $value;
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => (int) $value];
+                    break;
+
+                case 'ESTADO':
+                    // Validar estado
+                    $allowedStatuses = ['draft', 'pending', 'approved', 'shipped', 'delivered', 'cancelled'];
+                    if (!in_array($value, $allowedStatuses)) {
+                        throw new \Exception("Invalid status: {$value}. Allowed: " . implode(', ', $allowedStatuses));
+                    }
+                    $po->$modelField = $value;
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
+                    break;
+
+                case 'MONEDA_PO':
+                    // Validar moneda
+                    $allowedCurrencies = ['USD', 'EUR', 'CRC'];
+                    if (!in_array($value, $allowedCurrencies)) {
+                        throw new \Exception("Invalid currency: {$value}. Allowed: " . implode(', ', $allowedCurrencies));
+                    }
+                    $po->$modelField = $value;
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
+                    break;
+
+                case 'INCOTERM_COMPRA':
+                case 'INCOTERM_LOGISTICA':
+                case 'INCOTERM_PRECIOS':
+                    // Validar incoterms
+                    $allowedIncoterms = ['CIF', 'CIP', 'CFR', 'CPT', 'DAT', 'DAP', 'DDP', 'DEQ', 'DES', 'EXD', 'EXQ', 'EXW', 'FCA', 'FOB'];
+                    if (!in_array($value, $allowedIncoterms)) {
+                        throw new \Exception("Invalid incoterm: {$value}. Allowed: " . implode(', ', $allowedIncoterms));
+                    }
+                    $po->$modelField = $value;
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
+                    break;
+
+                default:
+                    // Campos de texto simples
+                    $po->$modelField = $value;
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
+                    break;
+            }
+        }
+
+        // Recalcular totales si se actualizó el monto
+        if (isset($payload['MONTO_PO'])) {
+            $po->total = $po->net_total;
+        }
+
+        return $changes;
+    }
+
+    /**
+     * Log audit information
+     */
+    private function logAudit(PurchaseOrder $po, array $changes, Request $request): void
+    {
+        $auditData = [
+            'po_id' => $po->id,
+            'order_number' => $po->order_number,
+            'user_id' => $request->user()?->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'request_id' => $request->header('X-Request-ID'),
+            'idempotency_key' => $request->header('Idempotency-Key'),
+            'changes' => $changes,
+            'timestamp' => now()->toISOString()
+        ];
+
+        \Log::info('Purchase Order Updated via API', $auditData);
+    }
 }

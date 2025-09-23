@@ -13,9 +13,9 @@ Route::get('/status', function () {
     ]);
 });
 
-// Public endpoint for creating purchase orders from external API
+// Public endpoints for purchase orders from external API
 Route::post('/purchase-orders', [PurchaseOrderController::class, 'createFromApi']);
-
+Route::put('/purchase-orders/{po_id}', [PurchaseOrderController::class, 'updateFromApi']);
 Route::delete('/purchase-orders/cancel/{order_number}', [PurchaseOrderController::class, 'deleteFromApi']);
 
 // Rutas protegidas con autenticación de token API
