@@ -385,26 +385,13 @@
                             </x-form-input>
                         </div>
 
-                        <!-- Tipo de Contenedor -->
-                        <div>
-                            <x-form-input>
-                                <x-slot:label>Tipo de Contenedor</x-slot:label>
-                                <x-slot:input
-                                    name="container_type"
-                                    wire:model="container_type"
-                                    class="w-full"
-                                    placeholder="Tipo de contenedor">
-                                </x-slot:input>
-                            </x-form-input>
-                        </div>
-
                         <!-- Modo de transporte -->
                         <div>
                             <x-form-select
                                 label="Modo de transporte"
                                 name="mode"
                                 wire:model.live="mode"
-                                :options="['maritimo' => 'Marítimo', 'aereo' => 'Aéreo']" />
+                                :options="['maritimo' => 'Marítimo', 'aereo' => 'Aéreo','terrestre' => 'Terrestre']" />
                         </div>
 
                         <!-- Comentarios (a lo ancho) -->
@@ -519,6 +506,19 @@
                             <x-slot:input name="container_number" wire:model="container_number" placeholder="Ingrese número de contenedor"
                                           class="pr-10 {{ $errors->has('container_number') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('container_number') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
+
+                    <!-- Tipo de Contenedor -->
+                    <div>
+                        <x-form-input>
+                            <x-slot:label>Tipo de Contenedor</x-slot:label>
+                            <x-slot:input
+                                name="container_type"
+                                wire:model="container_type"
+                                class="w-full"
+                                placeholder="Tipo de contenedor">
+                            </x-slot:input>
                         </x-form-input>
                     </div>
 
