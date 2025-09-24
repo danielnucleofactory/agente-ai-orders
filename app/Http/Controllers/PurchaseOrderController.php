@@ -436,53 +436,57 @@ class PurchaseOrderController extends Controller
     }
 
     /**
-     * Process update changes for purchase order
+     * Process update changes for purchase order (English - Only)
      */
-    private function processUpdateChanges(PurchaseOrder $po, array $payload): array
+    function processUpdateChanges(PurchaseOrder $po, array $payload): array
     {
         $changes = [];
 
-        // Mapeo de campos de la API a campos del modelo
+        // Mapeo de campos de la API a campos del modelo (claves en INGLÉS)
         $fieldMapping = [
             // Campos básicos
-            'PO' => 'order_number',
-            'PROVEEDOR_NO' => 'vendor_number',
-            'PROVEEDOR_NOMBRE' => 'vendor_name',
-            'RUTA_LOGISTICA' => 'route_label',
-            'MONTO_PO' => 'net_total',
-            'MONEDA_PO' => 'currency',
-            'FECHA_EMISION_PO' => 'emision_date_po',
-            'CATEGORIA' => 'category',
-            'INCOTERM_COMPRA' => 'incoterms',
-            'INCOTERM_LOGISTICA' => 'logistics_incoterm',
-            'INCOTERM_PRECIOS' => 'price_incoterm',
-            'FECHA_CARGOLIST' => 'date_theorical_load',
-            'DIF_FECHA_CARGA' => 'dif_load_date',
-            'ETD_ESTIMADO' => 'date_etd',
-            'DIF_FECHAS_ETD' => 'etd_dates_difference',
-            'ETA_ESTIMADO' => 'date_eta',
-            'DIF_FECHAS_ETA' => 'eta_dates_difference',
-            'EXPEDIENTE' => 'case_number_file',
-            'ESTADO' => 'status',
-            'PUERTO_EMBARQUE' => 'departure_port',
-            'PUERTO_ARRIBO' => 'arrival_port',
-            'DUA_INTERNAMIENTO' => 'customs_dua',
-            'NOTA_RECIBO' => 'receipt_note',
-            'FECHA_NR' => 'receipt_note_date',
-            'PROFORMA_FABRICA' => 'factory_proforma_number',
-            'FACTURA' => 'invoice',
-            'MONTO_FACTURA' => 'Invoice_amount',
-            'APLICA_TLC' => 'applies_tlc',
-            'APLICA_NOTA_TECNICA' => 'apply_technical_note',
-            'MOTIVO' => 'reason',
-            'TIPO_CLIENTE' => 'customer_type',
+            'order_number'            => 'order_number',
+            'vendor_number'           => 'vendor_number',
+            'vendor_name'             => 'vendor_name',
+            'route_label'             => 'route_label',
+            'net_total'               => 'net_total',
+            'currency'                => 'currency',
+            'emision_date_po'         => 'emision_date_po',
+            'category'                => 'category',
+            'incoterms'               => 'incoterms',
+            'logistics_incoterm'      => 'logistics_incoterm',
+            'price_incoterm'          => 'price_incoterm',
 
-            // Campos adicionales OLO
-            'GRUPO_REPOSITOR' => 'retail_group',
-            'CANT_COMENTARIOS' => 'comments_count', // Campo calculado
+            // Fechas y diferencias
+            'date_theorical_load'     => 'date_theorical_load',
+            'dif_load_date'           => 'dif_load_date',
+            'date_etd'                => 'date_etd',
+            'date_eta'                => 'date_eta',
+            'etd_dates_difference'    => 'etd_dates_difference',
+            'eta_dates_difference'    => 'eta_dates_difference',
+
+            // Otros
+            'case_number_file'        => 'case_number_file',
+            'status'                  => 'status',
+            'departure_port'          => 'departure_port',
+            'arrival_port'            => 'arrival_port',
+            'customs_dua'             => 'customs_dua',
+            'receipt_note'            => 'receipt_note',
+            'receipt_note_date'       => 'receipt_note_date',
+            'factory_proforma_number' => 'factory_proforma_number',
+            'invoice'                 => 'invoice',
+            'Invoice_amount'          => 'Invoice_amount',
+            'applies_tlc'             => 'applies_tlc',
+            'apply_technical_note'    => 'apply_technical_note',
+            'reason'                  => 'reason',
+            'customer_type'           => 'customer_type',
+
+            // OLO existentes
+            'retail_group'            => 'retail_group',
+            'comments_count'          => 'comments_count', // calculado/solo referencia
+
         ];
 
-        // Procesar cada campo del payload
         foreach ($payload as $apiField => $value) {
             if (!isset($fieldMapping[$apiField])) {
                 continue; // Ignorar campos no mapeados
@@ -491,108 +495,104 @@ class PurchaseOrderController extends Controller
             $modelField = $fieldMapping[$apiField];
             $oldValue = $po->$modelField;
 
-            // Procesar campos especiales
             switch ($apiField) {
-                case 'PROVEEDOR_NOMBRE':
-                    // Buscar vendor por nombre
-                    $vendor = Vendor::where('name', $value)->first();
-                    if ($vendor) {
-                        $po->vendor_id = $vendor->id;
-                        $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->name];
-                    } else {
+                case 'vendor_name': {
+                    $vendor = \App\Models\Vendor::where('name', $value)->first();
+                    if (!$vendor) {
                         throw new \Exception("Vendor not found: {$value}");
                     }
+                    $po->vendor_id = $vendor->id;
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->name];
                     break;
-
-                case 'PROVEEDOR_NO':
-                    // Buscar vendor por código
-                    $vendor = Vendor::where('vendo_code', $value)->first();
-                    if ($vendor) {
-                        $po->vendor_id = $vendor->id;
-                        $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->vendo_code];
-                    } else {
+                }
+                case 'vendor_number': {
+                    $vendor = \App\Models\Vendor::where('vendo_code', $value)->first();
+                    if (!$vendor) {
                         throw new \Exception("Vendor not found with code: {$value}");
                     }
+                    $po->vendor_id = $vendor->id;
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->vendo_code];
                     break;
+                }
 
-                case 'FECHA_EMISION_PO':
-                case 'FECHA_CARGOLIST':
-                case 'FECHA_NR':
-                    // Procesar fechas
+                // Fechas
+                case 'emision_date_po':
+                case 'date_theorical_load':
+                case 'receipt_note_date':
+                case 'date_etd':
+                case 'date_eta': {
                     $po->$modelField = \Carbon\Carbon::parse($value);
                     $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
                     break;
+                }
 
-                case 'ETD_ESTIMADO':
-                case 'ETA_ESTIMADO':
-                    // Procesar fechas ETD/ETA
-                    $po->$modelField = \Carbon\Carbon::parse($value);
-                    $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
-                    break;
-
-                case 'MONTO_PO':
-                case 'MONTO_FACTURA':
-                    // Procesar montos
+                // Montos
+                case 'net_total':
+                case 'Invoice_amount': {
                     $po->$modelField = (float) $value;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => (float) $value];
                     break;
+                }
 
-                case 'APLICA_TLC':
-                case 'APLICA_NOTA_TECNICA':
-                    // Procesar booleanos
+                // Booleanos
+                case 'applies_tlc':
+                case 'apply_technical_note': {
                     $po->$modelField = filter_var($value, FILTER_VALIDATE_BOOLEAN);
-                    $changes[$apiField] = ['old' => $oldValue, 'new' => (bool) $value];
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => (bool) $po->$modelField];
                     break;
+                }
 
-                case 'DIF_FECHAS_ETD':
-                case 'DIF_FECHAS_ETA':
-                    // Procesar diferencias de fechas
+                // Diferencias (enteros)
+                case 'etd_dates_difference':
+                case 'eta_dates_difference':
+                case 'dif_load_date': {
                     $po->$modelField = (int) $value;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => (int) $value];
                     break;
+                }
 
-                case 'ESTADO':
-                    // Validar estado
+                // Enums
+                case 'status': {
                     $allowedStatuses = ['draft', 'pending', 'approved', 'shipped', 'delivered', 'cancelled'];
-                    if (!in_array($value, $allowedStatuses)) {
+                    if (!in_array($value, $allowedStatuses, true)) {
                         throw new \Exception("Invalid status: {$value}. Allowed: " . implode(', ', $allowedStatuses));
                     }
                     $po->$modelField = $value;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
                     break;
-
-                case 'MONEDA_PO':
-                    // Validar moneda
+                }
+                case 'currency': {
                     $allowedCurrencies = ['USD', 'EUR', 'CRC'];
-                    if (!in_array($value, $allowedCurrencies)) {
+                    if (!in_array($value, $allowedCurrencies, true)) {
                         throw new \Exception("Invalid currency: {$value}. Allowed: " . implode(', ', $allowedCurrencies));
                     }
                     $po->$modelField = $value;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
                     break;
-
-                case 'INCOTERM_COMPRA':
-                case 'INCOTERM_LOGISTICA':
-                case 'INCOTERM_PRECIOS':
-                    // Validar incoterms
-                    $allowedIncoterms = ['CIF', 'CIP', 'CFR', 'CPT', 'DAT', 'DAP', 'DDP', 'DEQ', 'DES', 'EXD', 'EXQ', 'EXW', 'FCA', 'FOB'];
-                    if (!in_array($value, $allowedIncoterms)) {
+                }
+                case 'incoterms':
+                case 'logistics_incoterm':
+                case 'price_incoterm': {
+                    $allowedIncoterms = ['CIF','CIP','CFR','CPT','DAT','DAP','DDP','DEQ','DES','EXD','EXQ','EXW','FCA','FOB'];
+                    if (!in_array($value, $allowedIncoterms, true)) {
                         throw new \Exception("Invalid incoterm: {$value}. Allowed: " . implode(', ', $allowedIncoterms));
                     }
                     $po->$modelField = $value;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
                     break;
+                }
 
-                default:
-                    // Campos de texto simples
+                // Default: texto/otros (incluye case_number_file)
+                default: {
                     $po->$modelField = $value;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
                     break;
+                }
             }
         }
 
-        // Recalcular totales si se actualizó el monto
-        if (isset($payload['MONTO_PO'])) {
+        // Recalcular totales si se actualizó net_total
+        if (isset($payload['net_total'])) {
             $po->total = $po->net_total;
         }
 
