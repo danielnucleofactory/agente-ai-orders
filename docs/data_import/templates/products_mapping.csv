@@ -1,0 +1,10 @@
+"Nombre Frontend","Tabla","Nombre BD (Campo)","Tipo de Dato","Descripción","Obligatorio"
+"Compañía","products","company_id","ID Numérico","ID de la compañía a la que pertenece.","Sí"
+"SKU","products","sku","Texto","Stock Keeping Unit, código único del producto.","Sí"
+"Nombre","products","name","Texto","Nombre del producto.","Sí"
+"Descripción","products","description","Texto Largo","Descripción detallada del producto.","No"
+"Precio","products","price","Decimal","Precio unitario del producto.","Sí"
+"Stock","products","stock","Entero","Cantidad de unidades en inventario.","Sí"
+
+company_id,sku,name,description,price,stock
+
