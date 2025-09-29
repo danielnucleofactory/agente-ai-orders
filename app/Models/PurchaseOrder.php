@@ -220,8 +220,7 @@ class PurchaseOrder extends Model implements HasMedia
 
         'delay_days' => 'integer',
 
-        'date_etd_updated' => 'datetime',
-        'date_eta_updated' => 'datetime',
+        'date_eta_initial' => 'datetime',
 
         'consolidator_name' => 'string',
         'port_of_loading_validated' => 'boolean',
