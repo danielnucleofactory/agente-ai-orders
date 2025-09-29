@@ -229,8 +229,7 @@ class CreatePucharseOrder extends Component
     public $delay_days;
 
 // Versiones actualizadas ETA/ETD
-    public $date_etd_updated;
-    public $date_eta_updated;
+    public $date_eta_initial;
 
     // Costos
     public $po_amount = 0.0;        // Monto PO “declarado” (si lo usas)
@@ -446,8 +445,7 @@ class CreatePucharseOrder extends Component
                 $this->etd_dates_difference = $this->purchaseOrder->etd_dates_difference;
                 $this->eta_dates_difference = $this->purchaseOrder->eta_dates_difference;
 
-                $this->date_etd_updated = optional($this->purchaseOrder->date_etd_updated)?->format('Y-m-d');
-                $this->date_eta_updated = optional($this->purchaseOrder->date_eta_updated)?->format('Y-m-d');
+                $this->date_eta_initial = optional($this->purchaseOrder->date_eta_initial)?->format('Y-m-d');
 
                 //Campos extras que faltaban
                 $this->cbm               = $this->purchaseOrder->cbm;
@@ -880,8 +878,7 @@ class CreatePucharseOrder extends Component
                     'arrival_status' => $this->arrival_status,
                     'delay_days' => $this->delay_days,
 
-                    'date_etd_updated' => $this->date_etd_updated,
-                    'date_eta_updated' => $this->date_eta_updated,
+                    'date_eta_initial' => $this->date_eta_initial,
 
                     'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
                     'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
@@ -1175,8 +1172,7 @@ class CreatePucharseOrder extends Component
                 'arrival_status' => $this->arrival_status,
                 'delay_days' => $this->delay_days,
 
-                'date_etd_updated' => $this->date_etd_updated,
-                'date_eta_updated' => $this->date_eta_updated,
+                'date_eta_initial' => $this->date_eta_initial,
 
                 'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
                 'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
@@ -1365,10 +1361,10 @@ class CreatePucharseOrder extends Component
     {
         // Usamos Carbon para diferencias con signo
         $etdInitial = $this->date_etd_initial ? \Carbon\Carbon::parse($this->date_etd_initial) : null;
-        $etdUpdated = $this->date_etd_updated ? \Carbon\Carbon::parse($this->date_etd_updated) : null;
+        $etdUpdated = $this->date_etd ? \Carbon\Carbon::parse($this->date_etd) : null;
 
         $etaBase    = $this->date_eta ? \Carbon\Carbon::parse($this->date_eta) : null;
-        $etaUpdated = $this->date_eta_updated ? \Carbon\Carbon::parse($this->date_eta_updated) : null;
+        $etaUpdated = $this->date_eta_initial ? \Carbon\Carbon::parse($this->date_eta_initial) : null;
 
         $this->etd_dates_difference = ($etdInitial && $etdUpdated)
             ? $etdInitial->diffInDays($etdUpdated, true) //
