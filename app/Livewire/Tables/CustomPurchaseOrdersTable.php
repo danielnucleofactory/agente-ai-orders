@@ -26,8 +26,11 @@ class CustomPurchaseOrdersTable extends Component
     public $comment_release = '';
     public $file = null;
 
+    public $activeTab = 'route_label'; // 'route_label', 'container_number', 'actual'
+
     protected $queryString = [
         'search' => ['except' => ''],
+        'activeTab' => ['except' => 'route_label'],
         'sortField' => ['except' => 'created_at'],
         'sortDirection' => ['except' => 'desc'],
         'statusFilter' => ['except' => ''],
@@ -259,39 +262,96 @@ class CustomPurchaseOrdersTable extends Component
         $this->dispatch('open-modal', 'modal-consolidate-order');
     }
 
+    public function setTab($tab)
+    {
+        $this->activeTab = $tab;
+        $this->resetPage();
+    }
+
+    protected function getColorPalette()
+    {
+        return [
+            '#E0E5FF', '#C9CFFF', '#B2B9FF', '#9BA3FF', '#848DFF',
+            '#6D77FF', '#565FFF', '#4049FF', '#2933FF', '#121DFF',
+        ];
+    }
+
     protected function getPurchaseOrdersQuery()
     {
-        return PurchaseOrder::query()
+        $query = PurchaseOrder::query()
+            ->with('vendor', 'shippingDocuments') // Eager load relationships
             ->when($this->search, function ($query) {
                 $searchTerm = strtolower($this->search);
                 $query->where(function ($query) use ($searchTerm) {
                     $query->whereRaw('LOWER(order_number) LIKE ?', ['%' . $searchTerm . '%'])
-                        ->orWhereRaw('LOWER(CAST(vendor_id AS TEXT)) LIKE ?', ['%' . $searchTerm . '%'])
-                        ->orWhereRaw('LOWER(notes) LIKE ?', ['%' . $searchTerm . '%']);
+                          ->orWhereHas('vendor', function ($q) use ($searchTerm) {
+                              $q->whereRaw('LOWER(name) LIKE ?', ['%' . $searchTerm . '%']);
+                          })
+                          ->orWhereRaw('LOWER(notes) LIKE ?', ['%' . $searchTerm . '%']);
                 });
             })
-            ->when($this->statusFilter, function ($query) {
-                $query->where('status', $this->statusFilter);
-            })
+            ->when($this->statusFilter, fn($q) => $q->where('status', $this->statusFilter))
             ->when($this->consolidableFilter, function ($query) {
                 if ($this->consolidableFilter === 'yes') {
-                    $query->where('weight_kg', '>', 5000)->where('weight_kg', '<=', 15000);
+                    $query->whereBetween('weight_kg', [5001, 15000]);
                 } elseif ($this->consolidableFilter === 'no') {
-                    $query->where(function ($query) {
-                        $query->where('weight_kg', '<=', 5000)
-                            ->orWhere('weight_kg', '>', 15000);
-                    });
+                    $query->whereNotBetween('weight_kg', [5001, 15000]);
                 }
-            })
-            ->orderBy($this->sortField, $this->sortDirection);
+            });
+
+        // For suggestion tabs, only show orders not yet in a shipping document
+        if ($this->activeTab === 'route_label' || $this->activeTab === 'container_number') {
+            $query->whereDoesntHave('shippingDocuments');
+        }
+
+        return $query->orderBy($this->sortField, $this->sortDirection);
     }
 
     public function render()
     {
-        $purchaseOrders = $this->getPurchaseOrdersQuery()->paginate($this->perPage);
+        $query = $this->getPurchaseOrdersQuery();
+        $colors = $this->getColorPalette();
+        $colorMap = [];
+
+        if ($this->activeTab === 'route_label' || $this->activeTab === 'container_number') {
+            $distinctKeys = (clone $query)
+                ->whereNotNull($this->activeTab)
+                ->distinct()
+                ->pluck($this->activeTab);
+
+            foreach ($distinctKeys as $index => $key) {
+                $colorMap[$key] = $colors[$index % count($colors)];
+            }
+        }
+
+        $purchaseOrders = $query->paginate($this->perPage);
+        $items = $purchaseOrders->getCollection();
+
+        if ($this->activeTab === 'route_label' || $this->activeTab === 'container_number') {
+            foreach ($items as $item) {
+                if (isset($colorMap[$item->{$this->activeTab}])) {
+                    $item->color = $colorMap[$item->{$this->activeTab}];
+                }
+            }
+        } elseif ($this->activeTab === 'actual') {
+            $actualColorMap = [];
+            $colorIndex = 0;
+            $groupedItems = $items->filter(fn($order) => $order->shippingDocuments->isNotEmpty())
+                                   ->groupBy(fn($order) => $order->shippingDocuments->first()->id);
+
+            foreach ($groupedItems as $shippingDocId => $group) {
+                if (!isset($actualColorMap[$shippingDocId])) {
+                    $actualColorMap[$shippingDocId] = $colors[$colorIndex % count($colors)];
+                    $colorIndex++;
+                }
+                foreach ($group as $item) {
+                    $item->color = $actualColorMap[$shippingDocId];
+                }
+            }
+        }
 
         return view('livewire.tables.custom-purchase-orders-table', [
-            'purchaseOrders' => $purchaseOrders
+            'purchaseOrders' => $purchaseOrders,
         ]);
     }
 }
