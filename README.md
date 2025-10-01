@@ -91,4 +91,6 @@ Para contribuir al proyecto, por favor sigue el flujo de trabajo estándar:
 1.  Crea una nueva rama para tu feature (`git checkout -b feature/nombre-feature`).
 2.  Realiza tus cambios y haz commit.
 3.  Asegúrate de actualizar la documentación relevante siguiendo la [guía de actualización](./docs/guides/PROMPT_UPDATE_DOCS.md).
-4.  Abre un Pull Request para su revisión.
+4.  Sigue las [guías de desarrollo con IA](./docs/guides/AI_DEVELOPMENT_GUIDELINES.md) para mantener la calidad del código.
+5.  Consulta las [mejores prácticas del proyecto](./docs/guides/PROJECT_BEST_PRACTICES.md) para estándares de desarrollo.
+6.  Abre un Pull Request para su revisión.
