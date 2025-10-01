@@ -16,6 +16,7 @@ La documentación está organizada en las siguientes secciones principales:
   - **Guías y Procedimientos.** Contiene tutoriales y documentos de procedimientos, incluyendo:
     - [Guía para Actualizar Documentación](./guides/PROMPT_UPDATE_DOCS.md) - Mantener documentación sincronizada con IA
     - [Guías de Desarrollo con IA](./guides/AI_DEVELOPMENT_GUIDELINES.md) - Mejores prácticas para desarrollo asistido por IA
+    - [Mejores Prácticas del Proyecto](./guides/PROJECT_BEST_PRACTICES.md) - Guía completa de mejores prácticas de desarrollo
 
 ## Cómo Mantener la Documentación
 Para asegurar que esta documentación se mantenga siempre sincronizada con el código, por favor sigue las instrucciones en la [**Guía para Actualizar la Documentación**](./guides/PROMPT_UPDATE_DOCS.md).

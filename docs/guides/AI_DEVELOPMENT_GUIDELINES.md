@@ -9,23 +9,54 @@ Este documento establece las directrices y mejores prácticas para el desarrollo
 - Preservar la arquitectura del proyecto
 - Facilitar el mantenimiento a largo plazo
 - Asegurar la calidad de las contribuciones
+- **Minimizar cambios al código existente**
+- **Garantizar lectura completa del contexto antes de modificar**
 
 ---
 
 ## 📋 Directrices Generales
 
-### 1. **Antes de Solicitar Asistencia de IA**
+### 1. **Principios Fundamentales de Desarrollo con IA**
+
+#### **🔍 Lectura Completa del Contexto (OBLIGATORIO)**
+Antes de cualquier modificación, la IA DEBE:
+
+1. **Leer TODOS los archivos relacionados** al cambio solicitado
+2. **Entender la arquitectura existente** del módulo/funcionalidad
+3. **Revisar patrones de código** ya establecidos en el proyecto
+4. **Identificar dependencias** y relaciones entre componentes
+5. **Analizar el impacto** de los cambios propuestos
+
+#### **⚡ Minimización de Cambios (PRIORIDAD MÁXIMA)**
+La IA DEBE seguir esta jerarquía:
+
+1. **PRIMERO:** Modificar código existente (preferido)
+2. **SEGUNDO:** Extender funcionalidad existente
+3. **TERCERO:** Crear nuevos métodos en clases existentes
+4. **ÚLTIMO RECURSO:** Crear nuevos archivos (solo si es absolutamente necesario)
+
+#### **📋 Checklist de Lectura de Contexto**
+Antes de cualquier cambio, verificar:
+- [ ] ¿Existe código similar en el proyecto?
+- [ ] ¿Puedo reutilizar funcionalidad existente?
+- [ ] ¿Hay patrones establecidos que debo seguir?
+- [ ] ¿Qué archivos necesito leer para entender el contexto completo?
+
+### 2. **Antes de Solicitar Asistencia de IA**
 
 ✅ **SÍ hacer:**
 - Revisar la documentación existente en `/docs`
 - Entender la arquitectura actual del proyecto
 - Identificar claramente el problema o funcionalidad a implementar
 - Preparar contexto específico sobre los cambios necesarios
+- **Proporcionar archivos específicos** que deben ser leídos
+- **Especificar qué NO debe ser modificado**
 
 ❌ **NO hacer:**
 - Solicitar cambios sin contexto específico
 - Pedir implementaciones que contradigan la arquitectura existente
 - Solicitar creación de archivos sin justificación clara
+- **Pedir cambios sin especificar archivos a leer primero**
 
 ### 2. **Gestión de Archivos Temporales**
 
@@ -47,6 +78,12 @@ El archivo `.gitignore` está configurado para prevenir automáticamente que los
 
 #### Template para Nuevas Funcionalidades:
 ```markdown
+**OBLIGATORIO - Lectura de Contexto:**
+Antes de cualquier cambio, DEBES leer estos archivos:
+- [Lista específica de archivos a leer]
+- [Archivos relacionados en el mismo módulo]
+- [Patrones de código existentes]
+
 **Contexto del Proyecto:**
 - Proyecto: OLO Raga Orders (Laravel + Livewire)
 - Arquitectura: [describir módulo específico]
@@ -55,15 +92,74 @@ El archivo `.gitignore` está configurado para prevenir automáticamente que los
 **Objetivo:**
 [Descripción específica de lo que se necesita]
 
-**Restricciones:**
+**Restricciones CRÍTICAS:**
 - NO crear archivos temporales
+- MÍNIMIZAR cambios al código existente
+- PRIORIZAR modificar código existente sobre crear nuevo
 - Seguir la estructura existente en [directorio específico]
 - Mantener consistencia con [patrón específico]
 - Actualizar documentación en [archivos específicos]
 
 **Archivos a Modificar/Crear:**
-[Lista específica de archivos con justificación]
+[Lista específica de archivos con justificación de POR QUÉ cada uno es necesario]
+
+**Archivos que NO deben ser modificados:**
+[Lista de archivos que deben permanecer intactos]
 ```
+
+#### Template para Correcciones/Bugs:
+```markdown
+**OBLIGATORIO - Lectura de Contexto:**
+DEBES leer estos archivos ANTES de hacer cambios:
+- [Archivo específico con el bug]
+- [Archivos relacionados que podrían verse afectados]
+- [Tests existentes para entender el comportamiento esperado]
+
+**Problema Identificado:**
+[Descripción específica del bug o problema]
+
+**Restricciones CRÍTICAS:**
+- SOLO modificar el código necesario para corregir el bug
+- NO refactorizar código que funciona correctamente
+- MANTENER toda la funcionalidad existente
+- ACTUALIZAR tests si es necesario
+
+**Archivos a Modificar:**
+[Lista mínima de archivos necesarios]
+```
+
+---
+
+## 🔍 **Cómo Garantizar Lectura Completa del Contexto**
+
+### **Para el Desarrollador (Usuario):**
+1. **Siempre especifica archivos a leer:**
+   ```
+   "Antes de hacer cambios, lee estos archivos:
+   - app/Models/PurchaseOrder.php
+   - app/Http/Controllers/PurchaseOrderController.php
+   - app/Livewire/Forms/CreatePurchaseOrder.php"
+   ```
+
+2. **Proporciona contexto específico:**
+   ```
+   "El problema está en la línea 45 de PurchaseOrderController.php
+   donde se valida el campo 'vendor_id'"
+   ```
+
+3. **Especifica qué NO modificar:**
+   ```
+   "NO modifiques:
+   - app/Models/Vendor.php
+   - Las migraciones existentes
+   - Los tests que pasan actualmente"
+   ```
+
+### **Para la IA (Asistente):**
+1. **SIEMPRE leer archivos antes de modificar**
+2. **Usar herramientas de búsqueda semántica** para entender el contexto
+3. **Analizar patrones existentes** antes de implementar
+4. **Confirmar comprensión** antes de proceder con cambios
 
 ---
 
@@ -211,6 +307,11 @@ php artisan route:clear
 3. **VERIFICA** que los cambios no rompan funcionalidad existente
 4. **CONSULTA** la documentación antes de implementar nuevas funcionalidades
 5. **MANTÉN** la consistencia con la arquitectura existente
+6. **LEE SIEMPRE** el contexto completo antes de modificar código
+7. **MINIMIZA** los cambios al código existente
+8. **PRIORIZA** modificar código existente sobre crear nuevo
+9. **CONFIRMA** comprensión del contexto antes de proceder
+10. **ESPECIFICA** qué archivos deben ser leídos en cada solicitud
 
 ---
 
