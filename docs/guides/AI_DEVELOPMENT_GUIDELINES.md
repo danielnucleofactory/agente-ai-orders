@@ -40,6 +40,9 @@ Este documento establece las directrices y mejores prácticas para el desarrollo
 - Archivos de migración con timestamps específicos
 - Archivos de configuración con nombres descriptivos
 
+#### **Protección Automática:**
+El archivo `.gitignore` está configurado para prevenir automáticamente que los archivos temporales sean committeados. Esto es suficiente para mantener el proyecto limpio sin necesidad de scripts adicionales.
+
 ### 3. **Estructura de Prompts Efectivos**
 
 #### Template para Nuevas Funcionalidades:
@@ -148,24 +151,20 @@ Este documento establece las directrices y mejores prácticas para el desarrollo
 
 ## 🛠 Comandos Útiles para Mantenimiento
 
-### Limpiar archivos temporales:
-
-#### Usando scripts automatizados:
+### Verificar archivos temporales:
 ```bash
-# Linux/Mac
-./scripts/cleanup-temp-files.sh
-
-# Windows PowerShell
-.\scripts\cleanup-temp-files.ps1
-```
-
-#### Comandos manuales:
-```bash
-# Buscar archivos temporales
+# Buscar archivos temporales (solo para verificar)
 find . -name "*.tmp" -o -name "*.bak" -o -name "*.old" -o -name "temp_*"
 
-# Eliminar archivos temporales (¡CUIDADO!)
-find . -name "*.tmp" -delete
+# En Windows PowerShell
+Get-ChildItem -Recurse -Name "*.tmp", "*.bak", "*.old", "temp_*"
+```
+
+### Limpiar archivos temporales manualmente:
+```bash
+# Eliminar archivos temporales específicos (¡CUIDADO!)
+rm *.tmp *.bak *.old
+rm temp_* test_* debug_*
 ```
 
 ### Verificar estado del proyecto:
