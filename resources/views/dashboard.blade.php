@@ -127,38 +127,6 @@
           </div>
         </div>
       </div>
-      <div class="filter-group" data-filter="product" style="width: 180px;">
-        <label class="filter-label" style="color: #565AFF; font-size: 14px;">Producto</label>
-        <div class="multi-select" data-multiselect data-placeholder="Seleccionar productos" style="height: 40px; width: 180px; border: 2px solid #7288FF; border-radius: 10px; padding: 0; background: #fff;">
-          <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
-            <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar productos</span>
-            <i class="fas fa-chevron-down multi-select-icon"></i>
-          </button>
-          <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #7288FF; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(86,90,255,0.08); max-height: 70vh; overflow-y: auto;">
-            <div class="multi-select-search">
-              <input type="text" placeholder="Buscar productos... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
-            </div>
-            <div class="multi-select-options"></div>
-            <div class="multi-select-clear">Limpiar selección</div>
-          </div>
-        </div>
-      </div>
-      <div class="filter-group" data-filter="material" style="width: 180px;">
-        <label class="filter-label" style="color: #565AFF; font-size: 14px;">Material</label>
-        <div class="multi-select" data-multiselect data-placeholder="Seleccionar materiales" style="height: 40px; width: 180px; border: 2px solid #7288FF; border-radius: 10px; padding: 0; background: #fff;">
-          <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
-            <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar materiales</span>
-            <i class="fas fa-chevron-down multi-select-icon"></i>
-          </button>
-          <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #7288FF; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(86,90,255,0.08); max-height: 70vh; overflow-y: auto;">
-            <div class="multi-select-search">
-              <input type="text" placeholder="Buscar materiales... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
-            </div>
-            <div class="multi-select-options"></div>
-            <div class="multi-select-clear">Limpiar selección</div>
-          </div>
-        </div>
-      </div>
       <div class="action-buttons" style="display: flex; gap: 16px; align-items: flex-end; margin-left: auto;">
         <button class="btn-primary" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: none; background: #565AFF; color: #F7F7F7; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; justify-content: center;">Aceptar</button>
         <button class="btn-secondary" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: 2px solid #565AFF; background: #fff; color: #565AFF; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; gap: 8px; justify-content: center;">
@@ -181,10 +149,6 @@
       <div class="metric-card">
         <p class="metric-label">% PO's atrasadas</p>
         <span class="metric-value" id="delayedPercentageValue"></span>
-      </div>
-      <div class="metric-card">
-        <p class="metric-label">Material</p>
-        <span class="metric-value" id="materialCountValue"></span>
       </div>
     </div>
 

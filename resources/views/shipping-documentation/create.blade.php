@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="text-xl font-semibold leading-tight text-gray-800">
-            {{ __('Documentación de Envío') }}
+            {{ __('Embarques') }}
         </h2>
     </x-slot>
 
@@ -11,7 +11,7 @@
                 <div class="flex items-center justify-between mb-6">
                     <x-view-title>
                         <x-slot:title>
-                            Consolidación de ordenes
+                            Creación de Embarques
                         </x-slot:title>
                     </x-view-title>
                 </div>

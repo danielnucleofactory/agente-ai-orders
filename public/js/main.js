@@ -50,12 +50,6 @@ async function fetchDashboardData() {
     if (activeFilters.status && activeFilters.status.length > 0) {
       activeFilters.status.forEach(status => params.append('status[]', status));
     }
-    if (activeFilters.product_id && activeFilters.product_id.length > 0) {
-      activeFilters.product_id.forEach(pid => params.append('product_id[]', pid));
-    }
-    if (activeFilters.material_type && activeFilters.material_type.length > 0) {
-      activeFilters.material_type.forEach(mat => params.append('material_type[]', mat));
-    }
     if (activeFilters.vendor_id && activeFilters.vendor_id.length > 0) {
       activeFilters.vendor_id.forEach(vid => params.append('vendor_id[]', vid));
     }
@@ -1283,19 +1277,7 @@ function applyTopFilters() {
     activeFilters.vendor_id = Array.from(checked).map(cb => cb.value);
   }
 
-  // Producto (filtro múltiple)
-  const productoGroup = document.querySelector('.filter-group[data-filter="product"]');
-  if (productoGroup) {
-    const checked = productoGroup.querySelectorAll('input[type="checkbox"]:checked');
-    activeFilters.product_id = Array.from(checked).map(cb => cb.value);
-  }
 
-  // Material (filtro múltiple)
-  const materialGroup = document.querySelector('.filter-group[data-filter="material"]');
-  if (materialGroup) {
-    const checked = materialGroup.querySelectorAll('input[type="checkbox"]:checked');
-    activeFilters.material_type = Array.from(checked).map(cb => cb.value);
-  }
 }
 
 // Inicialización principal del dashboard

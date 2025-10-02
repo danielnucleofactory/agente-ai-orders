@@ -16,7 +16,7 @@
 
             <a href="{{ route('shipping-documentation.create') }}">
                 <x-secondary-button>
-                    Crear nuevo consolidado
+                    Crear nuevo embarque
                 </x-secondary-button>
             </a>
 
