@@ -729,33 +729,7 @@ class DashboardService
                 $query->where('order_date', '<=', $filters['date_to']);
             }
 
-            // Product filter - Updated for multiple values
-            if (!empty($filters['product_id'])) {
-                Log::info('Applying product filter', ['product_id' => $filters['product_id']]);
-                $productIds = is_array($filters['product_id']) ? $filters['product_id'] : [$filters['product_id']];
-                $productIds = array_filter($productIds); // Remove empty values
 
-                if (!empty($productIds)) {
-                    $query->whereHas('products', function ($q) use ($productIds) {
-                        $q->whereIn('product_id', $productIds);
-                    });
-                }
-            }
-
-            // Material type filter - CAST a texto para LIKE sobre json
-            if (!empty($filters['material_type'])) {
-                Log::info('Applying material_type filter', ['material_type' => $filters['material_type']]);
-                $materialTypes = is_array($filters['material_type']) ? $filters['material_type'] : [$filters['material_type']];
-                $materialTypes = array_filter($materialTypes); // Remove empty values
-
-                if (!empty($materialTypes)) {
-                    $query->where(function($q) use ($materialTypes) {
-                        foreach ($materialTypes as $materialType) {
-                            $q->orWhereRaw('material_type::text LIKE ?', ['%' . $materialType . '%']);
-                        }
-                    });
-                }
-            }
 
             // Hub filter - Updated for multiple values (actual_hub_id only)
             if (!empty($filters['hub_id'])) {

@@ -40,74 +40,575 @@
         </div>
     </div>
 
-    <div class="flex w-full justify-between gap-5 rounded-[0.625rem] bg-white p-4 text-xs">
-        <x-weight-card>
-            <x-slot:weight>
-                {{ $purchaseOrderDetails->weight_kg }}
-            </x-slot:weight>
-            <x-slot:height>
-                {{ intval($purchaseOrderDetails->height) }}
-            </x-slot:height>
-            <x-slot:width>
-                {{ intval($purchaseOrderDetails->width) }}
-            </x-slot:width>
-            <x-slot:length>
-                {{ intval($purchaseOrderDetails->length) }}
-            </x-slot:length>
-        </x-weight-card>
-
-        <!-- Primera tarjeta de fechas (3 fechas) -->
-        <div class="flex gap-2 mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 18 20" fill="none">
-                <path d="M5.625 10.25C5.32663 10.25 5.04048 10.3685 4.8295 10.5795C4.61853 10.7905 4.5 11.0766 4.5 11.375C4.5 11.6734 4.61853 11.9595 4.8295 12.1705C5.04048 12.3815 5.32663 12.5 5.625 12.5C5.92337 12.5 6.20952 12.3815 6.4205 12.1705C6.63147 11.9595 6.75 11.6734 6.75 11.375C6.75 11.0766 6.63147 10.7905 6.4205 10.5795C6.20952 10.3685 5.92337 10.25 5.625 10.25ZM7.875 11.375C7.875 11.0766 7.99353 10.7905 8.2045 10.5795C8.41548 10.3685 8.70163 10.25 9 10.25H12.375C12.6734 10.25 12.9595 10.3685 13.1705 10.5795C13.3815 10.7905 13.5 11.0766 13.5 11.375C13.5 11.6734 13.3815 11.9595 13.1705 12.1705C12.9595 12.3815 12.6734 12.5 12.375 12.5H9C8.70163 12.5 8.41548 12.3815 8.2045 12.1705C7.99353 11.9595 7.875 11.6734 7.875 11.375ZM5.625 13.25C5.32663 13.25 5.04048 13.3685 4.8295 13.5795C4.61853 13.7905 4.5 14.0766 4.5 14.375C4.5 14.6734 4.61853 14.9595 4.8295 15.1705C5.04048 15.3815 5.32663 15.5 5.625 15.5H9C9.29837 15.5 9.58452 15.3815 9.79549 15.1705C10.0065 14.9595 10.125 14.6734 10.125 14.375C10.125 14.0766 10.0065 13.7905 9.79549 13.5795C9.58452 13.3685 9.29837 13.25 9 13.25H5.625Z" fill="black" />
-                <path fill-rule="evenodd" clip-rule="evenodd" d="M4.125 0.5C3.82663 0.5 3.54048 0.618526 3.3295 0.829505C3.11853 1.04048 3 1.32663 3 1.625V3.5C2.20435 3.5 1.44129 3.81607 0.87868 4.37868C0.31607 4.94129 0 5.70435 0 6.5V17C0 17.7956 0.31607 18.5587 0.87868 19.1213C1.44129 19.6839 2.20435 20 3 20H15C15.7956 20 16.5587 19.6839 17.1213 19.1213C17.6839 18.5587 18 17.7956 18 17V6.5C18 5.70435 17.6839 4.94129 17.1213 4.37868C16.5587 3.81607 15.7956 3.5 15 3.5V1.625C15 1.32663 14.8815 1.04048 14.6705 0.829505C14.4595 0.618526 14.1734 0.5 13.875 0.5C13.5766 0.5 13.2905 0.618526 13.0795 0.829505C12.8685 1.04048 12.75 1.32663 12.75 1.625V3.5H5.25V1.625C5.25 1.32663 5.13147 1.04048 4.9205 0.829505C4.70952 0.618526 4.42337 0.5 4.125 0.5ZM2.25 9.5C2.25 9.10218 2.40804 8.72064 2.68934 8.43934C2.97064 8.15804 3.35218 8 3.75 8H14.25C14.6478 8 15.0294 8.15804 15.3107 8.43934C15.592 8.72064 15.75 9.10218 15.75 9.5V16.25C15.75 16.6478 15.592 17.0294 15.3107 17.3107C15.0294 17.592 14.6478 17.75 14.25 17.75H3.75C3.35218 17.75 2.97064 17.592 2.68934 17.3107C2.40804 17.0294 2.25 16.6478 2.25 16.25V9.5Z" fill="black" />
-            </svg>
-            <div class="space-y-1">
-                <p>Lead time requerido: <span>{{ $purchaseOrder->expected_lead_time ?? 0 }} días</span></p>
-                <p>Lead time en tránsito: <span>{{ $purchaseOrder->real_lead_time ?? 0 }} días</span></p>
-                <p>Fecha requerida en destino: <span>{{ $purchaseOrder->date_required_in_destination ? \Carbon\Carbon::parse($purchaseOrder->date_required_in_destination)->format('d/m/Y') : '-' }}</span></p>
-                <p>Fecha pickup planificada: <span>{{ $purchaseOrder->date_planned_pickup ? \Carbon\Carbon::parse($purchaseOrder->date_planned_pickup)->format('d/m/Y') : '-' }}</span></p>
+    {{-- SECCIÓN CON TODOS LOS CAMPOS DE LA PO --}}
+    <div class="rounded-[0.625rem] bg-white p-6 space-y-6">
+        {{-- Información Básica --}}
+        <div>
+            <h3 class="text-md font-bold mb-3 text-gray-700">Información Básica</h3>
+            <div class="grid grid-cols-4 gap-4 text-xs">
+                <div>
+                    <p class="text-gray-500">Estado</p>
+                    <p class="font-semibold">{{ $purchaseOrder->status ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha de orden</p>
+                    <p class="font-semibold">{{ $purchaseOrder->order_date ? \Carbon\Carbon::parse($purchaseOrder->order_date)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Moneda</p>
+                    <p class="font-semibold">{{ $purchaseOrder->currency ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Modo</p>
+                    <p class="font-semibold">{{ $purchaseOrder->mode ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Incoterms</p>
+                    <p class="font-semibold">{{ $purchaseOrder->incoterms ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Términos de pago</p>
+                    <p class="font-semibold">{{ $purchaseOrder->payment_terms ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Email agente</p>
+                    <p class="font-semibold">{{ $purchaseOrder->email_agent ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Tracking ID</p>
+                    <p class="font-semibold">{{ $purchaseOrder->tracking_id ?? '-' }}</p>
+                </div>
             </div>
         </div>
 
-        <!-- Segunda tarjeta de fechas (3 fechas) -->
-        <div class="flex gap-2 mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 18 20" fill="none">
-                <path d="M5.625 10.25C5.32663 10.25 5.04048 10.3685 4.8295 10.5795C4.61853 10.7905 4.5 11.0766 4.5 11.375C4.5 11.6734 4.61853 11.9595 4.8295 12.1705C5.04048 12.3815 5.32663 12.5 5.625 12.5C5.92337 12.5 6.20952 12.3815 6.4205 12.1705C6.63147 11.9595 6.75 11.6734 6.75 11.375C6.75 11.0766 6.63147 10.7905 6.4205 10.5795C6.20952 10.3685 5.92337 10.25 5.625 10.25ZM7.875 11.375C7.875 11.0766 7.99353 10.7905 8.2045 10.5795C8.41548 10.3685 8.70163 10.25 9 10.25H12.375C12.6734 10.25 12.9595 10.3685 13.1705 10.5795C13.3815 10.7905 13.5 11.0766 13.5 11.375C13.5 11.6734 13.3815 11.9595 13.1705 12.1705C12.9595 12.3815 12.6734 12.5 12.375 12.5H9C8.70163 12.5 8.41548 12.3815 8.2045 12.1705C7.99353 11.9595 7.875 11.6734 7.875 11.375ZM5.625 13.25C5.32663 13.25 5.04048 13.3685 4.8295 13.5795C4.61853 13.7905 4.5 14.0766 4.5 14.375C4.5 14.6734 4.61853 14.9595 4.8295 15.1705C5.04048 15.3815 5.32663 15.5 5.625 15.5H9C9.29837 15.5 9.58452 15.3815 9.79549 15.1705C10.0065 14.9595 10.125 14.6734 10.125 14.375C10.125 14.0766 10.0065 13.7905 9.79549 13.5795C9.58452 13.3685 9.29837 13.25 9 13.25H5.625Z" fill="black" />
-                <path fill-rule="evenodd" clip-rule="evenodd" d="M4.125 0.5C3.82663 0.5 3.54048 0.618526 3.3295 0.829505C3.11853 1.04048 3 1.32663 3 1.625V3.5C2.20435 3.5 1.44129 3.81607 0.87868 4.37868C0.31607 4.94129 0 5.70435 0 6.5V17C0 17.7956 0.31607 18.5587 0.87868 19.1213C1.44129 19.6839 2.20435 20 3 20H15C15.7956 20 16.5587 19.6839 17.1213 19.1213C17.6839 18.5587 18 17.7956 18 17V6.5C18 5.70435 17.6839 4.94129 17.1213 4.37868C16.5587 3.81607 15.7956 3.5 15 3.5V1.625C15 1.32663 14.8815 1.04048 14.6705 0.829505C14.4595 0.618526 14.1734 0.5 13.875 0.5C13.5766 0.5 13.2905 0.618526 13.0795 0.829505C12.8685 1.04048 12.75 1.32663 12.75 1.625V3.5H5.25V1.625C5.25 1.32663 5.13147 1.04048 4.9205 0.829505C4.70952 0.618526 4.42337 0.5 4.125 0.5ZM2.25 9.5C2.25 9.10218 2.40804 8.72064 2.68934 8.43934C2.97064 8.15804 3.35218 8 3.75 8H14.25C14.6478 8 15.0294 8.15804 15.3107 8.43934C15.592 8.72064 15.75 9.10218 15.75 9.5V16.25C15.75 16.6478 15.592 17.0294 15.3107 17.3107C15.0294 17.592 14.6478 17.75 14.25 17.75H3.75C3.35218 17.75 2.97064 17.592 2.68934 17.3107C2.40804 17.0294 2.25 16.6478 2.25 16.25V9.5Z" fill="black" />
-            </svg>
-            <div class="space-y-1">
-                <p>Fecha pickup real: <span>{{ $purchaseOrder->date_actual_pickup ? \Carbon\Carbon::parse($purchaseOrder->date_actual_pickup)->format('d/m/Y') : '-' }}</span></p>
-                <p>Fecha estimada de llegada al hub: <span>{{ $purchaseOrder->date_estimated_hub_arrival ? \Carbon\Carbon::parse($purchaseOrder->date_estimated_hub_arrival)->format('d/m/Y') : '-' }}</span></p>
-                <p>Fecha real de llegada al hub: <span>{{ $purchaseOrder->date_actual_hub_arrival ? \Carbon\Carbon::parse($purchaseOrder->date_actual_hub_arrival)->format('d/m/Y') : '-' }}</span></p>
+        {{-- Dimensiones y Peso --}}
+        <div>
+            <h3 class="text-md font-bold mb-3 text-gray-700">Dimensiones y Peso</h3>
+            <div class="grid grid-cols-4 gap-4 text-xs">
+                <div>
+                    <p class="text-gray-500">Peso (kg)</p>
+                    <p class="font-semibold">{{ $purchaseOrder->weight_kg ?? '0.00' }} kg</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Peso (lb)</p>
+                    <p class="font-semibold">{{ $purchaseOrder->weight_lb ?? '0.00' }} lb</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Alto</p>
+                    <p class="font-semibold">{{ $purchaseOrder->height ?? '0' }} in</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Ancho</p>
+                    <p class="font-semibold">{{ $purchaseOrder->width ?? '0' }} in</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Largo</p>
+                    <p class="font-semibold">{{ $purchaseOrder->length ?? '0' }} in</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Alto (cm)</p>
+                    <p class="font-semibold">{{ $purchaseOrder->height_cm ?? '0.00' }} cm</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Ancho (cm)</p>
+                    <p class="font-semibold">{{ $purchaseOrder->width_cm ?? '0.00' }} cm</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Largo (cm)</p>
+                    <p class="font-semibold">{{ $purchaseOrder->length_cm ?? '0.00' }} cm</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Volumen</p>
+                    <p class="font-semibold">{{ $purchaseOrder->volume ?? '0.000' }} m³</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">CBM</p>
+                    <p class="font-semibold">{{ $purchaseOrder->cbm ?? '0.00' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Cantidad pallets</p>
+                    <p class="font-semibold">{{ $purchaseOrder->pallet_quantity ?? '0' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Pallets real</p>
+                    <p class="font-semibold">{{ $purchaseOrder->pallet_quantity_real ?? '0' }}</p>
+                </div>
             </div>
         </div>
 
-        <!-- Tercera tarjeta de fechas (3 fechas) -->
-        <div class="flex gap-2 mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 18 20" fill="none">
-                <path d="M5.625 10.25C5.32663 10.25 5.04048 10.3685 4.8295 10.5795C4.61853 10.7905 4.5 11.0766 4.5 11.375C4.5 11.6734 4.61853 11.9595 4.8295 12.1705C5.04048 12.3815 5.32663 12.5 5.625 12.5C5.92337 12.5 6.20952 12.3815 6.4205 12.1705C6.63147 11.9595 6.75 11.6734 6.75 11.375C6.75 11.0766 6.63147 10.7905 6.4205 10.5795C6.20952 10.3685 5.92337 10.25 5.625 10.25ZM7.875 11.375C7.875 11.0766 7.99353 10.7905 8.2045 10.5795C8.41548 10.3685 8.70163 10.25 9 10.25H12.375C12.6734 10.25 12.9595 10.3685 13.1705 10.5795C13.3815 10.7905 13.5 11.0766 13.5 11.375C13.5 11.6734 13.3815 11.9595 13.1705 12.1705C12.9595 12.3815 12.6734 12.5 12.375 12.5H9C8.70163 12.5 8.41548 12.3815 8.2045 12.1705C7.99353 11.9595 7.875 11.6734 7.875 11.375ZM5.625 13.25C5.32663 13.25 5.04048 13.3685 4.8295 13.5795C4.61853 13.7905 4.5 14.0766 4.5 14.375C4.5 14.6734 4.61853 14.9595 4.8295 15.1705C5.04048 15.3815 5.32663 15.5 5.625 15.5H9C9.29837 15.5 9.58452 15.3815 9.79549 15.1705C10.0065 14.9595 10.125 14.6734 10.125 14.375C10.125 14.0766 10.0065 13.7905 9.79549 13.5795C9.58452 13.3685 9.29837 13.25 9 13.25H5.625Z" fill="black" />
-                <path fill-rule="evenodd" clip-rule="evenodd" d="M4.125 0.5C3.82663 0.5 3.54048 0.618526 3.3295 0.829505C3.11853 1.04048 3 1.32663 3 1.625V3.5C2.20435 3.5 1.44129 3.81607 0.87868 4.37868C0.31607 4.94129 0 5.70435 0 6.5V17C0 17.7956 0.31607 18.5587 0.87868 19.1213C1.44129 19.6839 2.20435 20 3 20H15C15.7956 20 16.5587 19.6839 17.1213 19.1213C17.6839 18.5587 18 17.7956 18 17V6.5C18 5.70435 17.6839 4.94129 17.1213 4.37868C16.5587 3.81607 15.7956 3.5 15 3.5V1.625C15 1.32663 14.8815 1.04048 14.6705 0.829505C14.4595 0.618526 14.1734 0.5 13.875 0.5C13.5766 0.5 13.2905 0.618526 13.0795 0.829505C12.8685 1.04048 12.75 1.32663 12.75 1.625V3.5H5.25V1.625C5.25 1.32663 5.13147 1.04048 4.9205 0.829505C4.70952 0.618526 4.42337 0.5 4.125 0.5ZM2.25 9.5C2.25 9.10218 2.40804 8.72064 2.68934 8.43934C2.97064 8.15804 3.35218 8 3.75 8H14.25C14.6478 8 15.0294 8.15804 15.3107 8.43934C15.592 8.72064 15.75 9.10218 15.75 9.5V16.25C15.75 16.6478 15.592 17.0294 15.3107 17.3107C15.0294 17.592 14.6478 17.75 14.25 17.75H3.75C3.35218 17.75 2.97064 17.592 2.68934 17.3107C2.40804 17.0294 2.25 16.6478 2.25 16.25V9.5Z" fill="black" />
-            </svg>
-            <div class="space-y-1">
-                <p>Fecha ETD: <span>{{ $purchaseOrder->date_etd ? \Carbon\Carbon::parse($purchaseOrder->date_etd)->format('d/m/Y') : '-' }}</span></p>
-                <p>Fecha ATD: <span>{{ $purchaseOrder->date_atd ? \Carbon\Carbon::parse($purchaseOrder->date_atd)->format('d/m/Y') : '-' }}</span></p>
-                <p>Fecha ETA: <span>{{ $purchaseOrder->date_eta ? \Carbon\Carbon::parse($purchaseOrder->date_eta)->format('d/m/Y') : '-' }}</span></p>
+        {{-- Montos y Costos --}}
+        <div>
+            <h3 class="text-md font-bold mb-3 text-gray-700">Montos y Costos</h3>
+            <div class="grid grid-cols-4 gap-4 text-xs">
+                <div>
+                    <p class="text-gray-500">Monto total</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->total_amount ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Neto total</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->net_total ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Costo adicional</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->additional_cost ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Total</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->total ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Costo seguro</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->insurance_cost ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Transporte terrestre 1</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->ground_transport_cost_1 ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Transporte terrestre 2</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->ground_transport_cost_2 ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Costo nacionalización</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->cost_nationalization ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">OFR estimado</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->cost_ofr_estimated ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">OFR real</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->cost_ofr_real ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Costo pallet estimado</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->estimated_pallet_cost ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Costo real estimado PO</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->real_cost_estimated_po ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Costo real real PO</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->real_cost_real_po ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Otros costos</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->other_costs ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Otros gastos</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->other_expenses ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Variable peso calculable</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->variable_calculare_weight ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Monto Invoice</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->Invoice_amount ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Monto flete</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->freight_amount ?? 0, 2) }}</p>
+                </div>
             </div>
         </div>
 
-        <!-- Cuarta tarjeta de fechas (3 fechas) -->
-        <div class="flex gap-2 mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 18 20" fill="none">
-                <path d="M5.625 10.25C5.32663 10.25 5.04048 10.3685 4.8295 10.5795C4.61853 10.7905 4.5 11.0766 4.5 11.375C4.5 11.6734 4.61853 11.9595 4.8295 12.1705C5.04048 12.3815 5.32663 12.5 5.625 12.5C5.92337 12.5 6.20952 12.3815 6.4205 12.1705C6.63147 11.9595 6.75 11.6734 6.75 11.375C6.75 11.0766 6.63147 10.7905 6.4205 10.5795C6.20952 10.3685 5.92337 10.25 5.625 10.25ZM7.875 11.375C7.875 11.0766 7.99353 10.7905 8.2045 10.5795C8.41548 10.3685 8.70163 10.25 9 10.25H12.375C12.6734 10.25 12.9595 10.3685 13.1705 10.5795C13.3815 10.7905 13.5 11.0766 13.5 11.375C13.5 11.6734 13.3815 11.9595 13.1705 12.1705C12.9595 12.3815 12.6734 12.5 12.375 12.5H9C8.70163 12.5 8.41548 12.3815 8.2045 12.1705C7.99353 11.9595 7.875 11.6734 7.875 11.375ZM5.625 13.25C5.32663 13.25 5.04048 13.3685 4.8295 13.5795C4.61853 13.7905 4.5 14.0766 4.5 14.375C4.5 14.6734 4.61853 14.9595 4.8295 15.1705C5.04048 15.3815 5.32663 15.5 5.625 15.5H9C9.29837 15.5 9.58452 15.3815 9.79549 15.1705C10.0065 14.9595 10.125 14.6734 10.125 14.375C10.125 14.0766 10.0065 13.7905 9.79549 13.5795C9.58452 13.3685 9.29837 13.25 9 13.25H5.625Z" fill="black" />
-                <path fill-rule="evenodd" clip-rule="evenodd" d="M4.125 0.5C3.82663 0.5 3.54048 0.618526 3.3295 0.829505C3.11853 1.04048 3 1.32663 3 1.625V3.5C2.20435 3.5 1.44129 3.81607 0.87868 4.37868C0.31607 4.94129 0 5.70435 0 6.5V17C0 17.7956 0.31607 18.5587 0.87868 19.1213C1.44129 19.6839 2.20435 20 3 20H15C15.7956 20 16.5587 19.6839 17.1213 19.1213C17.6839 18.5587 18 17.7956 18 17V6.5C18 5.70435 17.6839 4.94129 17.1213 4.37868C16.5587 3.81607 15.7956 3.5 15 3.5V1.625C15 1.32663 14.8815 1.04048 14.6705 0.829505C14.4595 0.618526 14.1734 0.5 13.875 0.5C13.5766 0.5 13.2905 0.618526 13.0795 0.829505C12.8685 1.04048 12.75 1.32663 12.75 1.625V3.5H5.25V1.625C5.25 1.32663 5.13147 1.04048 4.9205 0.829505C4.70952 0.618526 4.42337 0.5 4.125 0.5ZM2.25 9.5C2.25 9.10218 2.40804 8.72064 2.68934 8.43934C2.97064 8.15804 3.35218 8 3.75 8H14.25C14.6478 8 15.0294 8.15804 15.3107 8.43934C15.592 8.72064 15.75 9.10218 15.75 9.5V16.25C15.75 16.6478 15.592 17.0294 15.3107 17.3107C15.0294 17.592 14.6478 17.75 14.25 17.75H3.75C3.35218 17.75 2.97064 17.592 2.68934 17.3107C2.40804 17.0294 2.25 16.6478 2.25 16.25V9.5Z" fill="black" />
-            </svg>
-            <div class="space-y-1">
-                <p>Fecha ATA: <span>{{ $purchaseOrder->date_ata ? \Carbon\Carbon::parse($purchaseOrder->date_ata)->format('d/m/Y') : '-' }}</span></p>
-                <p>Fecha de consolidado: <span>{{ $purchaseOrder->date_consolidation ? \Carbon\Carbon::parse($purchaseOrder->date_consolidation)->format('d/m/Y') : '-' }}</span></p>
-                <p>Fecha de release: <span>{{ $purchaseOrder->release_date ? \Carbon\Carbon::parse($purchaseOrder->release_date)->format('d/m/Y') : '-' }}</span></p>
+        {{-- Ahorros --}}
+        <div>
+            <h3 class="text-md font-bold mb-3 text-gray-700">Ahorros</h3>
+            <div class="grid grid-cols-4 gap-4 text-xs">
+                <div>
+                    <p class="text-gray-500">Ahorro OFR FCL</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->savings_ofr_fcl ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Ahorro pickup</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->saving_pickup ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Ahorro ejecutado</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->saving_executed ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Ahorro no ejecutado</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->saving_not_executed ?? 0, 2) }}</p>
+                </div>
             </div>
         </div>
+
+        {{-- Fechas Principales --}}
+        <div>
+            <h3 class="text-md font-bold mb-3 text-gray-700">Fechas Principales</h3>
+            <div class="grid grid-cols-4 gap-4 text-xs">
+                <div>
+                    <p class="text-gray-500">Fecha requerida en destino</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_required_in_destination ? \Carbon\Carbon::parse($purchaseOrder->date_required_in_destination)->format('d/m/Y') : '-' }}</p>
+            </div>
+                <div>
+                    <p class="text-gray-500">Fecha pickup planificada</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_planned_pickup ? \Carbon\Carbon::parse($purchaseOrder->date_planned_pickup)->format('d/m/Y') : '-' }}</p>
+        </div>
+                <div>
+                    <p class="text-gray-500">Fecha pickup real</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_actual_pickup ? \Carbon\Carbon::parse($purchaseOrder->date_actual_pickup)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha estimada llegada hub</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_estimated_hub_arrival ? \Carbon\Carbon::parse($purchaseOrder->date_estimated_hub_arrival)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha real llegada hub</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_actual_hub_arrival ? \Carbon\Carbon::parse($purchaseOrder->date_actual_hub_arrival)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha ETD</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_etd ? \Carbon\Carbon::parse($purchaseOrder->date_etd)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha ATD</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_atd ? \Carbon\Carbon::parse($purchaseOrder->date_atd)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha ETA</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_eta ? \Carbon\Carbon::parse($purchaseOrder->date_eta)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha ATA</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_ata ? \Carbon\Carbon::parse($purchaseOrder->date_ata)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha consolidación</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_consolidation ? \Carbon\Carbon::parse($purchaseOrder->date_consolidation)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha release</p>
+                    <p class="font-semibold">{{ $purchaseOrder->release_date ? \Carbon\Carbon::parse($purchaseOrder->release_date)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha ETD inicial</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_etd_initial ? \Carbon\Carbon::parse($purchaseOrder->date_etd_initial)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha ETA inicial</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_eta_initial ? \Carbon\Carbon::parse($purchaseOrder->date_eta_initial)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha solicitud booking</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_booking_request ? \Carbon\Carbon::parse($purchaseOrder->date_booking_request)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha booking autorizado</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_booking_authorized ? \Carbon\Carbon::parse($purchaseOrder->date_booking_authorized)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha carga teórica</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_theorical_load ? \Carbon\Carbon::parse($purchaseOrder->date_theorical_load)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha variable</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_variable_date ? \Carbon\Carbon::parse($purchaseOrder->date_variable_date)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha carga PO</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_carga_po ? \Carbon\Carbon::parse($purchaseOrder->date_carga_po)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha recibida</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_received ? \Carbon\Carbon::parse($purchaseOrder->date_received)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha inspección</p>
+                    <p class="font-semibold">{{ $purchaseOrder->inspection_date ? \Carbon\Carbon::parse($purchaseOrder->inspection_date)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha corte VGM</p>
+                    <p class="font-semibold">{{ $purchaseOrder->vgm_cut_date ? \Carbon\Carbon::parse($purchaseOrder->vgm_cut_date)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha pago balance</p>
+                    <p class="font-semibold">{{ $purchaseOrder->balance_payment_date ? \Carbon\Carbon::parse($purchaseOrder->balance_payment_date)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha pago cargos locales</p>
+                    <p class="font-semibold">{{ $purchaseOrder->local_charges_payment_date ? \Carbon\Carbon::parse($purchaseOrder->local_charges_payment_date)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Entrada almacén aduanero</p>
+                    <p class="font-semibold">{{ $purchaseOrder->bonded_warehouse_enter ? \Carbon\Carbon::parse($purchaseOrder->bonded_warehouse_enter)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Salida almacén aduanero</p>
+                    <p class="font-semibold">{{ $purchaseOrder->bonded_warehouse_exit ? \Carbon\Carbon::parse($purchaseOrder->bonded_warehouse_exit)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha nota de recepción</p>
+                    <p class="font-semibold">{{ $purchaseOrder->receipt_note_date ? \Carbon\Carbon::parse($purchaseOrder->receipt_note_date)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Disponibilidad DC estimada</p>
+                    <p class="font-semibold">{{ $purchaseOrder->estimated_dc_availability_date ? \Carbon\Carbon::parse($purchaseOrder->estimated_dc_availability_date)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha invoice recibido</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_invoice_received ? \Carbon\Carbon::parse($purchaseOrder->date_invoice_received)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha doc vendor recibido</p>
+                    <p class="font-semibold">{{ $purchaseOrder->date_vendor_document_received ? \Carbon\Carbon::parse($purchaseOrder->date_vendor_document_received)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Actualización fecha PO</p>
+                    <p class="font-semibold">{{ $purchaseOrder->update_date_po ? \Carbon\Carbon::parse($purchaseOrder->update_date_po)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Emisión fecha PO</p>
+                    <p class="font-semibold">{{ $purchaseOrder->emision_date_po ? \Carbon\Carbon::parse($purchaseOrder->emision_date_po)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Fecha forwarder</p>
+                    <p class="font-semibold">{{ $purchaseOrder->forwader_date ? \Carbon\Carbon::parse($purchaseOrder->forwader_date)->format('d/m/Y') : '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Diferencia fecha carga</p>
+                    <p class="font-semibold">{{ $purchaseOrder->dif_load_date ? \Carbon\Carbon::parse($purchaseOrder->dif_load_date)->format('d/m/Y') : '-' }}</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Información de Envío --}}
+        <div>
+            <h3 class="text-md font-bold mb-3 text-gray-700">Información de Envío</h3>
+            <div class="grid grid-cols-4 gap-4 text-xs">
+                <div>
+                    <p class="text-gray-500">Bill of Lading</p>
+                    <p class="font-semibold">{{ $purchaseOrder->bill_of_lading ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Tipo de seguro</p>
+                    <p class="font-semibold">{{ $purchaseOrder->ensurence_type ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Número proforma fábrica</p>
+                    <p class="font-semibold">{{ $purchaseOrder->factory_proforma_number ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Número MBL</p>
+                    <p class="font-semibold">{{ $purchaseOrder->mbl_number ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Tipo contenedor</p>
+                    <p class="font-semibold">{{ $purchaseOrder->container_type ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Número contenedor</p>
+                    <p class="font-semibold">{{ $purchaseOrder->container_number ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Línea naviera</p>
+                    <p class="font-semibold">{{ $purchaseOrder->shipping_line ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Puerto salida</p>
+                    <p class="font-semibold">{{ $purchaseOrder->departure_port ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Puerto llegada</p>
+                    <p class="font-semibold">{{ $purchaseOrder->arrival_port ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Estado llegada</p>
+                    <p class="font-semibold">{{ $purchaseOrder->arrival_status ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Días de retraso</p>
+                    <p class="font-semibold">{{ $purchaseOrder->delay_days ?? '0' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Días libres contenedor</p>
+                    <p class="font-semibold">{{ $purchaseOrder->container_free_days ?? '0' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Diferencia fechas ETD</p>
+                    <p class="font-semibold">{{ $purchaseOrder->etd_dates_difference ?? '0' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Diferencia fechas ETA</p>
+                    <p class="font-semibold">{{ $purchaseOrder->eta_dates_difference ?? '0' }}</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Clasificación y Referencias --}}
+        <div>
+            <h3 class="text-md font-bold mb-3 text-gray-700">Clasificación y Referencias</h3>
+            <div class="grid grid-cols-4 gap-4 text-xs">
+                <div>
+                    <p class="text-gray-500">Incoterm logístico</p>
+                    <p class="font-semibold">{{ $purchaseOrder->logistics_incoterm ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Incoterm precio</p>
+                    <p class="font-semibold">{{ $purchaseOrder->price_incoterm ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Razón</p>
+                    <p class="font-semibold">{{ $purchaseOrder->reason ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Categoría</p>
+                    <p class="font-semibold">{{ $purchaseOrder->category ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Nombre forwarder</p>
+                    <p class="font-semibold">{{ $purchaseOrder->forwarder_name ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Número invoice carga</p>
+                    <p class="font-semibold">{{ $purchaseOrder->cargo_invoice_number ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Tipo tarifa</p>
+                    <p class="font-semibold">{{ $purchaseOrder->tariff_type ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Etiqueta ruta</p>
+                    <p class="font-semibold">{{ $purchaseOrder->route_label ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Grupo retail</p>
+                    <p class="font-semibold">{{ $purchaseOrder->retail_group ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Tipo cliente</p>
+                    <p class="font-semibold">{{ $purchaseOrder->customer_type ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Trading company</p>
+                    <p class="font-semibold">{{ $purchaseOrder->trading_company ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Proveedor servicio</p>
+                    <p class="font-semibold">{{ $purchaseOrder->service_provider ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Nombre consolidador</p>
+                    <p class="font-semibold">{{ $purchaseOrder->consolidator_name ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Número vendor</p>
+                    <p class="font-semibold">{{ $purchaseOrder->vendor_number ?? '-' }}</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Documentación --}}
+        <div>
+            <h3 class="text-md font-bold mb-3 text-gray-700">Documentación</h3>
+            <div class="grid grid-cols-4 gap-4 text-xs">
+                <div>
+                    <p class="text-gray-500">DUA Aduanas</p>
+                    <p class="font-semibold">{{ $purchaseOrder->customs_dua ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Invoice</p>
+                    <p class="font-semibold">{{ $purchaseOrder->invoice ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Factura merca</p>
+                    <p class="font-semibold">{{ $purchaseOrder->factura_merca ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Número caso/archivo</p>
+                    <p class="font-semibold">{{ $purchaseOrder->case_number_file ?? '-' }}</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Flags Booleanos --}}
+        <div>
+            <h3 class="text-md font-bold mb-3 text-gray-700">Indicadores</h3>
+            <div class="grid grid-cols-4 gap-4 text-xs">
+                <div>
+                    <p class="text-gray-500">Puerto carga validado</p>
+                    <p class="font-semibold">{{ $purchaseOrder->port_of_loading_validated ? 'Sí' : 'No' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Es dropship</p>
+                    <p class="font-semibold">{{ $purchaseOrder->is_dropship ? 'Sí' : 'No' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Aplica TLC</p>
+                    <p class="font-semibold">{{ $purchaseOrder->applies_tlc ? 'Sí' : 'No' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Aplica AF</p>
+                    <p class="font-semibold">{{ $purchaseOrder->applies_af ? 'Sí' : 'No' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Tiene factura merca</p>
+                    <p class="font-semibold">{{ $purchaseOrder->has_facture_merca ? 'Sí' : 'No' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Tarifa usada OK</p>
+                    <p class="font-semibold">{{ $purchaseOrder->used_rate_ok ? 'Sí' : 'No' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Usa almacén aduanero</p>
+                    <p class="font-semibold">{{ $purchaseOrder->uses_bonded_warehouse ? 'Sí' : 'No' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Aplica nota técnica</p>
+                    <p class="font-semibold">{{ $purchaseOrder->apply_technical_note ? 'Sí' : 'No' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">ETD inicial validado</p>
+                    <p class="font-semibold">{{ $purchaseOrder->etd_initial_validated ? 'Sí' : 'No' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Confirmar actualización fecha PO</p>
+                    <p class="font-semibold">{{ $purchaseOrder->confirm_update_date_po ? 'Sí' : 'No' }}</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Notas y Comentarios --}}
+        <div>
+            <h3 class="text-md font-bold mb-3 text-gray-700">Notas y Comentarios</h3>
+            <div class="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                    <p class="text-gray-500">Notas</p>
+                    <p class="font-semibold">{{ $purchaseOrder->notes ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Comentarios</p>
+                    <p class="font-semibold">{{ $purchaseOrder->comments ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Nota de recepción</p>
+                    <p class="font-semibold">{{ $purchaseOrder->receipt_note ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Notas de visibilidad</p>
+                    <p class="font-semibold">{{ $purchaseOrder->visibility_notes ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Razón rechazo</p>
+                    <p class="font-semibold">{{ $purchaseOrder->rejection_reason ?? '-' }}</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Tipo de Material (JSON) --}}
+        @if($purchaseOrder->material_type)
+        <div>
+            <h3 class="text-md font-bold mb-3 text-gray-700">Tipo de Material</h3>
+            <div class="text-xs">
+                <p class="font-semibold">{{ is_array($materialType) ? json_encode($materialType) : $materialType }}</p>
+            </div>
+        </div>
+        @endif
     </div>
 
     @if($purchaseOrder->tracking_id)
@@ -200,20 +701,10 @@
     @endif
 
     <div class="space-y-[1.875rem]" x-data="{
-        activeTab: 'tab1'
+        activeTab: 'tab3'
     }">
         <!-- Selector de pestañas -->
         <div class="flex gap-6 items-center text-lg font-bold">
-            <button @click="activeTab = 'tab1'"
-                :class="activeTab === 'tab1' ? 'border-dark-blue text-dark-blue' : 'border-transparent'"
-                class="border-b-2 py-[0.625rem]">
-                Información general
-            </button>
-            <button @click="activeTab = 'tab2'"
-                :class="activeTab === 'tab2' ? 'border-dark-blue text-dark-blue hidden' : 'border-transparent hidden'"
-                class="border-b-2 py-[0.625rem]">
-                Comparación de costos
-            </button>
             <button @click="activeTab = 'tab3'"
                 :class="activeTab === 'tab3' ? 'border-dark-blue text-dark-blue' : 'border-transparent'"
                 class="border-b-2 py-[0.625rem]">
@@ -228,222 +719,6 @@
 
         <!-- Contenido de las pestañas -->
         <div>
-            <div x-show="activeTab === 'tab1'" x-transition class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-[#E0E5FF]">
-                        <tr>
-                            <th scope="col"
-                                class="px-6 py-5 text-xs font-medium tracking-wider text-left text-black uppercase cursor-pointer"
-                                wire:click="sortBy('material_id')">
-                                Material ID
-                                @if ($sortField === 'material_id')
-                                    @if ($sortDirection === 'asc')
-                                        <svg class="inline-block ml-1 w-4 h-4" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M5 15l7-7 7 7"></path>
-                                        </svg>
-                                    @else
-                                        <svg class="inline-block ml-1 w-4 h-4" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M19 9l-7 7-7-7"></path>
-                                        </svg>
-                                    @endif
-                                @endif
-                            </th>
-                            <th scope="col"
-                                class="px-6 py-5 text-xs font-medium font-bold tracking-wider text-left text-black uppercase cursor-pointer"
-                                wire:click="sortBy('description')">
-                                Descripción
-                                @if ($sortField === 'description')
-                                    @if ($sortDirection === 'asc')
-                                        <svg class="inline-block ml-1 w-4 h-4" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M5 15l7-7 7 7"></path>
-                                        </svg>
-                                    @else
-                                        <svg class="inline-block ml-1 w-4 h-4" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M19 9l-7 7-7-7"></path>
-                                        </svg>
-                                    @endif
-                                @endif
-                            </th>
-                            <th scope="col"
-                                class="px-6 py-5 text-xs font-medium font-bold tracking-wider text-left text-black uppercase cursor-pointer"
-                                wire:click="sortBy('quantity')">
-                                Carga (kg)
-                                @if ($sortField === 'quantity')
-                                    @if ($sortDirection === 'asc')
-                                        <svg class="inline-block ml-1 w-4 h-4" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M5 15l7-7 7 7"></path>
-                                        </svg>
-                                    @else
-                                        <svg class="inline-block ml-1 w-4 h-4" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M19 9l-7 7-7-7"></path>
-                                        </svg>
-                                    @endif
-                                @endif
-                            </th>
-                            <th scope="col"
-                                class="px-6 py-5 text-xs font-medium font-bold tracking-wider text-left text-black uppercase cursor-pointer"
-                                wire:click="sortBy('price_per_unit')">
-                                Precio unitario
-                                @if ($sortField === 'price_per_unit')
-                                    @if ($sortDirection === 'asc')
-                                        <svg class="inline-block ml-1 w-4 h-4" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M5 15l7-7 7 7"></path>
-                                        </svg>
-                                    @else
-                                        <svg class="inline-block ml-1 w-4 h-4" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M19 9l-7 7-7-7"></path>
-                                        </svg>
-                                    @endif
-                                @endif
-                            </th>
-                            <th scope="col"
-                                class="px-6 py-5 text-xs font-medium font-bold tracking-wider text-left text-black uppercase cursor-pointer"
-                                wire:click="sortBy('subtotal')">
-                                Subtotal
-                                @if ($sortField === 'subtotal')
-                                    @if ($sortDirection === 'asc')
-                                        <svg class="inline-block ml-1 w-4 h-4" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M5 15l7-7 7 7"></path>
-                                        </svg>
-                                    @else
-                                        <svg class="inline-block ml-1 w-4 h-4" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M19 9l-7 7-7-7"></path>
-                                        </svg>
-                                    @endif
-                                @endif
-                            </th>
-                            <th scope="col"
-                                class="px-6 py-5 text-xs font-medium font-bold tracking-wider text-left text-black uppercase">
-                                Acciones
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        @forelse($orderProducts as $product)
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-gray-900">{{ $product['material_id'] }}</div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="text-sm text-gray-900">{{ $product['short_text'] }}</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">{{ $product['quantity'] }}</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">
-                                        $ {{ number_format($product['price_per_unit'], 2) }}
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">
-                                        $ {{ number_format($product['subtotal'], 2) }}
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 text-sm font-medium whitespace-nowrap">
-                                    <a href="{{ route('products.edit', $product['id']) }}" class="text-indigo-600 hover:text-indigo-900">Ver</a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                                    No se encontraron materiales para esta orden de compra
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                    <tfoot>
-                        <tr class="bg-gray-50">
-                            <td colspan="4" class="px-6 py-4 text-sm font-medium text-right text-gray-900">
-                                Subtotal:
-                            </td>
-                            <td class="px-6 py-4 text-sm font-medium text-gray-900">
-                                $ {{ number_format($net_total, 2) }}
-                            </td>
-                            <td></td>
-                        </tr>
-                        <tr class="bg-gray-50">
-                            <td colspan="4" class="px-6 py-4 text-sm font-medium text-right text-gray-900">
-                                Costos adicionales:
-                            </td>
-                            <td class="px-6 py-4 text-sm font-medium text-gray-900">
-                                $ {{ number_format($additional_cost, 2) }}
-                            </td>
-                            <td></td>
-                        </tr>
-                        <tr class="bg-gray-50">
-                            <td colspan="4" class="px-6 py-4 text-sm font-medium text-right text-gray-900">
-                                Seguro:
-                            </td>
-                            <td class="px-6 py-4 text-sm font-medium text-gray-900">
-                                $ {{ number_format($insurance_cost, 2) }}
-                            </td>
-                            <td></td>
-                        </tr>
-                        <tr class="bg-gray-50">
-                            <td colspan="4" class="px-6 py-4 text-sm font-bold text-right text-gray-900">
-                                Total:
-                            </td>
-                            <td class="px-6 py-4 text-sm font-bold text-gray-900">
-                                $ {{ number_format($total, 2) }}
-                            </td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-
-            <div x-show="activeTab === 'tab2'" x-transition class="space-y-[1.875rem]">
-                <div class="flex justify-between items-centers">
-                    <x-search-input class="w-64" />
-
-                    <div class="flex gap-4">
-                        <x-primary-button>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                viewBox="0 0 20 20" fill="none">
-                                <path
-                                    d="M18.453 10.8927C18.1752 13.5026 16.6964 15.9483 14.2494 17.3611C10.1839 19.7083 4.98539 18.3153 2.63818 14.2499L2.38818 13.8168M1.54613 9.10664C1.82393 6.49674 3.30272 4.05102 5.74971 2.63825C9.8152 0.29104 15.0137 1.68398 17.3609 5.74947L17.6109 6.18248M1.49316 16.0657L2.22521 13.3336L4.95727 14.0657M15.0424 5.93364L17.7744 6.66569L18.5065 3.93364"
-                                    stroke="#F7F7F7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                    class="disabled:stroke-[#C2C2C2]" />
-                            </svg>
-                        </x-primary-button>
-
-                        <x-secondary-button class="flex items-center gap-[0.625rem]">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="21" height="22"
-                                viewBox="0 0 21 22" fill="none">
-                                <path
-                                    d="M19.1527 9.89994L10.1371 18.9156C8.08686 20.9658 4.76275 20.9658 2.71249 18.9156C0.662241 16.8653 0.662242 13.5412 2.71249 11.4909L11.7281 2.47532C13.0949 1.10849 15.311 1.10849 16.6779 2.47532C18.0447 3.84216 18.0447 6.05823 16.6779 7.42507L8.01579 16.0871C7.33238 16.7705 6.22434 16.7705 5.54092 16.0871C4.8575 15.4037 4.8575 14.2957 5.54092 13.6123L13.1423 6.01086"
-                                    stroke="#565AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-
-                            <span>Adjuntar costos</span>
-                        </x-secondary-button>
-                    </div>
-                </div>
-
-                {{-- Añadir tabla --}}
-            </div>
-
             <div x-show="activeTab === 'tab3'" x-transition>
                 <div class="flex justify-between mb-6 items-centers">
                     <x-search-input class="w-64" />

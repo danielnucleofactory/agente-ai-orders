@@ -36,8 +36,8 @@ class Breadcrumb extends Component
         'ship-to.index' => 'Direcciones de envío',
         'ship-to.create' => 'Nueva dirección',
         'ship-to.edit' => 'Editar dirección',
-        'shipping-documentation.index' => 'Documentación de envío',
-        'shipping-documentation.create' => 'Nueva documentación',
+        'shipping-documentation.index' => 'Embarques',
+        'shipping-documentation.create' => 'Nuevo embarque',
         'shipping-documentation.requests' => 'Solicitudes',
         'hub.index' => 'Hubs',
         'hub.create' => 'Nuevo hub',
@@ -186,7 +186,7 @@ class Breadcrumb extends Component
                 if (str_contains($this->currentPath, 'shipping-documentation')) {
                     $this->segments = [
                         [
-                            'name' => 'Documentación de envío',
+                            'name' => 'Embarques',
                             'url' => 'shipping-documentation'
                         ]
                     ];

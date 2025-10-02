@@ -204,8 +204,6 @@ class DashboardController extends Controller
         $filters = [
             'date_from' => $request->get('date_from'),
             'date_to' => $request->get('date_to'),
-            'product_id' => $request->get('product_id'),
-            'material_type' => $request->get('material_type'),
             'hub_id' => $request->get('hub_id'),
             'vendor_id' => $request->get('vendor_id'),
             'status' => $request->get('status'),

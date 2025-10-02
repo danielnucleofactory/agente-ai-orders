@@ -137,7 +137,7 @@
                         <li>
                             <x-sidebar-dropdown-item href="{{ route('shipping-documentation.index') }}"
                                 :active="request()->routeIs('shipping-documentation.index')">
-                                Órdenes Consolidadas
+                                Seguimiento de Embarques
                             </x-sidebar-dropdown-item>
                         </li>
                         @endcan

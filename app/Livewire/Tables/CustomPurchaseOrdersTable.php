@@ -19,7 +19,6 @@ class CustomPurchaseOrdersTable extends Component
     public $sortDirection = 'desc';
     public $perPage = 10;
     public $statusFilter = '';
-    public $consolidableFilter = '';
     public $selected = [];
     public $selectAll = false;
     public $release_date = '';
@@ -34,7 +33,6 @@ class CustomPurchaseOrdersTable extends Component
         'sortField' => ['except' => 'created_at'],
         'sortDirection' => ['except' => 'desc'],
         'statusFilter' => ['except' => ''],
-        'consolidableFilter' => ['except' => ''],
     ];
 
     public function sortBy($field)
@@ -58,10 +56,6 @@ class CustomPurchaseOrdersTable extends Component
         $this->resetPage();
     }
 
-    public function updatingConsolidableFilter()
-    {
-        $this->resetPage();
-    }
 
     public function updatedSelectAll($value)
     {
@@ -95,23 +89,7 @@ class CustomPurchaseOrdersTable extends Component
         // Get the selected purchase orders
         $selectedOrders = PurchaseOrder::whereIn('id', $this->selected)->get();
 
-        // Check if all selected orders can be consolidated together
-        if (!PurchaseOrder::canBeConsolidatedTogether($selectedOrders)) {
-            // If not, check which orders are not consolidable individually
-            $nonConsolidableOrders = $selectedOrders->filter(function($order) {
-                return !$order->isConsolidable();
-            });
-
-            if ($nonConsolidableOrders->count() > 0) {
-                $orderNumbers = $nonConsolidableOrders->pluck('order_number')->join(', ');
-                session()->flash('error', "Las siguientes órdenes no son consolidables individualmente: {$orderNumbers}");
-            } else {
-                // If all orders are consolidable individually, then the total weight is outside the range
-                $totalWeight = $selectedOrders->sum('weight_kg');
-                session()->flash('error', "El peso total de las órdenes seleccionadas ({$totalWeight} kg) está fuera del rango permitido para consolidación (5001-15000 kg).");
-            }
-            return;
-        }
+        // Restricciones de consolidación eliminadas - todas las órdenes son consolidables sin restricciones
 
         // Start a database transaction
         \DB::beginTransaction();
@@ -216,23 +194,7 @@ class CustomPurchaseOrdersTable extends Component
         // Get the selected purchase orders
         $selectedOrders = PurchaseOrder::whereIn('id', $this->selected)->get();
 
-        // Check if all selected orders can be consolidated together
-        if (!PurchaseOrder::canBeConsolidatedTogether($selectedOrders)) {
-            // If not, check which orders are not consolidable individually
-            $nonConsolidableOrders = $selectedOrders->filter(function($order) {
-                return !$order->isConsolidable();
-            });
-
-            if ($nonConsolidableOrders->count() > 0) {
-                $orderNumbers = $nonConsolidableOrders->pluck('order_number')->join(', ');
-                session()->flash('error', "Las siguientes órdenes no son consolidables individualmente: {$orderNumbers}");
-            } else {
-                // If all orders are consolidable individually, then the total weight is outside the range
-                $totalWeight = $selectedOrders->sum('weight_kg');
-                session()->flash('error', "El peso total de las órdenes seleccionadas ({$totalWeight} kg) está fuera del rango permitido para consolidación (5001-15000 kg).");
-            }
-            return;
-        }
+        // Restricciones de consolidación eliminadas - todas las órdenes son consolidables sin restricciones
 
         // Open the modal
         $this->dispatch('open-modal', 'modal-hub-teorico');
@@ -279,7 +241,7 @@ class CustomPurchaseOrdersTable extends Component
     protected function getPurchaseOrdersQuery()
     {
         $query = PurchaseOrder::query()
-            ->with('vendor', 'shippingDocuments') // Eager load relationships
+            ->with('vendor', 'shippingDocuments', 'kanbanStatus') // Eager load relationships
             ->when($this->search, function ($query) {
                 $searchTerm = strtolower($this->search);
                 $query->where(function ($query) use ($searchTerm) {
@@ -290,18 +252,32 @@ class CustomPurchaseOrdersTable extends Component
                           ->orWhereRaw('LOWER(notes) LIKE ?', ['%' . $searchTerm . '%']);
                 });
             })
-            ->when($this->statusFilter, fn($q) => $q->where('status', $this->statusFilter))
-            ->when($this->consolidableFilter, function ($query) {
-                if ($this->consolidableFilter === 'yes') {
-                    $query->whereBetween('weight_kg', [5001, 15000]);
-                } elseif ($this->consolidableFilter === 'no') {
-                    $query->whereNotBetween('weight_kg', [5001, 15000]);
-                }
-            });
+            ->when($this->statusFilter, function($q) {
+                $q->whereHas('kanbanStatus', function($subQ) {
+                    $subQ->where('name', $this->statusFilter);
+                });
+            })
+            // Restricción de consolidación comentada - ahora todo es consolidable
+            // ->when($this->consolidableFilter, function ($query) {
+            //     if ($this->consolidableFilter === 'yes') {
+            //         $query->whereBetween('weight_kg', [5001, 15000]);
+            //     } elseif ($this->consolidableFilter === 'no') {
+            //         $query->whereNotBetween('weight_kg', [5001, 15000]);
+            //     }
+            // })
+            ;
 
-        // For suggestion tabs, only show orders not yet in a shipping document
+        // Para las pestañas de sugerencia (route_label y container_number), 
+        // mostrar solo órdenes que NO están en un documento de envío
+        // Para la pestaña "actual", mostrar TODAS las órdenes
         if ($this->activeTab === 'route_label' || $this->activeTab === 'container_number') {
             $query->whereDoesntHave('shippingDocuments');
+            
+            // Para route_label, excluir órdenes con campo vacío o nulo
+            if ($this->activeTab === 'route_label') {
+                $query->whereNotNull('route_label')
+                      ->whereRaw("TRIM(route_label) != ''");
+            }
         }
 
         return $query->orderBy($this->sortField, $this->sortDirection);
@@ -314,9 +290,13 @@ class CustomPurchaseOrdersTable extends Component
         $colorMap = [];
 
         if ($this->activeTab === 'route_label' || $this->activeTab === 'container_number') {
-            $distinctKeys = (clone $query)
+            // Obtener valores distintos que NO estén vacíos para asignar colores
+            $distinctKeys = PurchaseOrder::query()
+                ->whereDoesntHave('shippingDocuments')
                 ->whereNotNull($this->activeTab)
+                ->whereRaw("TRIM(" . $this->activeTab . ") != ''")
                 ->distinct()
+                ->orderBy($this->activeTab)
                 ->pluck($this->activeTab);
 
             foreach ($distinctKeys as $index => $key) {
@@ -329,9 +309,12 @@ class CustomPurchaseOrdersTable extends Component
 
         if ($this->activeTab === 'route_label' || $this->activeTab === 'container_number') {
             foreach ($items as $item) {
-                if (isset($colorMap[$item->{$this->activeTab}])) {
-                    $item->color = $colorMap[$item->{$this->activeTab}];
+                // Solo asignar color si el campo tiene un valor válido (no nulo y no vacío)
+                $fieldValue = $item->{$this->activeTab};
+                if ($fieldValue && trim($fieldValue) !== '' && isset($colorMap[$fieldValue])) {
+                    $item->color = $colorMap[$fieldValue];
                 }
+                // Si el campo está vacío o nulo, no se asigna color (sin fondo de color)
             }
         } elseif ($this->activeTab === 'actual') {
             $actualColorMap = [];
@@ -353,5 +336,50 @@ class CustomPurchaseOrdersTable extends Component
         return view('livewire.tables.custom-purchase-orders-table', [
             'purchaseOrders' => $purchaseOrders,
         ]);
+    }
+
+    /**
+     * Get available statuses from the current query results
+     */
+    public function getAvailableStatuses()
+    {
+        // Create a base query without ordering for distinct statuses
+        $baseQuery = PurchaseOrder::query()
+            ->with('vendor', 'shippingDocuments', 'kanbanStatus')
+            ->when($this->search, function ($query) {
+                $searchTerm = strtolower($this->search);
+                $query->where(function ($query) use ($searchTerm) {
+                    $query->whereRaw('LOWER(order_number) LIKE ?', ['%' . $searchTerm . '%'])
+                          ->orWhereHas('vendor', function ($q) use ($searchTerm) {
+                              $q->whereRaw('LOWER(name) LIKE ?', ['%' . $searchTerm . '%']);
+                          })
+                          ->orWhereRaw('LOWER(notes) LIKE ?', ['%' . $searchTerm . '%']);
+                });
+            });
+
+        // Apply tab-specific filters
+        if ($this->activeTab === 'route_label' || $this->activeTab === 'container_number') {
+            $baseQuery->whereDoesntHave('shippingDocuments');
+            
+            // Para route_label, excluir órdenes con campo vacío o nulo
+            if ($this->activeTab === 'route_label') {
+                $baseQuery->whereNotNull('route_label')
+                          ->whereRaw("TRIM(route_label) != ''");
+            }
+        }
+        
+        // Get unique kanban status names from the filtered results
+        $statuses = $baseQuery->join('kanban_statuses', 'purchase_orders.kanban_status_id', '=', 'kanban_statuses.id')
+            ->select('kanban_statuses.name')
+            ->distinct()
+            ->pluck('name')
+            ->filter()
+            ->mapWithKeys(function ($statusName) {
+                return [$statusName => $statusName];
+            })
+            ->sort()
+            ->toArray();
+            
+        return $statuses;
     }
 }

@@ -371,17 +371,14 @@ class PurchaseOrder extends Model implements HasMedia
     /**
      * Determine if the purchase order is consolidable based on weight.
      *
-     * Rules:
-     * - 0 to 5000 kg: Not consolidable
-     * - 5001 to 15000 kg: Consolidable
-     * - 15001+ kg: Not consolidable
+     * Restricciones eliminadas - todas las órdenes son consolidables sin restricciones de peso
      *
      * @return bool
      */
     public function isConsolidable(): bool
     {
-        $weight = $this->weight_kg ?? 0;
-        return $weight > 1 && $weight <= 20000;
+        // Sin restricciones - todas las órdenes son consolidables
+        return true;
     }
 
     /**
@@ -397,21 +394,15 @@ class PurchaseOrder extends Model implements HasMedia
     /**
      * Check if a collection of orders can be consolidated together.
      *
+     * Restricciones eliminadas - todas las órdenes pueden consolidarse sin restricciones
+     *
      * @param \Illuminate\Support\Collection $orders
      * @return bool
      */
     public static function canBeConsolidatedTogether($orders)
     {
-        // Check if all orders are consolidable individually
-        foreach ($orders as $order) {
-            if (!$order->isConsolidable()) {
-                return false;
-            }
-        }
-
-        // Check if the total weight of all orders is within the consolidable range
-        $totalWeight = $orders->sum('weight_kg');
-        return $totalWeight > 1 && $totalWeight <= 20000;
+        // Sin restricciones - todas las órdenes pueden consolidarse
+        return true;
     }
 
     /**
