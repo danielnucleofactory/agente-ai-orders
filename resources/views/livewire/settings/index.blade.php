@@ -19,7 +19,7 @@
 @endif
 
 <form wire:submit.prevent="saveSettings" wire:ignore class="px-6 py-4 space-y-6 bg-white rounded-2xl" >
-    <div>
+    <div class="hidden">
         <div class="flex flex-col mb-6">
             <span class="text-lg font-bold text-[#7288FF]">Apariencia</span>
             <span class="text-[#898989]">Personaliza la Apariencia</span>
