@@ -164,21 +164,21 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             @if($comment['status'] === 'Aprobado')
-                                <span class="inline-flex px-2 text-xs font-semibold leading-5 text-green-800 bg-green-100 rounded-full">
+                                <span class="inline-flex px-2 text-xs font-semibold leading-5 text-white bg-green-600 rounded-full">
                                     Aprobado
                                     <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                     </svg>
                                 </span>
                             @elseif($comment['status'] === 'Pendiente')
-                                <span class="inline-flex px-2 text-xs font-semibold leading-5 text-yellow-800 bg-yellow-100 rounded-full">
+                                <span class="inline-flex px-2 text-xs font-semibold leading-5 text-white bg-yellow-600 rounded-full">
                                     Pendiente
                                     <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
                                 </span>
                             @else
-                                <span class="inline-flex px-2 text-xs font-semibold leading-5 text-red-800 bg-red-100 rounded-full">
+                                <span class="inline-flex px-2 text-xs font-semibold leading-5 text-white bg-red-600 rounded-full">
                                     Rechazado
                                     <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
