@@ -255,7 +255,7 @@
 
                         @if($visibleColumns['hub'])
                         <td class="px-6 py-4 whitespace-nowrap">
-                            {{ $groupedPurchaseOrders[$document->id]->first()->shipTo->name }}
+                            {{ $groupedPurchaseOrders[$document->id]->first()->shipTo->name ?? '' }}
                         </td>
                         @endif
 
