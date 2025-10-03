@@ -72,7 +72,7 @@
                         {{ $this->getDeviceType($session->user_agent) }} - {{ $this->getBrowserType($session->user_agent) }}
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                        <span class="px-2 py-1 text-sm text-green-800 bg-green-100 rounded-full">
+                        <span class="px-2 py-1 text-sm text-white bg-[#1AAD8A] rounded-full">
                             Activa
                         </span>
                     </td>
