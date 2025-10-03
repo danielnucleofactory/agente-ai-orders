@@ -26,12 +26,11 @@
             <li>
                 <x-card-icon class="w-full !flex-col shadow-2xl">
                     <x-slot:icon
-                        class="flex items-center self-start justify-center p-2 rounded-full min-h-11 min-w-11 bg-neutral-blue">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="14" viewBox="0 0 17 14"
-                            fill="none">
-                            <path
-                                d="M16.0066 2.23992C16.0066 1.43093 15.3448 0.769035 14.5358 0.769035H2.76873C1.95975 0.769035 1.29785 1.43093 1.29785 2.23992M16.0066 2.23992V11.0652C16.0066 11.8742 15.3448 12.5361 14.5358 12.5361H2.76873C1.95975 12.5361 1.29785 11.8742 1.29785 11.0652V2.23992M16.0066 2.23992L8.65225 7.38799L1.29785 2.23992"
-                                stroke="white" stroke-width="1.47088" stroke-linecap="round" stroke-linejoin="round" />
+                        class="flex items-center self-start justify-center rounded-full h-14 w-14 bg-neutral-blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="11" fill="#28C7A1" stroke="none"/>
+                            <path d="M6 9L12 13L18 9M6 9V15C6 15.5523 6.44772 16 7 16H17C17.5523 16 18 15.5523 18 15V9M6 9L12 5L18 9" 
+                                stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </x-slot:icon>
                     <x-slot:title class="text-lg font-bold text-neutral-blue">
@@ -47,12 +46,11 @@
             <li>
                 <x-card-icon class="w-full !flex-col shadow-2xl">
                     <x-slot:icon
-                        class="flex items-center self-start justify-center p-2 rounded-full min-h-11 min-w-11 bg-neutral-blue">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 17 17"
-                            fill="none">
-                            <path
-                                d="M3.471 3.45416L13.8701 13.8533M16.025 8.65372C16.025 12.7154 12.7323 16.0081 8.67056 16.0081C4.60884 16.0081 1.31616 12.7154 1.31616 8.65372C1.31616 4.59199 4.60884 1.29932 8.67056 1.29932C12.7323 1.29932 16.025 4.59199 16.025 8.65372Z"
-                                stroke="white" stroke-width="1.47088" stroke-linecap="round" stroke-linejoin="round" />
+                        class="flex items-center self-start justify-center rounded-full h-14 w-14 bg-neutral-blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="11" fill="#28C7A1" stroke="none"/>
+                            <circle cx="12" cy="12" r="7" stroke="white" stroke-width="1.5"/>
+                            <path d="M7 7L17 17" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
                         </svg>
                     </x-slot:icon>
                     <x-slot:title class="text-lg font-bold text-neutral-blue">
@@ -68,12 +66,11 @@
             <li>
                 <x-card-icon class="w-full !flex-col shadow-2xl">
                     <x-slot:icon
-                        class="flex items-center self-start justify-center p-2 rounded-full min-h-11 min-w-11 bg-neutral-blue">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="14" viewBox="0 0 18 14"
-                            fill="none">
-                            <path
-                                d="M1.07214 5.18167H17.2518M2.54302 0.769035H15.7809C16.5933 0.769035 17.2518 1.42757 17.2518 2.23992V11.0652C17.2518 11.8775 16.5933 12.5361 15.7809 12.5361H2.54302C1.73068 12.5361 1.07214 11.8775 1.07214 11.0652V2.23992C1.07214 1.42757 1.73068 0.769035 2.54302 0.769035Z"
-                                stroke="white" stroke-width="1.47088" stroke-linecap="round" stroke-linejoin="round" />
+                        class="flex items-center self-start justify-center rounded-full h-14 w-14 bg-neutral-blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="11" fill="#28C7A1" stroke="none"/>
+                            <rect x="8" y="7" width="8" height="10" rx="1" stroke="white" stroke-width="1.5"/>
+                            <path d="M8 10H16" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
                         </svg>
                     </x-slot:icon>
                     <x-slot:title class="text-lg font-bold text-neutral-blue">
@@ -89,30 +86,13 @@
             <li>
                 <x-card-icon class="w-full !flex-col shadow-2xl">
                     <x-slot:icon
-                        class="flex items-center self-start justify-center p-2 rounded-full min-h-11 min-w-11 bg-neutral-blue">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="19" height="18" viewBox="0 0 19 18"
-                            fill="none">
-                            <g clip-path="url(#clip0_3161_105211)">
-                                <path d="M12.5907 2.21783H1.55908V11.7786H12.5907V2.21783Z" stroke="white"
-                                    stroke-width="1.47088" stroke-linecap="round" stroke-linejoin="round" />
-                                <path d="M12.5933 5.89586H15.535L17.7413 8.10218V11.7794H12.5933V5.89586Z"
-                                    stroke="white" stroke-width="1.47088" stroke-linecap="round"
-                                    stroke-linejoin="round" />
-                                <path
-                                    d="M4.87131 15.4557C5.88675 15.4557 6.70991 14.6325 6.70991 13.6171C6.70991 12.6016 5.88675 11.7785 4.87131 11.7785C3.85588 11.7785 3.03271 12.6016 3.03271 13.6171C3.03271 14.6325 3.85588 15.4557 4.87131 15.4557Z"
-                                    stroke="white" stroke-width="1.47088" stroke-linecap="round"
-                                    stroke-linejoin="round" />
-                                <path
-                                    d="M14.4319 15.4557C15.4473 15.4557 16.2705 14.6325 16.2705 13.6171C16.2705 12.6016 15.4473 11.7785 14.4319 11.7785C13.4164 11.7785 12.5933 12.6016 12.5933 13.6171C12.5933 14.6325 13.4164 15.4557 14.4319 15.4557Z"
-                                    stroke="white" stroke-width="1.47088" stroke-linecap="round"
-                                    stroke-linejoin="round" />
-                            </g>
-                            <defs>
-                                <clipPath id="clip0_3161_105211">
-                                    <rect width="17.6506" height="17.6506" fill="white"
-                                        transform="translate(0.826172 0.0111389)" />
-                                </clipPath>
-                            </defs>
+                        class="flex items-center self-start justify-center rounded-full h-14 w-14 bg-neutral-blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="11" fill="#28C7A1" stroke="none"/>
+                            <path d="M5 10H13V14H5V10Z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+                            <path d="M13 11H16L18 13V14H13V11Z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+                            <circle cx="8" cy="16" r="1.5" stroke="white" stroke-width="1.5"/>
+                            <circle cx="15" cy="16" r="1.5" stroke="white" stroke-width="1.5"/>
                         </svg>
                     </x-slot:icon>
                     <x-slot:title class="text-lg font-bold text-neutral-blue">
@@ -127,23 +107,11 @@
             <li>
                 <x-card-icon class="w-full !flex-col shadow-2xl">
                     <x-slot:icon
-                        class="flex items-center self-start justify-center p-2 rounded-full min-h-11 min-w-11 bg-neutral-blue">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="19" viewBox="0 0 18 19"
-                            fill="none">
-                            <g clip-path="url(#clip0_3161_105221)">
-                                <path d="M8.87378 1.7124V17.8921" stroke="white" stroke-width="1.47088"
-                                    stroke-linecap="round" stroke-linejoin="round" />
-                                <path
-                                    d="M12.5507 4.65556H7.03486C6.35218 4.65556 5.69746 4.92676 5.21473 5.40948C4.73201 5.89221 4.46082 6.54693 4.46082 7.2296C4.46082 7.91228 4.73201 8.567 5.21473 9.04972C5.69746 9.53245 6.35218 9.80364 7.03486 9.80364H10.7121C11.3947 9.80364 12.0495 10.0748 12.5322 10.5576C13.0149 11.0403 13.2861 11.695 13.2861 12.3777C13.2861 13.0604 13.0149 13.7151 12.5322 14.1978C12.0495 14.6805 11.3947 14.9517 10.7121 14.9517H4.46082"
-                                    stroke="white" stroke-width="1.47088" stroke-linecap="round"
-                                    stroke-linejoin="round" />
-                            </g>
-                            <defs>
-                                <clipPath id="clip0_3161_105221">
-                                    <rect width="17.6506" height="17.6506" fill="white"
-                                        transform="translate(0.0491943 0.97757)" />
-                                </clipPath>
-                            </defs>
+                        class="flex items-center self-start justify-center rounded-full h-14 w-14 bg-neutral-blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="11" fill="#28C7A1" stroke="none"/>
+                            <path d="M12 7V17M12 7C10.5 7 9 8 9 10C9 11.5 10 12 12 12M12 7C13.5 7 15 8 15 10C15 11.5 14 12 12 12M12 17C10.5 17 9 16 9 14C9 12.5 10 12 12 12M12 17C13.5 17 15 16 15 14C15 12.5 14 12 12 12" 
+                                stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </x-slot:icon>
                     <x-slot:title class="text-lg font-bold text-neutral-blue">
@@ -162,23 +130,12 @@
             <li>
                 <x-card-icon class="w-full !flex-col shadow-2xl">
                     <x-slot:icon
-                        class="flex items-center self-start justify-center p-2 rounded-full min-h-11 min-w-11 bg-neutral-blue">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="19" height="18" viewBox="0 0 19 18"
-                            fill="none">
-                            <g clip-path="url(#clip0_3161_105229)">
-                                <path
-                                    d="M16.0346 10.0638L10.7615 15.3369C10.6249 15.4736 10.4627 15.5821 10.2841 15.6561C10.1056 15.7302 9.91417 15.7683 9.72087 15.7683C9.52757 15.7683 9.33617 15.7302 9.15761 15.6561C8.97905 15.5821 8.81683 15.4736 8.68022 15.3369L2.36279 9.02679V1.67239H9.71719L16.0346 7.98982C16.3086 8.26541 16.4623 8.63821 16.4623 9.02679C16.4623 9.41538 16.3086 9.78817 16.0346 10.0638V10.0638Z"
-                                    stroke="white" stroke-width="1.47088" stroke-linecap="round"
-                                    stroke-linejoin="round" />
-                                <path d="M6.04077 5.34669H6.04946" stroke="white" stroke-width="1.47088"
-                                    stroke-linecap="round" stroke-linejoin="round" />
-                            </g>
-                            <defs>
-                                <clipPath id="clip0_3161_105229">
-                                    <rect width="17.6506" height="17.6506" fill="white"
-                                        transform="translate(0.891479 0.197647)" />
-                                </clipPath>
-                            </defs>
+                        class="flex items-center self-start justify-center rounded-full h-14 w-14 bg-neutral-blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="11" fill="#28C7A1" stroke="none"/>
+                            <path d="M7 9L11 13L17 7" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M18 12V16C18 16.5523 17.5523 17 17 17H7C6.44772 17 6 16.5523 6 16V8C6 7.44772 6.44772 7 7 7H14" 
+                                stroke="white" stroke-width="1.5" stroke-linecap="round"/>
                         </svg>
                     </x-slot:icon>
                     <x-slot:title class="text-lg font-bold text-neutral-blue">
