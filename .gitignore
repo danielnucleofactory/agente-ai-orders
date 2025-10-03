@@ -23,3 +23,20 @@ yarn-error.log
 /draft.yaml
 /.blueprint
 /internal_modules
+
+# Archivos temporales comunes durante desarrollo con IA
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+temp_*
+test_*
+debug_*
+demo_*
+helper_temp.php
+utils_temp.php
+*_temp.php
+*_test.php
+*_debug.php
+*_demo.php

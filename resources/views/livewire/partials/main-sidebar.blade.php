@@ -202,7 +202,7 @@
                             </x-sidebar-dropdown-item>
                         </li>
 
-                        <li>
+                        <li class="hidden">
                             <x-sidebar-dropdown-item href="{{ route('ship-to.index') }}"
                                 :active="request()->routeIs('ship-to.index')">
                                 Direcciones
