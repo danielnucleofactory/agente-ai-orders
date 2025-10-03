@@ -647,84 +647,10 @@
         </div>
     </div>
 
-    {{-- TABS: Costos y Ahorros / Historia --}}
-    <div x-data="{ activeTab: 'costos' }" class="bg-white rounded-[0.625rem] p-6 shadow-sm">
-        <div class="border-b border-gray-200 mb-6">
-            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                <button @click="activeTab = 'costos'"
-                    :class="{ 'border-[#127A62] text-[#127A62]': activeTab === 'costos', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'costos' }"
-                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                    Costos y Ahorros
-                </button>
-                <button @click="activeTab = 'historia'"
-                    :class="{ 'border-[#127A62] text-[#127A62]': activeTab === 'historia', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'historia' }"
-                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                    Historia
-                </button>
-            </nav>
-        </div>
-
-        {{-- Tab Content: Costos y Ahorros --}}
-        <div x-show="activeTab === 'costos'">
-            @if($shippingDocument)
-            <div class="space-y-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-semibold">Costos y Ahorros</h3>
-                    <button wire:click="openOverCostModal" class="flex items-center gap-2 text-sm text-gray-600 hover:text-[#0F614D]">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#1AAD8A" stroke-width="1.5">
-                            <path d="M14.25 10.5V14.25M14.25 14.25V18M14.25 14.25H18M14.25 14.25H10.5M6 11.25H3.75C2.50736 11.25 1.5 10.2426 1.5 9C1.5 7.75736 2.50736 6.75 3.75 6.75H6M12 6.75H14.25C15.4926 6.75 16.5 7.75736 16.5 9C16.5 9.62132 16.2542 10.1835 15.8504 10.6M12 4.5V13.5M6 4.5V13.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        Adjuntar costos
-                    </button>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-[#D4F5ED]">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-900">PO</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-900">Tipo de Gasto</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-900">Monto</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-900">Comentario</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            @forelse($overCostData as $item)
-                                <tr>
-                                    <td class="px-4 py-3 text-sm text-[#127A62]">{{ $item['po_number'] }}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900">{{ $item['cost_type'] }}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900">${{ number_format($item['amount'], 2) }}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900">{{ $item['comment'] ?? '-' }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="px-4 py-8 text-center text-sm text-gray-500">
-                                        No hay costos adicionales registrados
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                        @if(count($overCostData) > 0)
-                        <tfoot>
-                            <tr class="bg-gray-50">
-                                <td colspan="2" class="px-4 py-3 text-sm font-semibold text-gray-900 text-right">Total:</td>
-                                <td class="px-4 py-3 text-sm font-semibold text-gray-900">${{ number_format($totalOverCost, 2) }}</td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
-                        @endif
-                    </table>
-                </div>
-            </div>
-            @else
-            <div class="text-center py-8 text-gray-500">
-                Esta orden no está asociada a un documento de embarque
-            </div>
-            @endif
-        </div>
-
+    {{-- SECCIÓN: Historia --}}
+    <div class="bg-white rounded-[0.625rem] p-6 shadow-sm">
         {{-- Tab Content: Historia --}}
-        <div x-show="activeTab === 'historia'">
+        <div>
             <div class="space-y-6">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-lg font-semibold">Historia de Comentarios</h3>
