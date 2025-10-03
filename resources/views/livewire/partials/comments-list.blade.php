@@ -15,7 +15,7 @@
                     </svg>
                     <a href="{{ $comment['attachment']['url'] }}"
                        target="_blank"
-                       class="text-sm text-blue-600 hover:text-blue-800">
+                       class="text-sm text-[#1AAD8A] hover:text-[#0F614D]">
                         {{ $comment['attachment']['name'] }}
                     </a>
                 </div>

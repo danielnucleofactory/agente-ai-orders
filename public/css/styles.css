@@ -112,7 +112,7 @@ body {
 .filter-label {
   font-size: 14px;
   font-weight: 500;
-  color: #565aff;
+  color: #1AAD8A;
   margin-bottom: 8px;
 }
 .date-range {
@@ -162,11 +162,11 @@ body {
   text-align: left;
 }
 .multi-select-trigger:hover {
-  border-color: #565aff;
+  border-color: #1AAD8A;
 }
 .multi-select-trigger.active {
-  border-color: #565aff;
-  box-shadow: 0 0 0 2px rgba(86, 90, 255, 0.1);
+  border-color: #1AAD8A;
+  box-shadow: 0 0 0 2px rgba(26, 173, 138, 0.1);
 }
 .multi-select-value {
   flex: 1;
@@ -211,12 +211,12 @@ body {
 }
 
 .multi-select-content::-webkit-scrollbar-thumb {
-  background: #565aff;
+  background: #1AAD8A;
   border-radius: 4px;
 }
 
 .multi-select-content::-webkit-scrollbar-thumb:hover {
-  background: #434ad1;
+  background: #127A62;
 }
 
 /* Mejor separación visual para las opciones */
@@ -278,7 +278,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background-color: #565aff;
+  background-color: #1AAD8A;
   color: white;
   padding: 2px 6px;
   border-radius: 12px;
@@ -307,7 +307,7 @@ body {
   gap: 8px;
 }
 .btn-primary {
-  background-color: #565aff;
+  background-color: #1AAD8A;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -317,7 +317,7 @@ body {
   cursor: pointer;
 }
 .btn-primary:hover {
-  background-color: #7288ff;
+  background-color: #28C7A1;
 }
 .btn-secondary {
   background-color: white;
@@ -518,11 +518,11 @@ body {
   border-radius: 4px;
 }
 .table-container::-webkit-scrollbar-thumb {
-  background: #565AFF;
+  background: #1AAD8A;
   border-radius: 4px;
 }
 .table-container::-webkit-scrollbar-thumb:hover {
-  background: #434ad1;
+  background: #127A62;
 }
 .detail-table {
   width: 100%;
@@ -759,7 +759,7 @@ body {
   width: 100%;
 }
 .modal-btn {
-  background-color: #565aff;
+  background-color: #1AAD8A;
   color: #f7f7f7;
   width: 100%;
   height: 46px;
@@ -770,7 +770,7 @@ body {
   cursor: pointer;
 }
 .modal-btn:hover {
-  background-color: #7288ff;
+  background-color: #28C7A1;
 }
 
 /* Remove blue outline on chart canvas click */
@@ -858,7 +858,7 @@ canvas:focus {
   gap: 1rem;
 }
 .btn-primary {
-  background: #565aff;
+  background: #1AAD8A;
   color: #fff;
   border: none;
   padding: 0.5rem 1.5rem;
@@ -868,12 +868,12 @@ canvas:focus {
   transition: background 0.2s;
 }
 .btn-primary:hover {
-  background: #7288ff;
+  background: #28C7A1;
 }
 .btn-outline {
   background: #fff;
-  color: #565aff;
-  border: 1px solid #565aff;
+  color: #1AAD8A;
+  border: 1px solid #1AAD8A;
   padding: 0.5rem 1.5rem;
   border-radius: 6px;
   font-weight: bold;
@@ -881,7 +881,7 @@ canvas:focus {
   transition: background 0.2s, color 0.2s;
 }
 .btn-outline:hover {
-  background: #f0f4ff;
+  background: #E6F9F4;
 }
 .dashboard-metrics {
   display: grid;
@@ -953,14 +953,14 @@ th, td {
 }
 th {
   background: #f3f4f6;
-  color: #565aff;
+  color: #1AAD8A;
   font-weight: 600;
 }
 tbody tr {
   border-bottom: 1px solid #e5e7eb;
 }
 tbody tr:hover {
-  background: #f0f4ff;
+  background: #E6F9F4;
 }
 .total-row {
   font-weight: bold;
@@ -1029,7 +1029,7 @@ tbody tr:hover {
   transition: border 0.2s;
 }
 .multi-select-trigger:hover, .multi-select-trigger:focus {
-  border: 1.5px solid #565aff;
+  border: 1.5px solid #1AAD8A;
 }
 .multi-select-placeholder {
   color: #697077;
@@ -1038,7 +1038,7 @@ tbody tr:hover {
 .multi-select-arrow {
   margin-left: 1rem;
   font-size: 0.9em;
-  color: #565aff;
+  color: #1AAD8A;
 }
 .multi-select-dropdown {
   position: absolute;
@@ -1061,10 +1061,10 @@ tbody tr:hover {
   cursor: pointer;
 }
 .multi-select-option:hover {
-  background: #f0f4ff;
+  background: #E6F9F4;
 }
 .multi-select-option input[type="checkbox"] {
-  accent-color: #565aff;
+  accent-color: #1AAD8A;
   width: 1rem;
   height: 1rem;
 }
@@ -1108,7 +1108,7 @@ tbody tr:hover {
   padding: 0px;
   width: 48px;
   height: 48px;
-  background: #E0E5FF;
+  background: #D4F5ED;
   border-radius: 50px;
   flex: none;
   order: 0;

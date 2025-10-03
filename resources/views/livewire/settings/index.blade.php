@@ -144,45 +144,45 @@
 
     <div class="flex items-center justify-between">
         <label for="language" class="flex flex-col">
-            <span class="text-lg font-bold text-[#7288FF]">Idioma</span>
+            <span class="text-lg font-bold text-[#1AAD8A]">Idioma</span>
             <span class="text-[#898989]">Elige el idioma</span>
         </label>
 
-        <x-form-select wire:model="language" selectClasses="w-[366px] rounded-xl border-2 border-[#7288FF]" name="language"
+        <x-form-select wire:model="language" selectClasses="w-[366px] rounded-xl border-2 border-[#28C7A1]" name="language"
             :options="$languagesArray" />
     </div>
 
     <div class="flex items-center justify-between">
         <label for="time-zone" class="flex flex-col">
-            <span class="text-lg font-bold text-[#7288FF]">Zona Horaria </span>
+            <span class="text-lg font-bold text-[#1AAD8A]">Zona Horaria </span>
             <span class="text-[#898989]">Define tu configuración de Zona Horaria</span>
         </label>
 
-        <x-form-select wire:model="timeZone" selectClasses="w-[366px] rounded-xl border-2 border-[#7288FF]" name="time-zone"
+        <x-form-select wire:model="timeZone" selectClasses="w-[366px] rounded-xl border-2 border-[#28C7A1]" name="time-zone"
             :options="$timeZonesArray" />
     </div>
 
     <div class="flex items-center justify-between">
         <label for="date-format" class="flex flex-col">
-            <span class="text-lg font-bold text-[#7288FF]">Formato de Fecha</span>
+            <span class="text-lg font-bold text-[#1AAD8A]">Formato de Fecha</span>
             <span class="text-[#898989]">Define tu configuración de Formato de Fecha</span>
         </label>
 
-        <x-form-select wire:model="dateFormat" selectClasses="w-[366px] rounded-xl border-2 border-[#7288FF]" name="date-format"
+        <x-form-select wire:model="dateFormat" selectClasses="w-[366px] rounded-xl border-2 border-[#28C7A1]" name="date-format"
             :options="$dateFormatArray" />
     </div>
 
     <div class="flex items-center justify-between">
         <label for="time-format" class="flex flex-col">
-            <span class="text-lg font-bold text-[#7288FF]">Formato de Hora</span>
+            <span class="text-lg font-bold text-[#1AAD8A]">Formato de Hora</span>
             <span class="text-[#898989]">Define tu configuración de Formato de Hora</span>
         </label>
 
-        <x-form-select wire:model="timeFormat" selectClasses="w-[366px] rounded-xl border-2 border-[#7288FF]" name="time-format"
+        <x-form-select wire:model="timeFormat" selectClasses="w-[366px] rounded-xl border-2 border-[#28C7A1]" name="time-format"
             :options="$timeFormatArray" />
     </div>
 
-    <button type="submit" class="w-full primary-btn h-[46px] bg-[#565AFF] rounded-[6px] text-white hover:bg-[#565AFF]/80 transition-colors duration-300">
+    <button type="submit" class="w-full primary-btn h-[46px] bg-[#1AAD8A] rounded-[6px] text-white hover:bg-[#1AAD8A]/80 transition-colors duration-300">
         Guardar cambios
     </button>
 </form>

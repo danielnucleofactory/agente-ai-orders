@@ -60,7 +60,7 @@
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <a href="{{ route('authorizations.show', $request) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                                            <a href="{{ route('authorizations.show', $request) }}" class="text-[#1AAD8A] hover:text-[#0F614D] mr-3">
                                                 Ver detalles
                                             </a>
                                             <form method="POST" action="{{ route('authorizations.approve', $request) }}" class="inline">

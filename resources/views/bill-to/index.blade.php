@@ -26,7 +26,7 @@
             <a href="{{ route('ship-to.index') }}" class="border-b-2 border-transparent">
                 Direcciones de entrega
             </a>
-            <a href="{{ route('bill-to.index') }}" class="border-b-2 border-[#190FDB] text-[#190FDB]">
+            <a href="{{ route('bill-to.index') }}" class="border-b-2 border-[#127A62] text-[#127A62]">
                 Direcciones de facturación
             </a>
         </ul>

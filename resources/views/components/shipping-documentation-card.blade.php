@@ -45,27 +45,27 @@
     }
 @endphp
 
-<li class="kanban-card relative flex justify-between min-h-[180px] w-full gap-5 rounded-[0.625rem] border-2 border-[#E0E5FF] bg-white px-4 py-2 text-xs">
+<li class="kanban-card relative flex justify-between min-h-[180px] w-full gap-5 rounded-[0.625rem] border-2 border-[#D4F5ED] bg-white px-4 py-2 text-xs">
     <div class="flex grow flex-col space-y-[0.875rem]">
         <div class="flex gap-4">
             <div class="space-y-1 text-sm">
                 <p>
-                    <a class="text-[#190FDB] underline underline-offset-4" href="{{ route('purchase-orders.consolidated-order-detail', $documentId) }}">
+                    <a class="text-[#127A62] underline underline-offset-4" href="{{ route('purchase-orders.consolidated-order-detail', $documentId) }}">
                         Documento: {{ $documentId }}
                     </a>
                 </p>
                 <p>ID Tracking: {{ $trackingId }}</p>
-                <p>Órdenes: <span class="bg-[#E0E5FF] text-neutral-blue px-2 py-0.5 rounded-full">{{ $poCount }}</span></p>
+                <p>Órdenes: <span class="bg-[#D4F5ED] text-neutral-blue px-2 py-0.5 rounded-full">{{ $poCount }}</span></p>
             </div>
         </div>
 
         <div class="flex flex-col justify-between space-y-[0.875rem]">
-            <x-label class="bg-[#E0E5FF] py-[0.625rem] text-neutral-blue">
+            <x-label class="bg-[#D4F5ED] py-[0.625rem] text-neutral-blue">
                 <p class="text-base">Hub: <span>{{ $hubLocation }}</span></p>
 
                 <x-slot:icon>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="19" viewBox="0 0 18 19" fill="none">
-                        <path d="M8.18141 2.30297L2.52949 6.6989C2.15168 6.99275 1.96278 7.13968 1.82669 7.32368C1.70614 7.48667 1.61633 7.67029 1.56169 7.86551C1.5 8.0859 1.5 8.32521 1.5 8.80384V14.833C1.5 15.7664 1.5 16.2331 1.68166 16.5896C1.84144 16.9032 2.09641 17.1582 2.41002 17.318C2.76654 17.4996 3.23325 17.4996 4.16667 17.4996H13.8333C14.7668 17.4996 15.2335 17.4996 15.59 17.318C15.9036 17.1582 16.1586 16.9032 16.3183 16.5896C16.5 16.2331 16.5 15.7664 16.5 14.833V8.80384C16.5 8.32521 16.5 8.0859 16.4383 7.86551C16.3837 7.67029 16.2939 7.48667 16.1733 7.32368C16.0372 7.13968 15.8483 6.99275 15.4705 6.69891L9.81859 2.30297C9.52582 2.07526 9.37943 1.9614 9.21779 1.91763C9.07516 1.87902 8.92484 1.87902 8.78221 1.91763C8.62057 1.9614 8.47418 2.07526 8.18141 2.30297Z" stroke="#7288FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M8.18141 2.30297L2.52949 6.6989C2.15168 6.99275 1.96278 7.13968 1.82669 7.32368C1.70614 7.48667 1.61633 7.67029 1.56169 7.86551C1.5 8.0859 1.5 8.32521 1.5 8.80384V14.833C1.5 15.7664 1.5 16.2331 1.68166 16.5896C1.84144 16.9032 2.09641 17.1582 2.41002 17.318C2.76654 17.4996 3.23325 17.4996 4.16667 17.4996H13.8333C14.7668 17.4996 15.2335 17.4996 15.59 17.318C15.9036 17.1582 16.1586 16.9032 16.3183 16.5896C16.5 16.2331 16.5 15.7664 16.5 14.833V8.80384C16.5 8.32521 16.5 8.0859 16.4383 7.86551C16.3837 7.67029 16.2939 7.48667 16.1733 7.32368C16.0372 7.13968 15.8483 6.99275 15.4705 6.69891L9.81859 2.30297C9.52582 2.07526 9.37943 1.9614 9.21779 1.91763C9.07516 1.87902 8.92484 1.87902 8.78221 1.91763C8.62057 1.9614 8.47418 2.07526 8.18141 2.30297Z" stroke="#28C7A1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </x-slot:icon>
             </x-label>

@@ -38,7 +38,7 @@
                         @endif
                     </div>
 
-                    <label for="profile-image-input" class="absolute bottom-0 right-0 flex items-center justify-center w-10 h-10 text-white bg-indigo-500 rounded-lg cursor-pointer">
+                    <label for="profile-image-input" class="absolute bottom-0 right-0 flex items-center justify-center w-10 h-10 text-white bg-[#1AAD8A] rounded-lg cursor-pointer">
                         <i class="fas fa-pencil-alt"></i>
                     </label>
                     <input type="file"
@@ -108,7 +108,7 @@
                         <h3 class="text-sm font-medium text-indigo-500">Informacion de ususario</h3>
 
                         @if (!$editProfile)
-                            <button type="button" class="flex items-center justify-center w-10 h-10 text-white bg-indigo-500 rounded-lg" wire:click="activeEditProfile">
+                            <button type="button" class="flex items-center justify-center w-10 h-10 text-white bg-[#1AAD8A] rounded-lg" wire:click="activeEditProfile">
                                 <i class="fas fa-pencil-alt"></i>
                             </button>
                         @else

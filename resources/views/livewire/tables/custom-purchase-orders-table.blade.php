@@ -9,19 +9,19 @@
         <ul class="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-500">
             <li class="mr-2">
                 <a href="#" wire:click.prevent="setTab('route_label')"
-                   class="inline-flex p-4 border-b-2 rounded-t-lg group {{ $activeTab === 'route_label' ? 'text-blue-600 border-blue-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
+                   class="inline-flex p-4 border-b-2 rounded-t-lg group {{ $activeTab === 'route_label' ? 'text-[#1AAD8A] border-[#1AAD8A]' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
                     Por Ruta Logística
                 </a>
             </li>
             <li class="mr-2">
                 <a href="#" wire:click.prevent="setTab('container_number')"
-                   class="inline-flex p-4 border-b-2 rounded-t-lg group {{ $activeTab === 'container_number' ? 'text-blue-600 border-blue-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
+                   class="inline-flex p-4 border-b-2 rounded-t-lg group {{ $activeTab === 'container_number' ? 'text-[#1AAD8A] border-[#1AAD8A]' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
                     Por Contenedor
                 </a>
             </li>
             <li class="mr-2">
                 <a href="#" wire:click.prevent="setTab('actual')"
-                   class="inline-flex p-4 border-b-2 rounded-t-lg group {{ $activeTab === 'actual' ? 'text-blue-600 border-blue-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
+                   class="inline-flex p-4 border-b-2 rounded-t-lg group {{ $activeTab === 'actual' ? 'text-[#1AAD8A] border-[#1AAD8A]' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
                     General
                 </a>
             </li>
@@ -38,13 +38,13 @@
                             <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
                         </svg>
                     </div>
-                    <input wire:model.live.debounce.300ms="search" type="text" id="search" class="block w-full pl-10 border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="Buscar órdenes...">
+                    <input wire:model.live.debounce.300ms="search" type="text" id="search" class="block w-full pl-10 border-gray-300 rounded-md focus:border-[#1AAD8A] focus:ring-[#1AAD8A] sm:text-sm" placeholder="Buscar órdenes...">
                 </div>
             </div>
 
             <div>
                 <label for="statusFilter" class="sr-only">Filtrar por estado</label>
-                <select wire:model.live="statusFilter" id="statusFilter" class="block w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                <select wire:model.live="statusFilter" id="statusFilter" class="block w-full border-gray-300 rounded-md focus:border-[#1AAD8A] focus:ring-[#1AAD8A] sm:text-sm">
                     <option value="">Todos los estados</option>
                     @foreach($this->getAvailableStatuses() as $status => $label)
                         <option value="{{ $status }}">{{ $label }}</option>
@@ -63,7 +63,7 @@
 
             <button
                 wire:click="openReleaseModal"
-                class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 @if(count($selected) === 0) opacity-50 cursor-not-allowed @endif"
+                class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#1AAD8A] border border-transparent rounded-md shadow-sm hover:bg-[#127A62] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1AAD8A] @if(count($selected) === 0) opacity-50 cursor-not-allowed @endif"
                 @if(count($selected) === 0) disabled @endif
             >
                 Crear Documento de Embarque
@@ -71,7 +71,7 @@
 
             <div>
                 <label for="perPage" class="sr-only">Por página</label>
-                <select wire:model.live="perPage" id="perPage" class="block w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                <select wire:model.live="perPage" id="perPage" class="block w-full border-gray-300 rounded-md focus:border-[#1AAD8A] focus:ring-[#1AAD8A] sm:text-sm">
                     <option value="10">10 por página</option>
                     <option value="25">25 por página</option>
                     <option value="50">50 por página</option>
@@ -83,14 +83,14 @@
 
     <div class="overflow-x-auto bg-white rounded-lg shadow">
         <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-[#E0E5FF]">
+            <thead class="bg-[#D4F5ED]">
                 <tr>
                     <th scope="col" class="px-6 py-5 text-xs font-bold tracking-wider text-left text-black uppercase">
                         <div class="flex items-center">
                             <input
                                 type="checkbox"
                                 wire:model.live="selectAll"
-                                class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                                class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-[#1AAD8A]"
                             >
                         </div>
                     </th>
@@ -141,7 +141,7 @@
                                 type="checkbox"
                                 wire:model.live="selected"
                                 value="{{ $order->id }}"
-                                class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                                class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-[#1AAD8A]"
                             >
                         </td>
                         <td class="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
@@ -152,7 +152,7 @@
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                             <span class="inline-flex rounded-full px-2 text-xs font-semibold leading-5
-                                {{ $order->kanbanStatus ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800' }}
+                                {{ $order->kanbanStatus ? 'bg-[#D4F5ED] text-[#0F614D]' : 'bg-gray-100 text-gray-800' }}
                             ">
                                 {{ $order->kanbanStatus ? $order->kanbanStatus->name : 'Sin etapa' }}
                             </span>
@@ -170,8 +170,8 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
-                            <a href="/purchase-orders/{{ $order->id }}/detail" class="text-indigo-600 hover:text-indigo-900">Ver</a>
-                            <a href="/purchase-orders/{{ $order->id }}/edit" class="ml-4 text-indigo-600 hover:text-indigo-900">Editar</a>
+                            <a href="/purchase-orders/{{ $order->id }}/detail" class="text-[#1AAD8A] hover:text-[#0F614D]">Ver</a>
+                            <a href="/purchase-orders/{{ $order->id }}/edit" class="ml-4 text-[#1AAD8A] hover:text-[#0F614D]">Editar</a>
                         </td>
                     </tr>
                 @empty

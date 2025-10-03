@@ -12,9 +12,11 @@
 
         <div class="flex space-x-4">
             <x-black-btn onclick="window.print()">Imprimir</x-black-btn>
+            @can('has_edit_orders')
             <a href="{{ route('purchase-orders.edit', $purchaseOrder->id) }}">
                 <x-black-btn>Editar</x-black-btn>
             </a>
+            @endcan
         </div>
     </div>
 

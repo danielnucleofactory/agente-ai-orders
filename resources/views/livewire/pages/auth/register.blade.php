@@ -135,12 +135,12 @@ $register = function () {
         </div>
 
         <!-- Botón de inicio de sesión -->
-        <button type="submit" class="w-full bg-[#565aff] hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg mb-4">
+        <button type="submit" class="w-full bg-[#1AAD8A] hover:bg-[#28C7A1] text-white font-medium py-3 px-4 rounded-lg mb-4">
             Registrar
         </button>
 
         <!-- Botón de registro -->
-        <a href="{{ route('login') }}" class="w-full bg-[#9aabff] hover:bg-indigo-200 text-white font-medium py-3 px-4 rounded-lg mb-8 block text-center">
+        <a href="{{ route('login') }}" class="w-full bg-[#45E6BF] hover:bg-[#55F2CD] text-white font-medium py-3 px-4 rounded-lg mb-8 block text-center">
             Iniciar sesión
         </a>
     </form>

@@ -386,8 +386,8 @@ class DashboardManager {
 
     generateColors(count) {
         const colors = [
-            '#565aff', '#9aabff', '#ff3459', '#f46844',
-            '#5dd595', '#5ae7f4', '#c9cfff', '#ffb366'
+            '#127A62', '#1AAD8A', '#28C7A1', '#36D9B2',
+            '#45E6BF', '#55F2CD', '#ff3459', '#f46844'
         ];
 
         while (colors.length < count) {

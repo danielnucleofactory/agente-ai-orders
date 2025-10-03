@@ -19,7 +19,7 @@
                     type="text"
                     wire:model.live.debounce.300ms="search"
                     placeholder="Buscar por orden, usuario u operación..."
-                    class="w-full rounded-xl border-2 border-[#A5A3A3] pl-11 pr-10 py-[0.625rem] placeholder:text-[#9AABFF] focus:border-blue-500 focus:outline-none"
+                    class="w-full rounded-xl border-2 border-[#A5A3A3] pl-11 pr-10 py-[0.625rem] placeholder:text-[#28C7A1] focus:border-[#1AAD8A] focus:outline-none"
                 />
                 <div class="pointer-events-none absolute top-1/2 -translate-y-1/2 left-[1.125rem] flex items-center">
                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,7 +59,7 @@
     {{-- Tabla de historial --}}
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-[#E0E5FF]">
+            <thead class="bg-[#D4F5ED]">
                 <tr>
                     <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
                         <input type="checkbox" class="rounded text-primary-600">
@@ -149,7 +149,7 @@
                         </td>
                         <td class="px-6 py-4 text-sm whitespace-nowrap">
                             <a href="{{ route('purchase-orders.detail', $comment['purchase_order_id']) }}"
-                               class="text-blue-600 hover:text-blue-800 hover:underline">
+                               class="text-[#1AAD8A] hover:text-[#0F614D] hover:underline">
                                 {{ $comment['purchase_order_number'] }}
                             </a>
                         </td>
@@ -202,7 +202,7 @@
                                     </span>
                                 @else
                                     <a href="{{ $comment['attachment']['url'] }}"
-                                       class="flex items-center gap-1 text-blue-600 hover:text-blue-800"
+                                       class="flex items-center gap-1 text-[#1AAD8A] hover:text-[#0F614D]"
                                        target="_blank">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>

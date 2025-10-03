@@ -281,8 +281,8 @@ class DashboardService
         
         // Definimos todos los estados posibles
         $allStatus = collect([
-            (object)['name' => 'On Time', 'color' => '#565aff'],
-            (object)['name' => 'Atrasado', 'color' => '#c9cfff'],
+            (object)['name' => 'On Time', 'color' => '#1AAD8A'],
+            (object)['name' => 'Atrasado', 'color' => '#D4F5ED'],
             (object)['name' => 'Sin datos', 'color' => '#f0f0f0'],
         ]);
         
@@ -336,9 +336,9 @@ class DashboardService
             $counts[$cat] += (int)$item->total_pos;
         }
         $allTypes = collect([
-            (object)['name' => 'MARITIMO', 'color' => '#565aff', 'values' => ['maritimo']],
+            (object)['name' => 'MARITIMO', 'color' => '#1AAD8A', 'values' => ['maritimo']],
             (object)['name' => 'AEREO', 'color' => '#ff3459', 'values' => ['aereo']],
-            (object)['name' => 'SIN ESPECIFICAR', 'color' => '#c9cfff', 'values' => ['SIN_ESPECIFICAR']],
+            (object)['name' => 'SIN ESPECIFICAR', 'color' => '#D4F5ED', 'values' => ['SIN_ESPECIFICAR']],
         ]);
         return $allTypes->map(function($cat) use ($counts, $total) {
             return [
@@ -368,7 +368,7 @@ class DashboardService
                     'name' => 'Sin motivo',
                     'value' => 0,
                     'percentage' => 0,
-                    'color' => '#c9cfff',
+                    'color' => '#D4F5ED',
                 ]
             ]);
         }
@@ -393,7 +393,7 @@ class DashboardService
                 'name' => $motivo,
                 'value' => $cnt,
                 'percentage' => $total > 0 ? round(100.0 * $cnt / $total, 1) : 0,
-                'color' => '#565aff', // color fijo, puedes variar si quieres
+                'color' => '#1AAD8A', // color fijo, puedes variar si quieres
             ];
         })->values();
 
@@ -402,7 +402,7 @@ class DashboardService
             'name' => 'Sin motivo',
             'value' => $total - $sum_cnt,
             'percentage' => $total > 0 ? round(100.0 * ($total - $sum_cnt) / $total, 1) : 0,
-            'color' => '#c9cfff',
+            'color' => '#D4F5ED',
         ];
         $result = $result->push($sinMotivo)->sortByDesc('percentage')->filter(function($item) {
             return $item['value'] > 0; // Solo mostrar items con datos
@@ -441,7 +441,7 @@ class DashboardService
                 'name' => $stage->name,
                 'value' => $item ? (int)$item->total_pos : 0,
                 'percentage' => $total > 0 ? round(100.0 * ($item ? $item->total_pos : 0) / $total, 1) : 0,
-                'color' => $stage->color ?? '#c9cfff',
+                'color' => $stage->color ?? '#D4F5ED',
             ];
         });
 

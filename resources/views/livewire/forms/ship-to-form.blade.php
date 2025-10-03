@@ -118,7 +118,7 @@
                 <a href="{{ route('ship-to.index') }}" class="px-4 py-2 text-gray-700 bg-gray-300 rounded-md hover:bg-gray-400">
                     Cancelar
                 </a>
-                <button type="submit" class="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                <button type="submit" class="px-4 py-2 text-white bg-[#1AAD8A] rounded-md hover:bg-[#127A62]">
                     {{ $isEdit ? 'Actualizar' : 'Crear' }} Dirección de Envío
                 </button>
             </div>

@@ -894,8 +894,8 @@ class ForecastManager {
 
     generateColors(count) {
         const colors = [
-            '#565aff', '#7288ff', '#9aabff', '#aebbff',
-            '#c9cfff', '#f46844', '#5ae7f4', '#5dd595'
+            '#1AAD8A', '#28C7A1', '#36D9B2', '#45E6BF',
+            '#55F2CD', '#f46844', '#66FFDB', '#5dd595'
         ];
 
         while (colors.length < count) {

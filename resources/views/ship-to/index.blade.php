@@ -23,10 +23,10 @@
 
     <nav class="px-6 py-4 text-lg bg-white rounded-2xl">
         <ul class="flex items-center justify-between max-w-screen-md mx-auto">
-            <a href="{{ route('ship-to.index') }}" class="border-b-2 border-[#190FDB] text-[#190FDB]">
+            <a href="{{ route('ship-to.index') }}" class="border-b-2 border-[#127A62] text-[#127A62]">
                 Direcciones de entrega
             </a>
-            <a href="{{ route('bill-to.index') }}" class="border-b-2text-[#190FDB]">
+            <a href="{{ route('bill-to.index') }}" class="border-b-2text-[#127A62]">
                 Direcciones de facturación
             </a>
         </ul>

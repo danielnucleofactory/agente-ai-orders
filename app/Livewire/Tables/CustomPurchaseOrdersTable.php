@@ -233,8 +233,8 @@ class CustomPurchaseOrdersTable extends Component
     protected function getColorPalette()
     {
         return [
-            '#E0E5FF', '#C9CFFF', '#B2B9FF', '#9BA3FF', '#848DFF',
-            '#6D77FF', '#565FFF', '#4049FF', '#2933FF', '#121DFF',
+            '#D4F5ED', '#C0F0E5', '#ABEADC', '#97E5D4', '#82E0CB',
+            '#6EDBC3', '#55F2CD', '#45E6BF', '#36D9B2', '#28C7A1',
         ];
     }
 
