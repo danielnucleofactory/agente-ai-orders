@@ -1,6 +1,6 @@
 <div class="p-8 space-y-6 bg-white rounded-2xl">
     <div class="flex items-center justify-between">
-        <h2 class="text-lg font-bold text-[#7288FF]">Lista de sesiones</h2>
+        <h2 class="text-lg font-bold text-[#1AAD8A]">Lista de sesiones</h2>
     </div>
 
     @if (session()->has('message'))
@@ -14,7 +14,7 @@
             <div class="relative w-fit">
                 <input
                     wire:model.live.debounce.300ms="search"
-                    class="rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#9AABFF]"
+                    class="rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#28C7A1]"
                     placeholder="Buscar usuario, dispositivo o IP"
                 />
 
@@ -30,7 +30,7 @@
             @if ($search)
                 <button
                     wire:click="$set('search', '')"
-                    class="text-sm text-blue-600 hover:text-blue-800"
+                    class="text-sm text-[#1AAD8A] hover:text-[#0F614D]"
                 >
                     Limpiar búsqueda
                 </button>
@@ -39,7 +39,7 @@
     </div>
 
     <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-[#E0E5FF]">
+        <thead class="bg-[#D4F5ED]">
             <tr>
                 <th class="w-8 px-6 py-3">
                     <input type="checkbox" class="rounded">

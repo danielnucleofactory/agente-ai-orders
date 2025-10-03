@@ -29,11 +29,11 @@
                 @foreach($permissionGroups as $groupName => $permissions)
                     <div class="space-y-4 text-lg text-[#231F20]">
                         <h2 class="pb-2 text-xl font-semibold border-b border-gray-200">{{ $groupName }}</h2>
-                        <ul class="space-y-4 text-sm text-[#2B3674]">
+                        <ul class="space-y-4 text-sm text-black">
                             @foreach($permissions as $permissionKey => $permissionLabel)
                                 <li class="flex items-start gap-4">
                                     <button type="button" wire:click="togglePermission('{{ $permissionKey }}')" class="toggle-button">
-                                        <div class="w-12 h-6 rounded-full transition-all {{ in_array($permissionKey, $selectedPermissions) ? 'bg-[#7288FF]' : 'bg-gray-300' }} relative">
+                                        <div class="w-12 h-6 rounded-full transition-all {{ in_array($permissionKey, $selectedPermissions) ? 'bg-[#1AAD8A]' : 'bg-gray-300' }} relative">
                                             <div class="w-4 h-4 bg-white rounded-full absolute top-1 transition-all {{ in_array($permissionKey, $selectedPermissions) ? 'right-1' : 'left-1' }}"></div>
                                         </div>
                                     </button>

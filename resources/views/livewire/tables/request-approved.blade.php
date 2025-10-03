@@ -47,7 +47,7 @@
         <!-- Tabla -->
         <div class="overflow-x-auto bg-white rounded-lg shadow">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-[#E0E5FF]">
+                <thead class="bg-[#D4F5ED]">
                     <tr>
                         @foreach($headers as $key => $label)
                             <th class="px-6 py-6 text-xs font-bold tracking-wider text-left text-black uppercase">
@@ -141,7 +141,7 @@
 
                         <!-- Números de página -->
                         @for ($i = 1; $i <= $requests->lastPage(); $i++)
-                            <button wire:click="gotoPage({{ $i }})" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium {{ $requests->currentPage() === $i ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600' : 'text-gray-700 hover:bg-gray-50' }}">
+                            <button wire:click="gotoPage({{ $i }})" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium {{ $requests->currentPage() === $i ? 'z-10 bg-[#D4F5ED] border-[#1AAD8A] text-[#1AAD8A]' : 'text-gray-700 hover:bg-gray-50' }}">
                                 {{ $i }}
                             </button>
                         @endfor
@@ -170,7 +170,7 @@
 
         <x-slot name="requester">
             <div class="flex items-center">
-                <div class="flex items-center justify-center w-8 h-8 text-sm font-medium text-white bg-blue-600 rounded-full">
+                <div class="flex items-center justify-center w-8 h-8 text-sm font-medium text-white bg-[#1AAD8A] rounded-full">
                     @if(isset($selectedRequest->requester))
                         {{ substr($selectedRequest->requester->name ?? 'UN', 0, 2) }}
                     @else
@@ -279,7 +279,7 @@
                     Rechazar
                 </button>
             @else
-                <button class="w-full py-3 font-medium text-white transition duration-200 bg-indigo-600 rounded-lg hover:bg-indigo-700" wire:click="closeModal">
+                <button class="w-full py-3 font-medium text-white transition duration-200 bg-[#1AAD8A] rounded-lg hover:bg-[#127A62]" wire:click="closeModal">
                     Aceptar
                 </button>
             @endif

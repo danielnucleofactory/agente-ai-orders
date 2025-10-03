@@ -77,13 +77,13 @@
             <div class="flex gap-4">
                 <div class="space-y-6 w-full">
                     <div class="space-y-6">
-                        <h2 class="text-lg font-bold text-blue-600">Datos generales</h2>
+                        <h2 class="text-lg font-bold text-[#1AAD8A]">Datos generales</h2>
 
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
 
                             {{-- Identificación de la OC --}}
                             <div class="md:col-span-3">
-                                <h4 class="text-sm font-semibold text-[#7288FF]">Identificación de la OC</h4>
+                                <h4 class="text-sm font-semibold text-[#1AAD8A]">Identificación de la OC</h4>
                             </div>
 
                             {{-- Número de Orden (PO) --}}
@@ -125,7 +125,7 @@
 
                             {{-- Condiciones comerciales --}}
                             <div class="md:col-span-3">
-                                <h4 class="text-sm font-semibold text-[#7288FF]">Condiciones comerciales</h4>
+                                <h4 class="text-sm font-semibold text-[#1AAD8A]">Condiciones comerciales</h4>
                             </div>
 
                             {{-- Moneda --}}
@@ -157,7 +157,7 @@
 
                             {{-- Planificación logística --}}
                             <div class="md:col-span-3">
-                                <h4 class="text-sm font-semibold text-[#7288FF]">Planificación logística</h4>
+                                <h4 class="text-sm font-semibold text-[#1AAD8A]">Planificación logística</h4>
                             </div>
 
                             {{-- HUB planificado --}}
@@ -189,7 +189,7 @@
 
                             {{-- Clasificación --}}
                             <div class="md:col-span-3">
-                                <h4 class="text-sm font-semibold text-[#7288FF]">Clasificación</h4>
+                                <h4 class="text-sm font-semibold text-[#1AAD8A]">Clasificación</h4>
                             </div>
 
                             {{-- Categoría (nuevo) --}}
@@ -210,7 +210,7 @@
 
                             {{-- Notas / Motivo --}}
                             <div class="md:col-span-3">
-                                <h4 class="text-sm font-semibold text-[#7288FF]">Notas / Motivo</h4>
+                                <h4 class="text-sm font-semibold text-[#1AAD8A]">Notas / Motivo</h4>
                             </div>
 
                             {{-- Motivo (nuevo) --}}
@@ -234,12 +234,12 @@
                         </div>
                     </div>
 
-                    <h3 class="text-lg font-bold text-blue-600">Identificadores y transporte</h3>
+                    <h3 class="text-lg font-bold text-[#1AAD8A]">Identificadores y transporte</h3>
                     <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
 
                         <!-- Itinerario -->
                         <div class="col-span-3">
-                            <h4 class="text-sm font-semibold text-[#7288FF]">Itinerario</h4>
+                            <h4 class="text-sm font-semibold text-[#1AAD8A]">Itinerario</h4>
                         </div>
 
                         <x-form-input>
@@ -261,7 +261,7 @@
 
                         <!-- Naviera y equipo -->
                         <div class="col-span-3">
-                            <h4 class="text-sm font-semibold text-[#7288FF]">Naviera y equipo</h4>
+                            <h4 class="text-sm font-semibold text-[#1AAD8A]">Naviera y equipo</h4>
                         </div>
 
                         <x-form-input>
@@ -276,7 +276,7 @@
 
                         <!-- Identificadores de embarque -->
                         <div class="col-span-3">
-                            <h4 class="text-sm font-semibold text-[#7288FF]">Identificadores de embarque</h4>
+                            <h4 class="text-sm font-semibold text-[#1AAD8A]">Identificadores de embarque</h4>
                         </div>
 
                         <x-form-input>
@@ -303,7 +303,7 @@
             </div>
 
             <div class="space-y-6 w-full">
-                <h3 class="text-lg font-bold text-blue-600">Datos Proveedor</h3>
+                <h3 class="text-lg font-bold text-[#1AAD8A]">Datos Proveedor</h3>
 
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
                     <x-form-select label="Seleccionar Nombre del Proveedor" name="vendor_id" wireModel="vendor_id"
@@ -321,7 +321,7 @@
             </div>
 
             <div class="space-y-6 w-full hidden">
-                <h3 class="text-lg font-bold text-blue-600">Datos Ship to</h3>
+                <h3 class="text-lg font-bold text-[#1AAD8A]">Datos Ship to</h3>
 
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
                     <x-form-select label="Seleccionar Ship to" name="ship_to_id" wireModel="ship_to_id"
@@ -330,7 +330,7 @@
             </div>
 
             <div class="space-y-6 w-full hidden">
-                <h3 class="text-lg font-bold text-blue-600">Datos de facturación</h3>
+                <h3 class="text-lg font-bold text-[#1AAD8A]">Datos de facturación</h3>
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
                     <x-form-select label="Seleccionar Bill to" class="hidden" name="bill_to_id" wireModel="bill_to_id"
                         :options="$billToArray" :error="$errors->has('bill_to_id') ? true : false" />
@@ -338,7 +338,7 @@
             </div>
 
             <div class="space-y-6 w-full hidden">
-                <h3 class="text-lg font-bold text-blue-600">Dimensiones en centímetros</h3>
+                <h3 class="text-lg font-bold text-[#1AAD8A]">Dimensiones en centímetros</h3>
                 <div class="grid grid-cols-[1fr,1fr,1fr,1fr] gap-x-5 gap-y-6">
                     <x-form-input class="hidden">
                         <x-slot:label>
@@ -390,7 +390,7 @@
             </div>
 
             <div class="space-y-6 w-full">
-                <h3 class="text-lg font-bold text-blue-600">Dimensiones</h3>
+                <h3 class="text-lg font-bold text-[#1AAD8A]">Dimensiones</h3>
                 <div class="grid grid-cols-[1fr,1fr,1fr,1fr] gap-x-5 gap-y-6">
                     <x-form-input>
                         <x-slot:label>CBM (m³)</x-slot:label>
@@ -464,13 +464,13 @@
             </div>
 
             <div class="space-y-6 w-full">
-                <h3 class="text-lg font-bold text-blue-600">Fechas</h3>
+                <h3 class="text-lg font-bold text-[#1AAD8A]">Fechas</h3>
 
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
 
                     <!-- Booking y coordinación -->
                     <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#7288FF]">Booking y coordinación</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Booking y coordinación</h4>
                     </div>
 
                     <x-form-input>
@@ -494,7 +494,7 @@
 
                     <!-- Origen: preparación y carga -->
                     <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#7288FF]">Origen: preparación y carga</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Origen: preparación y carga</h4>
                     </div>
 
                     <x-form-input>
@@ -564,7 +564,7 @@
 
                     <!-- Salida (origen) -->
                     <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#7288FF]">Salida (origen)</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Salida (origen)</h4>
                     </div>
 
                     <x-form-input>
@@ -595,7 +595,7 @@
 
                     <!-- Arribo a destino -->
                     <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#7288FF]">Arribo a destino</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Arribo a destino</h4>
                     </div>
 
                     <x-form-input>
@@ -628,7 +628,7 @@
 
                     <!-- Almacén fiscal y recepción -->
                     <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#7288FF]">Almacén fiscal y recepción</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Almacén fiscal y recepción</h4>
                     </div>
 
                     <x-form-input>
@@ -662,7 +662,7 @@
 
                     <!-- Pagos y cargos -->
                     <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#7288FF]">Pagos y cargos</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Pagos y cargos</h4>
                     </div>
 
                     <x-form-input>
@@ -677,7 +677,7 @@
 
                     <!-- Métricas y varios -->
                     <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#7288FF]">Métricas y varios</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Métricas y varios</h4>
                     </div>
 
                     <x-form-input>
@@ -698,13 +698,13 @@
             </div>
 
             <div class="space-y-6 w-full">
-                <h3 class="text-lg font-bold text-blue-600">Información Adicional</h3>
+                <h3 class="text-lg font-bold text-[#1AAD8A]">Información Adicional</h3>
 
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
 
                     <!-- Configuración del envío -->
                     <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#7288FF]">Configuración del envío</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Configuración del envío</h4>
                     </div>
 
                     <x-form-select label="Tipo de Transporte" name="mode" wire:model.live="mode" :options="['maritimo' => 'Marítimo', 'aereo' => 'Aéreo', 'terrestre' => 'Terrestre']" :error="$errors->has('mode') ? true : false" />
@@ -723,7 +723,7 @@
 
                     <!-- Tipo de material -->
                     <div class="col-span-3 hidden">
-                        <h4 class="text-sm font-semibold text-[#565AFF]">Tipo de material</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Tipo de material</h4>
 
                         <!-- junto y compacto -->
                         <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-2">
@@ -734,7 +734,7 @@
                                         type="checkbox"
                                         value="{{ $value }}"
                                         wire:model="material_type"
-                                        class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                                        class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]"
                                     >
                                     <label for="material_type_{{ $value }}" class="block ml-2 text-sm text-gray-700">
                                         {{ $label }}
@@ -750,53 +750,53 @@
 
                     <!-- Opciones / Flags -->
                     <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#565AFF]">Opciones</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Opciones</h4>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 mt-2">
                             <div class="flex items-center hidden">
                                 <input id="is_dropship" type="checkbox" wire:model="is_dropship"
-                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                       class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="is_dropship" class="block ml-2 text-sm text-gray-700">Dropship</label>
                             </div>
                             <div class="flex items-center">
                                 <input id="applies_tlc" type="checkbox" wire:model="applies_tlc"
-                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                       class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="applies_tlc" class="block ml-2 text-sm text-gray-700">Aplica TLC</label>
                             </div>
                             <div class="flex items-center">
                                 <input id="applies_af" type="checkbox" wire:model="applies_af"
-                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                       class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="applies_af" class="block ml-2 text-sm text-gray-700">Aplica AF</label>
                             </div>
 
                             <div class="flex items-center">
                                 <input id="has_facture_merca" type="checkbox" wire:model="has_facture_merca"
-                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                       class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="has_facture_merca" class="block ml-2 text-sm text-gray-700">Tiene Factura Mercancía</label>
                             </div>
                             <div class="flex items-center">
                                 <input id="used_rate_ok" type="checkbox" wire:model="used_rate_ok"
-                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                       class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="used_rate_ok" class="block ml-2 text-sm text-gray-700">Tarifa Utilizada OK</label>
                             </div>
                             <div class="flex items-center">
                                 <input id="uses_bonded_warehouse" type="checkbox" wire:model="uses_bonded_warehouse"
-                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                       class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="uses_bonded_warehouse" class="block ml-2 text-sm text-gray-700">Usa Almacén Fiscal</label>
                             </div>
 
                             <div class="flex items-center">
                                 <input id="apply_technical_note" type="checkbox" wire:model="apply_technical_note"
-                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                       class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="apply_technical_note" class="block ml-2 text-sm text-gray-700">Aplica Nota Técnica</label>
                             </div>
                             <div class="flex items-center">
                                 <input id="etd_initial_validated" type="checkbox" wire:model="etd_initial_validated"
-                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                       class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="etd_initial_validated" class="block ml-2 text-sm text-gray-700">ETD Inicial Validada</label>
                             </div>
                             <div class="flex items-center">
                                 <input id="port_of_loading_validated" type="checkbox" wire:model="port_of_loading_validated"
-                                       class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                                       class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="port_of_loading_validated" class="block ml-2 text-sm text-gray-700">Puerto de Embarque Validado</label>
                             </div>
                         </div>
@@ -809,7 +809,7 @@
 
                     <!-- Volúmenes / pallets -->
                     <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#7288FF]">Volúmenes / pallets</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Volúmenes / pallets</h4>
                     </div>
 
                     <x-form-input>
@@ -824,7 +824,7 @@
 
                     <!-- Costos base -->
                     <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#7288FF]">Costos base</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Costos base</h4>
                     </div>
 
                     <x-form-input>
@@ -849,7 +849,7 @@
 
                     <!-- Costos logísticos -->
                     <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#7288FF]">Costos logísticos</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Costos logísticos</h4>
                     </div>
 
                     <x-form-input class="hidden">
@@ -879,7 +879,7 @@
 
                     <!-- Totales y cálculos -->
                     <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#7288FF]">Totales y cálculos</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Totales y cálculos</h4>
                     </div>
 
                     <x-form-input>
@@ -904,7 +904,7 @@
 
                     <!-- Ahorros -->
                     <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#7288FF]">Ahorros</h4>
+                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Ahorros</h4>
                     </div>
 
                     <x-form-input class="hidden">
@@ -932,13 +932,13 @@
 
             <div class="space-y-6 w-full">
                 <div class="space-y-6 w-full">
-                    <h3 class="text-lg font-bold text-blue-600">Datos de negocio</h3>
+                    <h3 class="text-lg font-bold text-[#1AAD8A]">Datos de negocio</h3>
 
                     <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
 
                         <!-- Proveedores y contratación -->
                         <div class="col-span-3">
-                            <h4 class="text-sm font-semibold text-[#7288FF]">Proveedores y contratación</h4>
+                            <h4 class="text-sm font-semibold text-[#1AAD8A]">Proveedores y contratación</h4>
                         </div>
 
                         <x-form-input>
@@ -958,7 +958,7 @@
 
                         <!-- Tarifas y ruta -->
                         <div class="col-span-3">
-                            <h4 class="text-sm font-semibold text-[#7288FF]">Tarifas y ruta</h4>
+                            <h4 class="text-sm font-semibold text-[#1AAD8A]">Tarifas y ruta</h4>
                         </div>
 
                         <x-form-input>
@@ -975,7 +975,7 @@
 
                         <!-- Segmento / cliente -->
                         <div class="col-span-3">
-                            <h4 class="text-sm font-semibold text-[#7288FF]">Segmento / cliente</h4>
+                            <h4 class="text-sm font-semibold text-[#1AAD8A]">Segmento / cliente</h4>
                         </div>
 
                         <x-form-input>
@@ -990,7 +990,7 @@
 
                         <!-- Documentos y referencias -->
                         <div class="col-span-3">
-                            <h4 class="text-sm font-semibold text-[#7288FF]">Documentos y referencias</h4>
+                            <h4 class="text-sm font-semibold text-[#1AAD8A]">Documentos y referencias</h4>
                         </div>
 
                         <x-form-input>
@@ -1035,7 +1035,7 @@
 
                         <!-- Notas -->
                         <div class="col-span-3">
-                            <h4 class="text-sm font-semibold text-[#7288FF]">Notas</h4>
+                            <h4 class="text-sm font-semibold text-[#1AAD8A]">Notas</h4>
                         </div>
 
                         <div class="col-span-3">
@@ -1051,7 +1051,7 @@
 
 
             <div class="space-y-6 w-full mb-10">
-                <h3 class="text-lg font-bold text-blue-600">Estado de llegada</h3>
+                <h3 class="text-lg font-bold text-[#1AAD8A]">Estado de llegada</h3>
                 <div class="grid grid-cols-[1fr,1fr] gap-x-5 gap-y-f6">
                     <x-form-input>
                         <x-slot:label>Estado</x-slot:label>
@@ -1067,7 +1067,7 @@
         </div>
 
         <div class="p-8 space-y-6 w-full bg-white rounded-2xl hidden">
-            <h3 class="w-fit border-b-2 border-[#190FDB] pb-2 text-lg font-bold text-[#190FDB]">Carga / Contenido</h3>
+            <h3 class="w-fit border-b-2 border-[#127A62] pb-2 text-lg font-bold text-[#127A62]">Carga / Contenido</h3>
 
             <div class="flex flex-col space-y-4">
                 <!-- Buscador de productos -->
@@ -1109,7 +1109,7 @@
                     </x-form-input>
 
                     <div class="self-end h-fit" x-data="{ selectedProduct: @entangle('selectedProduct') }">
-                        <x-primary-button class="border-[3px] border-[#565AFF] disabled:border-[#EDEDED]"
+                        <x-primary-button class="border-[3px] border-[#1AAD8A] disabled:border-[#EDEDED]"
                              wire:click="addProduct">
                             Agregar
                         </x-primary-button>
@@ -1143,22 +1143,22 @@
                         <thead>
                             <tr>
                                 <th scope="col"
-                                    class="bg-[#E0E5FF] px-6 py-3 text-left text-lg font-bold text-[#171717]">
+                                    class="bg-[#D4F5ED] px-6 py-3 text-left text-lg font-bold text-[#171717]">
                                     ID</th>
                                 <th scope="col"
-                                    class="bg-[#E0E5FF] px-6 py-3 text-left text-lg font-bold text-[#171717]">
+                                    class="bg-[#D4F5ED] px-6 py-3 text-left text-lg font-bold text-[#171717]">
                                     Descripción</th>
                                 <th scope="col"
-                                    class="bg-[#E0E5FF] px-6 py-3 text-left text-lg font-bold text-[#171717]">
+                                    class="bg-[#D4F5ED] px-6 py-3 text-left text-lg font-bold text-[#171717]">
                                     Precio unitario</th>
                                 <th scope="col"
-                                    class="bg-[#E0E5FF] px-6 py-3 text-left text-lg font-bold text-[#171717]">
+                                    class="bg-[#D4F5ED] px-6 py-3 text-left text-lg font-bold text-[#171717]">
                                     Carga (kg)</th>
                                 <th scope="col"
-                                    class="bg-[#E0E5FF] px-6 py-3 text-left text-lg font-bold text-[#171717]">
+                                    class="bg-[#D4F5ED] px-6 py-3 text-left text-lg font-bold text-[#171717]">
                                     Subtotal</th>
                                 <th scope="col"
-                                    class="bg-[#E0E5FF] px-6 py-3 text-left text-lg font-bold text-[#171717]">
+                                    class="bg-[#D4F5ED] px-6 py-3 text-left text-lg font-bold text-[#171717]">
                                     Acciones</th>
                             </tr>
                         </thead>
@@ -1175,7 +1175,7 @@
                                             wire:model.live="orderProducts.{{ $index }}.quantity"
                                             wire:change="updateQuantity({{ $index }}, $event.target.value)"
                                             min="1"
-                                            class="block w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                            class="block w-20 rounded-md border-gray-300 shadow-sm focus:border-[#1AAD8A] focus:ring-[#1AAD8A] sm:text-sm">
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                                         $ {{ number_format($product['subtotal'], 2) }}</td>
@@ -1208,7 +1208,7 @@
                                     Costo Adicional:</td>
                                 <td class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
                                     <input type="number" wire:model.live="additional_cost" step="0.01"
-                                        class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                        class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-[#1AAD8A] focus:ring-[#1AAD8A] sm:text-sm">
                                 </td>
                                 <td></td>
                             </tr>
@@ -1217,7 +1217,7 @@
                                     Costo de Seguro:</td>
                                 <td class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
                                     <input type="number" wire:model.live="insurance_cost" step="0.01"
-                                        class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" disabled>
+                                        class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-[#1AAD8A] focus:ring-[#1AAD8A] sm:text-sm" disabled>
                                 </td>
                                 <td></td>
                             </tr>

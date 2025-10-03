@@ -1,16 +1,16 @@
 <div>
     <div class="px-0 mx-0 w-full">
         @if($hasActiveFilters)
-        <div class="flex justify-between items-center p-3 mb-4 bg-blue-50 rounded-md">
+        <div class="flex justify-between items-center p-3 mb-4 bg-[#E6F9F4] rounded-md">
             <div class="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 w-5 h-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 w-5 h-5 text-[#1AAD8A]" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
                 </svg>
-                <span class="text-sm font-medium text-blue-700">Mostrando documentos filtrados. Los resultados que estás viendo están limitados por los filtros activos.</span>
+                <span class="text-sm font-medium text-[#127A62]">Mostrando documentos filtrados. Los resultados que estás viendo están limitados por los filtros activos.</span>
             </div>
             <button
                 wire:click="$dispatch('clearShippingDocumentationFilters')"
-                class="px-3 py-1 ml-3 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200"
+                class="px-3 py-1 ml-3 text-xs font-medium text-[#127A62] bg-[#D4F5ED] rounded-md hover:bg-[#C0F0E5]"
             >
                 Limpiar filtros
             </button>
@@ -392,7 +392,7 @@
                     fill="none">
                     <path
                         d="M19.1525 9.89897L10.1369 18.9146C8.08662 20.9648 4.7625 20.9648 2.71225 18.9146C0.661997 16.8643 0.661998 13.5402 2.71225 11.49L11.7279 2.47435C13.0947 1.10751 15.3108 1.10751 16.6776 2.47434C18.0444 3.84118 18.0444 6.05726 16.6776 7.42409L8.01555 16.0862C7.33213 16.7696 6.22409 16.7696 5.54068 16.0862C4.85726 15.4027 4.85726 14.2947 5.54068 13.6113L13.1421 6.00988"
-                        stroke="#565AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        stroke="#1AAD8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                         class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
                 </svg>
 

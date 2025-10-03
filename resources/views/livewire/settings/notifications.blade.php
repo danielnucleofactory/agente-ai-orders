@@ -17,14 +17,14 @@
 
         <!-- Notificaciones activas -->
         <div class="mb-8">
-            <h4 class="text-lg font-bold text-[#7288FF] mb-4">Notificaciones activas</h4>
+            <h4 class="text-lg font-bold text-[#1AAD8A] mb-4">Notificaciones activas</h4>
 
             <div class="space-y-6">
                 @foreach($activeNotifications as $key => $notification)
                     @if(isset($preferences[$key]))
                         <div class="flex items-start gap-4">
                             <button type="button" wire:click="togglePreference('{{ $key }}')" class="toggle-button">
-                                <div class="w-12 h-6 rounded-full transition-all {{ $preferences[$key]['enabled'] ?? false ? 'bg-[#7288FF]' : 'bg-gray-300' }} relative">
+                                <div class="w-12 h-6 rounded-full transition-all {{ $preferences[$key]['enabled'] ?? false ? 'bg-[#1AAD8A]' : 'bg-gray-300' }} relative">
                                     <div class="w-4 h-4 bg-white rounded-full absolute top-1 transition-all {{ $preferences[$key]['enabled'] ?? false ? 'right-1' : 'left-1' }}"></div>
                                 </div>
                             </button>
@@ -40,7 +40,7 @@
         <div class="flex justify-end">
             <button
                 type="submit"
-                class="w-full primary-btn h-[46px] bg-[#565AFF] rounded-[6px] text-white hover:bg-[#565AFF]/80 transition-colors duration-300"
+                class="w-full primary-btn h-[46px] bg-[#1AAD8A] rounded-[6px] text-white hover:bg-[#1AAD8A]/80 transition-colors duration-300"
             >
                 Guardar preferencias
             </button>

@@ -14,7 +14,7 @@
             <a href="{{ route('products.create') }}">
                 <x-secondary-button class="group flex items-center gap-[0.625rem]">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M8 1V15M1 8H15" stroke="#565AFF" stroke-width="2" stroke-linecap="round"
+                        <path d="M8 1V15M1 8H15" stroke="#1AAD8A" stroke-width="2" stroke-linecap="round"
                             stroke-linejoin="round"
                             class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
                     </svg>

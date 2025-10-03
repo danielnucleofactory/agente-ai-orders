@@ -87,20 +87,20 @@ $login = function () {
 
         <div class="flex items-center justify-between mb-8">
             <div class="flex items-center">
-                <input type="checkbox" id="remember" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                <input type="checkbox" id="remember" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-[#1AAD8A]">
                 <label for="remember" class="block ml-2 text-sm text-gray-600">Recordarme</label>
             </div>
 
-            <a href="{{ route('password.request') }}" class="text-sm text-gray-500 hover:text-indigo-600">¿Has olvidado tu contraseña?</a>
+            <a href="{{ route('password.request') }}" class="text-sm text-gray-500 hover:text-[#1AAD8A]">¿Has olvidado tu contraseña?</a>
         </div>
 
         <!-- Botón de inicio de sesión -->
-        <button type="submit" class="w-full bg-[#565aff] hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg mb-4">
+        <button type="submit" class="w-full bg-[#1AAD8A] hover:bg-[#28C7A1] text-white font-medium py-3 px-4 rounded-lg mb-4">
             Iniciar sesión
         </button>
 
         <!-- Botón de registro -->
-        <a href="{{ route('register') }}" class="w-full bg-[#9aabff] hover:bg-indigo-200 text-white font-medium py-3 px-4 rounded-lg mb-8 block text-center">
+        <a href="{{ route('register') }}" class="w-full bg-[#45E6BF] hover:bg-[#55F2CD] text-white font-medium py-3 px-4 rounded-lg mb-8 block text-center">
             Registrarse
         </a>
     </form>

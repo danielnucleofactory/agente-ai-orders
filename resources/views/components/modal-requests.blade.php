@@ -3,7 +3,7 @@
 <x-modal maxWidth="{{ $maxWidth }}" show="{{ $show }}" {{ $attributes }}>
     <div class="p-6">
         <!-- Title -->
-        <h2 class="mb-1 text-xl font-medium text-center text-indigo-600">
+        <h2 class="mb-1 text-xl font-medium text-center text-[#1AAD8A]">
             {{ $title ?? 'Detalles de la Operación' }}
         </h2>
 
@@ -14,43 +14,43 @@
 
         <!-- Requester Info -->
         <div class="mb-4">
-            <p class="mb-2 text-sm text-indigo-600">Solicitante</p>
+            <p class="mb-2 text-sm text-[#1AAD8A]">Solicitante</p>
             {{ $requester ?? '' }}
         </div>
 
         <!-- Date and Time -->
         <div class="grid grid-cols-2 gap-4 mb-4">
             <div>
-                <p class="mb-1 text-sm text-indigo-600">Fecha</p>
+                <p class="mb-1 text-sm text-[#1AAD8A]">Fecha</p>
                 {{ $date ?? '' }}
             </div>
             <div>
-                <p class="mb-1 text-sm text-indigo-600">Hora</p>
+                <p class="mb-1 text-sm text-[#1AAD8A]">Hora</p>
                 {{ $time ?? '' }}
             </div>
         </div>
 
         <!-- Operation Type -->
         <div class="mb-4">
-            <p class="mb-1 text-sm text-indigo-600">Tipo de Operación</p>
+            <p class="mb-1 text-sm text-[#1AAD8A]">Tipo de Operación</p>
             {{ $operationType ?? '' }}
         </div>
 
         <!-- Authorizable Info -->
         <div class="mb-4">
-            <p class="mb-1 text-sm text-indigo-600">Referencia</p>
+            <p class="mb-1 text-sm text-[#1AAD8A]">Referencia</p>
             {{ $authorizableInfo ?? '' }}
         </div>
 
         <!-- Status -->
         <div class="mb-4">
-            <p class="mb-1 text-sm text-indigo-600">Estado</p>
+            <p class="mb-1 text-sm text-[#1AAD8A]">Estado</p>
             {{ $status ?? '' }}
         </div>
 
         <!-- Data Content -->
         <div class="mb-4">
-            <p class="mb-1 text-sm text-indigo-600">Contenido</p>
+            <p class="mb-1 text-sm text-[#1AAD8A]">Contenido</p>
             {{ $dataContent ?? '' }}
         </div>
 
@@ -67,7 +67,7 @@
             @if(isset($actions))
                 {{ $actions }}
             @else
-                <button class="w-full py-3 font-medium text-white transition duration-200 bg-indigo-600 rounded-lg hover:bg-indigo-700" wire:click="closeModal">
+                <button class="w-full py-3 font-medium text-white transition duration-200 bg-[#1AAD8A] rounded-lg hover:bg-[#127A62]" wire:click="closeModal">
                     Aceptar
                 </button>
             @endif

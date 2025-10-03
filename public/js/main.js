@@ -27,7 +27,7 @@ const activeFilters = {
 };
 
 // Colores predefinidos para gráficos
-const defaultColors = ["#565aff", "#9aabff", "#ff3459", "#f46844", "#c9cfff", "#5ae7f4", "#5dd595"];
+const defaultColors = ["#1AAD8A", "#28C7A1", "#ff3459", "#f46844", "#D4F5ED", "#36D9B2", "#5dd595"];
 
 // Referencias a los gráficos
 let hubChartInstance = null;
@@ -110,7 +110,7 @@ function renderHubChart(hubData) {
   const data = hubData.map(item => item.percentage > 0 ? item.percentage : 0.1);
   const originalData = hubData.map(item => item.percentage); // Datos originales para tooltips
   const ids = hubData.map(item => String(item.id)); // Convertir todos los IDs a string para consistencia
-  const colors = ["#565aff", "#9aabff", "#ff3459", "#f46844", "#c9cfff", "#5ae7f4", "#5dd595"];
+  const colors = ["#1AAD8A", "#28C7A1", "#ff3459", "#f46844", "#D4F5ED", "#36D9B2", "#5dd595"];
   
   // Lógica de aclarado: si hay filtros activos, los no seleccionados se aclaran
   let backgroundColors = colors.slice(0, data.length);
@@ -243,11 +243,11 @@ function renderStatusChart(statusData) {
   const values = statusData.map(item => item.name); // "On Time", "Atrasado" o "Sin datos"
   // Colores específicos para cada estado
   const colors = {
-    "On Time": "#565aff",
-    "Atrasado": "#c9cfff",
+    "On Time": "#1AAD8A",
+    "Atrasado": "#D4F5ED",
     "Sin datos": "#f0f0f0"
   };
-  const backgroundColors = statusData.map(item => colors[item.name] || "#c9cfff");
+  const backgroundColors = statusData.map(item => colors[item.name] || "#D4F5ED");
   
   // Aplicar lógica de aclarado al crear el gráfico
   if (activeFilters.status && activeFilters.status.length > 0) {
@@ -307,7 +307,7 @@ function renderStatusChart(statusData) {
     legendItem.className = 'legend-item';
     legendItem.innerHTML = `
       <div class="legend-label">
-        <div class="legend-color" style="background-color: ${colors[item.name] || "#c9cfff"}"></div>
+        <div class="legend-color" style="background-color: ${colors[item.name] || "#D4F5ED"}"></div>
         <span>${item.name}</span>
       </div>
       <span>${item.percentage}%</span>
@@ -448,7 +448,7 @@ function renderDelayChart(delayData) {
   const labels = delayData.map(item => item.name);
   const data = delayData.map(item => item.percentage > 0 ? item.percentage : 0.1); // Valor mínimo para visualización
   const originalData = delayData.map(item => item.percentage); // Datos originales para tooltips
-  const colors = ["#565aff", "#9aabff", "#5ae7f4", "#f46844", "#5dd595", "#c9cfff"];
+  const colors = ["#1AAD8A", "#28C7A1", "#36D9B2", "#f46844", "#5dd595", "#D4F5ED"];
   
   // Aplicar lógica de aclarado si hay filtros activos
   let backgroundColors = colors.slice(0, data.length);
@@ -543,7 +543,7 @@ function renderStageChart(stageData) {
   const labels = stageData.map(item => item.name);
   const data = stageData.map(item => item.value > 0 ? item.value : 0.1); // Valor mínimo para visualización
   const originalData = stageData.map(item => item.value); // Datos originales para tooltips
-  const colors = stageData.map(item => item.color || "#c9cfff"); // Usar colores definidos en el backend
+  const colors = stageData.map(item => item.color || "#D4F5ED"); // Usar colores definidos en el backend
   
   // Aplicar lógica de aclarado si hay filtros activos
   let backgroundColors = colors;
@@ -811,7 +811,7 @@ function updateHubChartDataOnly(hubData) {
   const labels = hubData.map(item => item.name);
   const data = hubData.map(item => item.percentage);
   const ids = hubData.map(item => String(item.id));
-  const colors = ["#565aff", "#9aabff", "#ff3459", "#f46844", "#c9cfff", "#5ae7f4", "#5dd595"];
+  const colors = ["#1AAD8A", "#28C7A1", "#ff3459", "#f46844", "#D4F5ED", "#36D9B2", "#5dd595"];
   
   // Aplicar lógica de aclarado
   let backgroundColors = colors.slice(0, data.length);
@@ -853,13 +853,13 @@ function updateStatusChartDataOnly(statusData) {
   
   // Colores específicos para cada estado
   const colors = {
-    "On Time": "#565aff",
-    "Atrasado": "#c9cfff",
+    "On Time": "#1AAD8A",
+    "Atrasado": "#D4F5ED",
     "Sin datos": "#f0f0f0"
   };
   
   // Aplicar lógica de aclarado igual que en hub chart
-  const backgroundColors = statusData.map(item => colors[item.name] || "#c9cfff");
+  const backgroundColors = statusData.map(item => colors[item.name] || "#D4F5ED");
   
   if (activeFilters.status && activeFilters.status.length > 0) {
     statusData.forEach((item, idx) => {
@@ -882,7 +882,7 @@ function updateStatusChartDataOnly(statusData) {
     legendItem.className = 'legend-item';
     legendItem.innerHTML = `
       <div class="legend-label">
-        <div class="legend-color" style="background-color: ${colors[item.name] || "#c9cfff"}"></div>
+        <div class="legend-color" style="background-color: ${colors[item.name] || "#D4F5ED"}"></div>
         <span>${item.name}</span>
       </div>
       <span>${item.percentage}%</span>

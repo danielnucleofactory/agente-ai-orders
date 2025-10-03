@@ -1,6 +1,6 @@
 <div class="p-8 space-y-6 bg-white rounded-2xl">
     <div class="flex justify-between items-center">
-        <h2 class="text-lg font-bold text-[#7288FF]">Lista de usuarios</h2>
+        <h2 class="text-lg font-bold text-[#1AAD8A]">Lista de usuarios</h2>
 
         <div class="flex space-x-4">
             <a href="{{ route('settings.users.create') }}">
@@ -20,7 +20,7 @@
             <div class="relative w-fit">
                 <input
                     wire:model.live="search"
-                    class="rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#9AABFF]"
+                    class="rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#28C7A1]"
                     placeholder="Buscar"
                 />
 
@@ -36,7 +36,7 @@
     </div>
 
     <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-[#E0E5FF]">
+        <thead class="bg-[#D4F5ED]">
             <tr>
                 @foreach($headers as $key => $label)
                     <th class="px-6 py-6 text-xs tracking-wider text-left text-black uppercase font-bolf">

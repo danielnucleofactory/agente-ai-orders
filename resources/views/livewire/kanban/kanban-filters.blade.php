@@ -14,7 +14,7 @@
     <!-- Botón de filtros con badge de contador -->
     <button
         @click="toggle()"
-        class="group relative flex items-center gap-[0.625rem] rounded-md bg-indigo-600 px-4 py-2 text-white transition-colors duration-300 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+        class="group relative flex items-center gap-[0.625rem] rounded-md bg-[#1AAD8A] px-4 py-2 text-white transition-colors duration-300 hover:bg-[#127A62] focus:outline-none focus:ring-2 focus:ring-[#1AAD8A] focus:ring-offset-2"
     >
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="20" viewBox="0 0 22 20" fill="none">
             <path
@@ -58,7 +58,7 @@
                     id="search-filter"
                     wire:model.live.debounce.300ms="searchText"
                     placeholder="Buscar en número de orden, vendor, moneda, total, etc..."
-                    class="block w-full px-3 py-2 mt-1 text-base border-gray-300 rounded-md focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                    class="block w-full px-3 py-2 mt-1 text-base border-gray-300 rounded-md focus:border-[#1AAD8A] focus:outline-none focus:ring-[#1AAD8A]"
                 />
             </div>
 
@@ -66,7 +66,7 @@
             @if(count($currencies) > 0)
                 <div>
                     <label for="currency-filter" class="block text-sm font-medium text-gray-700">Moneda</label>
-                    <select id="currency-filter" wire:model.live="selectedCurrency" class="block w-full py-2 pl-3 pr-10 mt-1 text-base border-gray-300 rounded-md focus:border-indigo-500 focus:outline-none focus:ring-indigo-500">
+                    <select id="currency-filter" wire:model.live="selectedCurrency" class="block w-full py-2 pl-3 pr-10 mt-1 text-base border-gray-300 rounded-md focus:border-[#1AAD8A] focus:outline-none focus:ring-[#1AAD8A]">
                         <option value="">Todas las monedas</option>
                         @foreach($currencies as $currency)
                             <option value="{{ $currency }}">{{ $currency }}</option>
@@ -79,7 +79,7 @@
             @if(count($incoterms) > 0)
                 <div>
                     <label for="incoterm-filter" class="block text-sm font-medium text-gray-700">Incoterms</label>
-                    <select id="incoterm-filter" wire:model.live="selectedIncoterm" class="block w-full py-2 pl-3 pr-10 mt-1 text-base border-gray-300 rounded-md focus:border-indigo-500 focus:outline-none focus:ring-indigo-500">
+                    <select id="incoterm-filter" wire:model.live="selectedIncoterm" class="block w-full py-2 pl-3 pr-10 mt-1 text-base border-gray-300 rounded-md focus:border-[#1AAD8A] focus:outline-none focus:ring-[#1AAD8A]">
                         <option value="">Todos los incoterms</option>
                         @foreach($incoterms as $incoterm)
                             <option value="{{ $incoterm }}">{{ $incoterm }}</option>
@@ -92,7 +92,7 @@
             @if(count($plannedHubs) > 0)
                 <div>
                     <label for="planned-hub-filter" class="block text-sm font-medium text-gray-700">Hub Planificado</label>
-                    <select id="planned-hub-filter" wire:model.live="selectedPlannedHub" class="block w-full py-2 pl-3 pr-10 mt-1 text-base border-gray-300 rounded-md focus:border-indigo-500 focus:outline-none focus:ring-indigo-500">
+                    <select id="planned-hub-filter" wire:model.live="selectedPlannedHub" class="block w-full py-2 pl-3 pr-10 mt-1 text-base border-gray-300 rounded-md focus:border-[#1AAD8A] focus:outline-none focus:ring-[#1AAD8A]">
                         <option value="">Todos los hubs planificados</option>
                         @foreach($plannedHubs as $id => $name)
                             <option value="{{ $id }}">{{ $name }}</option>
@@ -105,7 +105,7 @@
             @if(count($actualHubs) > 0)
                 <div>
                     <label for="actual-hub-filter" class="block text-sm font-medium text-gray-700">Hub Real</label>
-                    <select id="actual-hub-filter" wire:model.live="selectedActualHub" class="block w-full py-2 pl-3 pr-10 mt-1 text-base border-gray-300 rounded-md focus:border-indigo-500 focus:outline-none focus:ring-indigo-500">
+                    <select id="actual-hub-filter" wire:model.live="selectedActualHub" class="block w-full py-2 pl-3 pr-10 mt-1 text-base border-gray-300 rounded-md focus:border-[#1AAD8A] focus:outline-none focus:ring-[#1AAD8A]">
                         <option value="">Todos los hubs reales</option>
                         @foreach($actualHubs as $id => $name)
                             <option value="{{ $id }}">{{ $name }}</option>
@@ -118,7 +118,7 @@
             @if(count($materialTypes) > 0)
                 <div>
                     <label for="material-type-filter" class="block text-sm font-medium text-gray-700">Tipo de Material</label>
-                    <select id="material-type-filter" wire:model.live="selectedMaterialType" class="block w-full py-2 pl-3 pr-10 mt-1 text-base border-gray-300 rounded-md focus:border-indigo-500 focus:outline-none focus:ring-indigo-500">
+                    <select id="material-type-filter" wire:model.live="selectedMaterialType" class="block w-full py-2 pl-3 pr-10 mt-1 text-base border-gray-300 rounded-md focus:border-[#1AAD8A] focus:outline-none focus:ring-[#1AAD8A]">
                         <option value="">Todos los tipos de material</option>
                         @foreach($materialTypes as $materialType)
                             <option value="{{ $materialType }}">{{ $materialType }}</option>
@@ -132,7 +132,7 @@
             <button
                 wire:click="resetFilters"
                 @click="close()"
-                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#1AAD8A] focus:ring-offset-2"
             >
                 Limpiar filtros
             </button>
@@ -140,7 +140,7 @@
             <button
                 wire:click="applyFilters"
                 @click="close()"
-                class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                class="px-4 py-2 text-sm font-medium text-white bg-[#1AAD8A] border border-transparent rounded-md shadow-sm hover:bg-[#127A62] focus:outline-none focus:ring-2 focus:ring-[#1AAD8A] focus:ring-offset-2"
             >
                 Aplicar filtros
             </button>

@@ -69,9 +69,11 @@
                     </div>
 
                     <div class="flex justify-end gap-4 mt-6">
-                        <x-secondary-button type="button" wire:click="$navigate('{{ route('settings.users') }}')">
-                            Cancelar
-                        </x-secondary-button>
+                        <a href="{{ route('settings.users') }}">
+                            <x-secondary-button type="button">
+                                Cancelar
+                            </x-secondary-button>
+                        </a>
 
                         <x-primary-button type="submit">
                             {{ $id ? 'Actualizar Usuario' : 'Crear Usuario' }}

@@ -16,7 +16,7 @@
         <div class="flex items-center justify-between p-3 border-b">
             <h3 class="font-semibold text-gray-700">Notificaciones</h3>
             @if($unreadCount > 0)
-                <button wire:click="markAllAsRead" class="text-xs text-blue-600 hover:text-blue-800">
+                <button wire:click="markAllAsRead" class="text-xs text-[#1AAD8A] hover:text-[#0F614D]">
                     Marcar todas como leídas
                 </button>
             @endif
@@ -25,14 +25,14 @@
         <div class="max-h-[350px] overflow-y-auto">
             @if(count($notifications) > 0)
                 @foreach($notifications as $notification)
-                    <div class="flex p-3 border-b hover:bg-gray-50 {{ !$notification->isRead() ? 'bg-blue-50' : '' }}">
+                    <div class="flex p-3 border-b hover:bg-gray-50 {{ !$notification->isRead() ? 'bg-[#E6F9F4]' : '' }}">
                         <div class="flex-1 w-full">
                             <p class="text-sm font-semibold text-gray-800">{{ $notification->title }}</p>
                             <p class="text-sm text-gray-600">{{ $notification->message }}</p>
                             <div class="flex items-center justify-between mt-1">
                                 <p class="text-xs text-gray-500">{{ $notification->created_at->diffForHumans() }}</p>
                                 @if(!$notification->isRead())
-                                    <button wire:click="markAsRead({{ $notification->id }})" class="text-xs text-blue-600 hover:text-blue-800">
+                                    <button wire:click="markAsRead({{ $notification->id }})" class="text-xs text-[#1AAD8A] hover:text-[#0F614D]">
                                         Marcar como leída
                                     </button>
                                 @endif

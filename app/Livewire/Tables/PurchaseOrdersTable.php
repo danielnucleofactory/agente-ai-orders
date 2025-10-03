@@ -63,8 +63,8 @@ class PurchaseOrdersTable extends DataTableComponent
             Column::make('Acciones', 'id')
                 ->format(function($value, $row) {
                     return '<div class="flex space-x-2">
-                        <a href="/purchase-orders/'.$row->id.'" class="text-indigo-600 hover:text-indigo-900">Ver</a>
-                        <a href="/purchase-orders/'.$row->id.'/edit" class="text-blue-600 hover:text-blue-900">Editar</a>
+                        <a href="/purchase-orders/'.$row->id.'" class="text-[#1AAD8A] hover:text-indigo-900">Ver</a>
+                        <a href="/purchase-orders/'.$row->id.'/edit" class="text-[#1AAD8A] hover:text-blue-900">Editar</a>
                     </div>';
                 })->html(),
         ];

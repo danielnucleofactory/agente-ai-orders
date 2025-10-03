@@ -9,7 +9,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <style>
             .multi-select {
-                border: 2px solid #7288FF !important;
+                border: 2px solid #28C7A1 !important;
                 border-radius: 0.75rem !important;
                 padding: 0.25rem 0.75rem !important;
                 background: #fff;
@@ -19,7 +19,7 @@
             .multi-select-trigger {
                 min-height: 38px;
                 font-size: 1rem;
-                color: #565AFF;
+                color: #1AAD8A;
                 background: transparent;
                 border: none;
                 outline: none;
@@ -32,9 +32,9 @@
             }
             .multi-select-content {
                 border-radius: 0.75rem;
-                border: 2px solid #7288FF;
+                border: 2px solid #28C7A1;
                 margin-top: 0.25rem;
-                box-shadow: 0 2px 8px rgba(86,90,255,0.08);
+                box-shadow: 0 2px 8px rgba(26,173,138,0.08);
                 max-height: 70vh;
                 overflow-y: auto;
                 z-index: 9999;
@@ -51,12 +51,12 @@
             }
             
             .multi-select-content::-webkit-scrollbar-thumb {
-                background: #565AFF;
+                background: #1AAD8A;
                 border-radius: 4px;
             }
             
             .multi-select-content::-webkit-scrollbar-thumb:hover {
-                background: #434ad1;
+                background: #127A62;
             }
             
             /* Mejor separación visual para las opciones */
@@ -75,20 +75,20 @@
             }
             
             .multi-select-option:hover {
-                background-color: #f8f9ff;
+                background-color: #E6F9F4;
             }
             
 
             .multi-select-search-input {
                 border-radius: 0.5rem;
-                border: 1px solid #7288FF;
+                border: 1px solid #28C7A1;
                 padding: 0.125rem 0.375rem;
                 margin-bottom: 0.125rem;
                 width: 100%;
                 font-size: 12px;
             }
             .multi-select-value {
-                color: #565AFF;
+                color: #1AAD8A;
                 font-size: 1rem;
                 font-weight: 500;
             }
@@ -104,21 +104,21 @@
     <!-- Filter Controls -->
     <div class="filters-section" style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: nowrap; font-family: 'Lato', sans-serif;">
       <div class="filter-group" data-filter="date-from" style="width: 180px;">
-        <label class="filter-label" style="color: #565AFF; font-size: 14px;">Fecha inicio</label>
-        <input type="date" id="startDate" class="date-input" style="height: 40px; width: 180px; padding: 8px 14px; border: 2px solid #7288FF; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
+        <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Fecha inicio</label>
+        <input type="date" id="startDate" class="date-input" style="height: 40px; width: 180px; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
       </div>
       <div class="filter-group" data-filter="date-to" style="width: 180px;">
-        <label class="filter-label" style="color: #565AFF; font-size: 14px;">Fecha fin</label>
-        <input type="date" id="endDate" class="date-input" style="height: 40px; width: 180px; padding: 8px 14px; border: 2px solid #7288FF; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
+        <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Fecha fin</label>
+        <input type="date" id="endDate" class="date-input" style="height: 40px; width: 180px; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
       </div>
       <div class="filter-group" data-filter="vendor" style="width: 180px;">
-        <label class="filter-label" style="color: #565AFF; font-size: 14px;">Vendor</label>
-        <div class="multi-select" data-multiselect data-placeholder="Seleccionar vendors" style="height: 40px; width: 180px; border: 2px solid #7288FF; border-radius: 10px; padding: 0; background: #fff;">
+        <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Vendor</label>
+        <div class="multi-select" data-multiselect data-placeholder="Seleccionar vendors" style="height: 40px; width: 180px; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
           <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
             <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar vendors</span>
             <i class="fas fa-chevron-down multi-select-icon"></i>
           </button>
-          <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #7288FF; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(86,90,255,0.08); max-height: 70vh; overflow-y: auto;">
+          <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #28C7A1; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(26,173,138,0.08); max-height: 70vh; overflow-y: auto;">
             <div class="multi-select-search">
               <input type="text" placeholder="Buscar vendors... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
             </div>
@@ -128,8 +128,8 @@
         </div>
       </div>
       <div class="action-buttons" style="display: flex; gap: 16px; align-items: flex-end; margin-left: auto;">
-        <button class="btn-primary" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: none; background: #565AFF; color: #F7F7F7; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; justify-content: center;">Aceptar</button>
-        <button class="btn-secondary" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: 2px solid #565AFF; background: #fff; color: #565AFF; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; gap: 8px; justify-content: center;">
+        <button class="btn-primary" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: none; background: #1AAD8A; color: #F7F7F7; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; justify-content: center;">Aceptar</button>
+        <button class="btn-secondary" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: 2px solid #1AAD8A; background: #fff; color: #1AAD8A; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; gap: 8px; justify-content: center;">
           <i class="fas fa-download"></i>
           Descargar
         </button>

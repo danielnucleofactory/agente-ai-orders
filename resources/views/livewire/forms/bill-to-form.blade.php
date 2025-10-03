@@ -99,11 +99,11 @@
 
             <div class="mt-6">
                 <div class="flex flex-col gap-2">
-                    <label for="notes" class="ml-[1.125rem] text-sm font-medium text-[#565AFF]">
+                    <label for="notes" class="ml-[1.125rem] text-sm font-medium text-[#1AAD8A]">
                         Notas
                     </label>
                     <textarea id="notes" name="notes"
-                        class="w-full rounded-xl border-2 border-[#9AABFF] px-3 py-[0.625rem] text-lg text-[#2E2E2E] placeholder:text-[#AFAFAF]"
+                        class="w-full rounded-xl border-2 border-[#28C7A1] px-3 py-[0.625rem] text-lg text-[#2E2E2E] placeholder:text-[#AFAFAF]"
                         placeholder="Ingrese notas adicionales" wire:model="notes"></textarea>
                 </div>
             </div>
@@ -112,7 +112,7 @@
                 <a href="{{ route('bill-to.index') }}" class="px-4 py-2 text-gray-700 bg-gray-300 rounded-md hover:bg-gray-400">
                     Cancelar
                 </a>
-                <button type="submit" class="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                <button type="submit" class="px-4 py-2 text-white bg-[#1AAD8A] rounded-md hover:bg-[#127A62]">
                     {{ $isEdit ? 'Actualizar' : 'Crear' }} Dirección de Facturación
                 </button>
             </div>

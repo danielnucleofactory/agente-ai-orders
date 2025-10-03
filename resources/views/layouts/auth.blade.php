@@ -31,7 +31,7 @@
 	  <div class="flex flex-col items-center justify-center w-full p-8 md:w-1/2">
 		 <!-- Logo centrado arriba del formulario -->
 		 <div class="mb-16">
-			<img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-raga-6PCPjK1wPB9TDZT1TKqq7OV20IR1wb.png" alt="RAGA-x Logo" class="h-14">
+			<img src="{{ asset('img/logo-olo.svg') }}" alt="OLO Logo" class="h-14">
 		 </div>
 
          {{ $slot }}

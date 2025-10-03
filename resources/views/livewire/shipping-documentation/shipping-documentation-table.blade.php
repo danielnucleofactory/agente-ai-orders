@@ -38,49 +38,49 @@
                     <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                         <div class="px-4 py-2">
                             <label class="flex items-center space-x-2">
-                                <input type="checkbox" wire:model.live="visibleColumns.document_number" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <input type="checkbox" wire:model.live="visibleColumns.document_number" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-blue-500">
                                 <span class="text-sm text-gray-700">Documento</span>
                             </label>
                         </div>
                         <div class="px-4 py-2">
                             <label class="flex items-center space-x-2">
-                                <input type="checkbox" wire:model.live="visibleColumns.purchase_orders" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <input type="checkbox" wire:model.live="visibleColumns.purchase_orders" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-blue-500">
                                 <span class="text-sm text-gray-700">Órdenes de Compra</span>
                             </label>
                         </div>
                         <div class="px-4 py-2">
                             <label class="flex items-center space-x-2">
-                                <input type="checkbox" wire:model.live="visibleColumns.status" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <input type="checkbox" wire:model.live="visibleColumns.status" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-blue-500">
                                 <span class="text-sm text-gray-700">Estado</span>
                             </label>
                         </div>
                         <div class="px-4 py-2">
                             <label class="flex items-center space-x-2">
-                                <input type="checkbox" wire:model.live="visibleColumns.modality" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <input type="checkbox" wire:model.live="visibleColumns.modality" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-blue-500">
                                 <span class="text-sm text-gray-700">Modalidad</span>
                             </label>
                         </div>
                         <div class="px-4 py-2">
                             <label class="flex items-center space-x-2">
-                                <input type="checkbox" wire:model.live="visibleColumns.incoterms" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <input type="checkbox" wire:model.live="visibleColumns.incoterms" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-blue-500">
                                 <span class="text-sm text-gray-700">Incoterms</span>
                             </label>
                         </div>
                         <div class="px-4 py-2">
                             <label class="flex items-center space-x-2">
-                                <input type="checkbox" wire:model.live="visibleColumns.vendor" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <input type="checkbox" wire:model.live="visibleColumns.vendor" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-blue-500">
                                 <span class="text-sm text-gray-700">Vendedor</span>
                             </label>
                         </div>
                         <div class="px-4 py-2">
                             <label class="flex items-center space-x-2">
-                                <input type="checkbox" wire:model.live="visibleColumns.hub" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <input type="checkbox" wire:model.live="visibleColumns.hub" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-blue-500">
                                 <span class="text-sm text-gray-700">Hub</span>
                             </label>
                         </div>
                         <div class="px-4 py-2">
                             <label class="flex items-center space-x-2">
-                                <input type="checkbox" wire:model.live="visibleColumns.actions" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <input type="checkbox" wire:model.live="visibleColumns.actions" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-blue-500">
                                 <span class="text-sm text-gray-700">Acciones</span>
                             </label>
                         </div>
@@ -103,7 +103,7 @@
 
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-[#E0E5FF]">
+            <thead class="bg-[#D4F5ED]">
                 <tr>
                     @if($visibleColumns['document_number'])
                     <th scope="col" class="px-6 py-5 text-xs font-bold tracking-wider text-left text-black uppercase cursor-pointer" wire:click="sortBy('document_number')">
@@ -171,7 +171,7 @@
                         @if($visibleColumns['document_number'])
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">
-                                <a href="{{ route('purchase-orders.consolidated-order-detail', $document->id) }}" class="text-blue-600 underline hover:text-blue-900">
+                                <a href="{{ route('purchase-orders.consolidated-order-detail', $document->id) }}" class="text-[#1AAD8A] underline hover:text-[#0F614D]">
                                     {{ $document->document_number }}
                                 </a>
                             </div>
@@ -183,7 +183,7 @@
                             <div class="text-sm text-gray-900">
                                 @if(isset($groupedPurchaseOrders[$document->id]))
                                     @foreach($groupedPurchaseOrders[$document->id] as $order)
-                                        <a href="{{ route('purchase-orders.consolidated-order-detail', $order->id) }}" class="text-blue-600 underline hover:text-blue-900">
+                                        <a href="{{ route('purchase-orders.consolidated-order-detail', $order->id) }}" class="text-[#1AAD8A] underline hover:text-[#0F614D]">
                                             {{ $order->order_number }}
                                         </a>  / <br/>
                                     @endforeach
@@ -231,7 +231,7 @@
                         @if($visibleColumns['modality'])
                         <td class="px-6 py-4 whitespace-nowrap">
                             <!-- Terrestre -->
-                            <div class="flex items-center bg-[#565AFF] text-white px-3 py-1.5 rounded-md gap-2">
+                            <div class="flex items-center bg-[#1AAD8A] text-white px-3 py-1.5 rounded-md gap-2">
                                 <span class="font-medium">Terrestre</span>
                                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M11.6667 5.83398H13.6145C13.8183 5.83398 13.9202 5.83398 14.0161 5.85701C14.1011 5.87742 14.1824 5.91109 14.257 5.95678C14.3411 6.00832 14.4131 6.08038 14.5573 6.22451L17.9429 9.61013C18.087 9.75425 18.1591 9.82632 18.2106 9.91041C18.2563 9.98497 18.29 10.0663 18.3104 10.1513C18.3334 10.2472 18.3334 10.3491 18.3334 10.5529V12.9173C18.3334 13.3056 18.3334 13.4997 18.27 13.6529C18.1854 13.8571 18.0232 14.0193 17.819 14.1039C17.6658 14.1673 17.4717 14.1673 17.0834 14.1673M12.9167 14.1673H11.6667M11.6667 14.1673V6.00065C11.6667 5.06723 11.6667 4.60052 11.4851 4.244C11.3253 3.9304 11.0703 3.67543 10.7567 3.51564C10.4002 3.33398 9.9335 3.33398 9.00008 3.33398H4.33342C3.39999 3.33398 2.93328 3.33398 2.57676 3.51564C2.26316 3.67543 2.00819 3.9304 1.8484 4.244C1.66675 4.60052 1.66675 5.06723 1.66675 6.00065V12.5007C1.66675 13.4211 2.41294 14.1673 3.33341 14.1673M11.6667 14.1673H8.33342M8.33342 14.1673C8.33342 15.548 7.21413 16.6673 5.83341 16.6673C4.4527 16.6673 3.33341 15.548 3.33341 14.1673M8.33342 14.1673C8.33342 12.7866 7.21413 11.6673 5.83341 11.6673C4.4527 11.6673 3.33341 12.7866 3.33341 14.1673M17.0834 14.584C17.0834 15.7346 16.1507 16.6673 15.0001 16.6673C13.8495 16.6673 12.9167 15.7346 12.9167 14.584C12.9167 13.4334 13.8495 12.5007 15.0001 12.5007C16.1507 12.5007 17.0834 13.4334 17.0834 14.584Z" stroke="#F7F7F7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -261,7 +261,7 @@
 
                         @if($visibleColumns['actions'])
                         <td class="text-sm font-medium whitespace-nowrap">
-                            <a href="{{ route('purchase-orders.consolidated-order-detail', $document->id) }}" class="flex items-center justify-center text-indigo-600 hover:text-indigo-900">
+                            <a href="{{ route('purchase-orders.consolidated-order-detail', $document->id) }}" class="flex items-center justify-center text-[#1AAD8A] hover:text-[#0F614D]">
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M1.61342 8.4761C1.52262 8.33234 1.47723 8.26046 1.45182 8.1496C1.43273 8.06632 1.43273 7.93498 1.45182 7.85171C1.47723 7.74084 1.52262 7.66896 1.61341 7.5252C2.36369 6.33721 4.59693 3.33398 8.00027 3.33398C11.4036 3.33398 13.6369 6.33721 14.3871 7.5252C14.4779 7.66896 14.5233 7.74084 14.5487 7.85171C14.5678 7.93498 14.5678 8.06632 14.5487 8.1496C14.5233 8.26046 14.4779 8.33234 14.3871 8.4761C13.6369 9.66409 11.4036 12.6673 8.00027 12.6673C4.59693 12.6673 2.36369 9.66409 1.61342 8.4761Z" stroke="#666666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                     <path d="M8.00027 10.0007C9.10484 10.0007 10.0003 9.10522 10.0003 8.00065C10.0003 6.89608 9.10484 6.00065 8.00027 6.00065C6.8957 6.00065 6.00027 6.89608 6.00027 8.00065C6.00027 9.10522 6.8957 10.0007 8.00027 10.0007Z" stroke="#666666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

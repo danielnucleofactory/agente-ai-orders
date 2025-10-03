@@ -64,7 +64,7 @@
 @endphp
 
 
-<li class="kanban-card relative flex justify-between min-h-[180px] w-full gap-5 rounded-[0.625rem] border-2 border-[#E0E5FF] bg-white px-4 py-2 text-xs"
+<li class="kanban-card relative flex justify-between min-h-[180px] w-full gap-5 rounded-[0.625rem] border-2 border-[#D4F5ED] bg-white px-4 py-2 text-xs"
     x-data x-init="$el.addEventListener('click', () => {
         window.selectedTaskId = '{{ $trackingId }}';
         console.log('Card clicked, set ID:', window.selectedTaskId);
@@ -76,7 +76,7 @@
             <div class="space-y-1 text-sm">
                 <p>
                     @if (!$isTrashed)
-                        <a class="text-[#190FDB] underline underline-offset-4"
+                        <a class="text-[#127A62] underline underline-offset-4"
                            href="/purchase-orders/{{ $trackingId }}/detail">
                             PO: {{ $po }}
                         </a>
