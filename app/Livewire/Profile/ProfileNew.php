@@ -62,31 +62,43 @@ class ProfileNew extends Component {
     #[Watch('profileImage')]
     public function updatedProfileImage()
     {
-        $this->validate([
-            'profileImage' => 'image|max:5000',
-        ], [
-            'profileImage.image' => 'El archivo debe ser una imagen.',
-            'profileImage.max' => 'El tamaño máximo de la imagen es de 5MB.',
-        ]);
+        try {
+            $this->validate([
+                'profileImage' => 'image|max:5000',
+            ], [
+                'profileImage.image' => 'El archivo debe ser una imagen.',
+                'profileImage.max' => 'El tamaño máximo de la imagen es de 5MB.',
+            ]);
 
-        // Eliminar todas las imágenes anteriores
-        $this->user->clearMediaCollection('profile-photo');
+            // Eliminar todas las imágenes anteriores
+            $this->user->clearMediaCollection('profile-photo');
 
-        // Agregar la nueva imagen a la colección
-        $media = $this->user->addMediaFromStream($this->profileImage->get())
-            ->usingName($this->user->name . '-profile')
-            ->usingFileName($this->profileImage->hashName())
-            ->toMediaCollection('profile-photo');
+            // Agregar la nueva imagen a la colección
+            $media = $this->user->addMedia($this->profileImage->getRealPath())
+                ->usingName($this->user->name . '-profile')
+                ->usingFileName($this->profileImage->hashName())
+                ->toMediaCollection('profile-photo');
 
-        // Limpiar la variable temporal
-        $this->profileImage = null;
+            // Limpiar la variable temporal
+            $this->profileImage = null;
 
-        // Forzar la actualización del usuario y la vista
-        $this->user = $this->user->fresh();
+            // Forzar la actualización del usuario y la vista
+            $this->user = $this->user->fresh();
 
-        // Emitir un evento para actualizar la interfaz
-        $this->dispatch('profile-photo-updated');
-        $this->dispatch('open-modal', 'successModal');
+            // Emitir un evento para actualizar la interfaz
+            $this->dispatch('profile-photo-updated');
+            $this->dispatch('open-modal', 'successModal');
+
+        } catch (\Exception $e) {
+            \Log::error('Error uploading profile image: ' . $e->getMessage(), [
+                'user_id' => $this->user->id,
+                'file_name' => $this->profileImage ? $this->profileImage->getClientOriginalName() : 'unknown',
+                'exception' => $e
+            ]);
+
+            $this->addError('profileImage', 'Error al subir la imagen: ' . $e->getMessage());
+            $this->profileImage = null;
+        }
     }
 
     public function render() {
