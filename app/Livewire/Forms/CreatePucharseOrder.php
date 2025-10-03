@@ -757,8 +757,6 @@ class CreatePucharseOrder extends Component
                 'logistics_incoterm' => "required|string|in:$allowedIncoterms",
                 'price_incoterm' => "required|string|in:$allowedIncoterms",
                 'vendor_id' => 'required',
-                'bonded_warehouse_exit' => 'required|date',
-                'bonded_warehouse_enter' => 'required|date',
                 'category'               => 'required|string',
                 'factory_proforma_number'=> 'required|string',
                 'route_label'            => 'required|string',
