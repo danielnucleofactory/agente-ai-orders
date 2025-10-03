@@ -101,7 +101,7 @@
         <!-- Tabla -->
         <div class="overflow-x-auto bg-white rounded-lg shadow">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-[#E0E5FF]">
+                <thead class="bg-[#D4F5ED]">
                     <tr>
                         @if($visibleColumns['order_number'])
                         <th scope="col" class="px-6 py-5 text-xs font-bold tracking-wider text-left text-black uppercase cursor-pointer">
