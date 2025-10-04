@@ -24,6 +24,15 @@ class PorthSyncService
     public function syncDocument($documentId, $documentType)
     {
         try {
+            // Solo procesar ShippingDocument
+            if ($documentType !== ShippingDocument::class) {
+                Log::info('Porth sync skipped - only ShippingDocument supported', [
+                    'document_type' => $documentType,
+                    'document_id' => $documentId
+                ]);
+                return false;
+            }
+
             $document = $documentType::find($documentId);
             if (!$document) {
                 Log::error('Document not found for sync', ['id' => $documentId, 'type' => $documentType]);
@@ -66,7 +75,7 @@ class PorthSyncService
     {
         $identifiers = [];
 
-        // Para ShippingDocument
+        // Solo para ShippingDocument
         if ($document instanceof ShippingDocument) {
             if ($document->tracking_id) {
                 $identifiers[] = ['type' => 'tracking_id', 'value' => $document->tracking_id];
@@ -82,17 +91,10 @@ class PorthSyncService
             }
         }
 
-        // Para PurchaseOrder
+        // PurchaseOrder no se sincroniza con Porth
         if ($document instanceof PurchaseOrder) {
-            if ($document->tracking_id) {
-                $identifiers[] = ['type' => 'tracking_id', 'value' => $document->tracking_id];
-            }
-            if ($document->mbl_number) {
-                $identifiers[] = ['type' => 'mbl_number', 'value' => $document->mbl_number];
-            }
-            if ($document->container_number) {
-                $identifiers[] = ['type' => 'container_number', 'value' => $document->container_number];
-            }
+            Log::info('PurchaseOrder detected - skipping Porth sync (only ShippingDocument supported)');
+            return [];
         }
 
         return $identifiers;
@@ -208,7 +210,7 @@ class PorthSyncService
             ]
         ];
 
-        // Enriquecer con datos del documento
+        // Enriquecer con datos del ShippingDocument
         if ($document instanceof ShippingDocument) {
             $basePayload = array_merge($basePayload, [
                 'masterBl' => $document->mbl_number,
@@ -219,17 +221,10 @@ class PorthSyncService
             ]);
         }
 
+        // PurchaseOrder no se sincroniza con Porth
         if ($document instanceof PurchaseOrder) {
-            $basePayload = array_merge($basePayload, [
-                'incoterm' => $document->incoterms,
-                'modality' => $document->mode,
-                'etd' => $document->date_etd?->toISOString(),
-                'eta' => $document->date_eta?->toISOString(),
-                'tags' => array_merge($basePayload['tags'], [
-                    'po_number:' . $document->order_number,
-                    'order_number:' . $document->order_number
-                ])
-            ]);
+            Log::warning('Attempted to build Porth payload for PurchaseOrder - this should not happen');
+            return null;
         }
 
         return $basePayload;
