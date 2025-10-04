@@ -129,13 +129,36 @@ class PorthSyncService
             $endpoint = $this->getSearchEndpoint($identifier['type']);
             $url = "{$this->porthBaseUrl}{$endpoint}/{$identifier['value']}";
 
+            Log::info('PorthSyncService: Searching in Porth', [
+                'identifier' => $identifier,
+                'endpoint' => $endpoint,
+                'url' => $url,
+                'api_key_configured' => !empty($this->porthApiKey)
+            ]);
+
             $response = Http::withHeaders([
                 'apikey' => $this->porthApiKey,
                 'Accept' => 'application/json'
             ])->timeout(90)->get($url);
 
             if ($response->successful()) {
-                return $response->json();
+                $data = $response->json();
+                Log::info('PorthSyncService: Found data in Porth', [
+                    'identifier' => $identifier,
+                    'response_status' => $response->status(),
+                    'response_data' => $data,
+                    'has_master_bl' => isset($data['masterBl']),
+                    'has_container' => isset($data['container']),
+                    'master_bl_value' => $data['masterBl'] ?? null,
+                    'container_value' => $data['container'] ?? null
+                ]);
+                return $data;
+            } else {
+                Log::info('PorthSyncService: No data found in Porth', [
+                    'identifier' => $identifier,
+                    'response_status' => $response->status(),
+                    'response_body' => $response->body()
+                ]);
             }
 
             return null;
@@ -143,7 +166,8 @@ class PorthSyncService
         } catch (\Exception $e) {
             Log::error('Error searching in Porth', [
                 'error' => $e->getMessage(),
-                'identifier' => $identifier
+                'identifier' => $identifier,
+                'trace' => $e->getTraceAsString()
             ]);
             return null;
         }
@@ -236,13 +260,51 @@ class PorthSyncService
     private function updateDocumentWithPorthData($document, $result)
     {
         try {
+            // Log detallado de los datos que vienen de Porth
+            Log::info('PorthSyncService: updateDocumentWithPorthData called', [
+                'document_id' => $document->id,
+                'document_mbl_number' => $document->mbl_number,
+                'document_container_number' => $document->container_number,
+                'result_data' => $result['data'] ?? null,
+                'result_action' => $result['action'] ?? null,
+                'result_status' => $result['status'] ?? null
+            ]);
+
             if (isset($result['data']['id'])) {
+                // Guardar el estado original antes de la actualización
+                $originalMbl = $document->mbl_number;
+                $originalContainer = $document->container_number;
+                
                 $document->porth_shipment_id = $result['data']['id'];
+                
+                // Verificar si Porth está devolviendo datos que puedan sobrescribir nuestros campos
+                if (isset($result['data']['masterBl']) && $result['data']['masterBl'] !== $originalMbl) {
+                    Log::warning('Porth returned different MBL number', [
+                        'document_id' => $document->id,
+                        'local_mbl' => $originalMbl,
+                        'porth_mbl' => $result['data']['masterBl'],
+                        'action' => 'keeping_local_value'
+                    ]);
+                    // NO sobrescribir el mbl_number local
+                }
+                
+                if (isset($result['data']['container']) && $result['data']['container'] !== $originalContainer) {
+                    Log::warning('Porth returned different container number', [
+                        'document_id' => $document->id,
+                        'local_container' => $originalContainer,
+                        'porth_container' => $result['data']['container'],
+                        'action' => 'keeping_local_value'
+                    ]);
+                    // NO sobrescribir el container_number local
+                }
+                
                 $document->save();
 
-                Log::info('Updated document with Porth shipment ID', [
+                Log::info('Updated document with Porth shipment ID (preserving local values)', [
                     'document_id' => $document->id,
-                    'porth_shipment_id' => $result['data']['id']
+                    'porth_shipment_id' => $result['data']['id'],
+                    'final_mbl_number' => $document->mbl_number,
+                    'final_container_number' => $document->container_number
                 ]);
             }
         } catch (\Exception $e) {

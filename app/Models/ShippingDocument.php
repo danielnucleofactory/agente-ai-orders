@@ -172,6 +172,16 @@ class ShippingDocument extends Model implements HasMedia
      */
     protected static function dispatchPorthSync($document)
     {
+        // Verificar si la sincronización está habilitada
+        $syncEnabled = config('services.porth.sync_enabled', true);
+        if (!$syncEnabled) {
+            \Log::info('Porth sync disabled by configuration', [
+                'document_id' => $document->id,
+                'sync_enabled' => $syncEnabled
+            ]);
+            return;
+        }
+
         // Verificar si hay campos que requieren sincronización
         $syncFields = ['tracking_id', 'mbl_number', 'container_number', 'booking_code'];
         $hasChanges = false;
@@ -184,6 +194,13 @@ class ShippingDocument extends Model implements HasMedia
         }
 
         if ($hasChanges) {
+            \Log::info('Dispatching Porth sync job', [
+                'document_id' => $document->id,
+                'changed_fields' => array_filter($syncFields, function($field) use ($document) {
+                    return $document->isDirty($field) && !empty($document->$field);
+                })
+            ]);
+
             // Disparar job de sincronización con delay
             \App\Jobs\PorthSyncJob::dispatch($document->id, get_class($document))
                 ->onQueue('porth-sync')
