@@ -41,6 +41,7 @@ return [
 
     'porth' => [
         'api_key' => env('PORTH_API_KEY'),
+        'base_url' => env('PORTH_BASE_URL', 'https://porth-api.fly.dev'),
     ],
 
 ];
