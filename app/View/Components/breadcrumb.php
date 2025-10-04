@@ -22,7 +22,7 @@ class Breadcrumb extends Component
         'purchase-orders.edit' => 'Editar',
         'purchase-orders.tracking' => 'Seguimiento',
         'purchase-orders.kanban' => 'Kanban',
-        'purchase-orders.consolidated-orders' => 'Órdenes consolidadas',
+        'purchase-orders.consolidated-orders' => 'Documentación de embarque',
         'purchase-orders.consolidated-order-detail' => 'Detalle de orden consolidada',
         'products.index' => 'Productos',
         'products.create' => 'Nuevo producto',
