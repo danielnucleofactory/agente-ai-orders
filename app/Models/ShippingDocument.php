@@ -18,6 +18,7 @@ class ShippingDocument extends Model implements HasMedia
         'document_number',
         'status',
         'creation_date',
+        'porth_shipment_id',
         'estimated_departure_date',
         'estimated_arrival_date',
         'actual_departure_date',
@@ -147,5 +148,46 @@ class ShippingDocument extends Model implements HasMedia
     public function files()
     {
         return $this->media()->where('collection_name', 'shipping_documents');
+    }
+
+    /**
+     * Boot method to add event listeners
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Disparar sincronización automática cuando se crea o actualiza
+        static::saved(function ($document) {
+            static::dispatchPorthSync($document);
+        });
+
+        static::updated(function ($document) {
+            static::dispatchPorthSync($document);
+        });
+    }
+
+    /**
+     * Disparar sincronización con Porth
+     */
+    protected static function dispatchPorthSync($document)
+    {
+        // Verificar si hay campos que requieren sincronización
+        $syncFields = ['tracking_id', 'mbl_number', 'container_number', 'booking_code'];
+        $hasChanges = false;
+
+        foreach ($syncFields as $field) {
+            if ($document->isDirty($field) && !empty($document->$field)) {
+                $hasChanges = true;
+                break;
+            }
+        }
+
+        if ($hasChanges) {
+            // Disparar job de sincronización con delay
+            \App\Jobs\PorthSyncJob::dispatch($document->id, get_class($document))
+                ->onQueue('porth-sync')
+                ->delay(now()->addSeconds(5));
+        }
     }
 }
