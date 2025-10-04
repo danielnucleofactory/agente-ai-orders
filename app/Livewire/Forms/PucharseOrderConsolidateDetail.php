@@ -45,7 +45,16 @@ class PucharseOrderConsolidateDetail extends Component {
     public $totalSavingNotExecuted = 0;
 
     public function mount($id = null) {
-        $this->shippingDocumentId = $id;
+        // Convert to integer if it's a numeric string
+        $this->shippingDocumentId = is_numeric($id) ? (int)$id : $id;
+        
+        \Log::info('PucharseOrderConsolidateDetail mount:', [
+            'original_id' => $id,
+            'converted_id' => $this->shippingDocumentId,
+            'id_type' => gettype($this->shippingDocumentId),
+            'is_numeric' => is_numeric($this->shippingDocumentId)
+        ]);
+        
         $this->loadRelatedPurchaseOrders();
         $this->loadTrackingData();
         $this->loadComments();
@@ -90,13 +99,35 @@ class PucharseOrderConsolidateDetail extends Component {
             }, 'company'])->where('document_number', $this->shippingDocumentId)->first();
         }
 
+        // If still not found, try to find by any field
+        if (!$shippingDocument) {
+            $shippingDocument = ShippingDocument::with(['purchaseOrders' => function($query) {
+                $this->applySorting($query);
+            }, 'company'])->where('id', $this->shippingDocumentId)
+                ->orWhere('document_number', $this->shippingDocumentId)
+                ->first();
+        }
+
+        \Log::info('Shipping document query result:', [
+            'found' => $shippingDocument ? 'yes' : 'no',
+            'id' => $shippingDocument->id ?? null,
+            'document_number' => $shippingDocument->document_number ?? null,
+            'mbl_number' => $shippingDocument->mbl_number ?? null,
+            'container_number' => $shippingDocument->container_number ?? null,
+            'company_loaded' => $shippingDocument->relationLoaded('company') ? 'yes' : 'no',
+            'company_name' => $shippingDocument->company->name ?? 'N/A'
+        ]);
+
         if (!$shippingDocument) {
             return;
         }
 
         \Log::info('Loaded shipping document:', [
             'id' => $shippingDocument->id,
-            'tracking_id' => $shippingDocument->tracking_id
+            'tracking_id' => $shippingDocument->tracking_id,
+            'mbl_number' => $shippingDocument->mbl_number,
+            'container_number' => $shippingDocument->container_number,
+            'company_name' => $shippingDocument->company->name ?? 'N/A'
         ]);
 
         // Store the shipping document for the view
