@@ -77,12 +77,15 @@
                                 // Event listeners
                                 window.addEventListener('document-moved-successfully', () => {
                                     console.log('Document moved successfully');
-                                    $wire.loadData();
+                                    // Forzar recarga de datos para asegurar que la UI se actualice
+                                    $wire.loadData().then(() => {
+                                        console.log('Data reloaded successfully');
+                                    });
                                 });
 
                                 window.addEventListener('error', (e) => {
                                     console.error('Error moving document:', e.detail);
-                                    // Revertir el movimiento
+                                    // Revertir el movimiento visualmente
                                     const cards = document.querySelectorAll('.document-card');
                                     cards.forEach(card => {
                                         if (card.getAttribute('data-document-id') === documentId) {
@@ -92,6 +95,8 @@
                                             }
                                         }
                                     });
+                                    // Recargar datos para sincronizar con el backend
+                                    $wire.loadData();
                                 });
                             "
                         >
@@ -156,12 +161,12 @@
                 </div>
 
                 {{-- Consolidador --}}
-                <div class="{{ (isset($columns[1]) && $newColumnId == $columns[1]['id']) ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[3]) && $newColumnId == $columns[3]['id']) ? '' : 'hidden' }}">
                     {{-- sin campos definidos en hoja Etapas --}}
                 </div>
 
                 {{-- Producción (ID: 2) --}}
-                <div class="{{ (isset($columns[2]) && $newColumnId == $columns[2]['id']) ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[1]) && $newColumnId == $columns[1]['id']) ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {{-- 1) Carga Lista Variable --}}
                         <x-form-input class="mb-4">
@@ -194,7 +199,7 @@
                 </div>
 
                 {{-- Booking (ID: 3) --}}
-                <div class="{{ (isset($columns[3]) && $newColumnId == $columns[3]['id']) ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[2]) && $newColumnId == $columns[2]['id']) ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <x-form-input class="mb-4">
                             <x-slot:label>Solicitud de Booking</x-slot:label>

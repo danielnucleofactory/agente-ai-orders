@@ -99,13 +99,15 @@ class ShippingDocumentationKanban extends Component
             'attachment' => 'nullable|file|max:5120', // 5MB
         ];
 
-        if ($this->newColumnId == $this->columns[1]['id']) {
+        // Columna 0: Consolidador (Nueva)
+        if ($this->newColumnId == $this->columns[0]['id']) {
             return $common + [
                     'release_date' => 'nullable|date',
                 ];
         }
 
-        if ($this->newColumnId == $this->columns[2]['id']) {
+        // Columna 1: Producción
+        if ($this->newColumnId == $this->columns[1]['id']) {
             return $common + [
                     // Necesarios (no obligatorios): fecha teórica
                     'date_theorical_load' => 'nullable|date',
@@ -116,7 +118,8 @@ class ShippingDocumentationKanban extends Component
                 ];
         }
 
-        if ($this->newColumnId == $this->columns[3]['id']) {
+        // Columna 2: Booking
+        if ($this->newColumnId == $this->columns[2]['id']) {
             return $common + [
                     // Requeridos
                     'date_booking_request'     => 'required|date',
@@ -128,7 +131,8 @@ class ShippingDocumentationKanban extends Component
                 ];
         }
 
-        if ($this->newColumnId == $this->columns[4]['id']) {
+        // Columna 3: Tránsito
+        if ($this->newColumnId == $this->columns[3]['id']) {
             return $common + [
                     // Requeridos
                     'actual_departure_date'  => 'required|date', // ETD real
@@ -148,20 +152,23 @@ class ShippingDocumentationKanban extends Component
                 ];
         }
 
-        if ($this->newColumnId == $this->columns[5]['id']) {
+        // Columna 4: Puerto
+        if ($this->newColumnId == $this->columns[4]['id']) {
             return $common + [
                     'actual_arrival_date' => 'required|date', // ETA real
                 ];
         }
 
-        if ($this->newColumnId == $this->columns[6]['id']) {
+        // Columna 5: Almacén Fiscal
+        if ($this->newColumnId == $this->columns[5]['id']) {
             return $common + [
                     'bonded_warehouse_enter' => 'required|date',
                     'bonded_warehouse_exit'  => 'required|date',
                 ];
         }
 
-        if ($this->newColumnId == $this->columns[7]['id']) {
+        // Columna 6: Ingresada
+        if ($this->newColumnId == $this->columns[6]['id']) {
             return $common + [
                     'receipt_note' => 'nullable|string|max:255',
                 ];
@@ -688,7 +695,7 @@ class ShippingDocumentationKanban extends Component
     // Helper method to update document fields based on column
     private function updateDocumentFields($shippingDoc)
     {
-        // Col 0: Consolidador
+        // Columna 0: Consolidador (Nueva)
         if ($this->newColumnId == $this->columns[0]['id']) {
             if (!is_null($this->release_date)) {
                 $shippingDoc->release_date = $this->release_date;
@@ -696,7 +703,7 @@ class ShippingDocumentationKanban extends Component
             return $shippingDoc;
         }
 
-        // Col 1: Producción
+        // Columna 1: Producción
         if ($this->newColumnId == $this->columns[1]['id']) {
             $shippingDoc->date_theorical_load = $this->date_theorical_load;
             $shippingDoc->date_variable_date  = $this->date_variable_date;
@@ -705,7 +712,7 @@ class ShippingDocumentationKanban extends Component
             return $shippingDoc;
         }
 
-        // Col 2: Booking
+        // Columna 2: Booking
         if ($this->newColumnId == $this->columns[2]['id']) {
             $shippingDoc->date_booking_request     = $this->date_booking_request;
             $shippingDoc->date_booking_authorized  = $this->date_booking_authorized;
@@ -715,7 +722,7 @@ class ShippingDocumentationKanban extends Component
             return $shippingDoc;
         }
 
-        // Col 3: Tránsito
+        // Columna 3: Tránsito
         if ($this->newColumnId == $this->columns[3]['id']) {
             $shippingDoc->actual_departure_date   = $this->actual_departure_date;   // ETD real
             $shippingDoc->estimated_arrival_date  = $this->estimated_arrival_date;  // ETA inicial
@@ -724,7 +731,6 @@ class ShippingDocumentationKanban extends Component
             $shippingDoc->container_number     = $this->container_number;
             $shippingDoc->bill_of_lading       = $this->bill_of_lading;
             $shippingDoc->container_type       = $this->container_type;
-
 
             $shippingDoc->Invoice_amount = $this->Invoice_amount;
             $shippingDoc->shipping_line  = $this->shipping_line;
@@ -736,26 +742,26 @@ class ShippingDocumentationKanban extends Component
             return $shippingDoc;
         }
 
-        // Col 4: Puerto
+        // Columna 4: Puerto
         if ($this->newColumnId == $this->columns[4]['id']) {
             $shippingDoc->actual_arrival_date = $this->actual_arrival_date; // ETA real
             return $shippingDoc;
         }
 
-        // Col 5: Almacén Fiscal
+        // Columna 5: Almacén Fiscal
         if ($this->newColumnId == $this->columns[5]['id']) {
             $shippingDoc->bonded_warehouse_enter = $this->bonded_warehouse_enter;
             $shippingDoc->bonded_warehouse_exit  = $this->bonded_warehouse_exit;
             return $shippingDoc;
         }
 
-        // Col 6: Ingresada
+        // Columna 6: Ingresada
         if ($this->newColumnId == $this->columns[6]['id']) {
             $shippingDoc->receipt_note = $this->receipt_note;
             return $shippingDoc;
         }
 
-        // Col 7,8,9: sin cambios
+        // Otras columnas: sin cambios
         return $shippingDoc;
     }
 
@@ -770,8 +776,8 @@ class ShippingDocumentationKanban extends Component
             $this->isValidating = true;
             $this->dispatch('validating-state-changed', isValidating: true);
 
-            // Verificamos que estamos en la columna que requiere validación
-            if ($this->newColumnId != $this->columns[1]['id']) {
+            // Verificamos que estamos en la columna que requiere validación (Tránsito)
+            if ($this->newColumnId != $this->columns[3]['id']) {
                 $this->isValidating = false;
                 $this->dispatch('validating-state-changed', isValidating: false);
                 return true; // No se requiere validación para otras columnas
@@ -903,12 +909,21 @@ class ShippingDocumentationKanban extends Component
     // First, add a method that handles everything in one go
     public function saveAndMoveDocument()
     {
-
-        $this->validate($this->getRules());
+        try {
+            // Validar los datos del formulario
+            $this->validate($this->getRules());
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Si hay errores de validación, mostrarlos y no cerrar el modal
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'Por favor, complete todos los campos requeridos correctamente.'
+            ]);
+            return;
+        }
 
         try {
-            // Primero validamos los códigos de tracking si es necesario
-            if ($this->newColumnId == $this->columns[1]['id']) {
+            // Primero validamos los códigos de tracking si es necesario (columna Tránsito)
+            if ($this->newColumnId == $this->columns[3]['id']) {
                 // Activar indicador de validación
                 $this->isValidating = true;
                 $this->dispatch('validating-state-changed', isValidating: true);
@@ -940,8 +955,9 @@ class ShippingDocumentationKanban extends Component
                 $this->updateDocumentFields($shippingDoc);
             } catch (\Exception $e) {
                 DB::rollBack();
-                $this->dispatch('error', [
-                    'message' => $e->getMessage()
+                $this->dispatch('notify', [
+                    'type' => 'error',
+                    'message' => 'Error al actualizar los campos del documento: ' . $e->getMessage()
                 ]);
                 return;
             }
@@ -986,6 +1002,8 @@ class ShippingDocumentationKanban extends Component
 
             // 5. Limpiar el formulario y cerrar modal
             $this->resetFormFields();
+
+            // Cerrar el modal después de un pequeño delay para asegurar que la UI se actualice
             $this->dispatch('close-modal', 'modal-document-move');
 
         } catch (\Exception $e) {
@@ -994,9 +1012,13 @@ class ShippingDocumentationKanban extends Component
                 'trace' => $e->getTraceAsString()
             ]);
 
-            $this->dispatch('error', [
+            $this->dispatch('notify', [
+                'type' => 'error',
                 'message' => 'Error al actualizar el documento: ' . $e->getMessage()
             ]);
+
+            // No cerrar el modal en caso de error para que el usuario pueda corregir
+            return;
         } finally {
             // Asegurarnos de que isValidating se resetea al final de la función
             $this->isValidating = false;
@@ -1098,7 +1120,7 @@ class ShippingDocumentationKanban extends Component
     public function hydrate()
     {
         // Aseguramos que el estado de validación se mantiene controlado
-        if ($this->isValidating && !$this->newColumnId == $this->columns[1]['id']) {
+        if ($this->isValidating && $this->newColumnId != $this->columns[3]['id']) {
             $this->isValidating = false;
         }
     }
