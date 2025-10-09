@@ -348,10 +348,10 @@ class PurchaseOrderController extends Controller
      * Update an existing purchase order from external API
      *
      * @param Request $request
-     * @param int $po_id
+     * @param string $po_id
      * @return JsonResponse
      */
-    public function updateFromApi(Request $request, int $po_id): JsonResponse
+    public function updateFromApi(Request $request, string $po_id): JsonResponse
     {
         try {
             DB::beginTransaction();
