@@ -325,10 +325,18 @@ class PurchaseOrderController extends Controller
         }
     }
 
-    public function deleteFromApi(Request $request, string $order_number): JsonResponse
+    public function deleteFromApi(Request $request): JsonResponse
     {
-        $po = \App\Models\PurchaseOrder::where('order_number', $order_number)->firstOrFail();
-        $po->delete(); // soft delete
+        $validated = $request->validate([
+            'order_number' => 'required|string',
+            'trading_company' => 'required|string',
+        ]);
+
+        $po = \App\Models\PurchaseOrder::where('order_number', $validated['order_number'])
+            ->where('trading_company', $validated['trading_company'])
+            ->firstOrFail();
+
+        $po->delete();
 
         return response()->json([
             'success' => true,
