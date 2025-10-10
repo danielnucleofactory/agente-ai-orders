@@ -295,7 +295,7 @@ Actualiza la información del perfil del usuario autenticado.
 | `date_invoice_received` | datetime | YYYY-MM-DD HH:MM:SS | Fecha factura recibida |
 | `date_vendor_document_received` | datetime | YYYY-MM-DD HH:MM:SS | Fecha documentos proveedor recibidos |
 | `date_required_in_destination` | datetime | YYYY-MM-DD HH:MM:SS | Fecha requerida en destino |
-| `dif_load_date` | datetime | YYYY-MM-DD HH:MM:SS | Fecha diferencia de carga |
+| `dif_load_date` | integer | Número entero | Diferencia en días de fecha de carga lista |
 | `emision_date_po` | date | YYYY-MM-DD | Fecha emisión PO |
 | `forwader_date` | datetime | YYYY-MM-DD HH:MM:SS | Fecha forwarder |
 

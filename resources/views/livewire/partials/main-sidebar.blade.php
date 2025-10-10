@@ -285,7 +285,15 @@
         </ul>
     </nav>
 
-    <div class="flex items-center justify-center border-t border-[#D2D2D2] bg-[#f7f7f7] px-6 py-6">
+    <div class="flex flex-col items-center justify-center px-6 py-6 space-y-4">
+        <!-- Logo RAGA al final - cambia según el estado de la barra -->
+        <div class="sidebar-logo-bottom w-full flex justify-center">
+            <!-- Logo cuando está cerrado -->
+            <img src="{{ asset('img/A color.png') }}" alt="RAGA Logo" class="h-8 sidebar-logo-bottom-closed w-full object-contain">
+            <!-- Logo cuando está abierto -->
+            <img src="{{ asset('img/Logo RAGA-x .png') }}" alt="RAGA Logo" class="h-10 sidebar-logo-bottom-expanded w-full object-contain">
+        </div>
+        
         <form method="POST" action="{{ route('logout-session') }}" class="w-full">
             @csrf
             <button type="submit"

@@ -19,13 +19,12 @@
                     <label for="statusFilter" class="sr-only">Filtrar por estado</label>
                     <select wire:model.live="statusFilter" id="statusFilter"
                             class="block w-full border-gray-300 rounded-md focus:border-[#1AAD8A] focus:ring-[#1AAD8A] sm:text-sm">
-                        <option value="">Todos los estados</option>
-                        <option value="__trashed">Anuladas</option> {{-- ⬅️ nuevo --}}
-                        <option value="draft">Borrador</option>
-                        <option value="pending">Pendiente</option>
-                        <option value="approved">Aprobada</option>
-                        <option value="shipped">Enviada</option>
-                        <option value="delivered">Entregada</option>
+                        <option value="">Todas las etapas</option>
+                        <option value="__trashed">Anuladas</option>
+                        <option value="__no_kanban">Sin etapa</option>
+                        @foreach(\App\Models\KanbanStatus::distinct()->get(['id', 'name']) as $kanbanStatus)
+                            <option value="kanban_{{ $kanbanStatus->id }}">{{ $kanbanStatus->name }}</option>
+                        @endforeach
                     </select>
                 </div>
 
@@ -235,13 +234,9 @@
                                         </span>
                                     @else
                                         <span class="inline-flex rounded-full px-2 text-xs font-semibold leading-5
-                                            {{ $order->status === 'draft' ? 'bg-gray-100 text-gray-800' : '' }}
-                                            {{ $order->status === 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                            {{ $order->status === 'approved' ? 'bg-green-100 text-green-800' : '' }}
-                                            {{ $order->status === 'shipped' ? 'bg-[#D4F5ED] text-[#0F614D]' : '' }}
-                                            {{ $order->status === 'delivered' ? 'bg-purple-100 text-purple-800' : '' }}
+                                            {{ $order->kanbanStatus ? 'bg-[#D4F5ED] text-[#0F614D]' : 'bg-gray-100 text-gray-800' }}
                                         ">
-                                            {{ ucfirst($order->status) }}
+                                            {{ $order->kanbanStatus ? $order->kanbanStatus->name : 'Sin etapa' }}
                                         </span>
                                     @endif
                                 </td>
@@ -249,7 +244,7 @@
 
                             @if($visibleColumns['order_date'])
                             <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $order->order_date ? $order->order_date->format('d/m/Y') : 'N/A' }}
+                                {{ formatDate($order->order_date) }}
                             </td>
                             @endif
 

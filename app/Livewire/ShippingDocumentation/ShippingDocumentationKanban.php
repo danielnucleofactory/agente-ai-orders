@@ -110,9 +110,39 @@ class ShippingDocumentationKanban extends Component
         if ($this->newColumnId == $this->columns[1]['id']) {
             return $common + [
                     // Necesarios (no obligatorios): fecha teórica
-                    'date_theorical_load' => 'nullable|date',
+                    'date_theorical_load' => [
+                        'nullable',
+                        'date',
+                        function ($attribute, $value, $fail) {
+                            if ($value) {
+                                // Obtener la fecha de emisión de la PO relacionada
+                                $shippingDoc = \App\Models\ShippingDocument::find($this->shippingDocumentId);
+                                $emisionDate = $shippingDoc && $shippingDoc->purchaseOrder ? 
+                                    $shippingDoc->purchaseOrder->emision_date_po : 
+                                    null;
+                                
+                                if ($emisionDate && $value < $emisionDate) {
+                                    $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                                }
+                            }
+                        }
+                    ],
                     // Requeridos para pasar de etapa:
-                    'date_variable_date'  => 'required|date',
+                    'date_variable_date'  => [
+                        'required',
+                        'date',
+                        function ($attribute, $value, $fail) {
+                            // Obtener la fecha de emisión de la PO relacionada
+                            $shippingDoc = \App\Models\ShippingDocument::find($this->shippingDocumentId);
+                            $emisionDate = $shippingDoc && $shippingDoc->purchaseOrder ? 
+                                $shippingDoc->purchaseOrder->emision_date_po : 
+                                null;
+                            
+                            if ($emisionDate && $value < $emisionDate) {
+                                $fail('La fecha de carga lista variable no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                            }
+                        }
+                    ],
                     'service_provider'    => 'required|string|max:100',
                     'forwarder_name'      => 'required|string|max:100',
                 ];
@@ -335,9 +365,9 @@ class ShippingDocumentationKanban extends Component
                 'po_count' => $doc->purchaseOrders->count(),
                 'company' => $doc->company->name ?? 'N/A',
                 'weight_kg' => $doc->total_weight_kg ?? 0,
-                'creation_date' => $doc->creation_date ? $doc->creation_date->format('d/m/Y') : 'N/A',
-                'estimated_departure_date' => $doc->estimated_departure_date ? $doc->estimated_departure_date->format('d/m/Y') : 'N/A',
-                'estimated_arrival_date' => $doc->estimated_arrival_date ? $doc->estimated_arrival_date->format('d/m/Y') : 'N/A',
+                'creation_date' => formatDate($doc->creation_date),
+                'estimated_departure_date' => formatDate($doc->estimated_departure_date),
+                'estimated_arrival_date' => formatDate($doc->estimated_arrival_date),
                 'hub_location' => $doc->hub_location ?? 'N/A',
                 'status' => $doc->status,
                 'kanban_status_id' => $kanbanStatusId,

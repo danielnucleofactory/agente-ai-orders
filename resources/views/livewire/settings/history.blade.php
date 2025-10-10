@@ -145,7 +145,7 @@
                             <input type="checkbox" class="rounded text-primary-600">
                         </td>
                         <td class="px-6 py-4 text-sm whitespace-nowrap">
-                            {{ \Carbon\Carbon::parse($comment['created_at'])->format('d/m/Y H:i') }}
+                            {{ formatDateTime($comment['created_at']) }}
                         </td>
                         <td class="px-6 py-4 text-sm whitespace-nowrap">
                             <a href="{{ route('purchase-orders.detail', $comment['purchase_order_id']) }}"

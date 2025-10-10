@@ -242,11 +242,18 @@
                             <h4 class="text-sm font-semibold text-[#1AAD8A]">Itinerario</h4>
                         </div>
 
-                        <x-form-input>
-                            <x-slot:label>Puerto de Embarque</x-slot:label>
-                            <x-slot:input name="departure_port" wire:model="departure_port" placeholder="Ingrese puerto de embarque"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('departure_port') }}</x-slot:error>
-                        </x-form-input>
+                        <div class="space-y-2">
+                            <x-form-input>
+                                <x-slot:label>Puerto de Embarque</x-slot:label>
+                                <x-slot:input name="departure_port" wire:model="departure_port" placeholder="Ingrese puerto de embarque"></x-slot:input>
+                                <x-slot:error>{{ $errors->first('departure_port') }}</x-slot:error>
+                            </x-form-input>
+                            <div class="flex items-center">
+                                <input id="port_of_loading_validated" type="checkbox" wire:model="port_of_loading_validated"
+                                       class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
+                                <label for="port_of_loading_validated" class="block ml-2 text-sm text-gray-700">Puerto de Embarque Validado</label>
+                            </div>
+                        </div>
 
                         <x-form-input>
                             <x-slot:label>Puerto de Arribo</x-slot:label>
@@ -484,7 +491,7 @@
                     </x-form-input>
 
                     <x-form-input>
-                        <x-slot:label>Fecha Agente de Carga</x-slot:label>
+                        <x-slot:label>Fecha de asignación de agente de carga</x-slot:label>
                         <x-slot:input
                             type="date"
                             name="forwader_date"
@@ -516,7 +523,8 @@
 
                     <x-form-input>
                         <x-slot:label>Fecha Carga Lista Variable</x-slot:label>
-                        <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date"></x-slot:input>
+                        <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500' : '' }}"></x-slot:input>
+                        <x-slot:error>{{ $errors->first('date_variable_date') }}</x-slot:error>
                     </x-form-input>
 
                     <x-form-input>
@@ -545,11 +553,13 @@
                     </x-form-input>
 
                     <x-form-input>
-                        <x-slot:label>Diferencia Fecha de Carga</x-slot:label>
+                        <x-slot:label>Diferencia de fecha de carga lista</x-slot:label>
                         <x-slot:input
-                            type="date"
+                            type="text"
                             name="dif_load_date"
-                            wire:model="dif_load_date">
+                            value="{{ $this->calculateLoadDateDifference() }}"
+                            readonly
+                            class="bg-gray-100">
                         </x-slot:input>
                     </x-form-input>
 
@@ -567,10 +577,17 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Salida (origen)</h4>
                     </div>
 
-                    <x-form-input>
-                        <x-slot:label>ETD Inicial</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="date_etd_initial"></x-slot:input>
-                    </x-form-input>
+                    <div class="space-y-2">
+                        <x-form-input>
+                            <x-slot:label>ETD Inicial</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="date_etd_initial"></x-slot:input>
+                        </x-form-input>
+                        <div class="flex items-center">
+                            <input id="etd_initial_validated" type="checkbox" wire:model="etd_initial_validated"
+                                   class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
+                            <label for="etd_initial_validated" class="block ml-2 text-sm text-gray-700">ETD Inicial Validada</label>
+                        </div>
+                    </div>
 
                     <x-form-input>
                         <x-slot:label>ETD </x-slot:label>
@@ -788,16 +805,6 @@
                                 <input id="apply_technical_note" type="checkbox" wire:model="apply_technical_note"
                                        class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="apply_technical_note" class="block ml-2 text-sm text-gray-700">Aplica Nota Técnica</label>
-                            </div>
-                            <div class="flex items-center">
-                                <input id="etd_initial_validated" type="checkbox" wire:model="etd_initial_validated"
-                                       class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
-                                <label for="etd_initial_validated" class="block ml-2 text-sm text-gray-700">ETD Inicial Validada</label>
-                            </div>
-                            <div class="flex items-center">
-                                <input id="port_of_loading_validated" type="checkbox" wire:model="port_of_loading_validated"
-                                       class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
-                                <label for="port_of_loading_validated" class="block ml-2 text-sm text-gray-700">Puerto de Embarque Validado</label>
                             </div>
                         </div>
 

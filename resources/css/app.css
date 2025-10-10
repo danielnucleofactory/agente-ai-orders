@@ -348,3 +348,27 @@ th {
     transform: rotate(0deg);
 }
 
+/* Estilos para los logos del sidebar */
+/* Logo del bottom - mostrar solo el logo cerrado por defecto */
+.sidebar-logo-bottom {
+    display: block;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-logo-bottom-closed {
+    display: block;
+}
+
+.sidebar-logo-bottom-expanded {
+    display: none;
+}
+
+/* Logo del bottom - cuando está expandido, mostrar solo el logo expandido */
+.main-sidebar.sidebar-expanded .sidebar-logo-bottom-closed {
+    display: none;
+}
+
+.main-sidebar.sidebar-expanded .sidebar-logo-bottom-expanded {
+    display: block;
+}
+
