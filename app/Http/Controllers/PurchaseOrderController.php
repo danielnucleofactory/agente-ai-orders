@@ -76,7 +76,17 @@ class PurchaseOrderController extends Controller
                     'category'               => ['required','string'],
                     'factory_proforma_number'=> ['required','string'],
                     'route_label'            => ['required','string'],
-                    'date_theorical_load'    => ['required','date'],
+                    'date_theorical_load'    => [
+                        'required',
+                        'date',
+                        function ($attribute, $value, $fail) use ($request) {
+                            $emisionDate = $request->input('emision_date_po');
+                            
+                            if ($emisionDate && $value < $emisionDate) {
+                                $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                            }
+                        }
+                    ],
                     'reason'                 => ['required','string'],
                     'incoterms'              => ['required','string'],
                     'logistics_incoterm'     => ['required','string'],

@@ -239,7 +239,7 @@
                                 </p>
                                 @if($phase['date'])
                                     <p class="mb-1 text-xs font-medium {{ $phase['is_completed'] || $phase['is_current'] ? 'text-gray-600' : 'text-gray-400' }}">
-                                        {{ \Carbon\Carbon::parse($phase['date'])->format('d/m/Y') }}
+                                        {{ formatDate($phase['date']) }}
                                         <span class="{{ $phase['is_completed'] || $phase['is_current'] ? 'text-dark-blue font-bold' : 'text-gray-400' }}">
                                             {{ \Carbon\Carbon::parse($phase['date'])->format('H:i') }}
                                         </span>
@@ -263,7 +263,7 @@
                             <div>
                                 <p class="text-sm text-gray-500">Entrega estimada</p>
                                 <p class="text-lg font-bold text-dark-blue">
-                                    {{ \Carbon\Carbon::parse($trackingData['estimated_delivery'])->format('d/m/Y') }}
+                                    {{ formatDate($trackingData['estimated_delivery']) }}
                                 </p>
                             </div>
                         </div>
@@ -755,7 +755,7 @@
                                         <input type="checkbox" class="rounded text-primary-600">
                                     </td>
                                     <td class="px-6 py-4 text-sm whitespace-nowrap">
-                                        {{ \Carbon\Carbon::parse($comment['created_at'])->format('d/m/Y H:i') }}
+                                        {{ formatDateTime($comment['created_at']) }}
                                     </td>
                                     <td class="px-6 py-4 text-sm whitespace-nowrap">
                                         {{ $comment['user_name'] }}

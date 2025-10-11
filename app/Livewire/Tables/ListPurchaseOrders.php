@@ -106,6 +106,7 @@ class ListPurchaseOrders extends Component
     {
         $purchaseOrders = \App\Models\PurchaseOrder::query()
             ->withTrashed() // incluye activas + anuladas
+            ->with('kanbanStatus') // cargar relación kanban status
             ->when($this->search, function ($query) {
                 $searchTerm = strtolower($this->search);
                 $query->where(function ($query) use ($searchTerm) {
@@ -117,9 +118,14 @@ class ListPurchaseOrders extends Component
             ->when($this->statusFilter === '__trashed', function ($q) {
                 $q->onlyTrashed(); // ⬅️ muestra solo anuladas
             })
-            ->when(in_array($this->statusFilter, ['draft','pending','approved','shipped','delivered']), function ($q) {
-                // filtra por status solo en órdenes activas
-                $q->whereNull('deleted_at')->where('status', $this->statusFilter);
+            ->when($this->statusFilter === '__no_kanban', function ($q) {
+                // filtra por órdenes sin kanban status
+                $q->whereNull('deleted_at')->whereNull('kanban_status_id');
+            })
+            ->when(str_starts_with($this->statusFilter, 'kanban_'), function ($q) {
+                // filtra por kanban status específico
+                $kanbanStatusId = str_replace('kanban_', '', $this->statusFilter);
+                $q->whereNull('deleted_at')->where('kanban_status_id', $kanbanStatusId);
             })
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);

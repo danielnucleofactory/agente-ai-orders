@@ -102,11 +102,11 @@
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Fecha emisión PO</p>
-                    <p class="font-semibold">{{ $purchaseOrder->emision_date_po ? \Carbon\Carbon::parse($purchaseOrder->emision_date_po)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->emision_date_po) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Fecha de creación en RAGA</p>
-                    <p class="font-semibold">{{ $purchaseOrder->order_date ? \Carbon\Carbon::parse($purchaseOrder->order_date)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->order_date) }}</p>
                 </div>
             </div>
 
@@ -274,15 +274,15 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
                 <div>
                     <p class="text-gray-500 mb-1">Solicitud de Booking</p>
-                    <p class="font-semibold">{{ $purchaseOrder->date_booking_request ? \Carbon\Carbon::parse($purchaseOrder->date_booking_request)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_booking_request) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Autorización Booking</p>
-                    <p class="font-semibold">{{ $purchaseOrder->date_booking_authorized ? \Carbon\Carbon::parse($purchaseOrder->date_booking_authorized)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_booking_authorized) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha Agente de Carga</p>
-                    <p class="font-semibold">{{ $purchaseOrder->forwader_date ? \Carbon\Carbon::parse($purchaseOrder->forwader_date)->format('d/m/Y') : '-' }}</p>
+                    <p class="text-gray-500 mb-1">Fecha de asignación de agente de carga</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->forwader_date) }}</p>
                 </div>
             </div>
 
@@ -291,35 +291,35 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
                 <div>
                     <p class="text-gray-500 mb-1">Fecha Inspección</p>
-                    <p class="font-semibold">{{ $purchaseOrder->inspection_date ? \Carbon\Carbon::parse($purchaseOrder->inspection_date)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->inspection_date) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Fecha Corte VGM</p>
-                    <p class="font-semibold">{{ $purchaseOrder->vgm_cut_date ? \Carbon\Carbon::parse($purchaseOrder->vgm_cut_date)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->vgm_cut_date) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Fecha Carga Lista Teórica</p>
-                    <p class="font-semibold">{{ $purchaseOrder->date_theorical_load ? \Carbon\Carbon::parse($purchaseOrder->date_theorical_load)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_theorical_load) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Fecha Carga Lista Variable</p>
-                    <p class="font-semibold">{{ $purchaseOrder->date_variable_date ? \Carbon\Carbon::parse($purchaseOrder->date_variable_date)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_variable_date) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Fecha Carga Lista Real</p>
-                    <p class="font-semibold">{{ $purchaseOrder->date_carga_po ? \Carbon\Carbon::parse($purchaseOrder->date_carga_po)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_carga_po) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Fecha de consolidado</p>
-                    <p class="font-semibold">{{ $purchaseOrder->date_consolidation ? \Carbon\Carbon::parse($purchaseOrder->date_consolidation)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_consolidation) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Fecha de release</p>
-                    <p class="font-semibold">{{ $purchaseOrder->release_date ? \Carbon\Carbon::parse($purchaseOrder->release_date)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->release_date) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Diferencia Fecha de Carga</p>
-                    <p class="font-semibold">{{ $purchaseOrder->dif_load_date ? \Carbon\Carbon::parse($purchaseOrder->dif_load_date)->format('d/m/Y') : '-' }}</p>
+                    <p class="text-gray-500 mb-1">Diferencia de fecha de carga lista</p>
+                    <p class="font-semibold">{{ $this->calculateLoadDateDifference($purchaseOrder) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Nombre del Consolidador</p>
@@ -332,15 +332,15 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
                 <div>
                     <p class="text-gray-500 mb-1">ETD Inicial</p>
-                    <p class="font-semibold">{{ $purchaseOrder->date_etd_initial ? \Carbon\Carbon::parse($purchaseOrder->date_etd_initial)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_etd_initial) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">ETD</p>
-                    <p class="font-semibold">{{ $purchaseOrder->date_etd ? \Carbon\Carbon::parse($purchaseOrder->date_etd)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_etd) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">ATD</p>
-                    <p class="font-semibold">{{ $purchaseOrder->date_atd ? \Carbon\Carbon::parse($purchaseOrder->date_atd)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_atd) }}</p>
                 </div>
             </div>
 
@@ -349,15 +349,15 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
                 <div>
                     <p class="text-gray-500 mb-1">ETA</p>
-                    <p class="font-semibold">{{ $purchaseOrder->date_eta ? \Carbon\Carbon::parse($purchaseOrder->date_eta)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_eta) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">ETA Inicial</p>
-                    <p class="font-semibold">{{ $purchaseOrder->date_eta_updated ? \Carbon\Carbon::parse($purchaseOrder->date_eta_updated)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_eta_updated) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">ATA</p>
-                    <p class="font-semibold">{{ $purchaseOrder->date_ata ? \Carbon\Carbon::parse($purchaseOrder->date_ata)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_ata) }}</p>
                 </div>
             </div>
 
@@ -366,19 +366,19 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
                 <div>
                     <p class="text-gray-500 mb-1">Ingreso Almacén Fiscal</p>
-                    <p class="font-semibold">{{ $purchaseOrder->bonded_warehouse_enter ? \Carbon\Carbon::parse($purchaseOrder->bonded_warehouse_enter)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->bonded_warehouse_enter) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Salida Almacén Fiscal</p>
-                    <p class="font-semibold">{{ $purchaseOrder->bonded_warehouse_exit ? \Carbon\Carbon::parse($purchaseOrder->bonded_warehouse_exit)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->bonded_warehouse_exit) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Fecha Nota de Recibo</p>
-                    <p class="font-semibold">{{ $purchaseOrder->receipt_note_date ? \Carbon\Carbon::parse($purchaseOrder->receipt_note_date)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->receipt_note_date) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Fecha Disp. Bogeda Estimada</p>
-                    <p class="font-semibold">{{ $purchaseOrder->estimated_dc_availability_date ? \Carbon\Carbon::parse($purchaseOrder->estimated_dc_availability_date)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->estimated_dc_availability_date) }}</p>
                 </div>
             </div>
 
@@ -387,11 +387,11 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
                 <div>
                     <p class="text-gray-500 mb-1">Fecha Pago Balance</p>
-                    <p class="font-semibold">{{ $purchaseOrder->balance_payment_date ? \Carbon\Carbon::parse($purchaseOrder->balance_payment_date)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->balance_payment_date) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Fecha Pago Cargos Locales</p>
-                    <p class="font-semibold">{{ $purchaseOrder->local_charges_payment_date ? \Carbon\Carbon::parse($purchaseOrder->local_charges_payment_date)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->local_charges_payment_date) }}</p>
                 </div>
             </div>
 
@@ -585,11 +585,11 @@
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Fecha recepción de factura</p>
-                    <p class="font-semibold">{{ $purchaseOrder->date_invoice_received ? \Carbon\Carbon::parse($purchaseOrder->date_invoice_received)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_invoice_received) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Fecha recepción doc. proveedor</p>
-                    <p class="font-semibold">{{ $purchaseOrder->date_vendor_document_received ? \Carbon\Carbon::parse($purchaseOrder->date_vendor_document_received)->format('d/m/Y') : '-' }}</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_vendor_document_received) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Factura Flete</p>
@@ -676,7 +676,7 @@
                             @forelse($comments as $comment)
                                 <tr>
                                     <td class="px-4 py-3 text-sm text-gray-900">
-                                        {{ $comment->created_at->format('d/m/Y H:i') }}
+                                        {{ formatDateTime($comment->created_at) }}
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-900">
                                         {{ $comment->user->name ?? 'Usuario desconocido' }}

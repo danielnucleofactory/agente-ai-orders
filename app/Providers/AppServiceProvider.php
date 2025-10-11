@@ -8,6 +8,7 @@ use App\Livewire\Tables\PurchaseOrdersTable;
 use App\Livewire\Ui\PurchaseOrderCard;
 use Illuminate\Support\Facades\Blade;
 use App\View\Components\Breadcrumb;
+use Carbon\Carbon;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Registrar componente de breadcrumb explícitamente
         Blade::component('breadcrumb', Breadcrumb::class);
+
 
         // Asegurarnos de que el componente breadcrumb esté disponible en todos los entornos
         try {            // Registro de componentes Livewire

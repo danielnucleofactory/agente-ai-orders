@@ -48,7 +48,7 @@ A continuación, se detallan las tablas de mapeo para cada entidad principal: **
 | **Booking y coordinación** | | | | |
 | Solicitud de Booking | `purchase_orders` | `date_booking_request` | `Fecha` | No |
 | Autorización Booking | `purchase_orders` | `date_booking_authorized` | `Fecha` | No |
-| Fecha Agente de Carga | `purchase_orders` | `forwader_date` | `Fecha` | No |
+| Fecha de asignación de agente de carga | `purchase_orders` | `forwader_date` | `Fecha` | No |
 | **Origen: preparación y carga** | | | | |
 | Fecha Inspección | `purchase_orders` | `inspection_date` | `Fecha` | No |
 | Fecha Corte VGM | `purchase_orders` | `vgm_cut_date` | `Fecha` | No |
@@ -57,7 +57,7 @@ A continuación, se detallan las tablas de mapeo para cada entidad principal: **
 | Fecha Carga Lista Real | `purchase_orders` | `date_carga_po` | `Fecha` | No |
 | Fecha de consolidado | `purchase_orders` | `date_consolidation` | `Fecha` | No |
 | Fecha de release | `purchase_orders` | `release_date` | `Fecha` | No |
-| Diferencia Fecha de Carga | `purchase_orders` | `dif_load_date` | `Fecha` | No |
+| Diferencia de fecha de carga lista | `purchase_orders` | `dif_load_date` | `Entero` | No |
 | Nombre del Consolidador | `purchase_orders` | `consolidator_name` | `Texto` | No |
 | **Salida (origen)** | | | | |
 | ETD Inicial | `purchase_orders` | `date_etd_initial` | `Fecha` | No |

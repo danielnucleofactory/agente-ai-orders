@@ -760,7 +760,17 @@ class CreatePucharseOrder extends Component
                 'category'               => 'required|string',
                 'factory_proforma_number'=> 'required|string',
                 'route_label'            => 'required|string',
-                'date_theorical_load'    => 'required|date',
+                'date_theorical_load'    => [
+                    'required',
+                    'date',
+                    function ($attribute, $value, $fail) {
+                        $emisionDate = $this->emision_date_po;
+                        
+                        if ($emisionDate && $value < $emisionDate) {
+                            $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                        }
+                    }
+                ],
                 'reason'                 => 'required|string',
             ], [
                 'order_number.required' => 'El número de orden es requerido',
@@ -1071,6 +1081,35 @@ class CreatePucharseOrder extends Component
     }
 
     public function updatePurchaseOrder($id) {
+        // Validación para actualización
+        $this->validate([
+            'date_theorical_load' => [
+                'required',
+                'date',
+                function ($attribute, $value, $fail) {
+                    $emisionDate = $this->emision_date_po;
+                    
+                    if ($emisionDate && $value < $emisionDate) {
+                        $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                    }
+                }
+            ],
+            'date_variable_date' => [
+                'nullable',
+                'date',
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $emisionDate = $this->emision_date_po;
+                        
+                        if ($emisionDate && $value < $emisionDate) {
+                            $fail('La fecha de carga lista variable no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                        }
+                    }
+                }
+            ],
+        ], [
+            'date_theorical_load.required' => 'La fecha de Carga Lista Teorica es requerida',
+        ]);
 
         $this->computeDateDiffs();
             $poData = [
@@ -1371,6 +1410,20 @@ class CreatePucharseOrder extends Component
         $this->eta_dates_difference = ($etaBase && $etaUpdated)
             ? $etaBase->diffInDays($etaUpdated, true)
             : null;
+    }
+
+    public function calculateLoadDateDifference()
+    {
+        if (!$this->date_theorical_load || !$this->date_carga_po) {
+            return '-';
+        }
+
+        $theoricalDate = \Carbon\Carbon::parse($this->date_theorical_load);
+        $realDate = \Carbon\Carbon::parse($this->date_carga_po);
+
+        $difference = $realDate->diffInDays($theoricalDate, false);
+        
+        return $difference;
     }
 
 }

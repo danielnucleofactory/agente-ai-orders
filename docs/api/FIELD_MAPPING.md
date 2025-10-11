@@ -46,7 +46,7 @@ Esta es la entidad principal del sistema. A continuación se detalla el mapeo ca
 ### **Campos de Fechas**
 | `date_booking_request` | `date` | `date_booking_request` | Solicitud de Booking | Fecha en que se solicitó el booking (reserva de espacio). | Opcional |
 | `date_booking_authorized` | `date` | `date_booking_authorized` | Autorización Booking | Fecha en que se autorizó el booking. | Opcional |
-| `forwader_date` | `date` | `forwader_date` | Fecha Agente de Carga | Fecha del agente de carga. | Opcional |
+| `forwader_date` | `date` | `forwader_date` | Fecha de asignación de agente de carga | Fecha de asignación del agente de carga. | Opcional |
 | `inspection_date` | `date` | `inspection_date` | Fecha Inspección | Fecha de inspección. | Opcional |
 | `vgm_cut_date` | `date` | `vgm_cut_date` | Fecha Corte VGM | Fecha de corte VGM. | Opcional |
 | `date_theorical_load` | `date` | `date_theorical_load` | Fecha Carga Lista Teórica | Fecha teórica en la que la carga debería estar lista. | Sí |
@@ -54,7 +54,7 @@ Esta es la entidad principal del sistema. A continuación se detalla el mapeo ca
 | `date_carga_po` | `date` | `date_carga_po` | Fecha Carga Lista Real | Fecha real de carga lista. | Opcional |
 | `date_consolidation` | `date` | `date_consolidation` | Fecha de consolidado | Fecha de consolidación. | Opcional |
 | `release_date` | `date` | `release_date` | Fecha de release | Fecha de liberación. | Opcional |
-| `dif_load_date` | `date` | `dif_load_date` | Diferencia Fecha de Carga | Diferencia en fecha de carga. | Opcional |
+| `dif_load_date` | `integer` | `dif_load_date` | Diferencia de fecha de carga lista | Diferencia en días entre fecha teórica y real de carga lista. | Opcional |
 | `consolidator_name` | `varchar` / `string` | `consolidator_name` | Nombre del Consolidador | Nombre del consolidador. | Opcional |
 | `date_etd_initial` | `date` | `date_etd_initial` | ETD Inicial | Fecha estimada de salida inicial. | Opcional |
 | `date_etd` | `date` | `date_etd` | ETD | Fecha estimada de salida. | Opcional |
