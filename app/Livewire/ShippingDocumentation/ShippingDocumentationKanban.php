@@ -161,19 +161,26 @@ class ShippingDocumentationKanban extends Component
                 ];
         }
 
-        // Columna 3: Tránsito
+        // Columna 3: Consolidador
         if ($this->newColumnId == $this->columns[3]['id']) {
+            return $common; // Sin campos específicos
+        }
+
+        // Columna 4: Tránsito
+        if ($this->newColumnId == $this->columns[4]['id']) {
             return $common + [
                     // Requeridos
                     'actual_departure_date'  => 'required|date', // ETD real
                     'estimated_arrival_date' => 'required|date', // ETA inicial
                     'date_eta_updated'       => 'required|date', // ETA variable
-                    'container_number'       => 'required|string|max:50',
+                    // Al menos uno de estos tres debe estar presente
+                    'container_number'       => 'nullable|required_without_all:tracking_id,bill_of_lading|string|max:50',
+                    'tracking_id'            => 'nullable|required_without_all:container_number,bill_of_lading|string|max:50',
+                    'bill_of_lading'         => 'nullable|required_without_all:tracking_id,container_number|string|max:100',
+                    // Otros campos requeridos
                     'shipping_line'          => 'required|string|max:100',
-                    'tracking_id'            => 'required|string|max:50',
                     'departure_port'         => 'required|string|max:100',
                     'arrival_port'           => 'required|string|max:100',
-                    'bill_of_lading'         => 'required|string|max:100',
                     // Necesarios/optativos según hoja
                     'Invoice_amount' => 'nullable|numeric|min:0',
                     'arrival_status' => 'nullable|string|max:100',
@@ -182,23 +189,23 @@ class ShippingDocumentationKanban extends Component
                 ];
         }
 
-        // Columna 4: Puerto
-        if ($this->newColumnId == $this->columns[4]['id']) {
+        // Columna 5: Puerto
+        if ($this->newColumnId == $this->columns[5]['id']) {
             return $common + [
                     'actual_arrival_date' => 'required|date', // ETA real
                 ];
         }
 
-        // Columna 5: Almacén Fiscal
-        if ($this->newColumnId == $this->columns[5]['id']) {
+        // Columna 6: Almacén Fiscal
+        if ($this->newColumnId == $this->columns[6]['id']) {
             return $common + [
                     'bonded_warehouse_enter' => 'required|date',
                     'bonded_warehouse_exit'  => 'required|date',
                 ];
         }
 
-        // Columna 6: Ingresada
-        if ($this->newColumnId == $this->columns[6]['id']) {
+        // Columna 9: Ingresada
+        if ($this->newColumnId == $this->columns[9]['id']) {
             return $common + [
                     'receipt_note' => 'nullable|string|max:255',
                 ];
@@ -228,12 +235,12 @@ class ShippingDocumentationKanban extends Component
             'actual_departure_date.required'  => 'El campo es obligatorio.',
             'estimated_arrival_date.required' => 'El campo es obligatorio.',
             'date_eta_updated.required'       => 'El campo es obligatorio.',
-            'container_number.required'       => 'El campo es obligatorio.',
+            'container_number.required_without_all' => 'Debe proporcionar al menos uno: Número de Booking, MBL o Número de Contenedor.',
+            'tracking_id.required_without_all'      => 'Debe proporcionar al menos uno: Número de Booking, MBL o Número de Contenedor.',
+            'bill_of_lading.required_without_all'   => 'Debe proporcionar al menos uno: Número de Booking, MBL o Número de Contenedor.',
             'shipping_line.required'          => 'El campo es obligatorio.',
-            'tracking_id.required'            => 'El campo es obligatorio.',
             'departure_port.required'         => 'El campo es obligatorio.',
             'arrival_port.required'           => 'El campo es obligatorio.',
-            'bill_of_lading.required'         => 'El campo es obligatorio.',
 
 
             // Puerto
@@ -752,8 +759,14 @@ class ShippingDocumentationKanban extends Component
             return $shippingDoc;
         }
 
-        // Columna 3: Tránsito
+        // Columna 3: Consolidador
         if ($this->newColumnId == $this->columns[3]['id']) {
+            // Sin campos específicos
+            return $shippingDoc;
+        }
+
+        // Columna 4: Tránsito
+        if ($this->newColumnId == $this->columns[4]['id']) {
             $shippingDoc->actual_departure_date   = $this->actual_departure_date;   // ETD real
             $shippingDoc->estimated_arrival_date  = $this->estimated_arrival_date;  // ETA inicial
             $shippingDoc->date_eta_updated        = $this->date_eta_updated;        // ETA variable
@@ -772,21 +785,21 @@ class ShippingDocumentationKanban extends Component
             return $shippingDoc;
         }
 
-        // Columna 4: Puerto
-        if ($this->newColumnId == $this->columns[4]['id']) {
+        // Columna 5: Puerto
+        if ($this->newColumnId == $this->columns[5]['id']) {
             $shippingDoc->actual_arrival_date = $this->actual_arrival_date; // ETA real
             return $shippingDoc;
         }
 
-        // Columna 5: Almacén Fiscal
-        if ($this->newColumnId == $this->columns[5]['id']) {
+        // Columna 6: Almacén Fiscal
+        if ($this->newColumnId == $this->columns[6]['id']) {
             $shippingDoc->bonded_warehouse_enter = $this->bonded_warehouse_enter;
             $shippingDoc->bonded_warehouse_exit  = $this->bonded_warehouse_exit;
             return $shippingDoc;
         }
 
-        // Columna 6: Ingresada
-        if ($this->newColumnId == $this->columns[6]['id']) {
+        // Columna 9: Ingresada
+        if ($this->newColumnId == $this->columns[9]['id']) {
             $shippingDoc->receipt_note = $this->receipt_note;
             return $shippingDoc;
         }
@@ -807,7 +820,7 @@ class ShippingDocumentationKanban extends Component
             $this->dispatch('validating-state-changed', isValidating: true);
 
             // Verificamos que estamos en la columna que requiere validación (Tránsito)
-            if ($this->newColumnId != $this->columns[3]['id']) {
+            if ($this->newColumnId != $this->columns[4]['id']) {
                 $this->isValidating = false;
                 $this->dispatch('validating-state-changed', isValidating: false);
                 return true; // No se requiere validación para otras columnas
@@ -953,7 +966,7 @@ class ShippingDocumentationKanban extends Component
 
         try {
             // Primero validamos los códigos de tracking si es necesario (columna Tránsito)
-            if ($this->newColumnId == $this->columns[3]['id']) {
+            if ($this->newColumnId == $this->columns[4]['id']) {
                 // Activar indicador de validación
                 $this->isValidating = true;
                 $this->dispatch('validating-state-changed', isValidating: true);
@@ -1150,7 +1163,7 @@ class ShippingDocumentationKanban extends Component
     public function hydrate()
     {
         // Aseguramos que el estado de validación se mantiene controlado
-        if ($this->isValidating && $this->newColumnId != $this->columns[3]['id']) {
+        if ($this->isValidating && $this->newColumnId != $this->columns[4]['id']) {
             $this->isValidating = false;
         }
     }

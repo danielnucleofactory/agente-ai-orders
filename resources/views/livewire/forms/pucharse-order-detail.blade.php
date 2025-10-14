@@ -466,11 +466,27 @@
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">ETD Inicial Validada</p>
-                    <p class="font-semibold">{{ $purchaseOrder->etd_initial_validated ? 'Sí' : 'No' }}</p>
+                    <div class="flex items-center">
+                        <input id="etd_initial_validated" type="checkbox" 
+                               {{ $purchaseOrder->etd_initial_validated ? 'checked' : '' }}
+                               disabled
+                               class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
+                        <label for="etd_initial_validated" class="block ml-2 text-sm text-gray-700">
+                            {{ $purchaseOrder->etd_initial_validated ? 'Validada' : 'No validada' }}
+                        </label>
+                    </div>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Puerto de Embarque Validado</p>
-                    <p class="font-semibold">{{ $purchaseOrder->port_of_loading_validated ? 'Sí' : 'No' }}</p>
+                    <div class="flex items-center">
+                        <input id="port_of_loading_validated" type="checkbox" 
+                               {{ $purchaseOrder->port_of_loading_validated ? 'checked' : '' }}
+                               disabled
+                               class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
+                        <label for="port_of_loading_validated" class="block ml-2 text-sm text-gray-700">
+                            {{ $purchaseOrder->port_of_loading_validated ? 'Validado' : 'No validado' }}
+                        </label>
+                    </div>
                 </div>
             </div>
 

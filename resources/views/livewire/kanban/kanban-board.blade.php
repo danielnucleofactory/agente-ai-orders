@@ -88,11 +88,11 @@
                                         if (newColumn == 1) {
                                             $dispatch('open-modal', 'modal-nuevo');
                                         } else if (newColumn == 2) {
-                                            $dispatch('open-modal','modal-consolidador');
-                                        } else if (newColumn == 3) {
                                             $dispatch('open-modal', 'modal-produccion');
-                                        } else if (newColumn == 4) {
+                                        } else if (newColumn == 3) {
                                             $dispatch('open-modal', 'modal-booking');
+                                        } else if (newColumn == 4) {
+                                            $dispatch('open-modal','modal-consolidador');
                                         } else if (newColumn == 5) {
                                             $dispatch('open-modal', 'modal-en-transito');
                                         } else if (newColumn == 6) {
@@ -498,8 +498,11 @@
 
             {{-- Equipo / BL / Naviera + nuevos campos --}}
             <div class="mb-8">
+                <div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm">
+                    <p><strong>Nota:</strong> Debe proporcionar al menos uno de los siguientes: Número de Booking, MBL o Número de Contenedor.</p>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-6">
-                    {{-- Número de Contenedor - requerido --}}
+                    {{-- Número de Contenedor --}}
                     <div>
                         <x-form-input>
                             <x-slot:label>Número de Contenedor</x-slot:label>
@@ -522,7 +525,7 @@
                         </x-form-input>
                     </div>
 
-                    {{-- BL - requerido --}}
+                    {{-- MBL --}}
                     <div>
                         <x-form-input>
                             <x-slot:label>MBL</x-slot:label>

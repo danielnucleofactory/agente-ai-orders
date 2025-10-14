@@ -46,8 +46,10 @@ class KanbanBoard extends Component
     public $mode;
     public $comment_stage_03;
 
+    // Consolidador (id 4)
+    public $comment_stage_04;
 
-    // En Tránsito (id 4)
+    // En Tránsito (id 5)
     public $date_atd;
     public $date_eta;
     public $date_eta_updated;
@@ -57,24 +59,24 @@ class KanbanBoard extends Component
     public $tracking_id;
     public $departure_port;
     public $arrival_port;
-    public $comment_stage_04;
-
-    // Puerto (id 5)
-    public $date_ata;
     public $comment_stage_05;
 
-
-    // Almacén Fiscal (id 6)
-    public $bonded_warehouse_enter;
-    public $bonded_warehouse_exit;
+    // Puerto (id 6)
+    public $date_ata;
     public $comment_stage_06;
 
 
+    // Almacén Fiscal (id 7)
+    public $bonded_warehouse_enter;
+    public $bonded_warehouse_exit;
     public $comment_stage_07;
+
+
     public $comment_stage_08;
+    public $comment_stage_09;
 
 
-    // Ingresada (id 9)
+    // Ingresada (id 10)
     public $receipt_note;
 
 
@@ -456,9 +458,9 @@ class KanbanBoard extends Component
     {
         return match ($stage) {
             1 => 'modal-nuevo',
-            2 => 'modal-consolidador',
-            3 => 'modal-produccion',
-            4 => 'modal-booking',
+            2 => 'modal-produccion',
+            3 => 'modal-booking',
+            4 => 'modal-consolidador',
             5 => 'modal-en-transito',
             6 => 'modal-puerto',
             7 => 'modal-alm-fiscal',
@@ -642,8 +644,9 @@ class KanbanBoard extends Component
     private function fieldsByStage(): array
     {
         return [
-            3 => ['date_variable_date', 'date_theorical_load', 'service_provider', 'forwarder_name'], // Producción
-            4 => ['date_booking_request', 'date_booking_authorized', 'date_etd_initial', 'date_etd_updated', 'mode'], // Booking
+            2 => ['date_variable_date', 'date_theorical_load', 'service_provider', 'forwarder_name'], // Producción
+            3 => ['date_booking_request', 'date_booking_authorized', 'date_etd_initial', 'date_etd_updated', 'mode'], // Booking
+            4 => [], // Consolidador (sin campos específicos)
             5 => [
                 'date_atd', 'date_eta', 'date_eta_updated', 'container_type',
                 'container_number', 'bill_of_lading',
@@ -652,7 +655,7 @@ class KanbanBoard extends Component
             ], // En transito
             6 => ['date_ata'], // Puerto
             7 => ['bonded_warehouse_enter', 'bonded_warehouse_exit', 'date_ata'], // Alm. Fiscal
-            8 => ['receipt_note'], // Ingresada
+            10 => ['receipt_note'], // Ingresada
         ];
     }
 
@@ -730,10 +733,10 @@ class KanbanBoard extends Component
                 'date_atd'         => 'required|date',
                 'date_eta'         => 'required|date',
                 'date_eta_updated' => 'required|date',
-                'container_number' => 'required|string',
-                'bill_of_lading'   => 'required',   // puede ser numérico o string según tu BD
+                'container_number' => 'nullable|required_without_all:tracking_id,bill_of_lading|string',
+                'bill_of_lading'   => 'nullable|required_without_all:tracking_id,container_number',   
+                'tracking_id'      => 'nullable|required_without_all:container_number,bill_of_lading|string',
                 'shipping_line'    => 'required|string',
-                'tracking_id'      => 'required|string',
                 'departure_port'   => 'required|string',
                 'arrival_port'     => 'required|string',
                 // 'container_type' no está como requerido en el Excel
@@ -794,6 +797,7 @@ class KanbanBoard extends Component
 
         $messages = [
             'required' => 'El campo es requerido.',
+            'required_without_all' => 'Debe proporcionar al menos uno: Número de Booking, MBL o Número de Contenedor.',
             'date'     => 'El campo debe ser una fecha válida.',
             'string'   => 'El campo debe ser texto.',
             'numeric'  => 'El campo debe ser numérico.',

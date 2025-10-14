@@ -45,3 +45,4 @@ if (!function_exists('formatDateForInput')) {
         return Carbon::parse($date)->format('Y-m-d');
     }
 }
+
