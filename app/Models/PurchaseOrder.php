@@ -441,4 +441,55 @@ class PurchaseOrder extends Model implements HasMedia
     {
         return $this->morphMany(Authorization::class, 'authorizable');
     }
+
+    /**
+     * Calcula automáticamente el estado de llegada y días de retraso basándose en la ETA
+     * 
+     * @return array ['arrival_status' => string, 'delay_days' => int]
+     */
+    public function calculateArrivalStatus(): array
+    {
+        // Usar la ETA más reciente disponible (updated > initial > original)
+        $eta = $this->date_eta_updated ?? $this->date_eta ?? null;
+        
+        if (!$eta) {
+            return [
+                'arrival_status' => null,
+                'delay_days' => null
+            ];
+        }
+
+        $today = now()->startOfDay();
+        $etaDate = $eta->startOfDay();
+        
+        if ($today > $etaDate) {
+            // Atrasado
+            $delayDays = $etaDate->diffInDays($today);
+            return [
+                'arrival_status' => 'Atrasado',
+                'delay_days' => $delayDays
+            ];
+        } else {
+            // A tiempo
+            return [
+                'arrival_status' => 'A tiempo',
+                'delay_days' => 0
+            ];
+        }
+    }
+
+    /**
+     * Actualiza automáticamente el estado de llegada y días de retraso
+     * 
+     * @return bool
+     */
+    public function updateArrivalStatus(): bool
+    {
+        $status = $this->calculateArrivalStatus();
+        
+        $this->arrival_status = $status['arrival_status'];
+        $this->delay_days = $status['delay_days'];
+        
+        return $this->save();
+    }
 }

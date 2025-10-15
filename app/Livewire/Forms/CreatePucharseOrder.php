@@ -1394,6 +1394,10 @@ class CreatePucharseOrder extends Component
     public function updatedFreightAmount()         { $this->calculateTotals(); }
     public function updatedCostNationalization()   { $this->calculateTotals(); }
     public function updatedOtherCosts()            { $this->calculateTotals(); }
+    
+    // NUEVO: Listeners para actualizar arrival_status automáticamente cuando cambie la ETA
+    public function updatedDateEta()               { $this->computeDateDiffs(); }
+    public function updatedDateEtaInitial()        { $this->computeDateDiffs(); }
     protected function computeDateDiffs(): void
     {
         // Usamos Carbon para diferencias con signo
@@ -1410,6 +1414,38 @@ class CreatePucharseOrder extends Component
         $this->eta_dates_difference = ($etaBase && $etaUpdated)
             ? $etaBase->diffInDays($etaUpdated, true)
             : null;
+
+        // NUEVO: Calcular automáticamente arrival_status y delay_days
+        $this->calculateArrivalStatus();
+    }
+
+    /**
+     * Calcula automáticamente el estado de llegada y días de retraso
+     */
+    protected function calculateArrivalStatus(): void
+    {
+        // Usar la ETA más reciente disponible (updated > initial > original)
+        $eta = $this->date_eta_initial ?? $this->date_eta ?? null;
+        
+        if (!$eta) {
+            $this->arrival_status = null;
+            $this->delay_days = null;
+            return;
+        }
+
+        $today = now()->startOfDay();
+        $etaDate = \Carbon\Carbon::parse($eta)->startOfDay();
+        
+        if ($today > $etaDate) {
+            // Atrasado
+            $delayDays = $etaDate->diffInDays($today);
+            $this->arrival_status = 'Atrasado';
+            $this->delay_days = $delayDays;
+        } else {
+            // A tiempo
+            $this->arrival_status = 'A tiempo';
+            $this->delay_days = 0;
+        }
     }
 
     public function calculateLoadDateDifference()
