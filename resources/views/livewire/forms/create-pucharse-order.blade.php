@@ -1062,12 +1062,12 @@
                 <div class="grid grid-cols-[1fr,1fr] gap-x-5 gap-y-f6">
                     <x-form-input>
                         <x-slot:label>Estado</x-slot:label>
-                        <x-slot:input name="arrival_status"  wire:model="arrival_status" placeholder="Ingrese estado"></x-slot:input>
+                        <x-slot:input name="arrival_status" wire:model="arrival_status" placeholder="Se calcula automáticamente" readonly class="bg-gray-100"></x-slot:input>
                     </x-form-input>
 
                     <x-form-input>
                         <x-slot:label>Días de retraso</x-slot:label>
-                        <x-slot:input type="number" name="delay_days" wire:model="delay_days" placeholder="0"></x-slot:input>
+                        <x-slot:input type="number" name="delay_days" wire:model="delay_days" placeholder="Se calcula automáticamente" readonly class="bg-gray-100"></x-slot:input>
                     </x-form-input>
                 </div>
             </div>

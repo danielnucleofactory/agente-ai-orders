@@ -484,6 +484,45 @@ class KanbanBoard extends Component
                 break;
             }
         }
+        
+        // NUEVO: Cargar datos de la PO en las propiedades del componente
+        $po = PurchaseOrder::find($taskId);
+        if ($po) {
+            // Producción - convertir fechas al formato Y-m-d para campos HTML date
+            $this->date_variable_date = $po->date_variable_date ? $po->date_variable_date->format('Y-m-d') : null;
+            $this->date_theorical_load = $po->date_theorical_load ? $po->date_theorical_load->format('Y-m-d') : null;
+            $this->service_provider = $po->service_provider;
+            $this->forwarder_name = $po->forwarder_name;
+            
+            // Booking - convertir fechas al formato Y-m-d
+            $this->date_booking_request = $po->date_booking_request ? $po->date_booking_request->format('Y-m-d') : null;
+            $this->date_booking_authorized = $po->date_booking_authorized ? $po->date_booking_authorized->format('Y-m-d') : null;
+            $this->date_etd_initial = $po->date_etd_initial ? $po->date_etd_initial->format('Y-m-d') : null;
+            $this->date_etd_updated = $po->date_etd_updated ? $po->date_etd_updated->format('Y-m-d') : null;
+            $this->container_type = $po->container_type;
+            $this->mode = $po->mode;
+            
+            // En Tránsito - convertir fechas al formato Y-m-d
+            $this->date_atd = $po->date_atd ? $po->date_atd->format('Y-m-d') : null;
+            $this->date_eta = $po->date_eta ? $po->date_eta->format('Y-m-d') : null;
+            $this->date_eta_updated = $po->date_eta_updated ? $po->date_eta_updated->format('Y-m-d') : null;
+            $this->container_number = $po->container_number;
+            $this->bill_of_lading = $po->bill_of_lading;
+            $this->shipping_line = $po->shipping_line;
+            $this->tracking_id = $po->tracking_id;
+            $this->departure_port = $po->departure_port;
+            $this->arrival_port = $po->arrival_port;
+            
+            // Puerto - convertir fechas al formato Y-m-d
+            $this->date_ata = $po->date_ata ? $po->date_ata->format('Y-m-d') : null;
+            
+            // Almacén Fiscal - convertir fechas al formato Y-m-d
+            $this->bonded_warehouse_enter = $po->bonded_warehouse_enter ? $po->bonded_warehouse_enter->format('Y-m-d') : null;
+            $this->bonded_warehouse_exit = $po->bonded_warehouse_exit ? $po->bonded_warehouse_exit->format('Y-m-d') : null;
+            
+            // Ingresada
+            $this->receipt_note = $po->receipt_note;
+        }
     }
 
     public function saveAttachment($poId)
@@ -698,6 +737,12 @@ class KanbanBoard extends Component
 
             // si quieres, puedes verificar que exista la PO
              if ($updated === 0) { throw new \RuntimeException('PO no encontrada'); }
+
+            // NUEVO: Actualizar automáticamente arrival_status y delay_days si se actualizó la ETA
+            $po = PurchaseOrder::find($poId);
+            if ($po && (isset($payload['date_eta']) || isset($payload['date_eta_updated']))) {
+                $po->updateArrivalStatus();
+            }
 
             DB::commit();
             return ['ok' => true, 'updated' => $updated];

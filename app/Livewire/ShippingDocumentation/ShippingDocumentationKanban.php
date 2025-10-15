@@ -638,6 +638,53 @@ class ShippingDocumentationKanban extends Component
                 break;
             }
         }
+        
+        // NUEVO: Cargar datos del ShippingDocument en las propiedades
+        $shippingDocId = str_replace('DOC-', '', $documentId);
+        $shippingDoc = ShippingDocument::find($shippingDocId);
+        
+        if ($shippingDoc) {
+            // Producción - convertir fechas al formato Y-m-d para campos HTML date
+            $this->date_theorical_load = $shippingDoc->date_theorical_load ? $shippingDoc->date_theorical_load->format('Y-m-d') : null;
+            $this->date_variable_date = $shippingDoc->date_variable_date ? $shippingDoc->date_variable_date->format('Y-m-d') : null;
+            $this->service_provider = $shippingDoc->service_provider;
+            $this->forwarder_name = $shippingDoc->forwarder_name;
+            
+            // Booking - convertir fechas al formato Y-m-d
+            $this->date_booking_request = $shippingDoc->date_booking_request ? $shippingDoc->date_booking_request->format('Y-m-d') : null;
+            $this->date_booking_authorized = $shippingDoc->date_booking_authorized ? $shippingDoc->date_booking_authorized->format('Y-m-d') : null;
+            $this->estimated_departure_date = $shippingDoc->estimated_departure_date ? $shippingDoc->estimated_departure_date->format('Y-m-d') : null;
+            $this->date_etd_updated = $shippingDoc->date_etd_updated ? $shippingDoc->date_etd_updated->format('Y-m-d') : null;
+            $this->container_type = $shippingDoc->container_type;
+            $this->mode = $shippingDoc->mode;
+            
+            // Tránsito - convertir fechas al formato Y-m-d
+            $this->actual_departure_date = $shippingDoc->actual_departure_date ? $shippingDoc->actual_departure_date->format('Y-m-d') : null;
+            $this->estimated_arrival_date = $shippingDoc->estimated_arrival_date ? $shippingDoc->estimated_arrival_date->format('Y-m-d') : null;
+            $this->date_eta_updated = $shippingDoc->date_eta_updated ? $shippingDoc->date_eta_updated->format('Y-m-d') : null;
+            $this->Invoice_amount = $shippingDoc->Invoice_amount;
+            $this->shipping_line = $shippingDoc->shipping_line;
+            $this->arrival_status = $shippingDoc->arrival_status;
+            $this->factura_merca = $shippingDoc->factura_merca;
+            $this->departure_port = $shippingDoc->departure_port;
+            $this->arrival_port = $shippingDoc->arrival_port;
+            $this->bill_of_lading = $shippingDoc->bill_of_lading;
+            $this->container_number = $shippingDoc->container_number;
+            $this->tracking_id = $shippingDoc->tracking_id;
+            
+            // Puerto - convertir fechas al formato Y-m-d
+            $this->actual_arrival_date = $shippingDoc->actual_arrival_date ? $shippingDoc->actual_arrival_date->format('Y-m-d') : null;
+            
+            // Almacén Fiscal - convertir fechas al formato Y-m-d
+            $this->bonded_warehouse_enter = $shippingDoc->bonded_warehouse_enter ? $shippingDoc->bonded_warehouse_enter->format('Y-m-d') : null;
+            $this->bonded_warehouse_exit = $shippingDoc->bonded_warehouse_exit ? $shippingDoc->bonded_warehouse_exit->format('Y-m-d') : null;
+            
+            // Ingresada
+            $this->receipt_note = $shippingDoc->receipt_note;
+            
+            // Otros campos - convertir fechas al formato Y-m-d
+            $this->release_date = $shippingDoc->release_date ? $shippingDoc->release_date->format('Y-m-d') : null;
+        }
     }
 
     public function setComments($documentId, $comment)
@@ -777,11 +824,15 @@ class ShippingDocumentationKanban extends Component
 
             $shippingDoc->Invoice_amount = $this->Invoice_amount;
             $shippingDoc->shipping_line  = $this->shipping_line;
-            $shippingDoc->arrival_status = $this->arrival_status;
             $shippingDoc->factura_merca  = $this->factura_merca;
             $shippingDoc->tracking_id    = $this->tracking_id;
             $shippingDoc->departure_port = $this->departure_port;
             $shippingDoc->arrival_port   = $this->arrival_port;
+            
+            // NUEVO: Calcular automáticamente arrival_status basándose en la ETA
+            $status = $shippingDoc->calculateArrivalStatus();
+            $shippingDoc->arrival_status = $status['arrival_status'];
+            
             return $shippingDoc;
         }
 

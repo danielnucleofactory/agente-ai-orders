@@ -294,7 +294,7 @@
 
                         <x-form-input class="mb-4">
                             <x-slot:label>Estado</x-slot:label>
-                            <x-slot:input type="text" wire:model="arrival_status" placeholder="Ingrese estado" class="pr-10 {{ $errors->has('arrival_status') ? 'border-red-500'  : '' }}"></x-slot:input>
+                            <x-slot:input type="text" wire:model="arrival_status" placeholder="Se calcula automáticamente" readonly class="pr-10 bg-gray-100 {{ $errors->has('arrival_status') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('arrival_status') }}</x-slot:error>
                         </x-form-input>
 
