@@ -81,7 +81,7 @@ class PurchaseOrderController extends Controller
                         'date',
                         function ($attribute, $value, $fail) use ($request) {
                             $emisionDate = $request->input('emision_date_po');
-                            
+
                             if ($emisionDate && $value < $emisionDate) {
                                 $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
                             }
@@ -636,4 +636,58 @@ class PurchaseOrderController extends Controller
 
         \Log::info('Purchase Order Updated via API', $auditData);
     }
+
+    public function index( Request $request ): JsonResponse
+    {
+        $query = PurchaseOrder::with(['vendor', 'products']);
+
+        // Si viene con filtros (query parameters), aplicarlos
+        if ($request->has('order_number') || $request->has('company')) {
+            if ($request->has('order_number')) {
+                $query->where('order_number', $request->order_number);
+            }
+
+            if ($request->has('company')) {
+                $company = $request->company;
+                $query->where('trading_company', $company);
+            }
+        }
+
+        $purchaseOrders = $query->get();
+
+        // Si no se encontraron POs activas pero hay filtros específicos, verificar si existen eliminadas
+        $deletedInfo = null;
+        if ($purchaseOrders->isEmpty() && ($request->has('order_number') || $request->has('company'))) {
+            $deletedQuery = PurchaseOrder::onlyTrashed();
+
+            if ($request->has('order_number')) {
+                $deletedQuery->where('order_number', $request->order_number);
+            }
+
+            if ($request->has('company')) {
+                $deletedQuery->where('trading_company', $request->company);
+            }
+
+            $deletedPO = $deletedQuery->first();
+            if ($deletedPO) {
+                $deletedInfo = [
+                    'message' => 'The requested purchase order was found but has been deleted',
+                    'deleted_at' => $deletedPO->deleted_at,
+                    'order_number' => $deletedPO->order_number,
+                    'trading_company' => $deletedPO->trading_company
+                ];
+            }
+        }
+
+        return response()->json([
+            'message' => 'Purchase orders fetched successfully',
+            'data' => $purchaseOrders,
+            'filters_applied' => [
+                'order_number' => $request->get('order_number'),
+                'company' => $request->get('company')
+            ],
+            'deleted_info' => $deletedInfo
+        ]);
+    }
 }
+
