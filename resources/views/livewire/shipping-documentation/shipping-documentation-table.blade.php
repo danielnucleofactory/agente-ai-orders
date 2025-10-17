@@ -249,7 +249,7 @@
 
                         @if($visibleColumns['vendor'])
                         <td class="px-6 py-4 whitespace-nowrap">
-                            {{ $groupedPurchaseOrders[$document->id]->first()->vendor->name }}
+                            {{ $groupedPurchaseOrders[$document->id]->first()->vendor?->name ?? 'Vendor eliminado' }}
                         </td>
                         @endif
 
