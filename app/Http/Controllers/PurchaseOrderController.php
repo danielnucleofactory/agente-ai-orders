@@ -637,6 +637,145 @@ class PurchaseOrderController extends Controller
         \Log::info('Purchase Order Updated via API', $auditData);
     }
 
+    public function bulk(Request $request): JsonResponse
+    {
+        $payload = $request->json()->all();
+        if (empty($payload)) {
+            $payload = $request->all();
+        }
+
+        // Normalizar a lista de items
+        $items = [];
+        if (isset($payload['items']) && is_array($payload['items'])) {
+            $items = $payload['items'];
+        } elseif (is_array($payload) && isset($payload[0])) {
+            $items = $payload; // array plano
+        } elseif (!empty($payload)) {
+            $items = [$payload]; // objeto único
+        }
+
+        if (empty($items)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No items received',
+                'results' => []
+            ], 422);
+        }
+
+        $results = [];
+
+        foreach ($items as $index => $item) {
+            // Validar únicamente order_number y company (trading_company)
+            $orderNumber = data_get($item, 'order_number');
+            $company     = data_get($item, 'company');
+
+            if (!$orderNumber || !$company) {
+                $results[] = [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'company' => $company,
+                    'status' => 'validation_error',
+                    'message' => 'order_number and company are required'
+                ];
+                continue;
+            }
+
+            // Buscar PO activa
+            $po = PurchaseOrder::where('order_number', $orderNumber)
+                ->where('trading_company', $company)
+                ->first();
+
+            if (!$po) {
+                // Si no está activa, verificar si existe eliminada
+                $deleted = PurchaseOrder::onlyTrashed()
+                    ->where('order_number', $orderNumber)
+                    ->where('trading_company', $company)
+                    ->first();
+
+                if ($deleted) {
+                    $results[] = [
+                        'index' => $index,
+                        'order_number' => $orderNumber,
+                        'company' => $company,
+                        'status' => 'deleted',
+                        'message' => 'Purchase order is deleted',
+                        'deleted_at' => $deleted->deleted_at,
+                    ];
+                } else {
+                    $results[] = [
+                        'index' => $index,
+                        'order_number' => $orderNumber,
+                        'company' => $company,
+                        'status' => 'not_found',
+                        'message' => 'Purchase order not found'
+                    ];
+                }
+                continue;
+            }
+
+            // Construir payload de actualización: permitir todos los campos excepto order_number/company
+            $updatePayload = $item;
+            unset($updatePayload['order_number'], $updatePayload['company']);
+
+            if (empty($updatePayload)) {
+                $results[] = [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'company' => $company,
+                    'status' => 'skipped',
+                    'message' => 'No updatable fields provided'
+                ];
+                continue;
+            }
+
+            try {
+                DB::beginTransaction();
+                // Reutilizar el mapeo/validaciones de processUpdateChanges
+                $changes = $this->processUpdateChanges($po, $updatePayload);
+                $po->save();
+
+                $this->logAudit($po, $changes, $request);
+                DB::commit();
+
+                $results[] = [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'company' => $company,
+                    'status' => 'updated',
+                    'updated_at' => $po->updated_at?->toISOString(),
+                    'changes' => $changes,
+                ];
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                $results[] = [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'company' => $company,
+                    'status' => 'error',
+                    'message' => $e->getMessage(),
+                ];
+            }
+        }
+
+        // Resumen
+        $summary = [
+            'total' => count($results),
+            'updated' => collect($results)->where('status', 'updated')->count(),
+            'deleted' => collect($results)->where('status', 'deleted')->count(),
+            'not_found' => collect($results)->where('status', 'not_found')->count(),
+            'skipped' => collect($results)->where('status', 'skipped')->count(),
+            'validation_error' => collect($results)->where('status', 'validation_error')->count(),
+            'error' => collect($results)->where('status', 'error')->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bulk update processed',
+            'summary' => $summary,
+            'results' => $results,
+        ]);
+    }
+
     public function index( Request $request ): JsonResponse
     {
         $query = PurchaseOrder::with(['vendor', 'products']);

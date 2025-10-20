@@ -19,6 +19,7 @@ Route::put('/purchase-orders/{po_id}', [PurchaseOrderController::class, 'updateF
 Route::delete('/purchase-orders/cancel', [PurchaseOrderController::class, 'deleteFromApi']);
 Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
 Route::post('/purchase-orders/search', [PurchaseOrderController::class, 'index']);
+Route::post('/purchase-orders/bulk', [PurchaseOrderController::class, 'bulk']);
 
 // Rutas protegidas con autenticación de token API
 Route::middleware('api.token')->group(function () {
