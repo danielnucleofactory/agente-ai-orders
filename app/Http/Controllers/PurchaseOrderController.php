@@ -73,7 +73,8 @@ class PurchaseOrderController extends Controller
                 $rules = [
                     // Requeridos
                     'order_number'           => ['required','string'],
-                    'category'               => ['required','string'],
+                    'trading_company'              => ['required','string'],
+                    /*'category'               => ['required','string'],
                     'factory_proforma_number'=> ['required','string'],
                     'route_label'            => ['required','string'],
                     'date_theorical_load'    => [
@@ -90,21 +91,12 @@ class PurchaseOrderController extends Controller
                     'reason'                 => ['required','string'],
                     'incoterms'              => ['required','string'],
                     'logistics_incoterm'     => ['required','string'],
-                    'price_incoterm'         => ['required','string'],
+                    'price_incoterm'         => ['required','string'],*/
                 ];
 
                 $messages = [
                     'order_number.required'            => 'El campo "P.O." es obligatorio.',
-                    'net_total.required'               => 'El campo "Monto" es obligatorio.',
-                    'category.required'                => 'El campo "Categoria" es obligatorio.',
-                    'factory_proforma_number.required' => 'El campo "Proforma Fábrica" es obligatorio.',
-                    'route_label.required'             => 'El campo "Ruta Logística" es obligatorio.',
-                    'date_theorical_load.required'     => 'El campo "Carga Lista Teórica" es obligatorio.',
-                    'date_theorical_load.date'         => 'El campo "Carga Lista Teórica" debe ser una fecha válida.',
-                    'reason.required'                  => 'El campo "Motivo" es obligatorio.',
-                    'incoterms.required'               => 'El "Incoterm de compra" es obligatorio.',
-                    'logistics_incoterm.required'      => 'El "Incoterm de logística" es obligatorio.',
-                    'price_incoterm.required'          => 'El "Incoterm de precios" es obligatorio.',
+                    'trading_company.required'         => 'El campo "Compañía" es obligatorio.',
                 ];
 
                 $validator = Validator::make($general, $rules, $messages);
