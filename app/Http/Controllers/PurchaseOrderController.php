@@ -114,33 +114,30 @@ class PurchaseOrderController extends Controller
                 $vendorId = data_get($general, 'vendor_id');
                 $vendorName = data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
 
-//                // Buscar o crear vendor
-//                if ($vendorId) {
-//                    $vendor = Vendor::where('vendo_code', $vendorId)->first();
-//                    if (!$vendor) {
-//                        // Crear vendor con vendo_code y nombre por defecto
-//                        $vendor = Vendor::create([
-//                            'company_id' => 1, // Usar company_id por defecto, se actualizará después
-//                            'vendo_code' => $vendorId,
-//                            'name' => 'Proveedor con falta de datos ' . $vendorId,
-//                            'status' => 'active'
-//                        ]);
-//                    }
-//                } else {
-//                    $vendor = Vendor::where('name', $vendorName)->first();
-//                    if (!$vendor) {
-//                        // Crear vendor con nombre
-//                        $vendor = Vendor::create([
-//                            'company_id' => 1, // Usar company_id por defecto, se actualizará después
-//                            'name' => $vendorName,
-//                            'vendo_code' => 'VENDOR_' . time(), // Generar código único
-//                            'status' => 'active'
-//                        ]);
-//                    }
-//                }
-//
-//                // Obtener company_id del vendor
-//                $companyId = $vendor->company_id;
+                // Buscar o crear vendor
+                $vendor = null;
+                if ($vendorId) {
+                    // Tratar vendor_id del JSON como vendo_code
+                    $vendor = Vendor::where('vendo_code', $vendorId)->first();
+                    if (!$vendor) {
+                        $vendor = Vendor::create([
+                            'company_id' => 1,
+                            'vendo_code' => (string) $vendorId,
+                            'name' => $vendorName ?: ('Proveedor ' . $vendorId),
+                            'status' => 'active',
+                        ]);
+                    }
+                } elseif ($vendorName) {
+                    $vendor = Vendor::where('name', $vendorName)->first();
+                    if (!$vendor) {
+                        $vendor = Vendor::create([
+                            'company_id' => 1,
+                            'name' => $vendorName,
+                            'vendo_code' => 'VENDOR_' . time(),
+                            'status' => 'active',
+                        ]);
+                    }
+                }
 
                 // 5) Totales
                 $totalWeight = 0;
@@ -182,6 +179,12 @@ class PurchaseOrderController extends Controller
                     'height_cm' => (float) data_get($general, 'height_cm', 0),
                     'date_required_in_destination' => $parseDate(data_get($general, 'date_required_in_destination')),
                 ];
+
+                // Asignar relación con vendor si se resolvió
+                if ($vendor) {
+                    $poData['vendor_id'] = $vendor->id;
+                    $poData['vendor_number'] = $vendor->vendo_code;
+                }
 
                 // 8) ===== NEW FIELDS FOR OLO (string) =====
                 foreach ([
