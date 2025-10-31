@@ -73,7 +73,8 @@ class PurchaseOrderController extends Controller
                 $rules = [
                     // Requeridos
                     'order_number'           => ['required','string'],
-                    'category'               => ['required','string'],
+                    'trading_company'              => ['required','string'],
+                    /*'category'               => ['required','string'],
                     'factory_proforma_number'=> ['required','string'],
                     'route_label'            => ['required','string'],
                     'date_theorical_load'    => [
@@ -81,7 +82,7 @@ class PurchaseOrderController extends Controller
                         'date',
                         function ($attribute, $value, $fail) use ($request) {
                             $emisionDate = $request->input('emision_date_po');
-                            
+
                             if ($emisionDate && $value < $emisionDate) {
                                 $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
                             }
@@ -90,21 +91,12 @@ class PurchaseOrderController extends Controller
                     'reason'                 => ['required','string'],
                     'incoterms'              => ['required','string'],
                     'logistics_incoterm'     => ['required','string'],
-                    'price_incoterm'         => ['required','string'],
+                    'price_incoterm'         => ['required','string'],*/
                 ];
 
                 $messages = [
                     'order_number.required'            => 'El campo "P.O." es obligatorio.',
-                    'net_total.required'               => 'El campo "Monto" es obligatorio.',
-                    'category.required'                => 'El campo "Categoria" es obligatorio.',
-                    'factory_proforma_number.required' => 'El campo "Proforma Fábrica" es obligatorio.',
-                    'route_label.required'             => 'El campo "Ruta Logística" es obligatorio.',
-                    'date_theorical_load.required'     => 'El campo "Carga Lista Teórica" es obligatorio.',
-                    'date_theorical_load.date'         => 'El campo "Carga Lista Teórica" debe ser una fecha válida.',
-                    'reason.required'                  => 'El campo "Motivo" es obligatorio.',
-                    'incoterms.required'               => 'El "Incoterm de compra" es obligatorio.',
-                    'logistics_incoterm.required'      => 'El "Incoterm de logística" es obligatorio.',
-                    'price_incoterm.required'          => 'El "Incoterm de precios" es obligatorio.',
+                    'trading_company.required'         => 'El campo "Compañía" es obligatorio.',
                 ];
 
                 $validator = Validator::make($general, $rules, $messages);
@@ -122,33 +114,30 @@ class PurchaseOrderController extends Controller
                 $vendorId = data_get($general, 'vendor_id');
                 $vendorName = data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
 
-//                // Buscar o crear vendor
-//                if ($vendorId) {
-//                    $vendor = Vendor::where('vendo_code', $vendorId)->first();
-//                    if (!$vendor) {
-//                        // Crear vendor con vendo_code y nombre por defecto
-//                        $vendor = Vendor::create([
-//                            'company_id' => 1, // Usar company_id por defecto, se actualizará después
-//                            'vendo_code' => $vendorId,
-//                            'name' => 'Proveedor con falta de datos ' . $vendorId,
-//                            'status' => 'active'
-//                        ]);
-//                    }
-//                } else {
-//                    $vendor = Vendor::where('name', $vendorName)->first();
-//                    if (!$vendor) {
-//                        // Crear vendor con nombre
-//                        $vendor = Vendor::create([
-//                            'company_id' => 1, // Usar company_id por defecto, se actualizará después
-//                            'name' => $vendorName,
-//                            'vendo_code' => 'VENDOR_' . time(), // Generar código único
-//                            'status' => 'active'
-//                        ]);
-//                    }
-//                }
-//
-//                // Obtener company_id del vendor
-//                $companyId = $vendor->company_id;
+                // Buscar o crear vendor
+                $vendor = null;
+                if ($vendorId) {
+                    // Tratar vendor_id del JSON como vendo_code
+                    $vendor = Vendor::where('vendo_code', $vendorId)->first();
+                    if (!$vendor) {
+                        $vendor = Vendor::create([
+                            'company_id' => 1,
+                            'vendo_code' => (string) $vendorId,
+                            'name' => $vendorName ?: ('Proveedor ' . $vendorId),
+                            'status' => 'active',
+                        ]);
+                    }
+                } elseif ($vendorName) {
+                    $vendor = Vendor::where('name', $vendorName)->first();
+                    if (!$vendor) {
+                        $vendor = Vendor::create([
+                            'company_id' => 1,
+                            'name' => $vendorName,
+                            'vendo_code' => 'VENDOR_' . time(),
+                            'status' => 'active',
+                        ]);
+                    }
+                }
 
                 // 5) Totales
                 $totalWeight = 0;
@@ -190,6 +179,12 @@ class PurchaseOrderController extends Controller
                     'height_cm' => (float) data_get($general, 'height_cm', 0),
                     'date_required_in_destination' => $parseDate(data_get($general, 'date_required_in_destination')),
                 ];
+
+                // Asignar relación con vendor si se resolvió
+                if ($vendor) {
+                    $poData['vendor_id'] = $vendor->id;
+                    $poData['vendor_number'] = $vendor->vendo_code;
+                }
 
                 // 8) ===== NEW FIELDS FOR OLO (string) =====
                 foreach ([
@@ -636,4 +631,197 @@ class PurchaseOrderController extends Controller
 
         \Log::info('Purchase Order Updated via API', $auditData);
     }
+
+    public function bulk(Request $request): JsonResponse
+    {
+        $payload = $request->json()->all();
+        if (empty($payload)) {
+            $payload = $request->all();
+        }
+
+        // Normalizar a lista de items
+        $items = [];
+        if (isset($payload['items']) && is_array($payload['items'])) {
+            $items = $payload['items'];
+        } elseif (is_array($payload) && isset($payload[0])) {
+            $items = $payload; // array plano
+        } elseif (!empty($payload)) {
+            $items = [$payload]; // objeto único
+        }
+
+        if (empty($items)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No items received',
+                'results' => []
+            ], 422);
+        }
+
+        $results = [];
+
+        foreach ($items as $index => $item) {
+            // Validar únicamente order_number y company (trading_company)
+            $orderNumber = data_get($item, 'order_number');
+            $company     = data_get($item, 'company');
+
+            if (!$orderNumber || !$company) {
+                $results[] = [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'company' => $company,
+                    'status' => 'validation_error',
+                    'message' => 'order_number and company are required'
+                ];
+                continue;
+            }
+
+            // Buscar PO activa
+            $po = PurchaseOrder::where('order_number', $orderNumber)
+                ->where('trading_company', $company)
+                ->first();
+
+            if (!$po) {
+                // Si no está activa, verificar si existe eliminada
+                $deleted = PurchaseOrder::onlyTrashed()
+                    ->where('order_number', $orderNumber)
+                    ->where('trading_company', $company)
+                    ->first();
+
+                if ($deleted) {
+                    $results[] = [
+                        'index' => $index,
+                        'order_number' => $orderNumber,
+                        'company' => $company,
+                        'status' => 'deleted',
+                        'message' => 'Purchase order is deleted',
+                        'deleted_at' => $deleted->deleted_at,
+                    ];
+                } else {
+                    $results[] = [
+                        'index' => $index,
+                        'order_number' => $orderNumber,
+                        'company' => $company,
+                        'status' => 'not_found',
+                        'message' => 'Purchase order not found'
+                    ];
+                }
+                continue;
+            }
+
+            // Construir payload de actualización: permitir todos los campos excepto order_number/company
+            $updatePayload = $item;
+            unset($updatePayload['order_number'], $updatePayload['company']);
+
+            if (empty($updatePayload)) {
+                $results[] = [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'company' => $company,
+                    'status' => 'skipped',
+                    'message' => 'No updatable fields provided'
+                ];
+                continue;
+            }
+
+            try {
+                DB::beginTransaction();
+                // Reutilizar el mapeo/validaciones de processUpdateChanges
+                $changes = $this->processUpdateChanges($po, $updatePayload);
+                $po->save();
+
+                $this->logAudit($po, $changes, $request);
+                DB::commit();
+
+                $results[] = [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'company' => $company,
+                    'status' => 'updated',
+                    'updated_at' => $po->updated_at?->toISOString(),
+                    'changes' => $changes,
+                ];
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                $results[] = [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'company' => $company,
+                    'status' => 'error',
+                    'message' => $e->getMessage(),
+                ];
+            }
+        }
+
+        // Resumen
+        $summary = [
+            'total' => count($results),
+            'updated' => collect($results)->where('status', 'updated')->count(),
+            'deleted' => collect($results)->where('status', 'deleted')->count(),
+            'not_found' => collect($results)->where('status', 'not_found')->count(),
+            'skipped' => collect($results)->where('status', 'skipped')->count(),
+            'validation_error' => collect($results)->where('status', 'validation_error')->count(),
+            'error' => collect($results)->where('status', 'error')->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bulk update processed',
+            'summary' => $summary,
+            'results' => $results,
+        ]);
+    }
+
+    public function index( Request $request ): JsonResponse
+    {
+        $query = PurchaseOrder::with(['vendor', 'products']);
+
+        // Si viene con filtros (query parameters), aplicarlos
+        if ($request->has('order_number') || $request->has('company')) {
+            if ($request->has('order_number')) {
+                $query->where('order_number', $request->order_number);
+            }
+
+            if ($request->has('company')) {
+                $company = $request->company;
+                $query->where('trading_company', $company);
+            }
+        }
+
+        $purchaseOrders = $query->get();
+
+        // Si no se encontraron POs activas pero hay filtros específicos, verificar si existen eliminadas
+        $deletedInfo = null;
+        if ($purchaseOrders->isEmpty() && ($request->has('order_number') || $request->has('company'))) {
+            $deletedQuery = PurchaseOrder::onlyTrashed();
+
+            if ($request->has('order_number')) {
+                $deletedQuery->where('order_number', $request->order_number);
+            }
+
+            if ($request->has('company')) {
+                $deletedQuery->where('trading_company', $request->company);
+            }
+
+            $deletedPO = $deletedQuery->first();
+            if ($deletedPO) {
+                $deletedInfo = [
+                    'message' => 'The requested purchase order was found but has been deleted',
+                    'deleted_at' => $deletedPO->deleted_at,
+                    'order_number' => $deletedPO->order_number,
+                    'trading_company' => $deletedPO->trading_company
+                ];
+            }
+        }
+
+        return response()->json([
+            'message' => 'Purchase orders fetched successfully',
+            'data' => $purchaseOrders,
+            'filters_applied' => [
+                'order_number' => $request->get('order_number'),
+                'company' => $request->get('company')
+            ],
+            'deleted_info' => $deletedInfo
+        ]);
+    }
 }
+
