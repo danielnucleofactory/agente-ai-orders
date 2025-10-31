@@ -235,7 +235,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div>
                     <p class="text-gray-500 mb-1">Nombre del Proveedor</p>
-                    <p class="font-semibold">{{ $purchaseOrder->vendor->vendor_name ?? '-' }}</p>
+                    <p class="font-semibold">{{ $purchaseOrder->vendor->name ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Número de Proveedor</p>
