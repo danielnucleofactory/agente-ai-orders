@@ -9,6 +9,10 @@ use App\Livewire\Ui\PurchaseOrderCard;
 use Illuminate\Support\Facades\Blade;
 use App\View\Components\Breadcrumb;
 use Carbon\Carbon;
+use App\Models\PurchaseOrder;
+use App\Models\ShippingDocument;
+use App\Observers\PurchaseOrderObserver;
+use App\Observers\ShippingDocumentObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Registrar observers para auditoría
+        PurchaseOrder::observe(PurchaseOrderObserver::class);
+        ShippingDocument::observe(ShippingDocumentObserver::class);
 
         // Registrar componente de breadcrumb explícitamente
         Blade::component('breadcrumb', Breadcrumb::class);
