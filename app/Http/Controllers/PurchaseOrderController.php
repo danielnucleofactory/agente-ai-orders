@@ -199,9 +199,11 @@ class PurchaseOrderController extends Controller
                     }
                 }
 
-                // Mapeo especial para case_number_file (expediente en el JSON)
+                // Mapeo especial para case_number_file (expediente en el JSON o case_number_file directo)
                 if (array_key_exists('expediente', $general)) {
                     $poData['case_number_file'] = $general['expediente'];
+                } elseif (array_key_exists('case_number_file', $general)) {
+                    $poData['case_number_file'] = $general['case_number_file'];
                 }
 
                 // 9) ===== NEW FIELDS FOR OLO (boolean) =====
@@ -220,7 +222,7 @@ class PurchaseOrderController extends Controller
                 }
 
                 // 11) ===== NEW FIELDS FOR OLO (decimal) =====
-                foreach (['Invoice_amount','freight_amount','cbm'] as $f) {
+                foreach (['Invoice_amount','freight_amount','cbm','total_amount'] as $f) {
                     if (($v = data_get($general, $f)) !== null && $v !== '') {
                         $poData[$f] = (float) $v;
                     }
@@ -489,6 +491,7 @@ class PurchaseOrderController extends Controller
             'factory_proforma_number' => 'factory_proforma_number',
             'invoice'                 => 'invoice',
             'Invoice_amount'          => 'Invoice_amount',
+            'total_amount'            => 'total_amount',
             'applies_tlc'             => 'applies_tlc',
             'apply_technical_note'    => 'apply_technical_note',
             'reason'                  => 'reason',
@@ -541,7 +544,8 @@ class PurchaseOrderController extends Controller
 
                 // Montos
                 case 'net_total':
-                case 'Invoice_amount': {
+                case 'Invoice_amount':
+                case 'total_amount': {
                     $po->$modelField = (float) $value;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => (float) $value];
                     break;

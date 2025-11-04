@@ -232,9 +232,10 @@ class CreatePucharseOrder extends Component
     public $date_eta_initial;
 
     // Costos
-    public $po_amount = 0.0;        // Monto PO “declarado” (si lo usas)
+    public $po_amount = 0.0;        // Monto PO "declarado" (si lo usas)
     public $Invoice_amount = 0.0;   // Monto de la factura (mantengo el nombre exacto)
     public $freight_amount = 0.0;   // Monto flete
+    public $total_amount = 0.0;     // Monto total
 
 // Métricas / contadores
     public $container_free_days;        // int
@@ -439,6 +440,7 @@ class CreatePucharseOrder extends Component
                 $this->po_amount       = (float) $this->purchaseOrder->po_amount;
                 $this->Invoice_amount  = (float) $this->purchaseOrder->Invoice_amount;
                 $this->freight_amount  = (float) $this->purchaseOrder->freight_amount;
+                $this->total_amount    = (float) $this->purchaseOrder->total_amount;
 
                 // Métricas / contadores
                 $this->container_free_days  = $this->purchaseOrder->container_free_days;
@@ -919,6 +921,7 @@ class CreatePucharseOrder extends Component
                     'po_amount'       => $this->po_amount,
                     'Invoice_amount'  => $this->Invoice_amount,
                     'freight_amount'  => $this->freight_amount,
+                    'total_amount'    => $this->total_amount,
 
                     'container_free_days'   => $this->container_free_days,
                     'etd_dates_difference'  => $this->etd_dates_difference,
@@ -1239,6 +1242,7 @@ class CreatePucharseOrder extends Component
                 'po_amount'                    => $this->po_amount,
                 'Invoice_amount'               => $this->Invoice_amount,
                 'freight_amount'               => $this->freight_amount,
+                'total_amount'                 => $this->total_amount,
                 'container_free_days'          => $this->container_free_days,
                 'etd_dates_difference'         => $this->etd_dates_difference,
                 'eta_dates_difference'         => $this->eta_dates_difference,

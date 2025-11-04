@@ -854,6 +854,11 @@
                         <x-slot:input type="number" step="0.01" name="other_expenses" placeholder="0.00" wire:model.live="other_expenses"></x-slot:input>
                     </x-form-input>
 
+                    <x-form-input>
+                        <x-slot:label>Monto Total</x-slot:label>
+                        <x-slot:input type="number" step="0.01" inputmode="decimal" wire:model.live="total_amount"></x-slot:input>
+                    </x-form-input>
+
                     <!-- Costos logísticos -->
                     <div class="col-span-3">
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Costos logísticos</h4>

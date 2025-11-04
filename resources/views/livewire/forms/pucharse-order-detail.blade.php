@@ -518,6 +518,10 @@
                     <p class="text-gray-500 mb-1">Otros Gastos</p>
                     <p class="font-semibold">$ {{ number_format($purchaseOrder->other_expenses ?? 0, 2) }}</p>
                 </div>
+                <div>
+                    <p class="text-gray-500 mb-1">Monto Total</p>
+                    <p class="font-semibold">$ {{ number_format($purchaseOrder->total_amount ?? 0, 2) }}</p>
+                </div>
             </div>
 
             {{-- Totales y cálculos --}}
@@ -689,26 +693,27 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
-                            @forelse($comments as $comment)
+                            @forelse($filteredComments as $comment)
                                 <tr>
                                     <td class="px-4 py-3 text-sm text-gray-900">
-                                        {{ formatDateTime($comment->created_at) }}
+                                        {{ formatDateTime($comment['created_at']) }}
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-900">
-                                        {{ $comment->user->name ?? 'Usuario desconocido' }}
+                                        {{ $comment['user_name'] ?? 'Usuario desconocido' }}
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-900">
-                                        {{ $comment->comment }}
+                                        {{ $comment['comment'] }}
                                     </td>
                                     <td class="px-4 py-3 text-sm">
-                                        @if($comment->getMedia('attachments')->count() > 0)
+                                        @if(!empty($comment['attachment']))
                                             <div class="space-y-1">
-                                                @foreach($comment->getMedia('attachments') as $media)
-                                                    <a href="{{ $media->getUrl() }}" target="_blank" 
-                                                       class="text-blue-600 hover:text-blue-800 block">
-                                                        {{ $media->file_name }}
-                                                    </a>
-                                                @endforeach
+                                                <a href="{{ $comment['attachment']['url'] }}" target="_blank" 
+                                                   class="text-blue-600 hover:text-blue-800 block">
+                                                    {{ $comment['attachment']['name'] }}
+                                                    @if($comment['attachment']['is_pending'])
+                                                        <span class="text-orange-600 text-xs">(pendiente de aprobación)</span>
+                                                    @endif
+                                                </a>
                                             </div>
                                         @else
                                             -
