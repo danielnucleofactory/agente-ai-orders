@@ -352,6 +352,31 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Delete a purchase order (soft delete)
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function destroy(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'order_number' => 'required|string',
+            'trading_company' => 'required|string',
+        ]);
+
+        $po = PurchaseOrder::where('order_number', $validated['order_number'])
+            ->where('trading_company', $validated['trading_company'])
+            ->firstOrFail();
+
+        $po->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Purchase order deleted successfully.',
+        ]);
+    }
+
+    /**
      * Update an existing purchase order from external API
      *
      * @param Request $request

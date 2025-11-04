@@ -17,6 +17,7 @@ Route::get('/status', function () {
 Route::post('/purchase-orders', [PurchaseOrderController::class, 'createFromApi']);
 Route::put('/purchase-orders/{po_id}', [PurchaseOrderController::class, 'updateFromApi']);
 Route::delete('/purchase-orders/cancel', [PurchaseOrderController::class, 'deleteFromApi']);
+Route::delete('/purchase-orders', [PurchaseOrderController::class, 'destroy']);
 Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
 Route::post('/purchase-orders/search', [PurchaseOrderController::class, 'index']);
 Route::post('/purchase-orders/bulk', [PurchaseOrderController::class, 'bulk']);
