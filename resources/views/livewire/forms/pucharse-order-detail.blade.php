@@ -239,7 +239,7 @@
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Número de Proveedor</p>
-                    <p class="font-semibold">{{ $purchaseOrder->vendor_number ?? '-' }}</p>
+                    <p class="font-semibold">{{ $purchaseOrder->vendor_id ?? '-' }}</p>
                 </div>
             </div>
             </div>
