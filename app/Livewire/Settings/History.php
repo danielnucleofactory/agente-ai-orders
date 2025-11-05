@@ -218,6 +218,11 @@ class History extends Component
                     'status' => $statusDisplay,
                     'status_icon' => $iconClass,
                     'operation' => $comment->operacion ?? 'Detalle PO',
+                    'action_type' => $comment->action_type ?? 'comment',
+                    'action_type_label' => $comment->getActionTypeLabel(),
+                    'old_values' => $comment->old_values ?? null,
+                    'new_values' => $comment->new_values ?? null,
+                    'has_changes' => !empty($comment->old_values) || !empty($comment->new_values),
                     'attachment' => $displayAttachment ? [
                         'name' => $displayAttachment->file_name . ($pendingAttachment ? ' (pendiente de aprobación)' : ''),
                         'url' => $attachment ? $displayAttachment->getUrl() : '#',

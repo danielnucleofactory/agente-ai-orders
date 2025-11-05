@@ -280,6 +280,11 @@ class PucharseOrderConsolidateDetail extends Component {
                     'created_at' => $comment->created_at,
                     'stage' => $comment->stage ?? 'shipping_document',
                     'status' => $comment->status ?? 'Pendiente',
+                    'action_type' => $comment->action_type ?? 'comment',
+                    'action_type_label' => $comment->getActionTypeLabel(),
+                    'old_values' => $comment->old_values ?? null,
+                    'new_values' => $comment->new_values ?? null,
+                    'has_changes' => !empty($comment->old_values) || !empty($comment->new_values),
                     'attachments' => $attachments,
                     'type' => 'comment'
                 ];
@@ -578,11 +583,30 @@ class PucharseOrderConsolidateDetail extends Component {
     public function attachPurchaseOrder($orderId)
     {
         try {
+            $purchaseOrder = \App\Models\PurchaseOrder::find($orderId);
+            
+            // Loguear antes de agregar
+            \App\Models\Comment::create([
+                'shipping_document_id' => $this->shippingDocument->id,
+                'user_id' => auth()->id(),
+                'action_type' => 'field_change',
+                'comment' => "Orden de compra agregada: {$purchaseOrder->order_number}",
+                'old_values' => null,
+                'new_values' => [
+                    'purchase_order_id' => $purchaseOrder->id,
+                    'purchase_order_number' => $purchaseOrder->order_number,
+                    'action' => 'attach'
+                ],
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+            
             $this->shippingDocument->purchaseOrders()->attach($orderId);
             $this->loadRelatedPurchaseOrders(); // Refresh the list
             $this->loadSavingsData(); // Recargar datos de ahorros
             $this->searchPO = ''; // Clear search
             $this->searchResults = []; // Clear results
+            $this->loadComments(); // Recargar comentarios para mostrar el log
 
             session()->flash('message', 'Orden de compra agregada exitosamente');
         } catch (\Exception $e) {
@@ -598,9 +622,33 @@ class PucharseOrderConsolidateDetail extends Component {
     }
 
     public function deleteOrder($id) {
-        $this->shippingDocument->purchaseOrders()->detach($id);
-        $this->loadRelatedPurchaseOrders();
-        $this->loadSavingsData(); // Recargar datos de ahorros
+        try {
+            $purchaseOrder = \App\Models\PurchaseOrder::find($id);
+            
+            // Loguear antes de eliminar
+            \App\Models\Comment::create([
+                'shipping_document_id' => $this->shippingDocument->id,
+                'user_id' => auth()->id(),
+                'action_type' => 'field_change',
+                'comment' => "Orden de compra eliminada: {$purchaseOrder->order_number}",
+                'old_values' => [
+                    'purchase_order_id' => $purchaseOrder->id,
+                    'purchase_order_number' => $purchaseOrder->order_number,
+                    'action' => 'detach'
+                ],
+                'new_values' => null,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+            
+            $this->shippingDocument->purchaseOrders()->detach($id);
+            $this->loadRelatedPurchaseOrders();
+            $this->loadSavingsData(); // Recargar datos de ahorros
+            $this->loadComments(); // Recargar comentarios para mostrar el log
+        } catch (\Exception $e) {
+            Log::error('Error al eliminar orden de compra: ' . $e->getMessage());
+            session()->flash('error', 'Error al eliminar la orden de compra');
+        }
     }
 
     public function setComments()

@@ -738,6 +738,9 @@
                                     Operación
                                 </th>
                                 <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
+                                    Tipo
+                                </th>
+                                <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
                                     Estado
                                 </th>
                                 <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
@@ -745,6 +748,9 @@
                                 </th>
                                 <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
                                     Archivos adjuntos
+                                </th>
+                                <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
+                                    Acciones
                                 </th>
                             </tr>
                         </thead>
@@ -765,6 +771,29 @@
                                     </td>
                                     <td class="px-6 py-4 text-sm whitespace-nowrap">
                                         {{ $comment['stage'] ?? 'Shipping Document' }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        @if(($comment['action_type'] ?? 'comment') === 'comment')
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                Comentario
+                                            </span>
+                                        @elseif($comment['action_type'] === 'field_change')
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                Cambio de Datos
+                                            </span>
+                                        @elseif($comment['action_type'] === 'status_change')
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                                Cambio de Estado
+                                            </span>
+                                        @elseif($comment['action_type'] === 'record_create')
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                Creación
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                Otro
+                                            </span>
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         @if($comment['status'] === 'Aprobado')
@@ -799,10 +828,20 @@
                                             @endforeach
                                         @endif
                                     </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        @if($comment['has_changes'] ?? false)
+                                            <button wire:click="$dispatchTo('partials.activity-detail-modal', 'openActivityDetail', @js($comment))" 
+                                                    class="text-[#1AAD8A] hover:text-[#0F614D] hover:underline">
+                                                Ver cambios
+                                            </button>
+                                        @else
+                                            <span class="text-gray-400">-</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="px-6 py-4 text-sm text-center text-gray-500">
+                                    <td colspan="9" class="px-6 py-4 text-sm text-center text-gray-500">
                                         No hay registros disponibles
                                     </td>
                                 </tr>
@@ -915,4 +954,6 @@
             </x-primary-button>
         </div>
     </x-modal>
+
+    @livewire('partials.activity-detail-modal')
 </div>

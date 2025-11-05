@@ -163,6 +163,29 @@
                             {{ $comment['operation'] }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
+                            @if(($comment['action_type'] ?? 'comment') === 'comment')
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    Comentario
+                                </span>
+                            @elseif($comment['action_type'] === 'field_change')
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    Cambio de Datos
+                                </span>
+                            @elseif($comment['action_type'] === 'status_change')
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                    Cambio de Estado
+                                </span>
+                            @elseif($comment['action_type'] === 'record_create')
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Creación
+                                </span>
+                            @else
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    Otro
+                                </span>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
                             @if($comment['status'] === 'Aprobado')
                                 <span class="inline-flex px-2 text-xs font-semibold leading-5 text-white bg-green-600 rounded-full">
                                     Aprobado
@@ -214,10 +237,20 @@
                                 <span class="text-gray-400">Sin archivos</span>
                             @endif
                         </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            @if($comment['has_changes'] ?? false)
+                                <button wire:click="$dispatchTo('partials.activity-detail-modal', 'openActivityDetail', @js($comment))" 
+                                        class="text-[#1AAD8A] hover:text-[#0F614D] hover:underline">
+                                    Ver cambios
+                                </button>
+                            @else
+                                <span class="text-gray-400">-</span>
+                            @endif
+                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="px-6 py-8 text-center text-gray-500">
+                        <td colspan="10" class="px-6 py-8 text-center text-gray-500">
                             <div class="flex flex-col items-center">
                                 <svg class="w-12 h-12 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -246,4 +279,6 @@
             @endif
         </div>
     @endif
+
+    @livewire('partials.activity-detail-modal')
 </div>

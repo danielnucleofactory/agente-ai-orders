@@ -16,7 +16,17 @@ class Comment extends Model implements HasMedia
         'comment',
         'user_id',
         'shipping_document_id',
-        'stage'
+        'stage',
+        'action_type',
+        'old_values',
+        'new_values',
+        'ip_address',
+        'user_agent'
+    ];
+
+    protected $casts = [
+        'old_values' => 'array',
+        'new_values' => 'array',
     ];
 
     public function user()
@@ -37,5 +47,19 @@ class Comment extends Model implements HasMedia
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('comment_attachments');
+    }
+
+    /**
+     * Get the label for the action type in Spanish
+     */
+    public function getActionTypeLabel(): string
+    {
+        return match($this->action_type ?? 'comment') {
+            'comment' => 'Comentario',
+            'field_change' => 'Cambio de Datos',
+            'status_change' => 'Cambio de Estado',
+            'record_create' => 'Creación',
+            default => 'Otro'
+        };
     }
 }
