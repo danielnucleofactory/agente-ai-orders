@@ -1003,17 +1003,8 @@ class ShippingDocumentationKanban extends Component
     // First, add a method that handles everything in one go
     public function saveAndMoveDocument()
     {
-        try {
-            // Validar los datos del formulario
-            $this->validate($this->getRules());
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            // Si hay errores de validación, mostrarlos y no cerrar el modal
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => 'Por favor, complete todos los campos requeridos correctamente.'
-            ]);
-            return;
-        }
+        // Validar los datos del formulario - Livewire mostrará los errores automáticamente
+        $this->validate($this->getRules(), $this->messages());
 
         try {
             // Primero validamos los códigos de tracking si es necesario (columna Tránsito)

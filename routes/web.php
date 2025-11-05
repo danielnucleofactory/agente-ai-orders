@@ -26,8 +26,12 @@ use App\Http\Controllers\ForecastController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 
-Route::view('/', 'welcome')
-    ->name('welcome');
+Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+    return redirect()->route('login');
+});
 
 // Dashboard routes
 Route::middleware(['auth', 'verified', 'permission:has_view_dashboard'])->group(function () {

@@ -239,7 +239,7 @@
 
             <div class="mb-8">
                 <x-form-input>
-                    <x-slot:label>Carga Lista Variable</x-slot:label>
+                    <x-slot:label>Carga Lista Variable <span class="text-red-500">*</span></x-slot:label>
                     <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500'  : '' }}">
                     </x-slot:input>
                     <x-slot:error>
@@ -254,7 +254,7 @@
             </div>
             <div class="mb-8">
                 <x-form-input>
-                    <x-slot:label>Proveedor de Servicio</x-slot:label>
+                    <x-slot:label>Proveedor de Servicio <span class="text-red-500">*</span></x-slot:label>
                     <x-slot:input type="text" wire:model.live="service_provider" placeholder="Ingrese proveedor de servicio" class="pr-10 {{ $errors->has('service_provider') ? 'border-red-500'  : '' }}">
                     </x-slot:input>
                     <x-slot:error>
@@ -264,11 +264,11 @@
             </div>
             <div class="mb-8">
                 <x-form-input>
-                    <x-slot:label>Agente de Carga</x-slot:label>
-                    <x-slot:input type="text" name="forwarder_name" placeholder="Ingrese agente de carga" wire:model="forwarder_name" class="pr-10 {{ $errors->has('service_provider') ? 'border-red-500'  : '' }}">
+                    <x-slot:label>Agente de Carga <span class="text-red-500">*</span></x-slot:label>
+                    <x-slot:input type="text" name="forwarder_name" placeholder="Ingrese agente de carga" wire:model="forwarder_name" class="pr-10 {{ $errors->has('forwarder_name') ? 'border-red-500'  : '' }}">
                     </x-slot:input>
                     <x-slot:error>
-                        {{ $errors->first('service_provider') }}
+                        {{ $errors->first('forwarder_name') }}
                     </x-slot:error>
                 </x-form-input>
             </div>
@@ -325,7 +325,7 @@
                         <!-- Solicitud de Booking -->
                         <div>
                             <x-form-input>
-                                <x-slot:label>Solicitud de Booking</x-slot:label>
+                                <x-slot:label>Solicitud de Booking <span class="text-red-500">*</span></x-slot:label>
                                 <x-slot:input
                                     type="date"
                                     name="date_booking_request"
@@ -341,7 +341,7 @@
                         <!-- Autorizacion de Booking -->
                         <div>
                             <x-form-input>
-                                <x-slot:label>Autorización de Booking</x-slot:label>
+                                <x-slot:label>Autorización de Booking <span class="text-red-500">*</span></x-slot:label>
                                 <x-slot:input
                                     type="date"
                                     name="date_booking_authorized"
@@ -357,7 +357,7 @@
                         <!-- ETD Inicial -->
                         <div>
                             <x-form-input>
-                                <x-slot:label>ETD Inicial</x-slot:label>
+                                <x-slot:label>ETD Inicial <span class="text-red-500">*</span></x-slot:label>
                                 <x-slot:input
                                     type="date"
                                     wire:model.live="date_etd_initial"
@@ -372,7 +372,7 @@
                         <!-- ETD Variable -->
                         <div>
                             <x-form-input>
-                                <x-slot:label>ETD Variable</x-slot:label>
+                                <x-slot:label>ETD Variable <span class="text-red-500">*</span></x-slot:label>
                                 <x-slot:input
                                     type="date"
                                     name="date_etd_updated"
@@ -388,10 +388,11 @@
                         <!-- Modo de transporte -->
                         <div>
                             <x-form-select
-                                label="Modo de transporte"
+                                label="Modo de transporte <span class='text-red-500'>*</span>"
                                 name="mode"
                                 wire:model.live="mode"
-                                :options="['maritimo' => 'Marítimo', 'aereo' => 'Aéreo','terrestre' => 'Terrestre']" />
+                                :options="['maritimo' => 'Marítimo', 'aereo' => 'Aéreo','terrestre' => 'Terrestre']"
+                                :error="$errors->has('mode')" />
                         </div>
 
                         <!-- Comentarios (a lo ancho) -->
@@ -469,7 +470,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-6">
                     <div>
                         <x-form-input>
-                            <x-slot:label>ETD Real (ATD)</x-slot:label>
+                            <x-slot:label>ETD Real (ATD) <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" name="date_atd" wire:model="date_atd"
                                           class="pr-10 {{ $errors->has('date_atd') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('date_atd') }}</x-slot:error>
@@ -478,7 +479,7 @@
 
                     <div>
                         <x-form-input>
-                            <x-slot:label>ETA Inicial</x-slot:label>
+                            <x-slot:label>ETA Inicial <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" name="date_eta" wire:model="date_eta"
                                           class="pr-10 {{ $errors->has('date_eta') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('date_eta') }}</x-slot:error>
@@ -487,7 +488,7 @@
 
                     <div>
                         <x-form-input>
-                            <x-slot:label>ETA Variable</x-slot:label>
+                            <x-slot:label>ETA Variable <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" name="date_eta_updated" wire:model="date_eta_updated"
                                           class="pr-10 {{ $errors->has('date_eta_updated') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('date_eta_updated') }}</x-slot:error>
@@ -548,7 +549,7 @@
                     {{-- Naviera - requerido --}}
                     <div>
                         <x-form-input>
-                            <x-slot:label>Línea Naviera</x-slot:label>
+                            <x-slot:label>Línea Naviera <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input name="shipping_line" wire:model="shipping_line" placeholder="Ingrese línea naviera"
                                           class="pr-10 {{ $errors->has('shipping_line') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('shipping_line') }}</x-slot:error>
@@ -591,7 +592,7 @@
 
                     <div>
                         <x-form-input>
-                            <x-slot:label>Puerto de Embarque</x-slot:label>
+                            <x-slot:label>Puerto de Embarque <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input name="departure_port" wire:model="departure_port" placeholder="Ingrese puerto de embarque"
                                           class="pr-10 {{ $errors->has('departure_port') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('departure_port') }}</x-slot:error>
@@ -600,7 +601,7 @@
 
                     <div>
                         <x-form-input>
-                            <x-slot:label>Puerto de Arribo</x-slot:label>
+                            <x-slot:label>Puerto de Arribo <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input name="arrival_port" wire:model="arrival_port" placeholder="Ingrese puerto de arribo"
                                           class="pr-10 {{ $errors->has('arrival_port') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('arrival_port') }}</x-slot:error>
@@ -650,7 +651,7 @@
 
             <div class="mb-8">
                 <x-form-input>
-                    <x-slot:label>ETA Real (ATA)</x-slot:label>
+                    <x-slot:label>ETA Real (ATA) <span class="text-red-500">*</span></x-slot:label>
                     <x-slot:input type="date" name="date_ata" wire:model="date_ata"
                                   class="pr-10 {{ $errors->has('date_ata') ? 'border-red-500' : '' }}"></x-slot:input>
                     <x-slot:error>{{ $errors->first('date_ata') }}</x-slot:error>
@@ -698,7 +699,7 @@
 
             <div class="mb-8">
                 <x-form-input>
-                    <x-slot:label>Ingreso Almacén Fiscal</x-slot:label>
+                    <x-slot:label>Ingreso Almacén Fiscal <span class="text-red-500">*</span></x-slot:label>
                     <x-slot:input type="date" name="bonded_warehouse_enter" wire:model.live="bonded_warehouse_enter"
                                   class="pr-10 {{ $errors->has('bonded_warehouse_enter') ? 'border-red-500' : '' }}"></x-slot:input>
                     <x-slot:error>{{ $errors->first('bonded_warehouse_enter') }}</x-slot:error>
@@ -707,7 +708,7 @@
 
             <div class="mb-8">
                 <x-form-input>
-                    <x-slot:label>Salida Almacén Fiscal</x-slot:label>
+                    <x-slot:label>Salida Almacén Fiscal <span class="text-red-500">*</span></x-slot:label>
                     <x-slot:input type="date" name="bonded_warehouse_exit" wire:model.live="bonded_warehouse_exit"
                                   class="pr-10 {{ $errors->has('bonded_warehouse_exit') ? 'border-red-500' : '' }}"></x-slot:input>
                     <x-slot:error>{{ $errors->first('bonded_warehouse_exit') }}</x-slot:error>
@@ -716,7 +717,7 @@
 
             <div class="mb-8">
                 <x-form-input>
-                    <x-slot:label>ETA Real (ATA)</x-slot:label>
+                    <x-slot:label>ETA Real (ATA) <span class="text-red-500">*</span></x-slot:label>
                     <x-slot:input type="date" name="date_ata" wire:model="date_ata"
                                   class="pr-10 {{ $errors->has('date_ata') ? 'border-red-500' : '' }}"></x-slot:input>
                     <x-slot:error>{{ $errors->first('date_ata') }}</x-slot:error>
