@@ -223,6 +223,12 @@
                         </li>
 
                         <li>
+                            <x-sidebar-dropdown-item href="{{ route('settings.companies') }}" :active="request()->routeIs('settings.companies*')">
+                                Empresas
+                            </x-sidebar-dropdown-item>
+                        </li>
+
+                        <li>
                             <x-sidebar-dropdown-item href="{{ route('settings.roles') }}" :active="request()->routeIs('settings.roles')">
                                 Roles
                             </x-sidebar-dropdown-item>
@@ -293,7 +299,7 @@
             <!-- Logo cuando está abierto -->
             <img src="{{ asset('img/Logo RAGA-x .png') }}" alt="RAGA Logo" class="h-10 sidebar-logo-bottom-expanded w-full object-contain">
         </div>
-        
+
         <form method="POST" action="{{ route('logout-session') }}" class="w-full">
             @csrf
             <button type="submit"
