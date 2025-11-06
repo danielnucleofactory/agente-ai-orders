@@ -221,6 +221,16 @@ Route::middleware(['auth'])->group(function () {
     Route::get('settings/sessions', Sessions::class)
         ->name('settings.sessions');
 
+    // Companies
+    Route::get('settings/companies', \App\Livewire\Settings\Companies::class)
+        ->name('settings.companies');
+
+    Route::get('settings/companies/create', \App\Livewire\Settings\CompanyCreate::class)
+        ->name('settings.companies.create');
+
+    Route::get('settings/companies/{id}/edit', \App\Livewire\Settings\CompanyCreate::class)
+        ->name('settings.companies.edit');
+
     Route::get('/bill-to', [App\Http\Controllers\BillToController::class, 'index'])->name('bill-to.index');
     Route::get('/bill-to/create', [App\Http\Controllers\BillToController::class, 'create'])->name('bill-to.create');
     Route::get('/bill-to/{billTo}/edit', [App\Http\Controllers\BillToController::class, 'edit'])->name('bill-to.edit');

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Settings;
 
+use App\Models\Company;
 use App\Models\User;
 use Livewire\Component;
 use Spatie\Permission\Models\Role;
@@ -15,6 +16,9 @@ class UserCreate extends Component
     public $role_id;
     public $roles;
 
+    public $company_ids = [];
+    public $companies;
+
     public $title;
     public $subtitle;
 
@@ -22,6 +26,8 @@ class UserCreate extends Component
     {
         $rules = [
             'name' => 'required|min:3',
+            'company_ids' => 'required|array|min:1',
+            'company_ids.*' => 'exists:companies,id'
         ];
 
         // Reglas diferentes para email dependiendo si es creación o edición
@@ -39,13 +45,15 @@ class UserCreate extends Component
     public function mount($id = null)
     {
         $this->roles = Role::all();
+        $this->companies = Company::all();
 
         if ($id) {
-            $user = User::with('roles')->findOrFail($id);
+            $user = User::with('roles', 'companies')->findOrFail($id);
             $this->id = $id;
             $this->name = $user->name;
             $this->email = $user->email;
             $this->role_id = $user->roles->first()?->id;
+            $this->company_ids = $user->companies->pluck('id')->toArray();
             $this->title = 'Editar Usuario';
             $this->subtitle = 'Modifica la información del usuario';
         } else {
@@ -64,6 +72,9 @@ class UserCreate extends Component
             'email.unique' => 'El email ya está en uso',
             'password.required' => 'La contraseña es requerida',
             'password.min' => 'La contraseña debe tener al menos 8 caracteres',
+            'company_ids.required' => 'Debe seleccionar al menos una empresa',
+            'company_ids.min' => 'Debe seleccionar al menos una empresa',
+            'company_ids.*.exists' => 'La empresa seleccionada no existe',
         ]);
 
         if ($this->id) {
@@ -87,6 +98,9 @@ class UserCreate extends Component
                 $user->syncRoles([]);
             }
 
+            // Sincronizar empresas
+            $user->companies()->sync($this->company_ids);
+
             $this->dispatch('open-modal', 'modal-user-created');
         } else {
             $user = User::create([
@@ -99,6 +113,9 @@ class UserCreate extends Component
                 $role = Role::findById($this->role_id);
                 $user->assignRole($role->name);
             }
+
+            // Asociar empresas
+            $user->companies()->attach($this->company_ids);
 
             $this->dispatch('open-modal', 'modal-user-created');
         }

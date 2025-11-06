@@ -54,6 +54,9 @@ class Breadcrumb extends Component
         'settings.users' => 'Usuarios',
         'settings.users.create' => 'Crear usuario',
         'settings.users.edit' => 'Editar usuario',
+        'settings.companies' => 'Empresas',
+        'settings.companies.create' => 'Crear empresa',
+        'settings.companies.edit' => 'Editar empresa',
         'settings.active-sessions' => 'Sesiones activas',
         'settings.profile' => 'Perfil',
         'settings.sessions' => 'Sesiones',
@@ -110,6 +113,10 @@ class Breadcrumb extends Component
         'tracking' => 'Seguimiento',
         'Kanban' => 'Kanban',
         'kanban' => 'Kanban',
+        'Companies' => 'Empresas',
+        'companies' => 'Empresas',
+        'Company' => 'Empresa',
+        'company' => 'Empresa',
     ];
 
     // Base path groups - maps a segment to its parent group name
