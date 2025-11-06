@@ -342,6 +342,245 @@ class PurchaseOrderController extends Controller
         }
     }
 
+    /**
+     * Create a single purchase order from data array
+     *
+     * @param array $orderData Array with 'general' and 'items' keys
+     * @return PurchaseOrder|null
+     * @throws \Exception
+     */
+    private function createSinglePurchaseOrder(array $orderData): ?PurchaseOrder
+    {
+        // Asegurar estructuras
+        $general = data_get($orderData, 'general', $orderData) ?? [];
+        $items   = data_get($orderData, 'items', []);
+        if (!is_array($items)) $items = [];
+
+        // Helpers
+        $parseDate = static function ($v) {
+            if ($v === null || $v === '') return null;
+            return \Illuminate\Support\Carbon::parse($v);
+        };
+        $toBool = static function ($v) {
+            if (is_bool($v)) return $v;
+            $b = filter_var($v, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            return $b ?? false;
+        };
+
+        // Validacion campos OLO
+        $rules = [
+            'order_number'    => ['required','string'],
+            'trading_company' => ['required','string'],
+        ];
+
+        $messages = [
+            'order_number.required'    => 'El campo "P.O." es obligatorio.',
+            'trading_company.required' => 'El campo "Compañía" es obligatorio.',
+        ];
+
+        $validator = Validator::make($general, $rules, $messages);
+        if ($validator->fails()) {
+            throw new \Exception('Validation failed: ' . $validator->errors()->first());
+        }
+
+        // Relaciones (se buscan por nombre/código y se crean si no existen)
+        $vendorId = data_get($general, 'vendor_id');
+        $vendorName = data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
+
+        // Buscar o crear vendor
+        $vendor = null;
+        if ($vendorId) {
+            $vendor = Vendor::where('vendo_code', $vendorId)->first();
+            if (!$vendor) {
+                $vendor = Vendor::create([
+                    'company_id' => 1,
+                    'vendo_code' => (string) $vendorId,
+                    'name' => $vendorName ?: ('Proveedor ' . $vendorId),
+                    'status' => 'active',
+                ]);
+            }
+        } elseif ($vendorName) {
+            $vendor = Vendor::where('name', $vendorName)->first();
+            if (!$vendor) {
+                $vendor = Vendor::create([
+                    'company_id' => 1,
+                    'name' => $vendorName,
+                    'vendo_code' => 'VENDOR_' . time(),
+                    'status' => 'active',
+                ]);
+            }
+        }
+
+        // Totales
+        $totalWeight = 0;
+        foreach ($items as $item) {
+            $totalWeight += (float) data_get($item, 'peso_kg', data_get($item, 'kgs', 0));
+        }
+        $netTotal = (float) (data_get($general, 'netValue', data_get($general, 'net_total', 0)));
+
+        // Kanban inicial
+        $kanbanStatusId = null;
+        $kanbanBoard = KanbanBoard::where('company_id', 1)
+            ->where('type', 'po_stages')
+            ->where('is_active', true)
+            ->first();
+
+        if ($kanbanBoard) {
+            $status = $kanbanBoard->statuses()->where('name', 'Recepción')->first()
+                ?: $kanbanBoard->defaultStatus();
+            $kanbanStatusId = $status?->id;
+        }
+
+        // Campos base
+        $poData = [
+            'company_id'   => 1,
+            'order_number' => data_get($general, 'order_number') ?? \Illuminate\Support\Str::uuid()->toString(),
+            'status'       => 'draft',
+            'order_date'   => now(),
+            'currency'     => data_get($general, 'currency', 'USD'),
+            'incoterms'    => data_get($general, 'incoterms', 'EXW'),
+            'net_total'    => $netTotal,
+            'total'        => $netTotal,
+            'weight_kg'    => $totalWeight,
+            'material_type'  => json_encode(['Standard']),
+            'ensurence_type' => 'pending',
+            'mode'           => data_get($general, 'mode', 'AIR'),
+            'kanban_status_id' => $kanbanStatusId,
+            'length_cm' => (float) data_get($general, 'length_cm', 0),
+            'width_cm'  => (float) data_get($general, 'width_cm', 0),
+            'height_cm' => (float) data_get($general, 'height_cm', 0),
+            'date_required_in_destination' => $parseDate(data_get($general, 'date_required_in_destination')),
+        ];
+
+        // Asignar relación con vendor si se resolvió
+        if ($vendor) {
+            $poData['vendor_id'] = $vendor->id;
+            $poData['vendor_number'] = $vendor->vendo_code;
+        }
+
+        // NEW FIELDS FOR OLO (string)
+        foreach ([
+                     'factory_proforma_number','mbl_number','container_type','container_number','shipping_line',
+                     'logistics_incoterm','reason','category','forwarder_name',
+                     'cargo_invoice_number','tariff_type','route_label','arrival_status','arrival_port','departure_port',
+                     'retail_group','customer_type','trading_company','service_provider','customs_dua','invoice',
+                     'factura_merca','receipt_note','visibility_notes','price_incoterm','consolidator_name','vendor_number',
+                 ] as $f) {
+            if (array_key_exists($f, $general)) {
+                $poData[$f] = $general[$f] === '' ? null : $general[$f];
+            }
+        }
+
+        // Mapeo especial para case_number_file
+        if (array_key_exists('expediente', $general)) {
+            $poData['case_number_file'] = $general['expediente'];
+        } elseif (array_key_exists('case_number_file', $general)) {
+            $poData['case_number_file'] = $general['case_number_file'];
+        }
+
+        // NEW FIELDS FOR OLO (boolean)
+        foreach ([
+                     'is_dropship','applies_tlc','applies_af','port_of_loading_validated','has_facture_merca',
+                     'used_rate_ok','uses_bonded_warehouse','apply_technical_note','etd_initial_validated',
+                 ] as $f) {
+            $poData[$f] = $toBool(data_get($general, $f, false));
+        }
+
+        // NEW FIELDS FOR OLO (int)
+        foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference'] as $f) {
+            if (($v = data_get($general, $f)) !== null && $v !== '') {
+                $poData[$f] = (int) $v;
+            }
+        }
+
+        // NEW FIELDS FOR OLO (decimal)
+        foreach (['Invoice_amount','freight_amount','cbm','total_amount'] as $f) {
+            if (($v = data_get($general, $f)) !== null && $v !== '') {
+                $poData[$f] = (float) $v;
+            }
+        }
+
+        // Fechas OLO
+        foreach ([
+                     'date_booking_request','date_booking_authorized','date_theorical_load','date_variable_date',
+                     'date_carga_po','date_received',
+                     'date_etd_initial','date_etd_updated','date_eta_updated',
+                     'date_etd', 'date_atd', 'date_eta', 'date_ata',
+                     'date_estimated_hub_arrival', 'date_actual_hub_arrival',
+                     'inspection_date','vgm_cut_date','balance_payment_date','local_charges_payment_date',
+                     'bonded_warehouse_enter','bonded_warehouse_exit','receipt_note_date',
+                     'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','dif_load_date','emision_date_po','forwader_date',
+                 ] as $f) {
+            if (array_key_exists($f, $general)) {
+                $poData[$f] = $parseDate($general[$f]);
+            }
+        }
+
+        // Cálculo de diferencias
+        $etdBase = $poData['date_etd_initial'] ?? $poData['date_etd'] ?? null;
+        $etdNew  = $poData['date_etd_updated'] ?? null;
+        if ($etdBase && $etdNew) {
+            $poData['etd_dates_difference'] = $etdNew->copy()->startOfDay()
+                ->diffInDays($etdBase->copy()->startOfDay(), false);
+        }
+
+        $etaBase = $poData['date_eta'] ?? null;
+        $etaNew  = $poData['date_eta_updated'] ?? null;
+        if ($etaBase && $etaNew) {
+            $poData['eta_dates_difference'] = $etaNew->copy()->startOfDay()
+                ->diffInDays($etaBase->copy()->startOfDay(), false);
+        }
+
+        // Limpiar null pero mantener campos opcionales
+        $optionalTextFields = ['mbl_number', 'factory_proforma_number', 'factura_merca', 'case_number_file'];
+        $poData = array_filter($poData, function($v, $k) use ($optionalTextFields) {
+            if (in_array($k, $optionalTextFields) && $v === null) {
+                return true;
+            }
+            return $v !== null && $v !== '';
+        }, ARRAY_FILTER_USE_BOTH);
+
+        // Crear PO
+        $purchaseOrder = PurchaseOrder::create($poData);
+
+        // Ítems (si existen)
+        if ($items) {
+            $groupedItems = [];
+            foreach ($items as $it) {
+                $mat = data_get($it, 'material');
+                if (!$mat) continue;
+
+                $groupedItems[$mat]['material'] = $mat;
+                $groupedItems[$mat]['price_per_unit'] = (float) data_get($it, 'price_per_unit', 0);
+                $groupedItems[$mat]['peso_kg'] = ((float) ($groupedItems[$mat]['peso_kg'] ?? 0))
+                    + (float) data_get($it, 'peso_kg', data_get($it, 'kgs', 0));
+            }
+
+            foreach ($groupedItems as $gi) {
+                $product = Product::firstOrCreate(
+                    ['material_id' => $gi['material']],
+                    [
+                        'short_text'       => 'Product ' . $gi['material'],
+                        'unit_of_measure'  => 'KG',
+                        'price_per_unit'   => (float) $gi['price_per_unit'],
+                    ]
+                );
+                $newPrice = (float) $gi['price_per_unit'];
+                if (abs((float) $product->price_per_unit - $newPrice) > 0.0001) {
+                    $product->price_per_unit = $newPrice;
+                    $product->save();
+                }
+
+                $purchaseOrder->products()->attach($product->id, [
+                    'quantity'   => (int) round((float) data_get($gi, 'peso_kg', 0)),
+                    'unit_price' => $newPrice,
+                ]);
+            }
+        }
+
+        return $purchaseOrder;
+    }
+
     public function deleteFromApi(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -738,13 +977,52 @@ class PurchaseOrderController extends Controller
                         'message' => 'Purchase order is deleted',
                         'deleted_at' => $deleted->deleted_at,
                     ];
-                } else {
+                    continue;
+                }
+
+                // Si no existe, intentar crearla
+                try {
+                    DB::beginTransaction();
+
+                    // Preparar el item como si fuera para createFromApi
+                    $createPayload = [
+                        'general' => $item,
+                        'items' => $item['items'] ?? []
+                    ];
+
+                    // Crear la PO usando la misma lógica de createFromApi
+                    $createdPo = $this->createSinglePurchaseOrder($createPayload);
+
+                    if ($createdPo) {
+                        DB::commit();
+                        $results[] = [
+                            'index' => $index,
+                            'order_number' => $orderNumber,
+                            'trading_company' => $tradingCompany,
+                            'status' => 'created',
+                            'message' => 'Purchase order created successfully',
+                            'id' => $createdPo->id,
+                            'created_at' => $createdPo->created_at?->toISOString(),
+                        ];
+                    } else {
+                        DB::rollBack();
+                        $results[] = [
+                            'index' => $index,
+                            'order_number' => $orderNumber,
+                            'trading_company' => $tradingCompany,
+                            'status' => 'failed',
+                            'message' => 'Failed to create purchase order',
+                        ];
+                    }
+                } catch (\Throwable $e) {
+                    DB::rollBack();
                     $results[] = [
                         'index' => $index,
                         'order_number' => $orderNumber,
                         'trading_company' => $tradingCompany,
-                        'status' => 'not_found',
-                        'message' => 'Purchase order not found'
+                        'status' => 'failed',
+                        'message' => 'Error creating purchase order: ' . $e->getMessage(),
+                        'error' => $e->getMessage(),
                     ];
                 }
                 continue;
