@@ -68,6 +68,33 @@
                         </x-slot:error>
                     </div>
 
+                    <!-- Sección de Empresas -->
+                    <div class="grid grid-cols-1 gap-4 mt-4">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-[#565AFF] ml-[1.125rem]">
+                                Empresas *
+                            </label>
+                            <div class="space-y-2 max-h-40 overflow-y-auto border-2 border-[#9AABFF] rounded-md p-3 bg-white {{ $errors->has('company_ids') ? 'border-red-500' : '' }}">
+                                @foreach($companies as $company)
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                        <input
+                                            type="checkbox"
+                                            wire:model="company_ids"
+                                            value="{{ $company->id }}"
+                                            class="rounded border-[#9AABFF] text-[#565AFF] focus:ring-[#9AABFF]"
+                                        >
+                                        <span class="text-sm text-[#2E2E2E]">{{ $company->name }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            @if($errors->has('company_ids') || $errors->has('company_ids.*'))
+                                <span class="text-red-500 text-xs mt-1">
+                                    {{ $errors->first('company_ids') ?: $errors->first('company_ids.*') }}
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+
                     <div class="flex justify-end gap-4 mt-6">
                         <a href="{{ route('settings.users') }}">
                             <x-secondary-button type="button">

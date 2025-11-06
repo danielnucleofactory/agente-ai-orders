@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -58,7 +59,15 @@ class User extends Authenticatable implements HasMedia, CanResetPassword
     /**
      * Get the company that owns the user.
      */
-    public function company(): BelongsTo
+    public function companies(): BelongsToMany
+    {
+        return $this->belongsToMany(Company::class);
+    }
+
+    /**
+     * Get the currently selected company
+     */
+    public function company()
     {
         return $this->belongsTo(Company::class);
     }
@@ -69,6 +78,47 @@ class User extends Authenticatable implements HasMedia, CanResetPassword
     public function hasCompany(): bool
     {
         return !is_null($this->company_id);
+    }
+
+    /**
+     * Set the current company for the user
+     */
+    public function setCurrentCompany(int $companyId): bool
+    {
+        // Verify the user has access to this company
+        if (!$this->companies()->where('companies.id', $companyId)->exists()) {
+            return false;
+        }
+
+        $this->update(['company_id' => $companyId]);
+        return true;
+    }
+
+    /**
+     * Get the current company or first available company
+     */
+    public function getCurrentCompany(): ?Company
+    {
+        // If user has a company_id set, return that company
+        if ($this->company_id) {
+            return $this->company;
+        }
+
+        // Otherwise, return the first available company
+        return $this->companies()->first();
+    }
+
+    /**
+     * Get the current company ID or first available company ID
+     */
+    public function getCurrentCompanyId(): ?int
+    {
+        if ($this->company_id) {
+            return $this->company_id;
+        }
+
+        $firstCompany = $this->companies()->first();
+        return $firstCompany ? $firstCompany->id : null;
     }
 
     public function notificationPreferences()

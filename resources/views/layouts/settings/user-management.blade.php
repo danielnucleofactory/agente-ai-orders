@@ -15,6 +15,9 @@
                 <livewire:settings.nav-link text="Usuarios" :route="'settings.users'" />
             </li>
             <li>
+                <livewire:settings.nav-link text="Empresas" :route="'settings.companies'" />
+            </li>
+            <li>
                 <livewire:settings.nav-link text="Roles" :route="'settings.roles'" />
             </li>
             <li>

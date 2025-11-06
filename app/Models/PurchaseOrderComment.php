@@ -20,6 +20,11 @@ class PurchaseOrderComment extends Model implements HasMedia
         'user_id',
         'comment',
         'operacion',
+        'action_type',
+        'old_values',
+        'new_values',
+        'ip_address',
+        'user_agent',
         'created_at',
         'updated_at',
     ];
@@ -27,6 +32,8 @@ class PurchaseOrderComment extends Model implements HasMedia
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'old_values' => 'array',
+        'new_values' => 'array',
     ];
 
     // Relación con la orden de compra
@@ -118,5 +125,19 @@ class PurchaseOrderComment extends Model implements HasMedia
         return $this->getFirstMedia('attachments') !== null ||
                $this->getFirstMedia('pending_attachments') !== null ||
                $this->authorizations()->where('operation_type', 'attach_file_to_comment')->exists();
+    }
+
+    /**
+     * Get the label for the action type in Spanish
+     */
+    public function getActionTypeLabel(): string
+    {
+        return match($this->action_type ?? 'comment') {
+            'comment' => 'Comentario',
+            'field_change' => 'Cambio de Datos',
+            'status_change' => 'Cambio de Estado',
+            'record_create' => 'Creación',
+            default => 'Otro'
+        };
     }
 }

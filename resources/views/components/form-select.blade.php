@@ -11,7 +11,7 @@
 <div class="relative flex flex-col">
     @if ($label)
         <label for="{{ $name }}" class="ml-[1.125rem] text-sm font-medium text-[#1AAD8A]">
-            {{ $label }}
+            {!! $label !!}
         </label>
     @endif
     <select id="{{ $name }}" name="{{ $name }}" class="{{ $selectClasses }} {{ $error ? 'border-red-500' : '' }}"

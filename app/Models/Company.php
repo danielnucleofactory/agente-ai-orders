@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Company extends Model
@@ -17,6 +18,7 @@ class Company extends Model
      */
     protected $fillable = [
         'name',
+        'address',
         'country',
         'city',
         'zip',
@@ -28,9 +30,9 @@ class Company extends Model
     /**
      * Get the users for the company.
      */
-    public function users(): HasMany
+    public function users(): BelongsToMany
     {
-        return $this->hasMany(User::class);
+        return $this->belongsToMany(User::class);
     }
 
     /**
@@ -39,5 +41,10 @@ class Company extends Model
     public function purchaseOrders(): HasMany
     {
         return $this->hasMany(PurchaseOrder::class);
+    }
+
+    public function getUsersCountAttribute(): int
+    {
+        return $this->users()->count();
     }
 }

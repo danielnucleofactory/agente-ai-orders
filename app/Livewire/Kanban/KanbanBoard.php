@@ -42,7 +42,6 @@ class KanbanBoard extends Component
     public $date_booking_authorized;
     public $date_etd_initial;
     public $date_etd_updated;
-    public $container_type;
     public $mode;
     public $comment_stage_03;
 
@@ -53,9 +52,13 @@ class KanbanBoard extends Component
     public $date_atd;
     public $date_eta;
     public $date_eta_updated;
+    public $container_type;
     public $container_number;
     public $bill_of_lading;
+    public $shipment_amount;
     public $shipping_line;
+    public $shipment_status;
+    public $merchandise_invoice;
     public $tracking_id;
     public $departure_port;
     public $arrival_port;
@@ -499,16 +502,19 @@ class KanbanBoard extends Component
             $this->date_booking_authorized = $po->date_booking_authorized ? $po->date_booking_authorized->format('Y-m-d') : null;
             $this->date_etd_initial = $po->date_etd_initial ? $po->date_etd_initial->format('Y-m-d') : null;
             $this->date_etd_updated = $po->date_etd_updated ? $po->date_etd_updated->format('Y-m-d') : null;
-            $this->container_type = $po->container_type;
             $this->mode = $po->mode;
             
             // En Tránsito - convertir fechas al formato Y-m-d
             $this->date_atd = $po->date_atd ? $po->date_atd->format('Y-m-d') : null;
             $this->date_eta = $po->date_eta ? $po->date_eta->format('Y-m-d') : null;
             $this->date_eta_updated = $po->date_eta_updated ? $po->date_eta_updated->format('Y-m-d') : null;
+            $this->container_type = $po->container_type;
             $this->container_number = $po->container_number;
             $this->bill_of_lading = $po->bill_of_lading;
+            $this->shipment_amount = $po->shipment_amount ?? null;
             $this->shipping_line = $po->shipping_line;
+            $this->shipment_status = $po->shipment_status ?? null;
+            $this->merchandise_invoice = $po->merchandise_invoice ?? null;
             $this->tracking_id = $po->tracking_id;
             $this->departure_port = $po->departure_port;
             $this->arrival_port = $po->arrival_port;
@@ -679,7 +685,27 @@ class KanbanBoard extends Component
         ])->layout('layouts.app');
     }
 
-    //Guardado de datos
+    /**
+     * Mapeo de campos por etapa del kanban.
+     * 
+     * NOTA: Los índices (2, 3, 4, etc.) corresponden a los IDs de las columnas KanbanStatus
+     * en la base de datos. Estos IDs pueden variar según la configuración del tablero.
+     * 
+     * Mapeo esperado de etapas:
+     * - 1: Nuevo
+     * - 2: Producción
+     * - 3: Booking
+     * - 4: Consolidador
+     * - 5: En Tránsito
+     * - 6: Puerto
+     * - 7: Almacén Fiscal
+     * - 8: En otra ZF
+     * - 9: Recibiendo CDI
+     * - 10: Ingresada
+     * - 11: Anulada
+     * 
+     * @return array<int, array<string>> Array indexado por ID de etapa con lista de campos
+     */
     private function fieldsByStage(): array
     {
         return [
@@ -755,11 +781,22 @@ class KanbanBoard extends Component
         }
     }
 
-    //Validación de datos requeridos
+    /**
+     * Reglas de validación requeridas por etapa del kanban.
+     * 
+     * IMPORTANTE: Los índices deben coincidir con los IDs de las columnas KanbanStatus
+     * y con los campos definidos en fieldsByStage().
+     * 
+     * Validaciones complejas:
+     * - Etapa 5 (En Tránsito): Usa 'required_without_all' para container_number, bill_of_lading
+     *   y tracking_id. Esto significa que al menos uno de estos tres campos debe estar presente.
+     * 
+     * @return array<int, array<string, string>> Array indexado por ID de etapa con reglas de validación
+     */
     private function requiredRulesByStage(): array
     {
         return [
-            3 => [
+            2 => [
                 'date_variable_date' => 'required|date',
                 'service_provider'   => 'required|string',
                 'forwarder_name'     => 'required|string',
@@ -767,24 +804,26 @@ class KanbanBoard extends Component
                 // 'date_theorical_load' => 'required|date',
             ],
 
-            4 => [
+            3 => [
                 'date_booking_request'    => 'required|date',
                 'date_booking_authorized' => 'required|date',
                 'date_etd_initial'        => 'required|date',
                 'date_etd_updated'        => 'required|date',
+                'mode'                    => 'required|string',
             ],
 
             5 => [
                 'date_atd'         => 'required|date',
                 'date_eta'         => 'required|date',
                 'date_eta_updated' => 'required|date',
+                // Validación compleja: al menos uno de estos tres campos debe estar presente
                 'container_number' => 'nullable|required_without_all:tracking_id,bill_of_lading|string',
                 'bill_of_lading'   => 'nullable|required_without_all:tracking_id,container_number',   
                 'tracking_id'      => 'nullable|required_without_all:container_number,bill_of_lading|string',
                 'shipping_line'    => 'required|string',
                 'departure_port'   => 'required|string',
                 'arrival_port'     => 'required|string',
-                // 'container_type' no está como requerido en el Excel
+                // 'container_type' no está como requerido
             ],
 
             6 => [
@@ -815,6 +854,7 @@ class KanbanBoard extends Component
             'date_booking_authorized'=> 'Aut. Booking',
             'date_etd_initial'       => 'ETD Inicial',
             'date_etd_updated'       => 'ETD Variable',
+            'mode'                   => 'Modo de transporte',
             'date_atd'               => 'ETD Real',
             'date_eta'               => 'ETA inicial',
             'date_eta_updated'       => 'ETA variable',
@@ -832,6 +872,16 @@ class KanbanBoard extends Component
         ];
     }
 
+    /**
+     * Valida los campos requeridos para una etapa específica.
+     * 
+     * Si la validación falla, Livewire automáticamente mostrará los errores
+     * en la vista y no ejecutará el resto del método saveAndMove().
+     * 
+     * @param int $stage ID de la etapa (columna KanbanStatus)
+     * @return void
+     * @throws \Illuminate\Validation\ValidationException Si la validación falla
+     */
     private function validateStageRequirements(int $stage): void
     {
         $rules = $this->requiredRulesByStage()[$stage] ?? [];
