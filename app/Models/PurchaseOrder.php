@@ -155,6 +155,7 @@ class PurchaseOrder extends Model implements HasMedia
         'visibility_notes',
         'Invoice_amount',
         'freight_amount',
+        'total_amount',
         'container_free_days',
         'etd_dates_difference',
         'eta_dates_difference',
@@ -444,14 +445,14 @@ class PurchaseOrder extends Model implements HasMedia
 
     /**
      * Calcula automáticamente el estado de llegada y días de retraso basándose en la ETA
-     * 
+     *
      * @return array ['arrival_status' => string, 'delay_days' => int]
      */
     public function calculateArrivalStatus(): array
     {
         // Usar la ETA más reciente disponible (updated > initial > original)
         $eta = $this->date_eta_updated ?? $this->date_eta ?? null;
-        
+
         if (!$eta) {
             return [
                 'arrival_status' => null,
@@ -461,7 +462,7 @@ class PurchaseOrder extends Model implements HasMedia
 
         $today = now()->startOfDay();
         $etaDate = $eta->startOfDay();
-        
+
         if ($today > $etaDate) {
             // Atrasado
             $delayDays = $etaDate->diffInDays($today);
@@ -480,16 +481,16 @@ class PurchaseOrder extends Model implements HasMedia
 
     /**
      * Actualiza automáticamente el estado de llegada y días de retraso
-     * 
+     *
      * @return bool
      */
     public function updateArrivalStatus(): bool
     {
         $status = $this->calculateArrivalStatus();
-        
+
         $this->arrival_status = $status['arrival_status'];
         $this->delay_days = $status['delay_days'];
-        
+
         return $this->save();
     }
 }
