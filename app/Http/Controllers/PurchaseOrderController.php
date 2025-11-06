@@ -194,9 +194,11 @@ class PurchaseOrderController extends Controller
                              'retail_group','customer_type','trading_company','service_provider','customs_dua','invoice',
                              'factura_merca','receipt_note','visibility_notes','price_incoterm','consolidator_name','vendor_number',
                          ] as $f) {
+                    // Verificar si el campo existe en el array (incluso si el valor es null)
                     if (array_key_exists($f, $general)) {
-                        // Guardar el valor incluso si es string vacío (se convertirá a null si es necesario)
-                        $poData[$f] = $general[$f] === '' ? null : $general[$f];
+                        $value = $general[$f];
+                        // Si viene como string vacío, convertir a null; si tiene valor (incluyendo null explícito), guardarlo
+                        $poData[$f] = ($value === '') ? null : $value;
                     }
                 }
 
@@ -262,13 +264,13 @@ class PurchaseOrderController extends Controller
                         ->diffInDays($etaBase->copy()->startOfDay(), false);
                 }
 
-                // 14) Limpiar null/"" pero mantener 0/false
+                // 14) Limpiar null/"" pero mantener 0/false y campos opcionales con null
                 // Campos de texto opcionales que pueden ser null (como mbl_number)
                 $optionalTextFields = ['mbl_number', 'factory_proforma_number', 'factura_merca', 'case_number_file'];
                 $poData = array_filter($poData, function($v, $k) use ($optionalTextFields) {
-                    // Permitir null para campos de texto opcionales
-                    if (in_array($k, $optionalTextFields) && $v === null) {
-                        return true;
+                    // Permitir null para campos de texto opcionales (para que se guarden explícitamente como null)
+                    if (in_array($k, $optionalTextFields)) {
+                        return true; // Mantener siempre estos campos, incluso si son null
                     }
                     // Para otros campos, eliminar null y strings vacíos
                     return $v !== null && $v !== '';
@@ -466,8 +468,11 @@ class PurchaseOrderController extends Controller
                      'retail_group','customer_type','trading_company','service_provider','customs_dua','invoice',
                      'factura_merca','receipt_note','visibility_notes','price_incoterm','consolidator_name','vendor_number',
                  ] as $f) {
+            // Verificar si el campo existe en el array (incluso si el valor es null)
             if (array_key_exists($f, $general)) {
-                $poData[$f] = $general[$f] === '' ? null : $general[$f];
+                $value = $general[$f];
+                // Si viene como string vacío, convertir a null; si tiene valor (incluyendo null explícito), guardarlo
+                $poData[$f] = ($value === '') ? null : $value;
             }
         }
 
@@ -531,12 +536,14 @@ class PurchaseOrderController extends Controller
                 ->diffInDays($etaBase->copy()->startOfDay(), false);
         }
 
-        // Limpiar null pero mantener campos opcionales
+        // Limpiar null pero mantener campos opcionales con null
         $optionalTextFields = ['mbl_number', 'factory_proforma_number', 'factura_merca', 'case_number_file'];
         $poData = array_filter($poData, function($v, $k) use ($optionalTextFields) {
-            if (in_array($k, $optionalTextFields) && $v === null) {
-                return true;
+            // Permitir siempre estos campos opcionales, incluso si son null (para que se guarden explícitamente)
+            if (in_array($k, $optionalTextFields)) {
+                return true; // Mantener siempre estos campos, incluso si son null
             }
+            // Para otros campos, eliminar null y strings vacíos
             return $v !== null && $v !== '';
         }, ARRAY_FILTER_USE_BOTH);
 
