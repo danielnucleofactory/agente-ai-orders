@@ -195,7 +195,8 @@ class PurchaseOrderController extends Controller
                              'factura_merca','receipt_note','visibility_notes','price_incoterm','consolidator_name','vendor_number',
                          ] as $f) {
                     if (array_key_exists($f, $general)) {
-                        $poData[$f] = $general[$f];
+                        // Guardar el valor incluso si es string vacío (se convertirá a null si es necesario)
+                        $poData[$f] = $general[$f] === '' ? null : $general[$f];
                     }
                 }
 
@@ -262,7 +263,16 @@ class PurchaseOrderController extends Controller
                 }
 
                 // 14) Limpiar null/"" pero mantener 0/false
-                $poData = array_filter($poData, fn($v) => $v !== null && $v !== '');
+                // Campos de texto opcionales que pueden ser null (como mbl_number)
+                $optionalTextFields = ['mbl_number', 'factory_proforma_number', 'factura_merca', 'case_number_file'];
+                $poData = array_filter($poData, function($v, $k) use ($optionalTextFields) {
+                    // Permitir null para campos de texto opcionales
+                    if (in_array($k, $optionalTextFields) && $v === null) {
+                        return true;
+                    }
+                    // Para otros campos, eliminar null y strings vacíos
+                    return $v !== null && $v !== '';
+                }, ARRAY_FILTER_USE_BOTH);
 
                 // 15) Crear PO
                 $purchaseOrder = PurchaseOrder::create($poData);
@@ -514,6 +524,7 @@ class PurchaseOrderController extends Controller
             'receipt_note'            => 'receipt_note',
             'receipt_note_date'       => 'receipt_note_date',
             'factory_proforma_number' => 'factory_proforma_number',
+            'mbl_number'              => 'mbl_number',
             'invoice'                 => 'invoice',
             'Invoice_amount'          => 'Invoice_amount',
             'total_amount'            => 'total_amount',
@@ -624,10 +635,12 @@ class PurchaseOrderController extends Controller
                     break;
                 }
 
-                // Default: texto/otros (incluye case_number_file)
+                // Default: texto/otros (incluye case_number_file, mbl_number, etc.)
                 default: {
-                    $po->$modelField = $value;
-                    $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
+                    // Convertir strings vacíos a null para campos de texto opcionales
+                    $finalValue = ($value === '') ? null : $value;
+                    $po->$modelField = $finalValue;
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => $finalValue];
                     break;
                 }
             }
@@ -689,38 +702,38 @@ class PurchaseOrderController extends Controller
         $results = [];
 
         foreach ($items as $index => $item) {
-            // Validar únicamente order_number y company (trading_company)
+            // Validar únicamente order_number y trading_company
             $orderNumber = data_get($item, 'order_number');
-            $company     = data_get($item, 'company');
+            $tradingCompany = data_get($item, 'trading_company');
 
-            if (!$orderNumber || !$company) {
+            if (!$orderNumber || !$tradingCompany) {
                 $results[] = [
                     'index' => $index,
                     'order_number' => $orderNumber,
-                    'company' => $company,
+                    'trading_company' => $tradingCompany,
                     'status' => 'validation_error',
-                    'message' => 'order_number and company are required'
+                    'message' => 'order_number and trading_company are required'
                 ];
                 continue;
             }
 
             // Buscar PO activa
             $po = PurchaseOrder::where('order_number', $orderNumber)
-                ->where('trading_company', $company)
+                ->where('trading_company', $tradingCompany)
                 ->first();
 
             if (!$po) {
                 // Si no está activa, verificar si existe eliminada
                 $deleted = PurchaseOrder::onlyTrashed()
                     ->where('order_number', $orderNumber)
-                    ->where('trading_company', $company)
+                    ->where('trading_company', $tradingCompany)
                     ->first();
 
                 if ($deleted) {
                     $results[] = [
                         'index' => $index,
                         'order_number' => $orderNumber,
-                        'company' => $company,
+                        'trading_company' => $tradingCompany,
                         'status' => 'deleted',
                         'message' => 'Purchase order is deleted',
                         'deleted_at' => $deleted->deleted_at,
@@ -729,7 +742,7 @@ class PurchaseOrderController extends Controller
                     $results[] = [
                         'index' => $index,
                         'order_number' => $orderNumber,
-                        'company' => $company,
+                        'trading_company' => $tradingCompany,
                         'status' => 'not_found',
                         'message' => 'Purchase order not found'
                     ];
@@ -737,15 +750,15 @@ class PurchaseOrderController extends Controller
                 continue;
             }
 
-            // Construir payload de actualización: permitir todos los campos excepto order_number/company
+            // Construir payload de actualización: permitir todos los campos excepto order_number/trading_company
             $updatePayload = $item;
-            unset($updatePayload['order_number'], $updatePayload['company']);
+            unset($updatePayload['order_number'], $updatePayload['trading_company']);
 
             if (empty($updatePayload)) {
                 $results[] = [
                     'index' => $index,
                     'order_number' => $orderNumber,
-                    'company' => $company,
+                    'trading_company' => $tradingCompany,
                     'status' => 'skipped',
                     'message' => 'No updatable fields provided'
                 ];
@@ -764,7 +777,7 @@ class PurchaseOrderController extends Controller
                 $results[] = [
                     'index' => $index,
                     'order_number' => $orderNumber,
-                    'company' => $company,
+                    'trading_company' => $tradingCompany,
                     'status' => 'updated',
                     'updated_at' => $po->updated_at?->toISOString(),
                     'changes' => $changes,
@@ -774,7 +787,7 @@ class PurchaseOrderController extends Controller
                 $results[] = [
                     'index' => $index,
                     'order_number' => $orderNumber,
-                    'company' => $company,
+                    'trading_company' => $tradingCompany,
                     'status' => 'error',
                     'message' => $e->getMessage(),
                 ];
