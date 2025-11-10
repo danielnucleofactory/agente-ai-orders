@@ -23,7 +23,7 @@ class CompanySeeder extends Seeder
 
             // Create a main company for testing with specific data
             Company::factory()->create([
-                'name' => 'Raga Orders',
+                'name' => 'Next Orders',
                 'address' => '',
             ]);
         } finally {

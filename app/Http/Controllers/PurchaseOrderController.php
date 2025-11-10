@@ -74,8 +74,9 @@ class PurchaseOrderController extends Controller
                     // Requeridos
                     'order_number'           => ['required','string'],
                     'trading_company'              => ['required','string'],
+                    'currency'               => ['required','string'],
                     /*'category'               => ['required','string'],
-                    'factory_proforma_number'=> ['required','string'],
+                    'factory_proforma_number'=> ['nullable','string'],
                     'route_label'            => ['required','string'],
                     'date_theorical_load'    => [
                         'required',

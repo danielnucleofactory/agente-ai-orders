@@ -111,7 +111,7 @@
 
                             {{-- Fecha de creación --}}
                             <x-form-input>
-                                <x-slot name="label">Fecha de creación en RAGA</x-slot>
+                                <x-slot name="label">Fecha de creación en Next</x-slot>
                                 <x-slot:input
                                     type="date"
                                     name="order_date"
@@ -130,7 +130,7 @@
 
                             {{-- Moneda --}}
                             <x-form-select
-                                label="Moneda"
+                                label="Moneda <span class='text-red-500'>*</span>"
                                 name="currency"
                                 :options="$currencyArray"
                                 wire:model="currency"
@@ -958,14 +958,14 @@
                             <x-slot:input name="forwarder_name" placeholder="Ingrese agente de carga" wire:model="forwarder_name"></x-slot:input>
                         </x-form-input>
 
-                        <x-form-input>
+                        <x-form-input class="hidden">
                             <x-slot:label>Proveedor de Servicio</x-slot:label>
                             <x-slot:input type="text" placeholder="Ingrese proveedor de servicio" wire:model.live="service_provider"></x-slot:input>
                         </x-form-input>
 
                         <x-form-input>
-                            <x-slot:label>Comercializadora</x-slot:label>
-                            <x-slot:input type="text" placeholder="Ingrese comercializadora" wire:model.live="trading_company"></x-slot:input>
+                            <x-slot:label>Cliente</x-slot:label>
+                            <x-slot:input type="text" placeholder="Ingrese cliente" wire:model.live="trading_company"></x-slot:input>
                         </x-form-input>
 
                         <!-- Tarifas y ruta -->

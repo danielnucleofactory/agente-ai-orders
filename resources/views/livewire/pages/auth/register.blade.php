@@ -56,7 +56,7 @@ $register = function () {
 ?>
 
 <div class="w-full max-w-xl p-10 bg-white shadow-xl rounded-3xl">
-    <h1 class="mb-2 text-3xl font-bold">¡Bienvenido a RAGA-x!</h1>
+    <h1 class="mb-2 text-3xl font-bold">¡Bienvenido a Next!</h1>
     <p class="mb-10 text-gray-600">Por favor ingrese sus datos para poder registrarse</p>
 
     <form wire:submit="register">

@@ -247,7 +247,8 @@
                             <div class="mb-1">
                                 <span class="font-semibold">{{ ucfirst($key) }}:</span>
                                 @if(is_bool($value))
-                                    {{ $value ? 'Sí' : 'No' }}
+                                    <input type="checkbox" {{ $value ? 'checked' : '' }} disabled
+                                           class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A] opacity-75">
                                 @elseif(is_array($value) || is_object($value))
                                     <pre class="text-xs">{{ json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
                                 @else

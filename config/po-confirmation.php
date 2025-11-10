@@ -32,7 +32,7 @@ return [
     |
     */
     'email_template' => 'po-confirmation::emails.confirmation',
-    'email_from_name' => env('PO_CONFIRMATION_FROM_NAME', 'Raga Orders'),
+    'email_from_name' => env('PO_CONFIRMATION_FROM_NAME', 'Next Orders'),
     'email_from_address' => env('PO_CONFIRMATION_FROM_ADDRESS', 'noreply@ragaorders.com'),
 
     /*
