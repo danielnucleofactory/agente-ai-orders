@@ -105,7 +105,7 @@
                     <p class="font-semibold">{{ formatDate($purchaseOrder->emision_date_po) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha de creación en RAGA</p>
+                    <p class="text-gray-500 mb-1">Fecha de creación en Next</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->order_date) }}</p>
                 </div>
             </div>
@@ -464,29 +464,35 @@
             {{-- Opciones --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Opciones</h4>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm mb-6">
-                <div>
-                    <p class="text-gray-500 mb-1">Aplica TLC</p>
-                    <p class="font-semibold">{{ $purchaseOrder->applies_tlc ? 'Sí' : 'No' }}</p>
+                <div class="flex items-center">
+                    <input type="checkbox" {{ ($purchaseOrder->applies_tlc ?? false) ? 'checked' : '' }} disabled
+                           class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A] opacity-75">
+                    <label class="block ml-2 text-sm text-gray-700">Aplica TLC</label>
                 </div>
-                <div>
-                    <p class="text-gray-500 mb-1">Aplica AF</p>
-                    <p class="font-semibold">{{ $purchaseOrder->applies_af ? 'Sí' : 'No' }}</p>
+                <div class="flex items-center">
+                    <input type="checkbox" {{ ($purchaseOrder->applies_af ?? false) ? 'checked' : '' }} disabled
+                           class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A] opacity-75">
+                    <label class="block ml-2 text-sm text-gray-700">Aplica AF</label>
                 </div>
-                <div>
-                    <p class="text-gray-500 mb-1">Tiene Factura Mercancía</p>
-                    <p class="font-semibold">{{ $purchaseOrder->has_facture_merca ? 'Sí' : 'No' }}</p>
+                <div class="flex items-center">
+                    <input type="checkbox" {{ ($purchaseOrder->has_facture_merca ?? false) ? 'checked' : '' }} disabled
+                           class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A] opacity-75">
+                    <label class="block ml-2 text-sm text-gray-700">Tiene Factura Mercancía</label>
                 </div>
-                <div>
-                    <p class="text-gray-500 mb-1">Tarifa Utilizada OK</p>
-                    <p class="font-semibold">{{ $purchaseOrder->used_rate_ok ? 'Sí' : 'No' }}</p>
+                <div class="flex items-center">
+                    <input type="checkbox" {{ ($purchaseOrder->used_rate_ok ?? false) ? 'checked' : '' }} disabled
+                           class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A] opacity-75">
+                    <label class="block ml-2 text-sm text-gray-700">Tarifa Utilizada OK</label>
                 </div>
-                <div>
-                    <p class="text-gray-500 mb-1">Usa Almacén Fiscal</p>
-                    <p class="font-semibold">{{ $purchaseOrder->uses_bonded_warehouse ? 'Sí' : 'No' }}</p>
+                <div class="flex items-center">
+                    <input type="checkbox" {{ ($purchaseOrder->uses_bonded_warehouse ?? false) ? 'checked' : '' }} disabled
+                           class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A] opacity-75">
+                    <label class="block ml-2 text-sm text-gray-700">Usa Almacén Fiscal</label>
                 </div>
-                <div>
-                    <p class="text-gray-500 mb-1">Aplica Nota Técnica</p>
-                    <p class="font-semibold">{{ $purchaseOrder->apply_technical_note ? 'Sí' : 'No' }}</p>
+                <div class="flex items-center">
+                    <input type="checkbox" {{ ($purchaseOrder->apply_technical_note ?? false) ? 'checked' : '' }} disabled
+                           class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A] opacity-75">
+                    <label class="block ml-2 text-sm text-gray-700">Aplica Nota Técnica</label>
                 </div>
             </div>
 
@@ -560,12 +566,12 @@
                     <p class="text-gray-500 mb-1">Agente de Carga</p>
                     <p class="font-semibold">{{ $purchaseOrder->forwarder_name ?? '-' }}</p>
                 </div>
-                <div>
+                <div class="hidden">
                     <p class="text-gray-500 mb-1">Proveedor de Servicio</p>
                     <p class="font-semibold">{{ $purchaseOrder->service_provider ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Comercializadora</p>
+                    <p class="text-gray-500 mb-1">Cliente</p>
                     <p class="font-semibold">{{ $purchaseOrder->trading_company ?? '-' }}</p>
                 </div>
             </div>
