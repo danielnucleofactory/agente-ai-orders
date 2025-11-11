@@ -542,7 +542,7 @@ class CreatePucharseOrder extends Component
                 $this->vendor_direccion = $vendor->vendor_direccion;
                 $this->vendor_pais = $vendor->vendor_pais;
                 $this->vendor_telefono = $vendor->vendor_telefono;
-                $this->vendor_number = $vendor->id; // Asignar el ID del proveedor
+                $this->vendor_number = $vendor->vendo_code; // Asignar el código del proveedor
             }
         }
     }

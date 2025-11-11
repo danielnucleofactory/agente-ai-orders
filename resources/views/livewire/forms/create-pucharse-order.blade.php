@@ -317,7 +317,7 @@
                         :options="$vendorArray" :error="$errors->has('vendor_id') ? true : false" />
 
                     <x-form-input>
-                        <x-slot:label>Id del Proveedor</x-slot:label>
+                        <x-slot:label>Código de Proveedor</x-slot:label>
                         <x-slot:input
                             name="vendor_number"
                             wire:model="vendor_number"

@@ -238,8 +238,8 @@
                     <p class="font-semibold">{{ $purchaseOrder->vendor->name ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Id del Proveedor</p>
-                    <p class="font-semibold">{{ $purchaseOrder->vendor_id ?? '-' }}</p>
+                    <p class="text-gray-500 mb-1">Código de Proveedor</p>
+                    <p class="font-semibold">{{ $purchaseOrder->vendor->vendo_code ?? '-' }}</p>
                 </div>
             </div>
             </div>
