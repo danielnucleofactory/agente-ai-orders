@@ -263,9 +263,7 @@
                                     <td class="px-6 py-4 text-sm font-medium whitespace-nowrap text-center">
                                         <div class="inline-flex items-center justify-center gap-4">
                                             @if(!empty($order->deleted_at))
-                                                <button type="button"
-                                                        wire:click="confirmRestore({{ $order->id }})"
-                                                        class="text-green-700 hover:text-green-900">Restaurar</button>
+                                                {{-- PO anulada: no mostrar botón restaurar --}}
                                             @else
                                                 <a href="{{ route('purchase-orders.detail', $order->id) }}"
                                                    class="text-[#1AAD8A] hover:text-[#0F614D]">Ver</a>
