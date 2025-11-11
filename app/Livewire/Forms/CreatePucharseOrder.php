@@ -385,16 +385,16 @@ class CreatePucharseOrder extends Component
                 $this->container_type = $this->purchaseOrder->container_type;
                 $this->container_number = $this->purchaseOrder->container_number;
                 $this->shipping_line = $this->purchaseOrder->shipping_line;
-                $this->port_of_loading_validated = (bool) $this->purchaseOrder->port_of_loading_validated;
+                $this->port_of_loading_validated = (bool) ($this->purchaseOrder->port_of_loading_validated ?? false);
 
                 $this->is_dropship = $this->purchaseOrder->is_dropship;
                 $this->applies_tlc = $this->purchaseOrder->applies_tlc;
                 $this->applies_af = $this->purchaseOrder->applies_af;
-                $this->has_facture_merca = (bool) $this->purchaseOrder->has_facture_merca;
-                $this->used_rate_ok = (bool) $this->purchaseOrder->used_rate_ok;
-                $this->uses_bonded_warehouse = (bool) $this->purchaseOrder->uses_bonded_warehouse;
-                $this->apply_technical_note = (bool) $this->purchaseOrder->apply_technical_note;
-                $this->etd_initial_validated = (bool) $this->purchaseOrder->etd_initial_validated;
+                $this->has_facture_merca = (bool) ($this->purchaseOrder->has_facture_merca ?? false);
+                $this->used_rate_ok = (bool) ($this->purchaseOrder->used_rate_ok ?? false);
+                $this->uses_bonded_warehouse = (bool) ($this->purchaseOrder->uses_bonded_warehouse ?? false);
+                $this->apply_technical_note = (bool) ($this->purchaseOrder->apply_technical_note ?? false);
+                $this->etd_initial_validated = (bool) ($this->purchaseOrder->etd_initial_validated ?? false);
 
                 $this->date_booking_request = optional($this->purchaseOrder->date_booking_request)?->format('Y-m-d');
                 $this->date_booking_authorized = optional($this->purchaseOrder->date_booking_authorized)?->format('Y-m-d');
@@ -542,6 +542,7 @@ class CreatePucharseOrder extends Component
                 $this->vendor_direccion = $vendor->vendor_direccion;
                 $this->vendor_pais = $vendor->vendor_pais;
                 $this->vendor_telefono = $vendor->vendor_telefono;
+                $this->vendor_number = $vendor->id; // Asignar el ID del proveedor
             }
         }
     }
