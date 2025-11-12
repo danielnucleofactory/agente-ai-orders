@@ -21,6 +21,7 @@ Route::delete('/purchase-orders', [PurchaseOrderController::class, 'destroy']);
 Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
 Route::post('/purchase-orders/search', [PurchaseOrderController::class, 'index']);
 Route::post('/purchase-orders/bulk', [PurchaseOrderController::class, 'bulk']);
+Route::post('/purchase-orders/bulk-update', [PurchaseOrderController::class, 'bulkUpdate']);
 
 // Rutas protegidas con autenticación de token API
 Route::middleware('api.token')->group(function () {

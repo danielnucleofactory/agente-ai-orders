@@ -1011,12 +1011,12 @@ class PurchaseOrderController extends Controller
                             'message' => 'Purchase order created successfully',
                             'id' => $createdPo->id,
                             'created_at' => $createdPo->created_at?->toISOString(),
-                        ];
-                    } else {
+                    ];
+                } else {
                         DB::rollBack();
-                        $results[] = [
-                            'index' => $index,
-                            'order_number' => $orderNumber,
+                    $results[] = [
+                        'index' => $index,
+                        'order_number' => $orderNumber,
                             'trading_company' => $tradingCompany,
                             'status' => 'failed',
                             'message' => 'Failed to create purchase order',
@@ -1086,6 +1086,152 @@ class PurchaseOrderController extends Controller
             'updated' => collect($results)->where('status', 'updated')->count(),
             'deleted' => collect($results)->where('status', 'deleted')->count(),
             'not_found' => collect($results)->where('status', 'not_found')->count(),
+            'skipped' => collect($results)->where('status', 'skipped')->count(),
+            'validation_error' => collect($results)->where('status', 'validation_error')->count(),
+            'error' => collect($results)->where('status', 'error')->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bulk update processed',
+            'summary' => $summary,
+            'results' => $results,
+        ]);
+    }
+
+    /**
+     * Bulk update purchase orders (only updates, does not create)
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function bulkUpdate(Request $request): JsonResponse
+    {
+        $payload = $request->json()->all();
+        if (empty($payload)) {
+            $payload = $request->all();
+        }
+
+        // Normalizar a lista de items
+        $items = [];
+        if (isset($payload['items']) && is_array($payload['items'])) {
+            $items = $payload['items'];
+        } elseif (is_array($payload) && isset($payload[0])) {
+            $items = $payload; // array plano
+        } elseif (!empty($payload)) {
+            $items = [$payload]; // objeto único
+        }
+
+        if (empty($items)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No items received',
+                'results' => []
+            ], 422);
+        }
+
+        $results = [];
+
+        foreach ($items as $index => $item) {
+            // Validar únicamente order_number y trading_company
+            $orderNumber = data_get($item, 'order_number');
+            $tradingCompany = data_get($item, 'trading_company');
+
+            if (!$orderNumber || !$tradingCompany) {
+                $results[] = [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'trading_company' => $tradingCompany,
+                    'status' => 'validation_error',
+                    'message' => 'order_number and trading_company are required'
+                ];
+                continue;
+            }
+
+            // Buscar PO activa
+            $po = PurchaseOrder::where('order_number', $orderNumber)
+                ->where('trading_company', $tradingCompany)
+                ->first();
+
+            if (!$po) {
+                // Si no está activa, verificar si existe eliminada
+                $deleted = PurchaseOrder::onlyTrashed()
+                    ->where('order_number', $orderNumber)
+                    ->where('trading_company', $tradingCompany)
+                    ->first();
+
+                if ($deleted) {
+                    $results[] = [
+                        'index' => $index,
+                        'order_number' => $orderNumber,
+                        'trading_company' => $tradingCompany,
+                        'status' => 'deleted',
+                        'message' => 'Purchase order is deleted',
+                        'deleted_at' => $deleted->deleted_at,
+                    ];
+                } else {
+                    // PO no encontrada - reportar error (NO crear)
+                    $results[] = [
+                        'index' => $index,
+                        'order_number' => $orderNumber,
+                        'trading_company' => $tradingCompany,
+                        'status' => 'not_found',
+                        'message' => 'Purchase order not found'
+                    ];
+                }
+                continue;
+            }
+
+            // Construir payload de actualización: permitir todos los campos excepto order_number/trading_company
+            $updatePayload = $item;
+            unset($updatePayload['order_number'], $updatePayload['trading_company']);
+
+            if (empty($updatePayload)) {
+                $results[] = [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'trading_company' => $tradingCompany,
+                    'status' => 'skipped',
+                    'message' => 'No updatable fields provided'
+                ];
+                continue;
+            }
+
+            try {
+                DB::beginTransaction();
+                // Reutilizar el mapeo/validaciones de processUpdateChanges
+                $changes = $this->processUpdateChanges($po, $updatePayload);
+                $po->save();
+
+                $this->logAudit($po, $changes, $request);
+                DB::commit();
+
+                $results[] = [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'trading_company' => $tradingCompany,
+                    'status' => 'updated',
+                    'updated_at' => $po->updated_at?->toISOString(),
+                    'changes' => $changes,
+                ];
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                $results[] = [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'trading_company' => $tradingCompany,
+                    'status' => 'error',
+                    'message' => $e->getMessage(),
+                ];
+            }
+        }
+
+        // Resumen
+        $summary = [
+            'total' => count($results),
+            'updated' => collect($results)->where('status', 'updated')->count(),
+            'not_found' => collect($results)->where('status', 'not_found')->count(),
+            'deleted' => collect($results)->where('status', 'deleted')->count(),
             'skipped' => collect($results)->where('status', 'skipped')->count(),
             'validation_error' => collect($results)->where('status', 'validation_error')->count(),
             'error' => collect($results)->where('status', 'error')->count(),
