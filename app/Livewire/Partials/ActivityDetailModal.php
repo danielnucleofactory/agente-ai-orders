@@ -32,142 +32,311 @@ class ActivityDetailModal extends Component
 
     public function openActivityDetail(...$args)
     {
-        // En Livewire 3, cuando se usa $dispatchTo con @js(), 
-        // el array puede venir expandido como argumentos separados
-        // Intentamos reconstruir el array desde los argumentos
+        // Estrategia: Fuente única de verdad - siempre cargar desde BD usando el ID
+        // Simplificar: solo extraer el ID del primer argumento, ignorar el resto
         
-        $activity = null;
+        $id = null;
         
-        // Si el primer argumento es un array, usarlo directamente
-        if (!empty($args) && is_array($args[0])) {
-            $activity = $args[0];
-        }
-        // Si el primer argumento es un string JSON, decodificarlo
-        elseif (!empty($args) && is_string($args[0])) {
-            $decoded = json_decode($args[0], true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                $activity = $decoded;
+        // Intentar extraer el ID del primer argumento
+        if (!empty($args)) {
+            // Si es un array con 'id'
+            if (is_array($args[0]) && isset($args[0]['id'])) {
+                $id = $args[0]['id'];
+            }
+            // Si es un string JSON, decodificarlo y buscar 'id'
+            elseif (is_string($args[0])) {
+                $decoded = json_decode($args[0], true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded) && isset($decoded['id'])) {
+                    $id = $decoded['id'];
+                }
+            }
+            // Si el primer argumento es directamente el ID (numérico o string numérico)
+            elseif (is_numeric($args[0])) {
+                $id = (int) $args[0];
+            }
+            // Si hay múltiples argumentos, el segundo podría ser el ID (índice 1)
+            elseif (count($args) > 1 && is_numeric($args[1])) {
+                $id = (int) $args[1];
             }
         }
-        // Si hay múltiples argumentos, intentar reconstruir el array
-        elseif (count($args) > 1) {
-            // Los argumentos vienen expandidos: [null, id, user_name, user_role, comment, created_at, status, status_icon, operation, action_type, action_type_label, old_values, new_values, has_changes, attachment]
-            try {
-                // Normalizar old_values y new_values para asegurar que sean arrays o null
-                $oldValuesArg = $args[11] ?? null;
-                $newValuesArg = $args[12] ?? null;
-                
-                // Si vienen como objetos, convertirlos a arrays
-                if (is_object($oldValuesArg)) {
-                    $oldValuesArg = json_decode(json_encode($oldValuesArg), true);
-                }
-                if (is_object($newValuesArg)) {
-                    $newValuesArg = json_decode(json_encode($newValuesArg), true);
-                }
-                
-                // Si no son arrays, establecer como null
-                $oldValuesArg = is_array($oldValuesArg) ? $oldValuesArg : null;
-                $newValuesArg = is_array($newValuesArg) ? $newValuesArg : null;
-                
-                $activity = [
-                    'id' => $args[1] ?? null,
-                    'user_name' => $args[2] ?? null,
-                    'user_role' => $args[3] ?? null,
-                    'comment' => $args[4] ?? null,
-                    'created_at' => $args[5] ?? null,
-                    'status' => $args[6] ?? null,
-                    'status_icon' => $args[7] ?? null,
-                    'operation' => $args[8] ?? null,
-                    'action_type' => $args[9] ?? null,
-                    'action_type_label' => $args[10] ?? null,
-                    'old_values' => $oldValuesArg,
-                    'new_values' => $newValuesArg,
-                    'has_changes' => $args[13] ?? null,
-                    'attachment' => $args[14] ?? null,
-                ];
-                
-                // Si tenemos el ID del comentario, cargar los datos completos desde la base de datos
-                // Esto es más confiable que depender del orden de los argumentos
-                if ($activity['id']) {
-                    // Intentar cargar desde PurchaseOrderComment
-                    try {
-                        $comment = \App\Models\PurchaseOrderComment::with('user')->find($activity['id']);
-                        if ($comment) {
-                            // Sobrescribir con datos del modelo para asegurar consistencia
-                            $activity['purchase_order_id'] = $comment->purchase_order_id;
-                            $activity['user_name'] = $comment->user->name ?? $activity['user_name'] ?? 'Usuario';
-                            $activity['comment'] = $comment->comment ?? $activity['comment'];
-                            $activity['created_at'] = $comment->created_at ?? $activity['created_at'];
-                            $activity['operation'] = $comment->operacion ?? $activity['operation'] ?? 'Detalle PO';
-                            $activity['action_type'] = $comment->action_type ?? $activity['action_type'] ?? 'comment';
-                            $activity['action_type_label'] = $comment->getActionTypeLabel();
-                            
-                            // Cargar old_values y new_values desde el modelo
-                            if ($comment->old_values) {
-                                $activity['old_values'] = is_array($comment->old_values) ? $comment->old_values : [];
-                            }
-                            if ($comment->new_values) {
-                                $activity['new_values'] = is_array($comment->new_values) ? $comment->new_values : [];
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        // Intentar cargar desde ShippingDocumentComment
-                        try {
-                            $comment = \App\Models\Comment::with('user')->find($activity['id']);
-                            if ($comment) {
-                                // Sobrescribir con datos del modelo para asegurar consistencia
-                                $activity['shipping_document_id'] = $comment->shipping_document_id;
-                                $activity['user_name'] = $comment->user->name ?? $activity['user_name'] ?? 'Usuario';
-                                $activity['comment'] = $comment->comment ?? $activity['comment'];
-                                $activity['created_at'] = $comment->created_at ?? $activity['created_at'];
-                                $activity['operation'] = $comment->operacion ?? $activity['operation'] ?? 'Detalle PO';
-                                $activity['action_type'] = $comment->action_type ?? $activity['action_type'] ?? 'comment';
-                                $activity['action_type_label'] = $comment->getActionTypeLabel();
-                                
-                                // Cargar old_values y new_values desde el modelo
-                                if ($comment->old_values) {
-                                    $activity['old_values'] = is_array($comment->old_values) ? $comment->old_values : [];
-                                }
-                                if ($comment->new_values) {
-                                    $activity['new_values'] = is_array($comment->new_values) ? $comment->new_values : [];
-                                }
-                            }
-                        } catch (\Exception $e2) {
-                            // Ignorar si no se encuentra
-                        }
-                    }
-                }
-            } catch (\Exception $e) {
-                \Log::warning('ActivityDetailModal: Failed to reconstruct array', ['error' => $e->getMessage(), 'args' => $args]);
-                return;
-            }
-        }
-
-        if (empty($activity) || !is_array($activity)) {
-            \Log::warning('ActivityDetailModal: Invalid activity data', ['args' => $args, 'activity' => $activity]);
+        
+        // Validar ID: si no hay ID, rechazar y mostrar error
+        if (empty($id)) {
+            \Log::warning('ActivityDetailModal: No ID provided', ['args' => $args]);
+            $this->show = false;
             return;
         }
-
-        $this->activity = $activity;
         
-        // Asegurar que oldValues y newValues sean arrays, incluso si vienen como null o otros tipos
-        $oldValues = $activity['old_values'] ?? null;
-        $newValues = $activity['new_values'] ?? null;
+        // Cargar TODO desde la BD usando el ID
+        $loaded = $this->loadActivityFromDatabase($id);
         
-        $this->oldValues = is_array($oldValues) ? $oldValues : [];
-        $this->newValues = is_array($newValues) ? $newValues : [];
+        if (!$loaded) {
+            \Log::warning('ActivityDetailModal: Failed to load activity from database', ['id' => $id]);
+            $this->show = false;
+            return;
+        }
         
-        // Determinar el tipo de modelo para usar los labels correctos
+        // Determinar el tipo de modelo para usar los labels correctos (necesario para validación)
         $this->fieldLabels = $this->determineFieldLabels();
         
-        $this->show = true;
+        // Validar orden de valores antes de mostrar (después de determinar labels)
+        $this->validateValuesOrder();
         
-        \Log::info('ActivityDetailModal: Modal opened', [
-            'activity' => $activity, 
-            'show' => $this->show,
-            'oldValues' => $this->oldValues,
-            'newValues' => $this->newValues
-        ]);
+        $this->show = true;
+    }
+
+    /**
+     * Carga la actividad desde la base de datos usando el ID
+     * 
+     * @param int $id ID del comentario
+     * @return bool true si se cargó correctamente, false en caso contrario
+     */
+    protected function loadActivityFromDatabase($id): bool
+    {
+        try {
+            // Intentar cargar como PurchaseOrderComment primero
+            $comment = \App\Models\PurchaseOrderComment::with('user')->find($id);
+            
+            if ($comment) {
+                \Log::info('ActivityDetailModal: Loading PurchaseOrderComment from DB', ['id' => $id]);
+                
+                // Asegurar que created_at sea Carbon
+                $createdAt = $comment->created_at;
+                if (!$createdAt instanceof \Carbon\Carbon) {
+                    $createdAt = \Carbon\Carbon::parse($createdAt);
+                }
+                
+                // Cargar old_values y new_values y convertir a arrays de forma segura
+                $oldVals = $comment->old_values;
+                $newVals = $comment->new_values;
+                
+                // Convertir objetos stdClass a arrays si es necesario
+                if (is_object($oldVals)) {
+                    $oldVals = json_decode(json_encode($oldVals), true);
+                }
+                if (is_object($newVals)) {
+                    $newVals = json_decode(json_encode($newVals), true);
+                }
+                
+                // Asegurar que sean arrays válidos
+                $oldVals = is_array($oldVals) ? $oldVals : [];
+                $newVals = is_array($newVals) ? $newVals : [];
+                
+                // Construir el array de actividad con todos los campos necesarios
+                $this->activity = [
+                    'id' => $comment->id,
+                    'purchase_order_id' => $comment->purchase_order_id,
+                    'user_name' => $comment->user->name ?? 'Usuario desconocido',
+                    'user_role' => $comment->getRole() ?? 'Sin rol',
+                    'comment' => $comment->comment ?? '',
+                    'created_at' => $createdAt,
+                    'operation' => $comment->operacion ?? 'Detalle PO',
+                    'action_type' => $comment->action_type ?? 'comment',
+                    'action_type_label' => $comment->getActionTypeLabel(),
+                ];
+                
+                // Asignar valores a las propiedades del componente
+                $this->oldValues = $oldVals;
+                $this->newValues = $newVals;
+                
+                \Log::info('ActivityDetailModal: Successfully loaded PurchaseOrderComment', [
+                    'comment_id' => $comment->id,
+                    'old_values_count' => count($this->oldValues),
+                    'new_values_count' => count($this->newValues),
+                    'user_name' => $this->activity['user_name'],
+                    'created_at' => $createdAt->toDateTimeString(),
+                ]);
+                
+                return true;
+            }
+            
+            // Si no es PurchaseOrderComment, intentar como Comment (ShippingDocument)
+            $comment = \App\Models\Comment::with('user')->find($id);
+            
+            if ($comment) {
+                \Log::info('ActivityDetailModal: Loading Comment (ShippingDocument) from DB', ['id' => $id]);
+                
+                // Asegurar que created_at sea Carbon
+                $createdAt = $comment->created_at;
+                if (!$createdAt instanceof \Carbon\Carbon) {
+                    $createdAt = \Carbon\Carbon::parse($createdAt);
+                }
+                
+                // Cargar old_values y new_values y convertir a arrays de forma segura
+                $oldVals = $comment->old_values;
+                $newVals = $comment->new_values;
+                
+                // Convertir objetos stdClass a arrays si es necesario
+                if (is_object($oldVals)) {
+                    $oldVals = json_decode(json_encode($oldVals), true);
+                }
+                if (is_object($newVals)) {
+                    $newVals = json_decode(json_encode($newVals), true);
+                }
+                
+                // Asegurar que sean arrays válidos
+                $oldVals = is_array($oldVals) ? $oldVals : [];
+                $newVals = is_array($newVals) ? $newVals : [];
+                
+                // Construir el array de actividad con todos los campos necesarios
+                $this->activity = [
+                    'id' => $comment->id,
+                    'shipping_document_id' => $comment->shipping_document_id,
+                    'user_name' => $comment->user->name ?? 'Usuario desconocido',
+                    'user_role' => $comment->getRole() ?? 'Sin rol',
+                    'comment' => $comment->comment ?? '',
+                    'created_at' => $createdAt,
+                    'operation' => $comment->operacion ?? 'Detalle SD',
+                    'action_type' => $comment->action_type ?? 'comment',
+                    'action_type_label' => $comment->getActionTypeLabel(),
+                ];
+                
+                // Asignar valores a las propiedades del componente
+                $this->oldValues = $oldVals;
+                $this->newValues = $newVals;
+                
+                \Log::info('ActivityDetailModal: Successfully loaded Comment (ShippingDocument)', [
+                    'comment_id' => $comment->id,
+                    'old_values_count' => count($this->oldValues),
+                    'new_values_count' => count($this->newValues),
+                    'user_name' => $this->activity['user_name'],
+                    'created_at' => $createdAt->toDateTimeString(),
+                ]);
+                
+                return true;
+            }
+            
+            // Si no se encontró ningún comentario
+            \Log::warning('ActivityDetailModal: Comment not found in database', ['id' => $id]);
+            return false;
+            
+        } catch (\Exception $e) {
+            \Log::error('ActivityDetailModal: Error loading activity from database', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return false;
+        }
+    }
+    
+    /**
+     * Valida el orden de old_values y new_values comparando con la descripción del comentario
+     * Si detecta un intercambio, lo corrige automáticamente
+     */
+    protected function validateValuesOrder(): void
+    {
+        // Solo validar si hay valores para comparar
+        if (empty($this->oldValues) && empty($this->newValues)) {
+            return;
+        }
+        
+        // Solo validar si tenemos la descripción del comentario
+        $description = $this->activity['comment'] ?? '';
+        if (empty($description)) {
+            return;
+        }
+        
+        // Obtener el primer campo cambiado de la descripción para comparar
+        // La descripción tiene formato: "Campo: valor_anterior → valor_nuevo"
+        $descriptionParts = explode(':', $description);
+        if (count($descriptionParts) < 2) {
+            return;
+        }
+        
+        $fieldPart = trim($descriptionParts[0]);
+        $valuePart = trim($descriptionParts[1]);
+        
+        // Buscar el campo en los labels para obtener el nombre técnico
+        $fieldName = null;
+        foreach ($this->fieldLabels as $techField => $label) {
+            if ($label === $fieldPart) {
+                $fieldName = $techField;
+                break;
+            }
+        }
+        
+        // Si no encontramos el campo, intentar usar el primer campo disponible
+        if (!$fieldName && !empty($this->oldValues)) {
+            $fieldName = array_key_first($this->oldValues);
+        }
+        if (!$fieldName && !empty($this->newValues)) {
+            $fieldName = array_key_first($this->newValues);
+        }
+        
+        if (!$fieldName) {
+            return;
+        }
+        
+        // Obtener valores actuales
+        $currentOldValue = $this->oldValues[$fieldName] ?? null;
+        $currentNewValue = $this->newValues[$fieldName] ?? null;
+        
+        // Parsear la descripción para extraer valores esperados
+        // Formato: "Campo: valor_anterior → valor_nuevo"
+        if (strpos($valuePart, '→') !== false) {
+            $valueParts = explode('→', $valuePart);
+            $expectedOldValue = trim($valueParts[0] ?? '');
+            $expectedNewValue = trim($valueParts[1] ?? '');
+            
+            // Normalizar valores para comparación (convertir a string y trim)
+            $normalizedCurrentOld = $this->normalizeValueForComparison($currentOldValue);
+            $normalizedCurrentNew = $this->normalizeValueForComparison($currentNewValue);
+            $normalizedExpectedOld = trim((string) $expectedOldValue);
+            $normalizedExpectedNew = trim((string) $expectedNewValue);
+            
+            // Detectar si están intercambiados
+            // Si el valor actual en oldValues coincide con el esperado en newValues
+            // y el valor actual en newValues coincide con el esperado en oldValues
+            $oldMatchesNew = $normalizedCurrentOld === $normalizedExpectedNew;
+            $newMatchesOld = $normalizedCurrentNew === $normalizedExpectedOld;
+            
+            if ($oldMatchesNew && $newMatchesOld) {
+                // Los valores están intercambiados, corregirlos
+                \Log::warning('ActivityDetailModal: Detected swapped old/new values, correcting', [
+                    'field' => $fieldName,
+                    'current_old' => $currentOldValue,
+                    'current_new' => $currentNewValue,
+                    'expected_old' => $expectedOldValue,
+                    'expected_new' => $expectedNewValue,
+                ]);
+                
+                // Intercambiar los valores
+                $temp = $this->oldValues;
+                $this->oldValues = $this->newValues;
+                $this->newValues = $temp;
+                
+                \Log::info('ActivityDetailModal: Corrected swapped values', [
+                    'field' => $fieldName,
+                    'corrected_old' => $this->oldValues[$fieldName] ?? null,
+                    'corrected_new' => $this->newValues[$fieldName] ?? null,
+                ]);
+            }
+        }
+    }
+    
+    /**
+     * Normaliza un valor para comparación (convierte a string y limpia)
+     */
+    protected function normalizeValueForComparison($value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+        
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+        
+        if (is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE);
+        }
+        
+        if ($value instanceof \Carbon\Carbon) {
+            return $value->format('Y-m-d H:i:s');
+        }
+        
+        return trim((string) $value);
     }
 
     public function close()
@@ -218,7 +387,18 @@ class ActivityDetailModal extends Component
 
     public function formatValue($value)
     {
+        // Si es null, mostrar como "(sin valor)"
         if ($value === null) {
+            return '<span class="text-gray-400 italic">(sin valor)</span>';
+        }
+        
+        // Si es una cadena vacía, mostrar como "(vacío)"
+        if (is_string($value) && trim($value) === '') {
+            return '<span class="text-gray-400 italic">(vacío)</span>';
+        }
+        
+        // Si es el string "N/A" literal, mantenerlo pero con estilo
+        if (is_string($value) && strtoupper(trim($value)) === 'N/A') {
             return '<span class="text-gray-400">N/A</span>';
         }
         

@@ -13,6 +13,13 @@ use App\Models\PurchaseOrder;
 use App\Models\ShippingDocument;
 use App\Observers\PurchaseOrderObserver;
 use App\Observers\ShippingDocumentObserver;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
+use Illuminate\Auth\Events\Failed;
+use App\Listeners\LogUserLogin;
+use App\Listeners\LogUserLogout;
+use App\Listeners\LogFailedLogin;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,6 +39,11 @@ class AppServiceProvider extends ServiceProvider
         // Registrar observers para auditoría
         PurchaseOrder::observe(PurchaseOrderObserver::class);
         ShippingDocument::observe(ShippingDocumentObserver::class);
+
+        // Registrar listeners para eventos de autenticación
+        Event::listen(Login::class, LogUserLogin::class);
+        Event::listen(Logout::class, LogUserLogout::class);
+        Event::listen(Failed::class, LogFailedLogin::class);
 
         // Registrar componente de breadcrumb explícitamente
         Blade::component('breadcrumb', Breadcrumb::class);

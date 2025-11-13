@@ -74,10 +74,40 @@ class PurchaseOrderObserver
         'saving_not_executed',
         'Invoice_amount',
         'freight_amount',
+        'total_amount',
         
         // Estados
         'status',
         'kanban_status_id',
+        
+        // Campos comerciales
+        'currency',
+        'incoterms',
+        'logistics_incoterm',
+        'price_incoterm',
+        'payment_terms',
+        'order_place',
+        
+        // Campos de transporte/logística
+        'departure_port',
+        'arrival_port',
+        'shipping_line',
+        'container_type',
+        'container_number',
+        'tariff_type',
+        'mode',
+        'route_label',
+        'forwarder_name',
+        'tracking_id',
+        'mbl_number',
+        'factory_proforma_number',
+        'bill_of_lading',
+        'consolidator_name',
+        
+        // Otros campos importantes
+        'reason',
+        'category',
+        'notes',
     ];
 
     /**

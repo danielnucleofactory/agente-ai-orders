@@ -15,7 +15,7 @@
         </label>
     @endif
     <select id="{{ $name }}" name="{{ $name }}" class="{{ $selectClasses }} {{ $error ? 'border-red-500' : '' }}"
-        @if ($wireModel) wire:model="{{ $wireModel }}" @endif {{ $attributes }}>
+        @if ($wireModel) wire:model.live="{{ $wireModel }}" @endif {{ $attributes }}>
         <option value="">{{ $optionPlaceholder }}</option>
         @foreach ($options as $key => $option)
             <option value="{{ $key }}">{{ $option }}</option>

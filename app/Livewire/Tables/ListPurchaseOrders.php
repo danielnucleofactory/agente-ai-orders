@@ -102,6 +102,31 @@ class ListPurchaseOrders extends Component
         $this->resetPage();
     }
 
+    public function getAvailableKanbanStatuses()
+    {
+        $companyId = auth()->user()->company_id ?? null;
+        
+        if (!$companyId) {
+            return \App\Models\KanbanStatus::select('id', 'name')
+                ->orderBy('id')
+                ->get();
+        }
+
+        // Obtener solo las etapas del tablero de Purchase Orders de la empresa del usuario
+        return \App\Models\KanbanStatus::whereHas('board', function ($query) use ($companyId) {
+            $query->where('company_id', $companyId)
+                  ->where(function($q) {
+                      $q->where('type', 'po_stages')
+                        ->orWhere('type', 'purchase_orders');
+                  })
+                  ->where('is_active', true);
+        })
+        ->select('id', 'name')
+        ->orderBy('position')
+        ->orderBy('id')
+        ->get();
+    }
+
     public function render()
     {
         $purchaseOrders = \App\Models\PurchaseOrder::query()
@@ -124,14 +149,18 @@ class ListPurchaseOrders extends Component
             })
             ->when(str_starts_with($this->statusFilter, 'kanban_'), function ($q) {
                 // filtra por kanban status específico
-                $kanbanStatusId = str_replace('kanban_', '', $this->statusFilter);
-                $q->whereNull('deleted_at')->where('kanban_status_id', $kanbanStatusId);
+                $kanbanStatusId = (int) str_replace('kanban_', '', $this->statusFilter);
+                // Solo aplicar el filtro si el ID es válido (mayor a 0)
+                if ($kanbanStatusId > 0) {
+                    $q->whereNull('deleted_at')->where('kanban_status_id', $kanbanStatusId);
+                }
             })
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
 
         return view('livewire.tables.list-purchase-orders', [
-            'purchaseOrders' => $purchaseOrders
+            'purchaseOrders' => $purchaseOrders,
+            'kanbanStatuses' => $this->getAvailableKanbanStatuses()
         ]);
     }
 

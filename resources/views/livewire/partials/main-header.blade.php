@@ -12,6 +12,7 @@
         <div class="hidden space-x-4 sm:flex sm:items-center sm:ms-6">
             <!-- Company Selector -->
             <div class="min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
                 <livewire:partials.company-selector/>
             </div>
 

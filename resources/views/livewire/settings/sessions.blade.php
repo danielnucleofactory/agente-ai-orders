@@ -69,28 +69,43 @@
                         </div>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                        {{ $this->getDeviceType($session->user_agent) }} - {{ $this->getBrowserType($session->user_agent) }}
+                        {{ $this->getDeviceType($session->user_agent ?? '') }} - {{ $this->getBrowserType($session->user_agent ?? '') }}
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                        <span class="px-2 py-1 text-sm text-white bg-[#1AAD8A] rounded-full">
-                            Activa
+                        <span class="px-2 py-1 text-sm font-semibold {{ $this->getEventTypeColor(trim($session->event_type_label ?? 'Sesión Activa')) }} rounded-full" style="{{ $this->getEventTypeStyle(trim($session->event_type_label ?? 'Sesión Activa')) }}">
+                            {{ $session->event_type_label ?? 'Sesión Activa' }}
                         </span>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                        {{ \Carbon\Carbon::createFromTimestamp($session->last_activity)->diffForHumans() }}
+                        @if(($session->status ?? 'Activa') === 'Activa')
+                            <span class="px-2 py-1 text-sm text-white bg-[#1AAD8A] rounded-full">
+                                Activa
+                            </span>
+                        @else
+                            <span class="px-2 py-1 text-sm text-gray-500">
+                                N/A
+                            </span>
+                        @endif
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                        País desconocido
+                        {{ $this->formatLastActivity($session->activity_timestamp ?? $session->last_activity ?? null) }}
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                        <button
-                            wire:click="closeSession('{{ $session->id }}')"
-                            class="inline-flex items-center text-gray-500 hover:text-gray-700"
-                        >
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-                            </svg>
-                        </button>
+                        {{ $session->ip_address ?? 'N/A' }}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                        @if(($session->source_type ?? 'session') === 'session')
+                            <button
+                                wire:click="closeSession('{{ $session->id }}')"
+                                class="inline-flex items-center text-gray-500 hover:text-gray-700"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                                </svg>
+                            </button>
+                        @else
+                            <span class="text-gray-400">-</span>
+                        @endif
                     </td>
                 </tr>
             @endforeach
