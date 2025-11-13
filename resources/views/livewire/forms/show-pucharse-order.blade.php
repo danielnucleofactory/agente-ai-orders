@@ -208,6 +208,18 @@
                     <p class="text-sm font-medium text-gray-500">Volumen (m³)</p>
                     <p class="text-lg">{{ $purchaseOrder->volume_m3 ? number_format($purchaseOrder->volume_m3, 3) : 'N/A' }}</p>
                 </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">CBM (m³)</p>
+                    <p class="text-lg">{{ $purchaseOrder->cbm ? number_format($purchaseOrder->cbm, 2) : 'N/A' }}</p>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Peso (kg)</p>
+                    <p class="text-lg">{{ number_format($purchaseOrder->peso_kg ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Peso (lb)</p>
+                    <p class="text-lg">{{ number_format($purchaseOrder->peso_lb ?? 0, 2) }}</p>
+                </div>
             </div>
         </div>
 

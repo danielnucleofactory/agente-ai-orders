@@ -395,6 +395,26 @@ class PurchaseOrder extends Model implements HasMedia
     }
 
     /**
+     * Accessor para peso_kg (alias de weight_kg)
+     *
+     * @return float|null
+     */
+    public function getPesoKgAttribute(): ?float
+    {
+        return $this->weight_kg;
+    }
+
+    /**
+     * Accessor para peso_lb (alias de weight_lb)
+     *
+     * @return float|null
+     */
+    public function getPesoLbAttribute(): ?float
+    {
+        return $this->weight_lb;
+    }
+
+    /**
      * Check if a collection of orders can be consolidated together.
      *
      * Restricciones eliminadas - todas las órdenes pueden consolidarse sin restricciones
