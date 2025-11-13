@@ -444,10 +444,10 @@ class PurchaseOrderController extends Controller
             'incoterms'    => data_get($general, 'incoterms', 'EXW'),
             'net_total'    => $netTotal,
             'total'        => $netTotal,
-            'weight_kg'    => $totalWeight,
+            'weight_kg'    => data_get($general, 'weight_kg') !== null ? (float) data_get($general, 'weight_kg') : ($totalWeight > 0 ? $totalWeight : null),
             'material_type'  => json_encode(['Standard']),
             'ensurence_type' => 'pending',
-            'mode'           => data_get($general, 'mode', 'AIR'),
+            'mode'           => data_get($general, 'mode'),
             'kanban_status_id' => $kanbanStatusId,
             'length_cm' => (float) data_get($general, 'length_cm', 0),
             'width_cm'  => (float) data_get($general, 'width_cm', 0),
@@ -494,14 +494,14 @@ class PurchaseOrderController extends Controller
         }
 
         // NEW FIELDS FOR OLO (int)
-        foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference'] as $f) {
+        foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference','pallet_quantity','pallet_quantity_real'] as $f) {
             if (($v = data_get($general, $f)) !== null && $v !== '') {
                 $poData[$f] = (int) $v;
             }
         }
 
         // NEW FIELDS FOR OLO (decimal)
-        foreach (['Invoice_amount','freight_amount','cbm','total_amount','other_expenses'] as $f) {
+        foreach (['Invoice_amount','freight_amount','cbm','total_amount','other_expenses','estimated_pallet_cost','real_cost_estimated_po','real_cost_real_po','weight_lb'] as $f) {
             if (($v = data_get($general, $f)) !== null && $v !== '') {
                 $poData[$f] = (float) $v;
             }
@@ -517,7 +517,7 @@ class PurchaseOrderController extends Controller
                      'inspection_date','vgm_cut_date','balance_payment_date','local_charges_payment_date',
                      'bonded_warehouse_enter','bonded_warehouse_exit','receipt_note_date',
                      'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','dif_load_date','emision_date_po','forwader_date',
-                     'date_consolidation',
+                     'date_consolidation','release_date',
                  ] as $f) {
             if (array_key_exists($f, $general)) {
                 $poData[$f] = $parseDate($general[$f]);
@@ -532,11 +532,16 @@ class PurchaseOrderController extends Controller
                 ->diffInDays($etdBase->copy()->startOfDay(), false);
         }
 
-        $etaBase = $poData['date_eta'] ?? null;
-        $etaNew  = $poData['date_eta_updated'] ?? null;
-        if ($etaBase && $etaNew) {
+        // Calcular diferencia ETA: usa date_eta_initial como base si existe, sino date_eta
+        $etaBase = $poData['date_eta_initial'] ?? $poData['date_eta'] ?? null;
+        $etaNew  = $poData['date_eta_updated'] ?? $poData['date_eta'] ?? null;
+        // Solo calcular si tenemos ambas fechas y son diferentes
+        if ($etaBase && $etaNew && $etaBase != $etaNew) {
             $poData['eta_dates_difference'] = $etaNew->copy()->startOfDay()
                 ->diffInDays($etaBase->copy()->startOfDay(), false);
+        } elseif (isset($general['eta_dates_difference']) && $general['eta_dates_difference'] !== null && $general['eta_dates_difference'] !== '') {
+            // Si viene directamente en el JSON, usarlo
+            $poData['eta_dates_difference'] = (int) $general['eta_dates_difference'];
         }
 
         // Limpiar null pero mantener campos opcionales con null
