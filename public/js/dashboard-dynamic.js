@@ -10,9 +10,9 @@ class DashboardManager {
         console.log('DashboardManager initializing...');
         this.setupEventListeners();
 
-        // Only initialize charts if we have data and haven't initialized yet
+        // Only initialize trend table if we have data and haven't initialized yet
         if (!this.initialized && window.dashboardData) {
-            this.initializeCharts();
+            this.initializeTrendTable();
             this.initialized = true;
         }
     }
@@ -139,14 +139,13 @@ class DashboardManager {
             console.log('Exporting data...');
             this.showLoading();
 
-            const form = document.getElementById('dashboard-filters');
-            const formData = new FormData(form);
-            const searchParams = new URLSearchParams(formData);
-
-            const response = await fetch(`/dashboard/export?${searchParams.toString()}`, {
+            // La exportación de la tabla de tendencias no requiere filtros
+            // Solo necesita el año actual y la compañía del usuario (manejado en el backend)
+            const response = await fetch('/dashboard/export', {
                 method: 'GET',
                 headers: {
                     'X-CSRF-TOKEN': window.csrfToken,
+                    'Accept': 'text/csv',
                 }
             });
 
@@ -191,196 +190,87 @@ class DashboardManager {
         // Update metrics
         this.updateMetrics(data.metrics);
 
-        // Update charts
-        this.updateCharts(data.charts);
-
-        // Update detail table
-        this.updateDetailTable(data.detail_table);
+        // Update trend table
+        this.updateTrendTable(data.trend_table);
     }
 
     updateMetrics(metrics) {
         console.log('Updating metrics:', metrics);
 
-        const elements = {
-            'total-pos': metrics.total_pos,
-            'on-time-percentage': metrics.on_time_percentage + '%',
-            'delayed-percentage': metrics.delayed_percentage + '%',
-            'material-count': metrics.material_count
-        };
+        // Update total PO's
+        const totalPosElement = document.getElementById('totalPosValue');
+        if (totalPosElement) {
+            totalPosElement.textContent = metrics.total_pos || 0;
+        }
 
-        for (const [id, value] of Object.entries(elements)) {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = value;
-            } else {
-                console.warn(`Element with id '${id}' not found`);
-            }
+        // Update on-time percentage
+        const onTimeElement = document.getElementById('onTimePercentageValue');
+        if (onTimeElement) {
+            onTimeElement.textContent = (metrics.on_time_percentage || 0) + '%';
+        }
+
+        // Update delayed percentage
+        const delayedElement = document.getElementById('delayedPercentageValue');
+        if (delayedElement) {
+            delayedElement.textContent = (metrics.delayed_percentage || 0) + '%';
         }
     }
 
-    updateCharts(chartsData) {
-        console.log('Updating charts with data:', chartsData);
-
-        // Update hub chart
-        if (chartsData.hub_distribution) {
-            this.updatePieChart('hubChart', 'hubLegend', chartsData.hub_distribution);
-        }
-
-        // Update delivery status chart
-        if (chartsData.delivery_status) {
-            this.updatePieChart('deliveryChart', 'deliveryLegend', chartsData.delivery_status);
-        }
-
-        // Update transport type chart
-        if (chartsData.transport_type) {
-            this.updatePieChart('transportChart', 'transportLegend', chartsData.transport_type);
-        }
-
-        // Update delay reasons chart
-        if (chartsData.delay_reasons) {
-            this.updatePieChart('delayChart', 'delayLegend', chartsData.delay_reasons);
-        }
-
-        // Update stage chart
-        if (chartsData.pos_by_stage) {
-            this.updatePieChart('stageChart', 'stageLegend', chartsData.pos_by_stage);
-        }
-    }
-
-    updatePieChart(canvasId, legendId, data) {
+    updateTrendTable(trendData) {
         try {
-            console.log(`Creating/updating chart: ${canvasId}`, data);
+            console.log('Updating trend table:', trendData);
 
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) {
-                console.warn(`Canvas with id '${canvasId}' not found`);
+            const tbody = document.getElementById('trendTableBody');
+            if (!tbody) {
+                console.warn('Trend table body not found');
                 return;
             }
 
-            // Destroy existing chart if it exists
-            if (this.charts[canvasId]) {
-                console.log(`Destroying existing chart: ${canvasId}`);
-                this.charts[canvasId].destroy();
-                delete this.charts[canvasId];
-            }
-
-            // Skip if no data
-            if (!data || data.length === 0) {
-                console.log(`No data for chart: ${canvasId}`);
-                this.updateChartLegend(legendId, [], []);
+            if (!trendData || !trendData.categories) {
+                tbody.innerHTML = '<tr><td colspan="13" class="text-center text-gray-500">Sin datos disponibles</td></tr>';
                 return;
             }
 
-            // Create new chart
-            const ctx = canvas.getContext('2d');
-            const colors = this.generateColors(data.length);
-
-            console.log(`Creating new chart: ${canvasId}`);
-
-            // Use percentage values for the chart visualization if available, otherwise use value
-            const chartData = data.map(item => item.percentage || item.value);
-
-            const chart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: data.map(item => item.name),
-                    datasets: [{
-                        data: chartData,
-                        backgroundColor: colors,
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const item = data[context.dataIndex];
-                                    if (item.percentage) {
-                                        return `${item.name}: ${item.percentage}% (${item.value})`;
-                                    }
-                                    return `${item.name}: ${item.value}`;
-                                }
-                            }
-                        }
-                    },
-                    cutout: '70%'
+            // Update year in header if needed
+            const yearElements = document.querySelectorAll('.year, #currentYear');
+            yearElements.forEach(el => {
+                if (trendData.year) {
+                    el.textContent = trendData.year;
                 }
             });
 
-            // Store chart reference
-            this.charts[canvasId] = chart;
-            console.log(`Chart created successfully: ${canvasId}`);
+            // Define category order
+            const categoryOrder = [
+                'PO en Produccion',
+                'Cumplimiento de Carga lista',
+                'PO en booking',
+                'PO en transito',
+                'Allocation',
+                'PO En puerto de transbordo',
+                'Tiempo en puerto de transbordo',
+                'PO con ETA'
+            ];
 
-            // Update legend
-            this.updateChartLegend(legendId, data, colors);
+            // Build table rows
+            let tableHTML = '';
+            categoryOrder.forEach(categoryName => {
+                const categoryData = trendData.categories[categoryName] || {};
+                tableHTML += '<tr>';
+                tableHTML += `<td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: 500; color: #374151; width: 15%;">${categoryName}</td>`;
+                
+                // Add data for each month (1-12)
+                for (let month = 1; month <= 12; month++) {
+                    const value = categoryData[month.toString()] || 0;
+                    const displayValue = value === 0 ? '-' : value.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    tableHTML += `<td style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; color: #374151; width: calc(85% / 12);">${displayValue}</td>`;
+                }
+                
+                tableHTML += '</tr>';
+            });
+
+            tbody.innerHTML = tableHTML;
         } catch (error) {
-            console.error(`Error creating chart ${canvasId}:`, error);
-        }
-    }
-
-    updateChartLegend(legendId, data, colors) {
-        try {
-            const legend = document.getElementById(legendId);
-            if (!legend) {
-                console.warn(`Legend with id '${legendId}' not found`);
-                return;
-            }
-
-            if (!data || data.length === 0) {
-                legend.innerHTML = '<div class="text-sm text-gray-500">Sin datos</div>';
-                return;
-            }
-
-            legend.innerHTML = data.map((item, index) => {
-                // Use percentage if available, otherwise use value
-                const displayValue = item.percentage ? `${item.percentage}%` : item.value;
-
-                return `
-                    <div class="legend-item">
-                        <div class="legend-label">
-                            <div class="legend-color" style="background-color: ${colors[index]}"></div>
-                            <span class="legend-text">${item.name}</span>
-                        </div>
-                        <span class="legend-value">${displayValue}</span>
-                    </div>
-                `;
-            }).join('');
-        } catch (error) {
-            console.error(`Error updating legend ${legendId}:`, error);
-        }
-    }
-
-    updateDetailTable(tableData) {
-        try {
-            console.log('Updating detail table:', tableData);
-
-            const tbody = document.getElementById('detailTableBody');
-            if (!tbody) {
-                console.warn('Detail table body not found');
-                return;
-            }
-
-            if (!tableData || tableData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-gray-500">Sin datos disponibles</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = tableData.map(row => `
-                <tr>
-                    <td>${row.po_number}</td>
-                    <td>${row.fecha_salida}</td>
-                    <td>${row.fecha_estimada}</td>
-                    <td class="text-right">${row.cantidad_kg}</td>
-                </tr>
-            `).join('');
-        } catch (error) {
-            console.error('Error updating detail table:', error);
+            console.error('Error updating trend table:', error);
         }
     }
 
@@ -397,18 +287,18 @@ class DashboardManager {
         return colors.slice(0, count);
     }
 
-    initializeCharts() {
+    initializeTrendTable() {
         try {
-            console.log('Initializing charts...');
+            console.log('Initializing trend table...');
 
-            if (window.dashboardData && window.dashboardData.charts) {
-                this.updateCharts(window.dashboardData.charts);
-                console.log('All charts initialized successfully');
+            if (window.dashboardData && window.dashboardData.trend_table) {
+                this.updateTrendTable(window.dashboardData.trend_table);
+                console.log('Trend table initialized successfully');
             } else {
-                console.warn('No dashboard data available for chart initialization');
+                console.warn('No trend table data available for initialization');
             }
         } catch (error) {
-            console.error('Error initializing charts:', error);
+            console.error('Error initializing trend table:', error);
         }
     }
 
@@ -453,11 +343,11 @@ class DashboardManager {
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Content Loaded - Initializing Dashboard');
-    new DashboardManager();
+    window.dashboardManager = new DashboardManager();
 });
 
 // Also handle case where this script loads after DOM is ready
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
     console.log('DOM already ready - Initializing Dashboard');
-    new DashboardManager();
+    window.dashboardManager = new DashboardManager();
 }

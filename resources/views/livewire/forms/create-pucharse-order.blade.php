@@ -113,14 +113,13 @@
                             <x-form-input>
                                 <x-slot name="label">Fecha de creación en Next</x-slot>
                                 <x-slot:input
-                                    type="date"
-                                    name="order_date"
-                                    wire:model="order_date"
-                                    class="pr-10">
+                                    type="text"
+                                    name="created_at_display"
+                                    value="{{ $purchaseOrder && $purchaseOrder->created_at ? formatDate($purchaseOrder->created_at) : '-' }}"
+                                    readonly
+                                    disabled
+                                    class="pr-10 bg-gray-100 cursor-not-allowed">
                                 </x-slot:input>
-                                <x-slot:error>
-                                    {{ $errors->first('order-date') }}
-                                </x-slot:error>
                             </x-form-input>
 
                             {{-- Condiciones comerciales --}}
@@ -243,11 +242,8 @@
                         </div>
 
                         <div class="space-y-2">
-                            <x-form-input>
-                                <x-slot:label>Puerto de Embarque</x-slot:label>
-                                <x-slot:input name="departure_port" wire:model="departure_port" placeholder="Ingrese puerto de embarque"></x-slot:input>
-                                <x-slot:error>{{ $errors->first('departure_port') }}</x-slot:error>
-                            </x-form-input>
+                            <x-form-select label="Puerto de Embarque" name="departure_port" wireModel="departure_port"
+                                :options="$portsArray" :error="$errors->has('departure_port') ? true : false" />
                             <div class="flex items-center">
                                 <input id="port_of_loading_validated" type="checkbox" wire:model="port_of_loading_validated"
                                        class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
@@ -255,26 +251,19 @@
                             </div>
                         </div>
 
-                        <x-form-input>
-                            <x-slot:label>Puerto de Arribo</x-slot:label>
-                            <x-slot:input name="arrival_port" wire:model="arrival_port" placeholder="Ingrese puerto de arribo"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('arrival_port') }}</x-slot:error>
-                        </x-form-input>
+                        <x-form-select label="Puerto de Arribo" name="arrival_port" wireModel="arrival_port"
+                            :options="$portsArray" :error="$errors->has('arrival_port') ? true : false" />
 
-                        <x-form-input>
-                            <x-slot:label>Línea Naviera</x-slot:label>
-                            <x-slot:input name="shipping_line" wire:model="shipping_line" placeholder="Ingrese naviera"></x-slot:input>
-                        </x-form-input>
+                        <x-form-select label="Línea Naviera" name="shipping_line" wireModel="shipping_line"
+                            :options="$shippingLineArray" :error="$errors->has('shipping_line') ? true : false" />
 
                         <!-- Naviera y equipo -->
                         <div class="col-span-3">
                             <h4 class="text-sm font-semibold text-[#1AAD8A]">Naviera y equipo</h4>
                         </div>
 
-                        <x-form-input>
-                            <x-slot:label>Tipo de Contenedor</x-slot:label>
-                            <x-slot:input name="container_type" wire:model="container_type" placeholder="Tipo de contenedor"></x-slot:input>
-                        </x-form-input>
+                        <x-form-select label="Tipo de Contenedor" name="container_type" wireModel="container_type"
+                            :options="$containerTypeArray" :error="$errors->has('container_type') ? true : false" />
 
                         <x-form-input>
                             <x-slot:label>Número de Contenedor</x-slot:label>
@@ -314,6 +303,7 @@
 
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
                     <x-form-select label="Seleccionar Nombre del Proveedor" name="vendor_id" wireModel="vendor_id"
+                        wire:change="onVendorSelected"
                         :options="$vendorArray" :error="$errors->has('vendor_id') ? true : false" />
 
                     <x-form-input>
@@ -530,7 +520,8 @@
 
                     <x-form-input>
                         <x-slot:label>Fecha Carga Lista Real</x-slot:label>
-                        <x-slot:input type="date" name="date_carga_po" wire:model="date_carga_po"></x-slot:input>
+                        <x-slot:input type="date" name="date_carga_po" wire:model="date_carga_po" class="pr-10 {{ $errors->has('date_carga_po') ? 'border-red-500' : '' }}"></x-slot:input>
+                        <x-slot:error>{{ $errors->first('date_carga_po') }}</x-slot:error>
                     </x-form-input>
 
                     <x-form-input class="hidden">
@@ -916,10 +907,6 @@
                     </x-form-input>
 
                     <!-- Ahorros -->
-                    <div class="col-span-3">
-                        <h4 class="text-sm font-semibold text-[#1AAD8A]">Ahorros</h4>
-                    </div>
-
                     <x-form-input class="hidden">
                         <x-slot:label>Ahorros OFR FCL</x-slot:label>
                         <x-slot:input type="number" step="0.01" name="savings_ofr_fcl" placeholder="0.00" wire:model.live="savings_ofr_fcl" disabled></x-slot:input>
@@ -974,10 +961,8 @@
                             <h4 class="text-sm font-semibold text-[#1AAD8A]">Tarifas y ruta</h4>
                         </div>
 
-                        <x-form-input>
-                            <x-slot:label>Tipo Tarifa</x-slot:label>
-                            <x-slot:input name="tariff_type" placeholder="Ingrese el tipo de tarifa" wire:model="tariff_type"></x-slot:input>
-                        </x-form-input>
+                        <x-form-select label="Tipo Tarifa" name="tariff_type" wireModel="tariff_type"
+                            :options="$tariffTypeArray" :error="$errors->has('tariff_type') ? true : false" />
 
                         <x-form-input>
                             <x-slot:label>Ruta Logística</x-slot:label>

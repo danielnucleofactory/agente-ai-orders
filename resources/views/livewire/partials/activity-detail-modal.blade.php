@@ -36,35 +36,43 @@
                         </button>
                     </div>
 
-                    @if($activity)
+                    @if($activity && is_array($activity))
                     <!-- Activity Info -->
                     <div class="mb-4 p-4 bg-gray-50 rounded-lg">
                         <div class="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <span class="font-medium text-gray-700">Tipo:</span>
                                 <span class="ml-2">
-                                    @if($activity['action_type'] ?? 'comment' === 'comment')
+                                    @php
+                                        $actionType = $activity['action_type'] ?? 'comment';
+                                        $actionTypeLabel = $activity['action_type_label'] ?? '';
+                                    @endphp
+                                    @if($actionType === 'comment' || $actionTypeLabel === 'Comentario')
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                             Comentario
                                         </span>
-                                    @elseif($activity['action_type'] === 'field_change')
+                                    @elseif($actionType === 'field_change' || $actionTypeLabel === 'Cambio de Datos')
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                                             Cambio de Datos
                                         </span>
-                                    @elseif($activity['action_type'] === 'status_change')
+                                    @elseif($actionType === 'status_change' || $actionTypeLabel === 'Cambio de Estado')
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                                             Cambio de Estado
                                         </span>
-                                    @elseif($activity['action_type'] === 'record_create')
+                                    @elseif($actionType === 'record_create' || $actionTypeLabel === 'Creación')
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                             Creación
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            {{ $actionTypeLabel ?: 'Otro' }}
                                         </span>
                                     @endif
                                 </span>
                             </div>
                             <div>
                                 <span class="font-medium text-gray-700">Usuario:</span>
-                                <span class="ml-2">{{ $activity['user_name'] ?? 'N/A' }}</span>
+                                <span class="ml-2">{{ $activity['user_name'] ?? 'Usuario desconocido' }}</span>
                             </div>
                             <div>
                                 <span class="font-medium text-gray-700">Fecha:</span>
@@ -72,6 +80,7 @@
                                     @if(!empty($activity['created_at']))
                                         @php
                                             try {
+                                                // created_at ya viene como Carbon desde loadActivityFromDatabase
                                                 $date = $activity['created_at'] instanceof \Carbon\Carbon 
                                                     ? $activity['created_at'] 
                                                     : \Carbon\Carbon::parse($activity['created_at']);
@@ -87,13 +96,19 @@
                             </div>
                             <div>
                                 <span class="font-medium text-gray-700">Descripción:</span>
-                                <span class="ml-2">{{ $activity['comment'] ?? 'N/A' }}</span>
+                                <span class="ml-2">{{ $activity['comment'] ?? 'Sin descripción' }}</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Changes Comparison -->
-                    @if(!empty($oldValues) || !empty($newValues))
+                    @php
+                        // Validar que oldValues y newValues sean arrays válidos
+                        $hasOldValues = !empty($this->oldValues) && is_array($this->oldValues);
+                        $hasNewValues = !empty($this->newValues) && is_array($this->newValues);
+                        $hasChanges = $hasOldValues || $hasNewValues;
+                    @endphp
+                    @if($hasChanges)
                     <div class="border-t border-gray-200 pt-4">
                         <h4 class="text-md font-medium text-gray-900 mb-3">Comparación de Cambios</h4>
                         <div class="overflow-x-auto">
@@ -107,26 +122,47 @@
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     @php
-                                        $allFields = array_unique(array_merge(array_keys($oldValues ?? []), array_keys($newValues ?? [])));
+                                        $oldKeys = $hasOldValues ? array_keys($this->oldValues) : [];
+                                        $newKeys = $hasNewValues ? array_keys($this->newValues) : [];
+                                        $allFields = array_unique(array_merge($oldKeys, $newKeys));
                                     @endphp
-                                    @foreach($allFields as $field)
-                                    <tr>
-                                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {{ $this->getFieldLabel($field) }}
-                                        </td>
-                                        <td class="px-4 py-3 text-sm text-gray-500">
-                                            {!! $this->formatValue($oldValues[$field] ?? null) !!}
-                                        </td>
-                                        <td class="px-4 py-3 text-sm text-gray-900 font-medium">
-                                            {!! $this->formatValue($newValues[$field] ?? null) !!}
-                                        </td>
-                                    </tr>
-                                    @endforeach
+                                    @if(!empty($allFields))
+                                        @foreach($allFields as $field)
+                                        <tr>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                {{ $this->getFieldLabel($field) }}
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-gray-500">
+                                                {!! $this->formatValue($this->oldValues[$field] ?? null) !!}
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-gray-900 font-medium">
+                                                {!! $this->formatValue($this->newValues[$field] ?? null) !!}
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    @else
+                                        <tr>
+                                            <td colspan="3" class="px-4 py-8 text-center text-sm text-gray-500">
+                                                No hay cambios registrados
+                                            </td>
+                                        </tr>
+                                    @endif
                                 </tbody>
                             </table>
                         </div>
                     </div>
+                    @elseif(($activity['action_type'] ?? 'comment') !== 'comment')
+                    <div class="border-t border-gray-200 pt-4">
+                        <p class="text-sm text-gray-500 italic">No se encontraron detalles de cambios para esta actividad.</p>
+                    </div>
                     @endif
+                    @else
+                    <!-- Error state -->
+                    <div class="mb-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                        <p class="text-sm text-red-800">
+                            <strong>Error:</strong> No se pudieron cargar los datos de la actividad.
+                        </p>
+                    </div>
                     @endif
                 </div>
 

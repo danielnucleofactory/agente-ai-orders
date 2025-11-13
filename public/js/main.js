@@ -324,17 +324,18 @@ function showError(msg) {
 // Renderizar indicadores superiores
 function renderTopMetrics(metrics) {
   console.log('renderTopMetrics recibe:', metrics);
+  if (!metrics) return;
+  
   if (document.getElementById('totalPosValue')) {
-    document.getElementById('totalPosValue').textContent = metrics.total_pos;
+    document.getElementById('totalPosValue').textContent = metrics.total_pos || 0;
   }
   if (document.getElementById('onTimePercentageValue')) {
-    document.getElementById('onTimePercentageValue').textContent = metrics.on_time_percentage.toLocaleString('es-ES', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
+    const onTime = metrics.on_time_percentage || 0;
+    document.getElementById('onTimePercentageValue').textContent = onTime.toLocaleString('es-ES', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
   }
   if (document.getElementById('delayedPercentageValue')) {
-    document.getElementById('delayedPercentageValue').textContent = metrics.delayed_percentage.toLocaleString('es-ES', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
-  }
-  if (document.getElementById('materialCountValue')) {
-    document.getElementById('materialCountValue').textContent = metrics.material_count;
+    const delayed = metrics.delayed_percentage || 0;
+    document.getElementById('delayedPercentageValue').textContent = delayed.toLocaleString('es-ES', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
   }
 }
 
@@ -690,22 +691,11 @@ async function updateDashboardUI() {
       const metrics = response.data && response.data.metrics ? response.data.metrics : response.metrics;
       if (metrics) renderTopMetrics(metrics);
       
-      // Gráficos - Crear SOLO la primera vez, luego solo actualizar datos
-      const charts = response.data && response.data.charts ? response.data.charts : response.charts;
-      if (charts) {
-        if (!chartsCreated) {
-          console.log('Creando gráficos por primera vez');
-          createAllChartsOnce(charts);
-          chartsCreated = true;
-        } else {
-          console.log('Actualizando datos de gráficos existentes SIN recrear');
-          updateAllChartsData(charts);
-        }
+      // Tabla de tendencias
+      const trendTable = response.data && response.data.trend_table ? response.data.trend_table : response.trend_table;
+      if (trendTable && window.dashboardManager) {
+        window.dashboardManager.updateTrendTable(trendTable);
       }
-      
-      // Tabla de detalle
-      const detailTable = response.data && response.data.detail_table ? response.data.detail_table : response.detail_table;
-      if (detailTable) renderDetailTable(detailTable);
       
     } catch (error) {
       console.error('Error en updateDashboardUI:', error);
@@ -1325,6 +1315,16 @@ document.addEventListener('DOMContentLoaded', () => {
       activeFilters.date_to = endDateInput.value || null;
       updateDashboardUI();
     });
+  }
+  
+  // Inicializar métricas y tabla desde datos del servidor si están disponibles
+  if (window.dashboardData) {
+    if (window.dashboardData.metrics) {
+      renderTopMetrics(window.dashboardData.metrics);
+    }
+    if (window.dashboardData.trend_table && window.dashboardManager) {
+      window.dashboardManager.updateTrendTable(window.dashboardData.trend_table);
+    }
   }
   
   // Cargar datos iniciales del dashboard
