@@ -213,10 +213,12 @@ class PurchaseOrderController extends Controller
                 // 9) ===== NEW FIELDS FOR OLO (boolean) =====
                 foreach ([
                              'is_dropship','applies_tlc','applies_af','port_of_loading_validated','has_facture_merca',
-                             'used_rate_ok','uses_bonded_warehouse','apply_technical_note','etd_initial_validated',
+                             'uses_bonded_warehouse','apply_technical_note','etd_initial_validated',
                          ] as $f) {
                     $poData[$f] = $toBool(data_get($general, $f, false));
                 }
+                // Forzar used_rate_ok siempre como false
+                $poData['used_rate_ok'] = false;
 
                 // 10) ===== NEW FIELDS FOR OLO (int) =====
                 foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference'] as $f) {
@@ -487,10 +489,12 @@ class PurchaseOrderController extends Controller
         // NEW FIELDS FOR OLO (boolean)
         foreach ([
                      'is_dropship','applies_tlc','applies_af','port_of_loading_validated','has_facture_merca',
-                     'used_rate_ok','uses_bonded_warehouse','apply_technical_note','etd_initial_validated',
+                     'uses_bonded_warehouse','apply_technical_note','etd_initial_validated',
                  ] as $f) {
             $poData[$f] = $toBool(data_get($general, $f, false));
         }
+        // Forzar used_rate_ok siempre como false
+        $poData['used_rate_ok'] = false;
 
         // NEW FIELDS FOR OLO (int)
         foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference'] as $f) {
