@@ -60,8 +60,14 @@ class PurchaseOrderController extends Controller
 
                 // Helpers
                 $parseDate = static function ($v) {
-                    if ($v === null || $v === '') return null;
-                    return \Illuminate\Support\Carbon::parse($v);
+                    if ($v === null || $v === '' || $v === false) return null;
+                    try {
+                        return \Illuminate\Support\Carbon::parse($v);
+                    } catch (\Exception $e) {
+                        // Si falla el parseo, retornar null en lugar de lanzar excepción
+                        \Log::warning("Error parsing date: {$v} - " . $e->getMessage());
+                        return null;
+                    }
                 };
                 $toBool = static function ($v) {
                     if (is_bool($v)) return $v;
@@ -249,8 +255,15 @@ class PurchaseOrderController extends Controller
                              'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','dif_load_date','emision_date_po','forwader_date',
                              'date_consolidation','release_date',
                          ] as $f) {
-                    if (array_key_exists($f, $general)) {
-                        $poData[$f] = $parseDate($general[$f]);
+                    // Verificar si el campo existe en el array (usar array_key_exists para verificar existencia real)
+                    if (array_key_exists($f, $general) || isset($general[$f])) {
+                        $dateValue = $general[$f];
+                        if ($dateValue !== null && $dateValue !== '') {
+                            $parsedDate = $parseDate($dateValue);
+                            if ($parsedDate !== null) {
+                                $poData[$f] = $parsedDate;
+                            }
+                        }
                     }
                 }
 
