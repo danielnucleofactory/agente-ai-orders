@@ -755,35 +755,100 @@ class PurchaseOrderController extends Controller
             'incoterms'               => 'incoterms',
             'logistics_incoterm'      => 'logistics_incoterm',
             'price_incoterm'          => 'price_incoterm',
+            'trading_company'         => 'trading_company',
+            'mode'                    => 'mode',
 
-            // Fechas y diferencias
-            'date_theorical_load'     => 'date_theorical_load',
-            'dif_load_date'           => 'dif_load_date',
-            'date_etd'                => 'date_etd',
-            'date_eta'                => 'date_eta',
-            'etd_dates_difference'    => 'etd_dates_difference',
-            'eta_dates_difference'    => 'eta_dates_difference',
+            // Transporte y contenedores
+            'shipping_line'           => 'shipping_line',
+            'service_provider'        => 'service_provider',
+            'tariff_type'             => 'tariff_type',
+            'container_type'          => 'container_type',
+            'container_number'        => 'container_number',
+            'consolidator_name'       => 'consolidator_name',
+            'forwarder_name'          => 'forwarder_name',
 
-            // Otros
-            'case_number_file'        => 'case_number_file',
-            'status'                  => 'status',
+            // Puertos
             'departure_port'          => 'departure_port',
             'arrival_port'            => 'arrival_port',
-            'customs_dua'             => 'customs_dua',
-            'receipt_note'            => 'receipt_note',
+
+            // Dimensiones y peso
+            'cbm'                     => 'cbm',
+            'weight_kg'               => 'weight_kg',
+            'weight_lb'               => 'weight_lb',
+            'pallet_quantity'         => 'pallet_quantity',
+            'pallet_quantity_real'    => 'pallet_quantity_real',
+
+            // Fechas
+            'date_booking_request'    => 'date_booking_request',
+            'date_booking_authorized' => 'date_booking_authorized',
+            'forwader_date'           => 'forwader_date',
+            'inspection_date'         => 'inspection_date',
+            'vgm_cut_date'            => 'vgm_cut_date',
+            'date_theorical_load'     => 'date_theorical_load',
+            'date_variable_date'      => 'date_variable_date',
+            'date_carga_po'           => 'date_carga_po',
+            'release_date'            => 'release_date',
+            'date_consolidation'      => 'date_consolidation',
+            'date_etd_initial'        => 'date_etd_initial',
+            'date_etd'                => 'date_etd',
+            'date_atd'                => 'date_atd',
+            'date_eta'                => 'date_eta',
+            'date_eta_initial'        => 'date_eta_initial',
+            'date_ata'                => 'date_ata',
+            'bonded_warehouse_enter'  => 'bonded_warehouse_enter',
+            'bonded_warehouse_exit'   => 'bonded_warehouse_exit',
             'receipt_note_date'       => 'receipt_note_date',
+            'estimated_dc_availability_date' => 'estimated_dc_availability_date',
+            'balance_payment_date'    => 'balance_payment_date',
+            'local_charges_payment_date' => 'local_charges_payment_date',
+            'date_invoice_received'   => 'date_invoice_received',
+            'date_vendor_document_received' => 'date_vendor_document_received',
+
+            // Diferencias y enteros
+            'dif_load_date'           => 'dif_load_date',
+            'etd_dates_difference'    => 'etd_dates_difference',
+            'eta_dates_difference'    => 'eta_dates_difference',
+            'container_free_days'     => 'container_free_days',
+            'delay_days'              => 'delay_days',
+
+            // Identificadores
+            'case_number_file'        => 'case_number_file',
             'factory_proforma_number' => 'factory_proforma_number',
             'mbl_number'              => 'mbl_number',
+            'tracking_id'             => 'tracking_id',
             'invoice'                 => 'invoice',
+            'cargo_invoice_number'    => 'cargo_invoice_number',
+            'factura_merca'           => 'factura_merca',
+            'customs_dua'             => 'customs_dua',
+            'receipt_note'            => 'receipt_note',
+
+            // Costos y montos
             'Invoice_amount'          => 'Invoice_amount',
+            'freight_amount'          => 'freight_amount',
+            'other_expenses'          => 'other_expenses',
             'total_amount'            => 'total_amount',
+            'estimated_pallet_cost'   => 'estimated_pallet_cost',
+            'real_cost_estimated_po'  => 'real_cost_estimated_po',
+            'real_cost_real_po'       => 'real_cost_real_po',
+
+            // Booleanos
             'applies_tlc'             => 'applies_tlc',
             'apply_technical_note'    => 'apply_technical_note',
+            'port_of_loading_validated' => 'port_of_loading_validated',
+            'has_facture_merca'       => 'has_facture_merca',
+            'used_rate_ok'            => 'used_rate_ok',
+            'uses_bonded_warehouse'   => 'uses_bonded_warehouse',
+            'etd_initial_validated'   => 'etd_initial_validated',
+
+            // Texto y otros
             'reason'                  => 'reason',
             'customer_type'           => 'customer_type',
-
-            // OLO existentes
             'retail_group'            => 'retail_group',
+            'insurance_type'          => 'insurance_type',
+            'visibility_notes'        => 'visibility_notes',
+            'comments'                => 'comments',
+            'arrival_status'         => 'arrival_status',
+            'status'                  => 'status',
             'comments_count'          => 'comments_count', // calculado/solo referencia
 
         ];
@@ -818,38 +883,75 @@ class PurchaseOrderController extends Controller
 
                 // Fechas
                 case 'emision_date_po':
+                case 'date_booking_request':
+                case 'date_booking_authorized':
+                case 'forwader_date':
+                case 'inspection_date':
+                case 'vgm_cut_date':
                 case 'date_theorical_load':
-                case 'receipt_note_date':
+                case 'date_variable_date':
+                case 'date_carga_po':
+                case 'release_date':
+                case 'date_consolidation':
+                case 'date_etd_initial':
                 case 'date_etd':
-                case 'date_eta': {
-                    $po->$modelField = \Carbon\Carbon::parse($value);
+                case 'date_atd':
+                case 'date_eta':
+                case 'date_eta_initial':
+                case 'date_ata':
+                case 'bonded_warehouse_enter':
+                case 'bonded_warehouse_exit':
+                case 'receipt_note_date':
+                case 'estimated_dc_availability_date':
+                case 'balance_payment_date':
+                case 'local_charges_payment_date':
+                case 'date_invoice_received':
+                case 'date_vendor_document_received': {
+                    $po->$modelField = $value ? \Carbon\Carbon::parse($value) : null;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
                     break;
                 }
 
-                // Montos
+                // Montos (decimales)
                 case 'net_total':
                 case 'Invoice_amount':
-                case 'total_amount': {
-                    $po->$modelField = (float) $value;
-                    $changes[$apiField] = ['old' => $oldValue, 'new' => (float) $value];
+                case 'freight_amount':
+                case 'other_expenses':
+                case 'total_amount':
+                case 'estimated_pallet_cost':
+                case 'real_cost_estimated_po':
+                case 'real_cost_real_po':
+                case 'cbm':
+                case 'weight_kg':
+                case 'weight_lb': {
+                    $po->$modelField = ($value !== null && $value !== '') ? (float) $value : null;
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => ($value !== null && $value !== '') ? (float) $value : null];
                     break;
                 }
 
                 // Booleanos
                 case 'applies_tlc':
-                case 'apply_technical_note': {
+                case 'apply_technical_note':
+                case 'port_of_loading_validated':
+                case 'has_facture_merca':
+                case 'used_rate_ok':
+                case 'uses_bonded_warehouse':
+                case 'etd_initial_validated': {
                     $po->$modelField = filter_var($value, FILTER_VALIDATE_BOOLEAN);
                     $changes[$apiField] = ['old' => $oldValue, 'new' => (bool) $po->$modelField];
                     break;
                 }
 
-                // Diferencias (enteros)
+                // Enteros
                 case 'etd_dates_difference':
                 case 'eta_dates_difference':
-                case 'dif_load_date': {
-                    $po->$modelField = (int) $value;
-                    $changes[$apiField] = ['old' => $oldValue, 'new' => (int) $value];
+                case 'dif_load_date':
+                case 'container_free_days':
+                case 'delay_days':
+                case 'pallet_quantity':
+                case 'pallet_quantity_real': {
+                    $po->$modelField = ($value !== null && $value !== '') ? (int) $value : null;
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => ($value !== null && $value !== '') ? (int) $value : null];
                     break;
                 }
 
