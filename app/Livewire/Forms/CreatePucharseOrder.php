@@ -36,6 +36,313 @@ class CreatePucharseOrder extends Component
     public $paymentTermsArray = ["30" => "30 días", "60" => "60 días", "90" => "90 días"];
     public $vendorArray = [];
     public $shipToArray = [];
+    
+    // Arrays para dropdowns de datos maestros
+    public $containerTypeArray = [
+        'Contenedor 20ft' => 'Contenedor 20ft',
+        'Contenedor 40 HC' => 'Contenedor 40 HC',
+        'Contenedor 40ft' => 'Contenedor 40ft',
+        'Contenedor 45 HC' => 'Contenedor 45 HC',
+        'Contenedor 45ft' => 'Contenedor 45ft',
+        'Contenedor 53ft' => 'Contenedor 53ft',
+        'FTL' => 'FTL',
+        'LCL' => 'LCL',
+        'Plataforma 20ft' => 'Plataforma 20ft',
+        'Plataforma 40ft' => 'Plataforma 40ft',
+    ];
+    
+    public $portsArray = [
+        'ACAJUTLA, EL SALVADOR' => 'ACAJUTLA, EL SALVADOR',
+        'ALAJUELA, COSTA RICA' => 'ALAJUELA, COSTA RICA',
+        'ALGECIRAS, SPAIN' => 'ALGECIRAS, SPAIN',
+        'ALTAMIRA, MÉXICO' => 'ALTAMIRA, MÉXICO',
+        'AMATILLO, HONDURAS' => 'AMATILLO, HONDURAS',
+        'ANCONA, ITALY' => 'ANCONA, ITALY',
+        'ANTWERP LUX, LUXEMBOURG' => 'ANTWERP LUX, LUXEMBOURG',
+        'ANTWERP, BELGIUM' => 'ANTWERP, BELGIUM',
+        'ARICA, CHILE' => 'ARICA, CHILE',
+        'ATLANTA, UNITED STATES' => 'ATLANTA, UNITED STATES',
+        'BALBOA, PANAMA' => 'BALBOA, PANAMA',
+        'BANGKOK, THAILAND' => 'BANGKOK, THAILAND',
+        'BARCELONA, SPAIN' => 'BARCELONA, SPAIN',
+        'BARRANQUILLA, COLOMBIA' => 'BARRANQUILLA, COLOMBIA',
+        'BARRIOS, GUATEMALA' => 'BARRIOS, GUATEMALA',
+        'BAVARIA, GERMANY' => 'BAVARIA, GERMANY',
+        'BEIJIAO, CHINA' => 'BEIJIAO, CHINA',
+        'BILBAO, SPAIN' => 'BILBAO, SPAIN',
+        'BOGOTÁ, COLOMBIA' => 'BOGOTÁ, COLOMBIA',
+        'BOSTON, UNITED STATES' => 'BOSTON, UNITED STATES',
+        'BREMERHAVEN, GERMANY' => 'BREMERHAVEN, GERMANY',
+        'BROOKLYN, UNITED STATES' => 'BROOKLYN, UNITED STATES',
+        'BUENAVENTURA, COLOMBIA' => 'BUENAVENTURA, COLOMBIA',
+        'BUENOS AIRES, ARGENTINA' => 'BUENOS AIRES, ARGENTINA',
+        'BUSAN, KOREA' => 'BUSAN, KOREA',
+        'CABELLO, VENEZUELA' => 'CABELLO, VENEZUELA',
+        'CALDERA, COSTA RICA' => 'CALDERA, COSTA RICA',
+        'CALI, COLOMBIA' => 'CALI, COLOMBIA',
+        'CALIFORNIA, UNITED STATES' => 'CALIFORNIA, UNITED STATES',
+        'CALLAO, PERU' => 'CALLAO, PERU',
+        'CARABOBO, VENEZUELA' => 'CARABOBO, VENEZUELA',
+        'CARTAGENA, COLOMBIA' => 'CARTAGENA, COLOMBIA',
+        'CASTELLON, SPAIN' => 'CASTELLON, SPAIN',
+        'CAUCEDO, DOMINICAN REPUBLIC' => 'CAUCEDO, DOMINICAN REPUBLIC',
+        'CD HIDALGO, MÉXICO' => 'CD HIDALGO, MÉXICO',
+        'CHANGCHENG, CHINA' => 'CHANGCHENG, CHINA',
+        'CHARLESTON, UNITED STATES' => 'CHARLESTON, UNITED STATES',
+        'CHIWAN, CHINA' => 'CHIWAN, CHINA',
+        'CHONGQING, CHINA' => 'CHONGQING, CHINA',
+        'CIUDAD DE GUATEMALA, GUATEMALA' => 'CIUDAD DE GUATEMALA, GUATEMALA',
+        'CIUDAD HIDALGO, MÉXICO' => 'CIUDAD HIDALGO, MÉXICO',
+        'COCHIN, INDIA' => 'COCHIN, INDIA',
+        'COLON, PANAMA' => 'COLON, PANAMA',
+        'COLON, PANAMÁ' => 'COLON, PANAMÁ',
+        'CORTÉS, HONDURAS' => 'CORTÉS, HONDURAS',
+        'CRANBURY, UNITED STATES' => 'CRANBURY, UNITED STATES',
+        'CUCUTA, COLOMBIA' => 'CUCUTA, COLOMBIA',
+        'CUNDINAMARCA, COLOMBIA' => 'CUNDINAMARCA, COLOMBIA',
+        'CÚCUTA, COLOMBIA' => 'CÚCUTA, COLOMBIA',
+        'DA NANG, VIETNAM' => 'DA NANG, VIETNAM',
+        'DALIAN, CHINA' => 'DALIAN, CHINA',
+        'DATO_ANTIGUO, COSTA RICA' => 'DATO_ANTIGUO, COSTA RICA',
+        'DELMAS, HAITI' => 'DELMAS, HAITI',
+        'DESAMPARADOS, COSTA RICA' => 'DESAMPARADOS, COSTA RICA',
+        'DORAL, UNITED STATES' => 'DORAL, UNITED STATES',
+        'DUCHCOV, CZECH REPUBLIC' => 'DUCHCOV, CZECH REPUBLIC',
+        'EL PASO, UNITED STATES' => 'EL PASO, UNITED STATES',
+        'ESMERALDA, ECUADOR' => 'ESMERALDA, ECUADOR',
+        'EVERGLADES, UNITED STATES' => 'EVERGLADES, UNITED STATES',
+        'EZEIZA, ARGENTINA' => 'EZEIZA, ARGENTINA',
+        'FLORIDA, UNITED STATES' => 'FLORIDA, UNITED STATES',
+        'FOSHAN NEW PORT, CHINA' => 'FOSHAN NEW PORT, CHINA',
+        'FOSHAN, CHINA' => 'FOSHAN, CHINA',
+        'FRANKFURT, GERMANY' => 'FRANKFURT, GERMANY',
+        'FUJIAN, CHINA' => 'FUJIAN, CHINA',
+        'FUNZA, COLOMBIA' => 'FUNZA, COLOMBIA',
+        'FUZHOU, CHINA' => 'FUZHOU, CHINA',
+        'GAOMING FOSHAN, CHINA' => 'GAOMING FOSHAN, CHINA',
+        'GAOMING, CHINA' => 'GAOMING, CHINA',
+        'GAOSHA, CHINA' => 'GAOSHA, CHINA',
+        'GENOA, ITALY' => 'GENOA, ITALY',
+        'GEORGE TOWN, CAYMAN ISLANDS' => 'GEORGE TOWN, CAYMAN ISLANDS',
+        'GEORGIA, UNITED STATES' => 'GEORGIA, UNITED STATES',
+        'GUADALAJARA, MÉXICO' => 'GUADALAJARA, MÉXICO',
+        'GUANGDONG PROVINCE, CHINA' => 'GUANGDONG PROVINCE, CHINA',
+        'GUANGDONG, CHINA' => 'GUANGDONG, CHINA',
+        'GUANGZHOU, CHINA' => 'GUANGZHOU, CHINA',
+        'GUARERO, VENEZUELA' => 'GUARERO, VENEZUELA',
+        'GUAYAQUIL, ECUADOR' => 'GUAYAQUIL, ECUADOR',
+        'GÉNOVA, ITALY' => 'GÉNOVA, ITALY',
+        'HAI PHONG, VIETNAM' => 'HAI PHONG, VIETNAM',
+        'HAIFA, ISRAEL' => 'HAIFA, ISRAEL',
+        'HAMBURGO, GERMANY' => 'HAMBURGO, GERMANY',
+        'HEBEI, CHINA' => 'HEBEI, CHINA',
+        'HENAN, CHINA' => 'HENAN, CHINA',
+        'HEREDIA, COSTA RICA' => 'HEREDIA, COSTA RICA',
+        'HO CHI MINH, VIETNAM' => 'HO CHI MINH, VIETNAM',
+        'HONG KONG, CHINA' => 'HONG KONG, CHINA',
+        'HOUSTON, UNITED STATES' => 'HOUSTON, UNITED STATES',
+        'HUANGPU, CHINA' => 'HUANGPU, CHINA',
+        'ITAJAI, BRAZIL' => 'ITAJAI, BRAZIL',
+        'JABEL ALI, UNITED ARAB EMIRATES' => 'JABEL ALI, UNITED ARAB EMIRATES',
+        'JAXPORT, UNITED STATES' => 'JAXPORT, UNITED STATES',
+        'JEBELI ALI, UNITED ARAB EMIRATES' => 'JEBELI ALI, UNITED ARAB EMIRATES',
+        'JIANGMEN, CHINA' => 'JIANGMEN, CHINA',
+        'JIANGSU, CHINA' => 'JIANGSU, CHINA',
+        'JIUJIANG,  FOSHAN, CHINA' => 'JIUJIANG,  FOSHAN, CHINA',
+        'KANSAS, UNITED STATES' => 'KANSAS, UNITED STATES',
+        'KAOHSIUNG, TAIWAN' => 'KAOHSIUNG, TAIWAN',
+        'KARACHI, PAKISTAN' => 'KARACHI, PAKISTAN',
+        'KEELUNG, CHINA' => 'KEELUNG, CHINA',
+        'KOPER LUX, LUXEMBOURG' => 'KOPER LUX, LUXEMBOURG',
+        'KOPER, HUNGARY' => 'KOPER, HUNGARY',
+        'LA GUAIRA, VENEZUELA' => 'LA GUAIRA, VENEZUELA',
+        'LA SPEZIA, ITALY' => 'LA SPEZIA, ITALY',
+        'LAEM CHABANG, THAILAND' => 'LAEM CHABANG, THAILAND',
+        'LANCASTER, UNITED STATES' => 'LANCASTER, UNITED STATES',
+        'LANSHI, CHINA' => 'LANSHI, CHINA',
+        'LAZARO CARDENAS, MÉXICO' => 'LAZARO CARDENAS, MÉXICO',
+        'LEIPHEIM, GERMANY' => 'LEIPHEIM, GERMANY',
+        'LEIXÕES, PORTUGAL' => 'LEIXÕES, PORTUGAL',
+        'LELIU, CHINA' => 'LELIU, CHINA',
+        'LIMA, PERU' => 'LIMA, PERU',
+        'LIMON, COSTA RICA' => 'LIMON, COSTA RICA',
+        'LIVORNO, ITALY' => 'LIVORNO, ITALY',
+        'LOS ANGELES, UNITED STATES' => 'LOS ANGELES, UNITED STATES',
+        'MAFANG, CHINA' => 'MAFANG, CHINA',
+        'MANILA, PHILIPPINES' => 'MANILA, PHILIPPINES',
+        'MANIZALES, COLOMBIA' => 'MANIZALES, COLOMBIA',
+        'MANZANILLO M, MÉXICO' => 'MANZANILLO M, MÉXICO',
+        'MANZANILLO P, PANAMA' => 'MANZANILLO P, PANAMA',
+        'MANZANILLO P, PANAMÁ' => 'MANZANILLO P, PANAMÁ',
+        'MANZANILLO, CUBA' => 'MANZANILLO, CUBA',
+        'MANZANILLO, MÉXICO' => 'MANZANILLO, MÉXICO',
+        'MANZANILLO, PANAMA' => 'MANZANILLO, PANAMA',
+        'MARACAIBO, VENEZUELA' => 'MARACAIBO, VENEZUELA',
+        'MARIN, SPAIN' => 'MARIN, SPAIN',
+        'MASSALAVES, SPAIN' => 'MASSALAVES, SPAIN',
+        'MASSILLON OH, UNITED STATES' => 'MASSILLON OH, UNITED STATES',
+        'MAWEI FUZHOU, CHINA' => 'MAWEI FUZHOU, CHINA',
+        'MAWEI, CHINA' => 'MAWEI, CHINA',
+        'MAWEI, FUJIAN, CHINA' => 'MAWEI, FUJIAN, CHINA',
+        'MEDELLIN, COLOMBIA' => 'MEDELLIN, COLOMBIA',
+        'MEXICO, PHILIPPINES' => 'MEXICO, PHILIPPINES',
+        'MIAMI ESP, UNITED STATES' => 'MIAMI ESP, UNITED STATES',
+        'MIAMI FL, UNITED STATES' => 'MIAMI FL, UNITED STATES',
+        'MIAMI INTERPORT, UNITED STATES' => 'MIAMI INTERPORT, UNITED STATES',
+        'MIAMI, UNITED STATES' => 'MIAMI, UNITED STATES',
+        'MIGRACIÓN MIAMI, UNITED STATES' => 'MIGRACIÓN MIAMI, UNITED STATES',
+        'MILAN, ITALY' => 'MILAN, ITALY',
+        'MINNESOTA, UNITED STATES' => 'MINNESOTA, UNITED STATES',
+        'MIRAMAR, UNITED STATES' => 'MIRAMAR, UNITED STATES',
+        'MIXCO, GUATEMALA' => 'MIXCO, GUATEMALA',
+        'MOIN, COSTA RICA' => 'MOIN, COSTA RICA',
+        'MONTEVIDEO, URUGUAY' => 'MONTEVIDEO, URUGUAY',
+        'MOÍN, COSTA RICA' => 'MOÍN, COSTA RICA',
+        'MUNDRA, INDIA' => 'MUNDRA, INDIA',
+        'MURCIA, SPAIN' => 'MURCIA, SPAIN',
+        'NANJING, CHINA' => 'NANJING, CHINA',
+        'NANSHA, CHINA' => 'NANSHA, CHINA',
+        'NASSAU, BAHAMAS' => 'NASSAU, BAHAMAS',
+        'NAVEGANTES, BRASIL, BRAZIL' => 'NAVEGANTES, BRASIL, BRAZIL',
+        'NAVEGANTES, BRAZIL' => 'NAVEGANTES, BRAZIL',
+        'NEW JERSEY, UNITED STATES' => 'NEW JERSEY, UNITED STATES',
+        'NEW YORK, UNITED STATES' => 'NEW YORK, UNITED STATES',
+        'NHAVA SHEVA, INDIA' => 'NHAVA SHEVA, INDIA',
+        'NINGBO , CHINA' => 'NINGBO , CHINA',
+        'NINGBO, CHINA' => 'NINGBO, CHINA',
+        'NINGBO., CHINA' => 'NINGBO., CHINA',
+        'NORFOLK VA, UNITED STATES' => 'NORFOLK VA, UNITED STATES',
+        'NORFOLK, UNITED STATES' => 'NORFOLK, UNITED STATES',
+        'NUEVO LEON, MÉXICO' => 'NUEVO LEON, MÉXICO',
+        'OKLAHOMA, UNITED STATES' => 'OKLAHOMA, UNITED STATES',
+        'OLOCUILTA, EL SALVADOR' => 'OLOCUILTA, EL SALVADOR',
+        'OLOCUILTA, EL SALVADOR, EL SALVADOR' => 'OLOCUILTA, EL SALVADOR, EL SALVADOR',
+        'ORANJESTAD, ARUBA' => 'ORANJESTAD, ARUBA',
+        'PAITA, PERU' => 'PAITA, PERU',
+        'PARAGUACHON, COLOMBIA' => 'PARAGUACHON, COLOMBIA',
+        'PARAGUACHON, VENEZUELA' => 'PARAGUACHON, VENEZUELA',
+        'PARAGUACHÓN, COLOMBIA' => 'PARAGUACHÓN, COLOMBIA',
+        'PARANAGUA, BRAZIL' => 'PARANAGUA, BRAZIL',
+        'PASO CANOAS, COSTA RICA' => 'PASO CANOAS, COSTA RICA',
+        'PEDRO DE ALVARADO, GUATEMALA' => 'PEDRO DE ALVARADO, GUATEMALA',
+        'PENSILVANIA, UNITED STATES' => 'PENSILVANIA, UNITED STATES',
+        'PEÑAS BLANCAS, COSTA RICA' => 'PEÑAS BLANCAS, COSTA RICA',
+        'PICKUP, COLOMBIA' => 'PICKUP, COLOMBIA',
+        'PORTO ALEGRE, BRAZIL' => 'PORTO ALEGRE, BRAZIL',
+        'POSORJA, ECUADOR' => 'POSORJA, ECUADOR',
+        'PTO. ARICA, COLOMBIA' => 'PTO. ARICA, COLOMBIA',
+        'PTO. CALLAO, PERU' => 'PTO. CALLAO, PERU',
+        'PTO. CAUCEDO, DOMINICAN REPUBLIC' => 'PTO. CAUCEDO, DOMINICAN REPUBLIC',
+        'PTO. PAITA, PERU' => 'PTO. PAITA, PERU',
+        'PTO. SAN ANTONIO, CHILE' => 'PTO. SAN ANTONIO, CHILE',
+        'PUERTO ARICA, PERU' => 'PUERTO ARICA, PERU',
+        'PUERTO CABELLO, VENEZUELA' => 'PUERTO CABELLO, VENEZUELA',
+        'PUERTO PLATA, DOMINICAN REPUBLIC' => 'PUERTO PLATA, DOMINICAN REPUBLIC',
+        'PUERTO, UNITED STATES' => 'PUERTO, UNITED STATES',
+        'PUERTO1, UNITED ARAB EMIRATES' => 'PUERTO1, UNITED ARAB EMIRATES',
+        'QINGDAO, CHINA' => 'QINGDAO, CHINA',
+        'QUETZAL, GUATEMALA' => 'QUETZAL, GUATEMALA',
+        'QUI NHON, VIETNAM' => 'QUI NHON, VIETNAM',
+        'QUITO, ECUADOR' => 'QUITO, ECUADOR',
+        'RIO GRANDE, BRAZIL' => 'RIO GRANDE, BRAZIL',
+        'RONGQI, CHINA' => 'RONGQI, CHINA',
+        'ROTTERDAM, NEDERLAND' => 'ROTTERDAM, NEDERLAND',
+        'SAN ANTONIO, CHILE' => 'SAN ANTONIO, CHILE',
+        'SAN JOSE, COSTA RICA' => 'SAN JOSE, COSTA RICA',
+        'SAN JUAN, PUERTO RICO' => 'SAN JUAN, PUERTO RICO',
+        'SAN MARCOS, EL SALVADOR' => 'SAN MARCOS, EL SALVADOR',
+        'SAN PEDRO DE SULA, HONDURAS' => 'SAN PEDRO DE SULA, HONDURAS',
+        'SAN PEDRO, ARGENTINA' => 'SAN PEDRO, ARGENTINA',
+        'SAN SALVADOR, EL SALVADOR' => 'SAN SALVADOR, EL SALVADOR',
+        'SAN VICENTE, CHILE' => 'SAN VICENTE, CHILE',
+        'SANRONG, CHINA' => 'SANRONG, CHINA',
+        'SANSHAN, CHINA' => 'SANSHAN, CHINA',
+        'SANSHUI FOSHAN, CHINA' => 'SANSHUI FOSHAN, CHINA',
+        'SANSHUI, CHINA' => 'SANSHUI, CHINA',
+        'SANTA MARIA, SPAIN' => 'SANTA MARIA, SPAIN',
+        'SANTO DOMINGO, DOMINICAN REPUBLIC' => 'SANTO DOMINGO, DOMINICAN REPUBLIC',
+        'SANTO TOMAS DE CASTILLA, GUATEMALA' => 'SANTO TOMAS DE CASTILLA, GUATEMALA',
+        'SANTOS, BRAZIL' => 'SANTOS, BRAZIL',
+        'SAO PAULO, BRAZIL' => 'SAO PAULO, BRAZIL',
+        'SAVANNAH GEO, UNITED STATES' => 'SAVANNAH GEO, UNITED STATES',
+        'SAVANNAH, UNITED STATES' => 'SAVANNAH, UNITED STATES',
+        'SHANDON, CHINA' => 'SHANDON, CHINA',
+        'SHANGHAI, CHINA' => 'SHANGHAI, CHINA',
+        'SHANTOU, CHINA' => 'SHANTOU, CHINA',
+        'SHEKOU, CHINA' => 'SHEKOU, CHINA',
+        'SHENZHEN, CHINA' => 'SHENZHEN, CHINA',
+        'SHUNDE, CHINA' => 'SHUNDE, CHINA',
+        'SINES, PORTUGAL' => 'SINES, PORTUGAL',
+        'SINGAPORE, SINGAPORE' => 'SINGAPORE, SINGAPORE',
+        'STUHR, GERMANY' => 'STUHR, GERMANY',
+        'SUAPE, BRAZIL' => 'SUAPE, BRAZIL',
+        'SUBIC BAY, PHILIPPINES' => 'SUBIC BAY, PHILIPPINES',
+        'SUZHOU, CHINA' => 'SUZHOU, CHINA',
+        'TAICANG, CHINA' => 'TAICANG, CHINA',
+        'TAICHUNG, CHINA' => 'TAICHUNG, CHINA',
+        'TAIPEI TW, TAIWAN' => 'TAIPEI TW, TAIWAN',
+        'TAIPEI, CHINA' => 'TAIPEI, CHINA',
+        'TAIPEI, TAIWAN' => 'TAIPEI, TAIWAN',
+        'TANGSHAN, CHINA' => 'TANGSHAN, CHINA',
+        'TIANJIN, CHINA' => 'TIANJIN, CHINA',
+        'TIANJIN,, CHINA' => 'TIANJIN,, CHINA',
+        'TIANJINXINGANG, CHINA' => 'TIANJINXINGANG, CHINA',
+        'TIENDITAS, VENEZUELA' => 'TIENDITAS, VENEZUELA',
+        'TIFTON, UNITED STATES' => 'TIFTON, UNITED STATES',
+        'TORONTO, CANADA' => 'TORONTO, CANADA',
+        'TOWNSEND, UNITED STATES' => 'TOWNSEND, UNITED STATES',
+        'TRUJILLO ALTO, PUERTO RICO' => 'TRUJILLO ALTO, PUERTO RICO',
+        'VADO LIGURE, ITALY' => 'VADO LIGURE, ITALY',
+        'VALENCIA CA, VENEZUELA' => 'VALENCIA CA, VENEZUELA',
+        'VALENCIA, SPAIN' => 'VALENCIA, SPAIN',
+        'VALENCIA, VENEZUELA' => 'VALENCIA, VENEZUELA',
+        'VALPARAISO, CHILE' => 'VALPARAISO, CHILE',
+        'VERACRUZ, MÉXICO' => 'VERACRUZ, MÉXICO',
+        'VIGO, SPAIN' => 'VIGO, SPAIN',
+        'WAIHAI, CHINA' => 'WAIHAI, CHINA',
+        'WINFIELD, UNITED STATES' => 'WINFIELD, UNITED STATES',
+        'WUHAN, CHINA' => 'WUHAN, CHINA',
+        'XIAMEN, CHINA' => 'XIAMEN, CHINA',
+        'XIAOLAN, CHINA' => 'XIAOLAN, CHINA',
+        'XINGANG, CHINA' => 'XINGANG, CHINA',
+        'XIOLAN, CHINA' => 'XIOLAN, CHINA',
+        'YANTIAN, CHINA' => 'YANTIAN, CHINA',
+        'YICHANG, CHINA' => 'YICHANG, CHINA',
+        'YUMBO, COLOMBIA' => 'YUMBO, COLOMBIA',
+        'YUNFU, CHINA' => 'YUNFU, CHINA',
+        'ZHANGJIAGANG, CHINA' => 'ZHANGJIAGANG, CHINA',
+        'ZHAOQING, CHINA' => 'ZHAOQING, CHINA',
+        'ZHAPU, CHINA' => 'ZHAPU, CHINA',
+        'ZHEJIANG, CHINA' => 'ZHEJIANG, CHINA',
+        'ZHONGSHAN, CHINA' => 'ZHONGSHAN, CHINA',
+    ];
+    
+    public $shippingLineArray = [
+        'CMA CGM' => 'CMA CGM',
+        'COSCO' => 'COSCO',
+        'COSIARMA' => 'COSIARMA',
+        'EVERGREEN' => 'EVERGREEN',
+        'HAPAG LLOYD' => 'HAPAG LLOYD',
+        'HAPPAG' => 'HAPPAG',
+        'HSUD' => 'HSUD',
+        'MAERSK' => 'MAERSK',
+        'MSC' => 'MSC',
+        'ONE' => 'ONE',
+        'OOCL' => 'OOCL',
+        'PIL' => 'PIL',
+        'PRUEBA' => 'PRUEBA',
+        'SEALAND' => 'SEALAND',
+        'VASI' => 'VASI',
+        'WAN HAI' => 'WAN HAI',
+        'ZIM' => 'ZIM',
+        'ZIM LINES' => 'ZIM LINES',
+    ];
+    
+    public $tariffTypeArray = [
+        'FAK' => 'FAK',
+        'NAC' => 'NAC',
+        'Premium' => 'Premium',
+    ];
 
     // Datos generales
     public $order_number;
@@ -539,11 +846,23 @@ class CreatePucharseOrder extends Component
         if ($this->vendor_id) {
             $vendor = Vendor::find($this->vendor_id);
             if ($vendor) {
-                $this->vendor_direccion = $vendor->vendor_direccion;
-                $this->vendor_pais = $vendor->vendor_pais;
-                $this->vendor_telefono = $vendor->vendor_telefono;
-                $this->vendor_number = $vendor->vendo_code; // Asignar el código del proveedor
+                $this->vendor_direccion = $vendor->vendor_direccion ?? null;
+                $this->vendor_pais = $vendor->vendor_pais ?? null;
+                $this->vendor_telefono = $vendor->vendor_telefono ?? null;
+                $this->vendor_number = $vendor->vendo_code ?? ''; // Asignar el código del proveedor o string vacío si es null
+            } else {
+                // Si no se encuentra el vendor, limpiar los campos
+                $this->vendor_direccion = null;
+                $this->vendor_pais = null;
+                $this->vendor_telefono = null;
+                $this->vendor_number = '';
             }
+        } else {
+            // Si no hay vendor_id, limpiar los campos
+            $this->vendor_direccion = null;
+            $this->vendor_pais = null;
+            $this->vendor_telefono = null;
+            $this->vendor_number = '';
         }
     }
 
@@ -576,6 +895,8 @@ class CreatePucharseOrder extends Component
     public function updatedVendorId()
     {
         $this->onVendorSelected();
+        // Forzar actualización del componente para asegurar que los cambios se reflejen inmediatamente
+        $this->dispatch('vendor-changed');
     }
 
     public function updatedShipToId()
@@ -761,7 +1082,7 @@ class CreatePucharseOrder extends Component
                 'price_incoterm' => "required|string|in:$allowedIncoterms",
                 'vendor_id' => 'required',
                 'currency'               => 'required|string',
-                'category'               => 'required|string',
+                'category'               => 'nullable|string',
                 'factory_proforma_number'=> 'nullable|string',
                 'route_label'            => 'required|string',
                 'date_theorical_load'    => [
@@ -775,7 +1096,18 @@ class CreatePucharseOrder extends Component
                         }
                     }
                 ],
-                'reason'                 => 'required|string',
+                'date_carga_po' => [
+                    'nullable',
+                    'date',
+                    function ($attribute, $value, $fail) {
+                        if ($value && $this->date_theorical_load) {
+                            if ($value < $this->date_theorical_load) {
+                                $fail('La fecha de carga lista real no puede ser anterior a la fecha de carga lista teórica (' . formatDate($this->date_theorical_load) . ')');
+                            }
+                        }
+                    }
+                ],
+                'reason'                 => 'nullable|string',
             ], [
                 'order_number.required' => 'El número de orden es requerido',
                 'order_number.unique' => 'Este número de orden ya existe. Por favor, use un número diferente.',
@@ -784,10 +1116,8 @@ class CreatePucharseOrder extends Component
                 'price_incoterm.required' => 'El incoterm de precio es requerido',
                 'vendor_id.required' => 'El vendor es requerido',
                 'currency.required'      => 'La moneda es requerida',
-                'category.required'               => 'La categoria es requerida',
                 'route_label.required'            => 'La ruta es requerida',
                 'date_theorical_load.required'    => 'La fecha de Carga Lista Teorica es requerida',
-                'reason.required'                 => 'El motivo es requerido',
             ]);
 
             try {
@@ -1108,6 +1438,17 @@ class CreatePucharseOrder extends Component
                         
                         if ($emisionDate && $value < $emisionDate) {
                             $fail('La fecha de carga lista variable no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                        }
+                    }
+                }
+            ],
+            'date_carga_po' => [
+                'nullable',
+                'date',
+                function ($attribute, $value, $fail) {
+                    if ($value && $this->date_theorical_load) {
+                        if ($value < $this->date_theorical_load) {
+                            $fail('La fecha de carga lista real no puede ser anterior a la fecha de carga lista teórica (' . formatDate($this->date_theorical_load) . ')');
                         }
                     }
                 }

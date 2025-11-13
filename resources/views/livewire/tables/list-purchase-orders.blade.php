@@ -22,7 +22,7 @@
                         <option value="">Todas las etapas</option>
                         <option value="__trashed">Anuladas</option>
                         <option value="__no_kanban">Sin etapa</option>
-                        @foreach(\App\Models\KanbanStatus::distinct()->get(['id', 'name']) as $kanbanStatus)
+                        @foreach($kanbanStatuses as $kanbanStatus)
                             <option value="kanban_{{ $kanbanStatus->id }}">{{ $kanbanStatus->name }}</option>
                         @endforeach
                     </select>

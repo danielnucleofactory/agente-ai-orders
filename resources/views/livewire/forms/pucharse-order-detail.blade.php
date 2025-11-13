@@ -106,7 +106,7 @@
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Fecha de creación en Next</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->order_date) }}</p>
+                    <p class="font-semibold">{{ $purchaseOrder->created_at ? formatDate($purchaseOrder->created_at) : '-' }}</p>
                 </div>
             </div>
 

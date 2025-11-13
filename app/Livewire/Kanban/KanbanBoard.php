@@ -383,10 +383,8 @@ class KanbanBoard extends Component
             $oldColumnName = \App\Models\KanbanStatus::find($oldStatus)->name ?? 'desconocido';
             $newColumnName = \App\Models\KanbanStatus::find($newStatus)->name ?? 'desconocido';
 
-            // Actualizar directamente en la base de datos
-            \Illuminate\Support\Facades\DB::table('purchase_orders')
-                ->where('id', $taskId)
-                ->update(['kanban_status_id' => $newStatus]);
+            // Actualizar usando Eloquent para que se dispare el Observer y se registre en el historial
+            $task->update(['kanban_status_id' => $newStatus]);
 
             // Crear notificación para todos los usuarios (tu servicio actual)
             $notificationService = app(\App\Services\NotificationService::class);
@@ -453,26 +451,8 @@ class KanbanBoard extends Component
         $this->comment = '';
         $this->attachment = null;
 
-        // 5) Cerrar el modal desde Livewire (sin Alpine extra)
-        $this->dispatch('close-modal', $this->modalName($stage));
-    }
-
-    private function modalName(int $stage): string
-    {
-        return match ($stage) {
-            1 => 'modal-nuevo',
-            2 => 'modal-produccion',
-            3 => 'modal-booking',
-            4 => 'modal-consolidador',
-            5 => 'modal-en-transito',
-            6 => 'modal-puerto',
-            7 => 'modal-alm-fiscal',
-            8 => 'modal-en-otra-zf',
-            9 => 'modal-recibiendo-cdi',
-            10 => 'modal-ingresada',
-            11 => 'modal-anulada',
-            default => 'success-modal',
-        };
+        // 5) Cerrar el modal unificado
+        $this->dispatch('close-modal', 'modal-po-stage-change');
     }
 
     public function setCurrentTask($taskId, $newColumnId)

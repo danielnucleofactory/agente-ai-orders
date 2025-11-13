@@ -90,6 +90,10 @@ class ChangeDescriptionHelper
         'order_number' => 'Número de Orden',
         'currency' => 'Moneda',
         'incoterms' => 'Incoterms',
+        'logistics_incoterm' => 'Incoterm Logístico',
+        'price_incoterm' => 'Incoterm de Precio',
+        'payment_terms' => 'Términos de Pago',
+        'order_place' => 'Lugar de Orden',
         'tracking_id' => 'ID de Rastreo',
         'container_number' => 'Número de Contenedor',
         'container_type' => 'Tipo de Contenedor',
@@ -97,6 +101,17 @@ class ChangeDescriptionHelper
         'shipping_line' => 'Línea de Envío',
         'arrival_port' => 'Puerto de Llegada',
         'departure_port' => 'Puerto de Salida',
+        'tariff_type' => 'Tipo de Tarifa',
+        'mode' => 'Tipo de Transporte',
+        'route_label' => 'Ruta Logística',
+        'forwarder_name' => 'Nombre del Forwarder',
+        'factory_proforma_number' => 'Número de Proforma de Fábrica',
+        'bill_of_lading' => 'Conocimiento de Embarque',
+        'consolidator_name' => 'Nombre del Consolidador',
+        'reason' => 'Motivo',
+        'category' => 'Categoría',
+        'notes' => 'Notas',
+        'total_amount' => 'Monto Total',
     ];
 
     /**
