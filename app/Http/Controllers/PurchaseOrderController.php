@@ -468,6 +468,7 @@ class PurchaseOrderController extends Controller
                      'cargo_invoice_number','tariff_type','route_label','arrival_status','arrival_port','departure_port',
                      'retail_group','customer_type','trading_company','service_provider','customs_dua','invoice',
                      'factura_merca','receipt_note','visibility_notes','price_incoterm','consolidator_name','vendor_number',
+                     'insurance_type',
                  ] as $f) {
             // Verificar si el campo existe en el array (incluso si el valor es null)
             if (array_key_exists($f, $general)) {
@@ -500,7 +501,7 @@ class PurchaseOrderController extends Controller
         }
 
         // NEW FIELDS FOR OLO (decimal)
-        foreach (['Invoice_amount','freight_amount','cbm','total_amount'] as $f) {
+        foreach (['Invoice_amount','freight_amount','cbm','total_amount','other_expenses'] as $f) {
             if (($v = data_get($general, $f)) !== null && $v !== '') {
                 $poData[$f] = (float) $v;
             }
@@ -510,12 +511,13 @@ class PurchaseOrderController extends Controller
         foreach ([
                      'date_booking_request','date_booking_authorized','date_theorical_load','date_variable_date',
                      'date_carga_po','date_received',
-                     'date_etd_initial','date_etd_updated','date_eta_updated',
+                     'date_etd_initial','date_etd_updated','date_eta_updated','date_eta_initial',
                      'date_etd', 'date_atd', 'date_eta', 'date_ata',
                      'date_estimated_hub_arrival', 'date_actual_hub_arrival',
                      'inspection_date','vgm_cut_date','balance_payment_date','local_charges_payment_date',
                      'bonded_warehouse_enter','bonded_warehouse_exit','receipt_note_date',
                      'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','dif_load_date','emision_date_po','forwader_date',
+                     'date_consolidation',
                  ] as $f) {
             if (array_key_exists($f, $general)) {
                 $poData[$f] = $parseDate($general[$f]);

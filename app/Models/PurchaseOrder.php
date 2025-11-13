@@ -80,6 +80,7 @@ class PurchaseOrder extends Model implements HasMedia
         'actual_hub_id',
         'material_type',
         'ensurence_type',
+        'insurance_type',
         'mode',
         'tracking_id',
         'pallet_quantity',
