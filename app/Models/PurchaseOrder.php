@@ -59,6 +59,7 @@ class PurchaseOrder extends Model implements HasMedia
         'date_ata',
         'date_consolidation',
         'release_date',
+        'date_eta_initial',
         'insurance_cost',
         'ground_transport_cost_1',
         'ground_transport_cost_2',

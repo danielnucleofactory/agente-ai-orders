@@ -279,7 +279,16 @@ class PurchaseOrderController extends Controller
                                  'net_total', 'total', 'length_cm', 'width_cm', 'height_cm',
                                  'pallet_quantity', 'pallet_quantity_real', 'delay_days', 'container_free_days',
                                  'etd_dates_difference', 'eta_dates_difference'];
-                $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields) {
+                // Campos de fecha que deben preservarse incluso si vienen del JSON (pueden ser null si no vienen)
+                $dateFields = ['date_booking_request', 'date_booking_authorized', 'date_theorical_load', 'date_variable_date',
+                              'date_carga_po', 'date_received', 'date_etd_initial', 'date_etd_updated', 'date_eta_updated',
+                              'date_eta_initial', 'date_etd', 'date_atd', 'date_eta', 'date_ata',
+                              'date_estimated_hub_arrival', 'date_actual_hub_arrival', 'inspection_date', 'vgm_cut_date',
+                              'balance_payment_date', 'local_charges_payment_date', 'bonded_warehouse_enter',
+                              'bonded_warehouse_exit', 'receipt_note_date', 'estimated_dc_availability_date',
+                              'date_invoice_received', 'date_vendor_document_received', 'dif_load_date', 'emision_date_po',
+                              'forwader_date', 'date_consolidation', 'release_date', 'date_required_in_destination'];
+                $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields, $dateFields) {
                     // Permitir null para campos de texto opcionales (para que se guarden explícitamente como null)
                     if (in_array($k, $optionalTextFields)) {
                         return true; // Mantener siempre estos campos, incluso si son null
@@ -287,6 +296,11 @@ class PurchaseOrderController extends Controller
                     // Permitir valores numéricos 0 (que son válidos)
                     if (in_array($k, $numericFields)) {
                         return $v !== null && $v !== '';
+                    }
+                    // Permitir campos de fecha si vienen del JSON (incluso si se parsean como null)
+                    if (in_array($k, $dateFields)) {
+                        // Si el campo existe en $poData, mantenerlo (incluso si es null, significa que vino del JSON)
+                        return true;
                     }
                     // Para otros campos, eliminar null y strings vacíos, pero permitir 0 y false
                     return $v !== null && $v !== '' && $v !== false;
