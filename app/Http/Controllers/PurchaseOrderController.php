@@ -444,7 +444,6 @@ class PurchaseOrderController extends Controller
             'incoterms'    => data_get($general, 'incoterms', 'EXW'),
             'net_total'    => $netTotal,
             'total'        => $netTotal,
-            'weight_kg'    => data_get($general, 'weight_kg') !== null ? (float) data_get($general, 'weight_kg') : ($totalWeight > 0 ? $totalWeight : null),
             'material_type'  => json_encode(['Standard']),
             'ensurence_type' => 'pending',
             'mode'           => data_get($general, 'mode'),
@@ -501,9 +500,16 @@ class PurchaseOrderController extends Controller
         }
 
         // NEW FIELDS FOR OLO (decimal)
-        foreach (['Invoice_amount','freight_amount','cbm','total_amount','other_expenses','estimated_pallet_cost','real_cost_estimated_po','real_cost_real_po','weight_lb'] as $f) {
-            if (($v = data_get($general, $f)) !== null && $v !== '') {
-                $poData[$f] = (float) $v;
+        foreach (['Invoice_amount','freight_amount','cbm','total_amount','other_expenses','estimated_pallet_cost','real_cost_estimated_po','real_cost_real_po','weight_kg','weight_lb'] as $f) {
+            // Si viene en el JSON, usarlo (incluso si es 0)
+            if (array_key_exists($f, $general)) {
+                $v = $general[$f];
+                if ($v !== null && $v !== '') {
+                    $poData[$f] = (float) $v;
+                }
+            } elseif ($f === 'weight_kg' && $totalWeight > 0) {
+                // Si no viene weight_kg pero hay peso calculado de items, usarlo
+                $poData[$f] = (float) $totalWeight;
             }
         }
 
@@ -544,15 +550,24 @@ class PurchaseOrderController extends Controller
             $poData['eta_dates_difference'] = (int) $general['eta_dates_difference'];
         }
 
-        // Limpiar null pero mantener campos opcionales con null
+        // Limpiar null pero mantener campos opcionales con null y valores numéricos 0
         $optionalTextFields = ['mbl_number', 'factory_proforma_number', 'factura_merca', 'case_number_file'];
-        $poData = array_filter($poData, function($v, $k) use ($optionalTextFields) {
+        $numericFields = ['weight_kg', 'weight_lb', 'cbm', 'Invoice_amount', 'freight_amount', 'other_expenses',
+                         'total_amount', 'estimated_pallet_cost', 'real_cost_estimated_po', 'real_cost_real_po',
+                         'net_total', 'total', 'length_cm', 'width_cm', 'height_cm',
+                         'pallet_quantity', 'pallet_quantity_real', 'delay_days', 'container_free_days',
+                         'etd_dates_difference', 'eta_dates_difference'];
+        $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields) {
             // Permitir siempre estos campos opcionales, incluso si son null (para que se guarden explícitamente)
             if (in_array($k, $optionalTextFields)) {
                 return true; // Mantener siempre estos campos, incluso si son null
             }
-            // Para otros campos, eliminar null y strings vacíos
-            return $v !== null && $v !== '';
+            // Permitir valores numéricos 0 (que son válidos)
+            if (in_array($k, $numericFields)) {
+                return $v !== null && $v !== '';
+            }
+            // Para otros campos, eliminar null y strings vacíos, pero permitir 0 y false
+            return $v !== null && $v !== '' && $v !== false;
         }, ARRAY_FILTER_USE_BOTH);
 
         // Crear PO
