@@ -177,8 +177,8 @@ class PurchaseOrderController extends Controller
                     'net_total'    => $netTotal,
                     'total'        => $netTotal,
                     'material_type'  => json_encode(['Standard']),
-                    'ensurence_type' => 'pending',
-                    'mode'           => data_get($general, 'mode', 'AIR'),
+                    'ensurence_type' => data_get($general, 'ensurence_type', 'pending'),
+                    'mode'           => data_get($general, 'mode'),
                     'kanban_status_id' => $kanbanStatusId,
                     'length_cm' => (float) data_get($general, 'length_cm', 0),
                     'width_cm'  => (float) data_get($general, 'width_cm', 0),
@@ -199,7 +199,7 @@ class PurchaseOrderController extends Controller
                              'cargo_invoice_number','tariff_type','route_label','arrival_status','arrival_port','departure_port',
                              'retail_group','customer_type','trading_company','service_provider','customs_dua','invoice',
                              'factura_merca','receipt_note','visibility_notes','price_incoterm','consolidator_name','vendor_number',
-                             'insurance_type',
+                             'insurance_type','tracking_id',
                          ] as $f) {
                     // Verificar si el campo existe en el array (incluso si el valor es null)
                     if (array_key_exists($f, $general)) {
@@ -221,22 +221,33 @@ class PurchaseOrderController extends Controller
                              'is_dropship','applies_tlc','applies_af','port_of_loading_validated','has_facture_merca',
                              'used_rate_ok','uses_bonded_warehouse','apply_technical_note','etd_initial_validated',
                          ] as $f) {
-                    $poData[$f] = $toBool(data_get($general, $f, false));
+                    // Verificar si el campo existe en el array
+                    if (array_key_exists($f, $general) || isset($general[$f])) {
+                        $poData[$f] = $toBool($general[$f]);
+                    } else {
+                        $poData[$f] = false;
+                    }
                 }
 
                 // 10) ===== NEW FIELDS FOR OLO (int) =====
                 foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference','pallet_quantity','pallet_quantity_real'] as $f) {
-                    if (($v = data_get($general, $f)) !== null && $v !== '') {
-                        $poData[$f] = (int) $v;
+                    // Verificar si el campo existe en el array
+                    if (array_key_exists($f, $general) || isset($general[$f])) {
+                        $v = $general[$f];
+                        if ($v !== null && $v !== '') {
+                            $poData[$f] = (int) $v;
+                        }
                     }
                 }
 
                 // 11) ===== NEW FIELDS FOR OLO (decimal) =====
                 foreach (['Invoice_amount','freight_amount','cbm','total_amount','other_expenses','estimated_pallet_cost','real_cost_estimated_po','real_cost_real_po','weight_kg','weight_lb'] as $f) {
-                    // Si viene en el JSON, usarlo (incluso si es 0)
-                    $v = data_get($general, $f);
-                    if ($v !== null && $v !== '') {
-                        $poData[$f] = (float) $v;
+                    // Verificar si el campo existe en el array
+                    if (array_key_exists($f, $general) || isset($general[$f])) {
+                        $v = $general[$f];
+                        if ($v !== null && $v !== '') {
+                            $poData[$f] = (float) $v;
+                        }
                     } elseif ($f === 'weight_kg' && $totalWeight > 0) {
                         // Si no viene weight_kg pero hay peso calculado de items, usarlo
                         $poData[$f] = (float) $totalWeight;
