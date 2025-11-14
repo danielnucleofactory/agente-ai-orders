@@ -19,7 +19,7 @@
                     type="text"
                     wire:model.live.debounce.300ms="search"
                     placeholder="Buscar por orden, usuario u operación..."
-                    class="w-full rounded-xl border-2 border-[#A5A3A3] pl-11 pr-10 py-[0.625rem] placeholder:text-[#9AABFF] focus:border-blue-500 focus:outline-none"
+                    class="w-full rounded-xl border-2 border-[#A5A3A3] pl-11 pr-10 py-[0.625rem] placeholder:text-[#28C7A1] focus:border-[#1AAD8A] focus:outline-none"
                 />
                 <div class="pointer-events-none absolute top-1/2 -translate-y-1/2 left-[1.125rem] flex items-center">
                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,7 +59,7 @@
     {{-- Tabla de historial --}}
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-[#E0E5FF]">
+            <thead class="bg-[#D4F5ED]">
                 <tr>
                     <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
                         <input type="checkbox" class="rounded text-primary-600">
@@ -145,11 +145,11 @@
                             <input type="checkbox" class="rounded text-primary-600">
                         </td>
                         <td class="px-6 py-4 text-sm whitespace-nowrap">
-                            {{ \Carbon\Carbon::parse($comment['created_at'])->format('d/m/Y H:i') }}
+                            {{ formatDateTime($comment['created_at']) }}
                         </td>
                         <td class="px-6 py-4 text-sm whitespace-nowrap">
                             <a href="{{ route('purchase-orders.detail', $comment['purchase_order_id']) }}"
-                               class="text-blue-600 hover:text-blue-800 hover:underline">
+                               class="text-[#1AAD8A] hover:text-[#0F614D] hover:underline">
                                 {{ $comment['purchase_order_number'] }}
                             </a>
                         </td>
@@ -163,22 +163,45 @@
                             {{ $comment['operation'] }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
+                            @if(($comment['action_type'] ?? 'comment') === 'comment')
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    Comentario
+                                </span>
+                            @elseif($comment['action_type'] === 'field_change')
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    Cambio de Datos
+                                </span>
+                            @elseif($comment['action_type'] === 'status_change')
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                    Cambio de Estado
+                                </span>
+                            @elseif($comment['action_type'] === 'record_create')
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Creación
+                                </span>
+                            @else
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    Otro
+                                </span>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
                             @if($comment['status'] === 'Aprobado')
-                                <span class="inline-flex px-2 text-xs font-semibold leading-5 text-green-800 bg-green-100 rounded-full">
+                                <span class="inline-flex px-2 text-xs font-semibold leading-5 text-white bg-green-600 rounded-full">
                                     Aprobado
                                     <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                     </svg>
                                 </span>
                             @elseif($comment['status'] === 'Pendiente')
-                                <span class="inline-flex px-2 text-xs font-semibold leading-5 text-yellow-800 bg-yellow-100 rounded-full">
+                                <span class="inline-flex px-2 text-xs font-semibold leading-5 text-white bg-yellow-600 rounded-full">
                                     Pendiente
                                     <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
                                 </span>
                             @else
-                                <span class="inline-flex px-2 text-xs font-semibold leading-5 text-red-800 bg-red-100 rounded-full">
+                                <span class="inline-flex px-2 text-xs font-semibold leading-5 text-white bg-red-600 rounded-full">
                                     Rechazado
                                     <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -202,7 +225,7 @@
                                     </span>
                                 @else
                                     <a href="{{ $comment['attachment']['url'] }}"
-                                       class="flex items-center gap-1 text-blue-600 hover:text-blue-800"
+                                       class="flex items-center gap-1 text-[#1AAD8A] hover:text-[#0F614D]"
                                        target="_blank">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
@@ -214,10 +237,20 @@
                                 <span class="text-gray-400">Sin archivos</span>
                             @endif
                         </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            @if($comment['has_changes'] ?? false)
+                                <button wire:click="$dispatchTo('partials.activity-detail-modal', 'openActivityDetail', @js($comment))" 
+                                        class="text-[#1AAD8A] hover:text-[#0F614D] hover:underline">
+                                    Ver cambios
+                                </button>
+                            @else
+                                <span class="text-gray-400">-</span>
+                            @endif
+                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="px-6 py-8 text-center text-gray-500">
+                        <td colspan="10" class="px-6 py-8 text-center text-gray-500">
                             <div class="flex flex-col items-center">
                                 <svg class="w-12 h-12 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -246,4 +279,6 @@
             @endif
         </div>
     @endif
+
+    @livewire('partials.activity-detail-modal')
 </div>

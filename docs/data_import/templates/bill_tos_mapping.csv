@@ -1,0 +1,9 @@
+"Nombre Frontend","Tabla","Nombre BD (Campo)","Tipo de Dato","Descripción","Obligatorio"
+"Compañía","bill_tos","company_id","ID Numérico","ID de la compañía a la que pertenece.","Sí"
+"Nombre","bill_tos","name","Texto","Razón Social o nombre fiscal.","Sí"
+"ID Fiscal (RFC/TAX ID)","bill_tos","tax_id","Texto","Número de identificación fiscal.","Sí"
+"Dirección","bill_tos","address","Texto","Dirección fiscal completa.","Sí"
+
+company_id,name,tax_id,address
+
+

@@ -27,7 +27,7 @@ const activeFilters = {
 };
 
 // Colores predefinidos para gráficos
-const defaultColors = ["#565aff", "#9aabff", "#ff3459", "#f46844", "#c9cfff", "#5ae7f4", "#5dd595"];
+const defaultColors = ["#1AAD8A", "#28C7A1", "#ff3459", "#f46844", "#D4F5ED", "#36D9B2", "#5dd595"];
 
 // Referencias a los gráficos
 let hubChartInstance = null;
@@ -49,12 +49,6 @@ async function fetchDashboardData() {
     }
     if (activeFilters.status && activeFilters.status.length > 0) {
       activeFilters.status.forEach(status => params.append('status[]', status));
-    }
-    if (activeFilters.product_id && activeFilters.product_id.length > 0) {
-      activeFilters.product_id.forEach(pid => params.append('product_id[]', pid));
-    }
-    if (activeFilters.material_type && activeFilters.material_type.length > 0) {
-      activeFilters.material_type.forEach(mat => params.append('material_type[]', mat));
     }
     if (activeFilters.vendor_id && activeFilters.vendor_id.length > 0) {
       activeFilters.vendor_id.forEach(vid => params.append('vendor_id[]', vid));
@@ -116,7 +110,7 @@ function renderHubChart(hubData) {
   const data = hubData.map(item => item.percentage > 0 ? item.percentage : 0.1);
   const originalData = hubData.map(item => item.percentage); // Datos originales para tooltips
   const ids = hubData.map(item => String(item.id)); // Convertir todos los IDs a string para consistencia
-  const colors = ["#565aff", "#9aabff", "#ff3459", "#f46844", "#c9cfff", "#5ae7f4", "#5dd595"];
+  const colors = ["#1AAD8A", "#28C7A1", "#ff3459", "#f46844", "#D4F5ED", "#36D9B2", "#5dd595"];
   
   // Lógica de aclarado: si hay filtros activos, los no seleccionados se aclaran
   let backgroundColors = colors.slice(0, data.length);
@@ -249,11 +243,11 @@ function renderStatusChart(statusData) {
   const values = statusData.map(item => item.name); // "On Time", "Atrasado" o "Sin datos"
   // Colores específicos para cada estado
   const colors = {
-    "On Time": "#565aff",
-    "Atrasado": "#c9cfff",
+    "On Time": "#1AAD8A",
+    "Atrasado": "#D4F5ED",
     "Sin datos": "#f0f0f0"
   };
-  const backgroundColors = statusData.map(item => colors[item.name] || "#c9cfff");
+  const backgroundColors = statusData.map(item => colors[item.name] || "#D4F5ED");
   
   // Aplicar lógica de aclarado al crear el gráfico
   if (activeFilters.status && activeFilters.status.length > 0) {
@@ -313,7 +307,7 @@ function renderStatusChart(statusData) {
     legendItem.className = 'legend-item';
     legendItem.innerHTML = `
       <div class="legend-label">
-        <div class="legend-color" style="background-color: ${colors[item.name] || "#c9cfff"}"></div>
+        <div class="legend-color" style="background-color: ${colors[item.name] || "#D4F5ED"}"></div>
         <span>${item.name}</span>
       </div>
       <span>${item.percentage}%</span>
@@ -330,17 +324,18 @@ function showError(msg) {
 // Renderizar indicadores superiores
 function renderTopMetrics(metrics) {
   console.log('renderTopMetrics recibe:', metrics);
+  if (!metrics) return;
+  
   if (document.getElementById('totalPosValue')) {
-    document.getElementById('totalPosValue').textContent = metrics.total_pos;
+    document.getElementById('totalPosValue').textContent = metrics.total_pos || 0;
   }
   if (document.getElementById('onTimePercentageValue')) {
-    document.getElementById('onTimePercentageValue').textContent = metrics.on_time_percentage.toLocaleString('es-ES', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
+    const onTime = metrics.on_time_percentage || 0;
+    document.getElementById('onTimePercentageValue').textContent = onTime.toLocaleString('es-ES', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
   }
   if (document.getElementById('delayedPercentageValue')) {
-    document.getElementById('delayedPercentageValue').textContent = metrics.delayed_percentage.toLocaleString('es-ES', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
-  }
-  if (document.getElementById('materialCountValue')) {
-    document.getElementById('materialCountValue').textContent = metrics.material_count;
+    const delayed = metrics.delayed_percentage || 0;
+    document.getElementById('delayedPercentageValue').textContent = delayed.toLocaleString('es-ES', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
   }
 }
 
@@ -454,7 +449,7 @@ function renderDelayChart(delayData) {
   const labels = delayData.map(item => item.name);
   const data = delayData.map(item => item.percentage > 0 ? item.percentage : 0.1); // Valor mínimo para visualización
   const originalData = delayData.map(item => item.percentage); // Datos originales para tooltips
-  const colors = ["#565aff", "#9aabff", "#5ae7f4", "#f46844", "#5dd595", "#c9cfff"];
+  const colors = ["#1AAD8A", "#28C7A1", "#36D9B2", "#f46844", "#5dd595", "#D4F5ED"];
   
   // Aplicar lógica de aclarado si hay filtros activos
   let backgroundColors = colors.slice(0, data.length);
@@ -549,7 +544,7 @@ function renderStageChart(stageData) {
   const labels = stageData.map(item => item.name);
   const data = stageData.map(item => item.value > 0 ? item.value : 0.1); // Valor mínimo para visualización
   const originalData = stageData.map(item => item.value); // Datos originales para tooltips
-  const colors = stageData.map(item => item.color || "#c9cfff"); // Usar colores definidos en el backend
+  const colors = stageData.map(item => item.color || "#D4F5ED"); // Usar colores definidos en el backend
   
   // Aplicar lógica de aclarado si hay filtros activos
   let backgroundColors = colors;
@@ -696,22 +691,11 @@ async function updateDashboardUI() {
       const metrics = response.data && response.data.metrics ? response.data.metrics : response.metrics;
       if (metrics) renderTopMetrics(metrics);
       
-      // Gráficos - Crear SOLO la primera vez, luego solo actualizar datos
-      const charts = response.data && response.data.charts ? response.data.charts : response.charts;
-      if (charts) {
-        if (!chartsCreated) {
-          console.log('Creando gráficos por primera vez');
-          createAllChartsOnce(charts);
-          chartsCreated = true;
-        } else {
-          console.log('Actualizando datos de gráficos existentes SIN recrear');
-          updateAllChartsData(charts);
-        }
+      // Tabla de tendencias
+      const trendTable = response.data && response.data.trend_table ? response.data.trend_table : response.trend_table;
+      if (trendTable && window.dashboardManager) {
+        window.dashboardManager.updateTrendTable(trendTable);
       }
-      
-      // Tabla de detalle
-      const detailTable = response.data && response.data.detail_table ? response.data.detail_table : response.detail_table;
-      if (detailTable) renderDetailTable(detailTable);
       
     } catch (error) {
       console.error('Error en updateDashboardUI:', error);
@@ -817,7 +801,7 @@ function updateHubChartDataOnly(hubData) {
   const labels = hubData.map(item => item.name);
   const data = hubData.map(item => item.percentage);
   const ids = hubData.map(item => String(item.id));
-  const colors = ["#565aff", "#9aabff", "#ff3459", "#f46844", "#c9cfff", "#5ae7f4", "#5dd595"];
+  const colors = ["#1AAD8A", "#28C7A1", "#ff3459", "#f46844", "#D4F5ED", "#36D9B2", "#5dd595"];
   
   // Aplicar lógica de aclarado
   let backgroundColors = colors.slice(0, data.length);
@@ -859,13 +843,13 @@ function updateStatusChartDataOnly(statusData) {
   
   // Colores específicos para cada estado
   const colors = {
-    "On Time": "#565aff",
-    "Atrasado": "#c9cfff",
+    "On Time": "#1AAD8A",
+    "Atrasado": "#D4F5ED",
     "Sin datos": "#f0f0f0"
   };
   
   // Aplicar lógica de aclarado igual que en hub chart
-  const backgroundColors = statusData.map(item => colors[item.name] || "#c9cfff");
+  const backgroundColors = statusData.map(item => colors[item.name] || "#D4F5ED");
   
   if (activeFilters.status && activeFilters.status.length > 0) {
     statusData.forEach((item, idx) => {
@@ -888,7 +872,7 @@ function updateStatusChartDataOnly(statusData) {
     legendItem.className = 'legend-item';
     legendItem.innerHTML = `
       <div class="legend-label">
-        <div class="legend-color" style="background-color: ${colors[item.name] || "#c9cfff"}"></div>
+        <div class="legend-color" style="background-color: ${colors[item.name] || "#D4F5ED"}"></div>
         <span>${item.name}</span>
       </div>
       <span>${item.percentage}%</span>
@@ -1283,19 +1267,7 @@ function applyTopFilters() {
     activeFilters.vendor_id = Array.from(checked).map(cb => cb.value);
   }
 
-  // Producto (filtro múltiple)
-  const productoGroup = document.querySelector('.filter-group[data-filter="product"]');
-  if (productoGroup) {
-    const checked = productoGroup.querySelectorAll('input[type="checkbox"]:checked');
-    activeFilters.product_id = Array.from(checked).map(cb => cb.value);
-  }
 
-  // Material (filtro múltiple)
-  const materialGroup = document.querySelector('.filter-group[data-filter="material"]');
-  if (materialGroup) {
-    const checked = materialGroup.querySelectorAll('input[type="checkbox"]:checked');
-    activeFilters.material_type = Array.from(checked).map(cb => cb.value);
-  }
 }
 
 // Inicialización principal del dashboard
@@ -1343,6 +1315,16 @@ document.addEventListener('DOMContentLoaded', () => {
       activeFilters.date_to = endDateInput.value || null;
       updateDashboardUI();
     });
+  }
+  
+  // Inicializar métricas y tabla desde datos del servidor si están disponibles
+  if (window.dashboardData) {
+    if (window.dashboardData.metrics) {
+      renderTopMetrics(window.dashboardData.metrics);
+    }
+    if (window.dashboardData.trend_table && window.dashboardManager) {
+      window.dashboardManager.updateTrendTable(window.dashboardData.trend_table);
+    }
   }
   
   // Cargar datos iniciales del dashboard

@@ -65,6 +65,36 @@ trait HasPOConfirmationWrapper
         return $query->whereRaw('1 = 0'); // Retorna resultados vacíos
     }
 
+    public function scopeNeedingEmailType(Builder $query, int $emailType): Builder
+    {
+        if ($this->isPOConfirmationAvailable()) {
+            return $this->getPOConfirmationTrait()->scopeNeedingEmailType($query, $emailType);
+        }
+
+        // Implementación directa si el módulo está activo
+        if (config('po-confirmation.enabled', false)) {
+            // Get the configured days for this email type
+            $emailDays = $this->getTimingSetting("email{$emailType}_days", [1 => 5, 2 => 3, 3 => 1, 4 => 0][$emailType]);
+
+            // Calculate the cutoff date based on date_theorical_load
+            $cutoffDate = now()->addDays($emailDays);
+
+            return $query->where('confirm_update_date_po', false)
+                        ->whereNotNull('date_theorical_load')
+                        ->where('date_theorical_load', '<=', $cutoffDate)
+                        ->where('date_theorical_load', '>=', now())
+                        ->where(function ($q) use ($emailType) {
+                            // Check if this specific email type hasn't been sent yet
+                            $q->whereRaw("NOT EXISTS (
+                                SELECT 1 FROM jsonb_array_elements(COALESCE(email_sent_history::jsonb, '[]'::jsonb)) AS elem
+                                WHERE elem->>'type' = ?
+                            )", [$emailType]);
+                        });
+        }
+
+        return $query->whereRaw('1 = 0'); // Retorna resultados vacíos
+    }
+
     public function isPendingConfirmation(): bool
     {
         if ($this->isPOConfirmationAvailable()) {
@@ -156,6 +186,29 @@ trait HasPOConfirmationWrapper
         if ($this->isPOConfirmationAvailable()) {
             return $this->getPOConfirmationTrait()->confirmPO($newDeliveryDate);
         }
+
+        // Implementación directa si el módulo está activo
+        if (config('po-confirmation.enabled', false)) {
+            try {
+                // Update delivery date if provided
+                if ($newDeliveryDate) {
+                    $this->updateDeliveryDate($newDeliveryDate);
+                }
+
+                // Mark as confirmed
+                $this->update([
+                    'confirm_update_date_po' => true,
+                    'confirmation_hash' => null,
+                    'hash_expires_at' => null,
+                ]);
+
+                return true;
+            } catch (\Exception $e) {
+                \Log::error("Error confirming PO {$this->id}: " . $e->getMessage());
+                return false;
+            }
+        }
+
         return false;
     }
 
@@ -164,6 +217,22 @@ trait HasPOConfirmationWrapper
         if ($this->isPOConfirmationAvailable()) {
             return $this->getPOConfirmationTrait()->updateDeliveryDate($newDate);
         }
+
+        // Implementación directa si el módulo está activo
+        if (config('po-confirmation.enabled', false)) {
+            try {
+                $this->update([
+                    'date_theorical_load' => $newDate,
+                    'update_date_po' => $newDate,
+                ]);
+
+                return true;
+            } catch (\Exception $e) {
+                \Log::error("Error updating delivery date for PO {$this->id}: " . $e->getMessage());
+                return false;
+            }
+        }
+
         return false;
     }
 
@@ -203,10 +272,143 @@ trait HasPOConfirmationWrapper
                 return null;
             }
 
-            return route('po.confirm', ['hash' => $this->confirmation_hash]);
+            return route('po-confirmation.show', ['hash' => $this->confirmation_hash]);
         }
 
         return null;
+    }
+
+    /**
+     * Marcar tipo específico de email como enviado
+     */
+    public function markEmailTypeAsSent(int $emailType): bool
+    {
+        if ($this->isPOConfirmationAvailable()) {
+            return $this->getPOConfirmationTrait()->markEmailTypeAsSent($emailType);
+        }
+
+        // Implementación directa si el módulo está activo
+        if (config('po-confirmation.enabled', false)) {
+            try {
+                // Get current email history
+                $emailHistory = $this->email_sent_history ? json_decode($this->email_sent_history, true) : [];
+
+                // Add new email to history
+                $emailHistory[] = [
+                    'type' => $emailType,
+                    'sent_at' => now()->toISOString(),
+                    'days_until_delivery' => $this->date_theorical_load ? now()->diffInDays($this->date_theorical_load, false) : null
+                ];
+
+                $this->update([
+                    'last_email_type_sent' => $emailType,
+                    'last_email_sent_at' => now(),
+                    'email_sent_history' => json_encode($emailHistory),
+                    'confirmation_email_sent' => true,
+                    'confirmation_email_sent_at' => now(),
+                ]);
+
+                \Log::info("Email type {$emailType} marked as sent for PO {$this->order_number}");
+                return true;
+            } catch (\Exception $e) {
+                \Log::error("Error marking email type {$emailType} as sent for PO {$this->id}: " . $e->getMessage());
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Verificar si un tipo específico de email ya se envió
+     */
+    public function hasEmailTypeBeenSent(int $emailType): bool
+    {
+        if ($this->isPOConfirmationAvailable()) {
+            return $this->getPOConfirmationTrait()->hasEmailTypeBeenSent($emailType);
+        }
+
+        // Implementación directa si el módulo está activo
+        if (config('po-confirmation.enabled', false)) {
+            if (!$this->email_sent_history) {
+                return false;
+            }
+
+            $emailHistory = json_decode($this->email_sent_history, true);
+
+            foreach ($emailHistory as $email) {
+                if ($email['type'] == $emailType) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Obtener el siguiente tipo de email que se debe enviar
+     */
+    public function getNextEmailTypeToSend(): ?int
+    {
+        if ($this->isPOConfirmationAvailable()) {
+            return $this->getPOConfirmationTrait()->getNextEmailTypeToSend();
+        }
+
+        // Implementación directa si el módulo está activo
+        if (config('po-confirmation.enabled', false)) {
+            if (!$this->date_theorical_load) {
+                return null;
+            }
+
+            $daysUntilDelivery = now()->diffInDays($this->date_theorical_load, false);
+
+            // Get email settings
+            $email1Days = $this->getTimingSetting('email1_days', 5);
+            $email2Days = $this->getTimingSetting('email2_days', 3);
+            $email3Days = $this->getTimingSetting('email3_days', 1);
+            $email4Days = $this->getTimingSetting('email4_days', 0);
+
+            // Check which emails should be sent based on days until delivery
+            $emailsToSend = [];
+
+            if ($daysUntilDelivery <= $email1Days && !$this->hasEmailTypeBeenSent(1)) {
+                $emailsToSend[] = 1;
+            }
+            if ($daysUntilDelivery <= $email2Days && !$this->hasEmailTypeBeenSent(2)) {
+                $emailsToSend[] = 2;
+            }
+            if ($daysUntilDelivery <= $email3Days && !$this->hasEmailTypeBeenSent(3)) {
+                $emailsToSend[] = 3;
+            }
+            if ($daysUntilDelivery <= $email4Days && !$this->hasEmailTypeBeenSent(4)) {
+                $emailsToSend[] = 4;
+            }
+
+            // Return the highest priority email (lowest number) that should be sent
+            return !empty($emailsToSend) ? min($emailsToSend) : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Obtener configuración de timing
+     */
+    protected function getTimingSetting(string $key, $default = null)
+    {
+        if (class_exists('RagaOrders\POConfirmation\Models\POConfirmationSetting')) {
+            return \RagaOrders\POConfirmation\Models\POConfirmationSetting::getValue($key, $default);
+        }
+        return $default;
+    }
+
+    /**
+     * Determinar qué tipo de email se debe enviar
+     */
+    public function getEmailTypeToSend(): ?int
+    {
+        return $this->getNextEmailTypeToSend();
     }
 
     // Métodos estáticos que necesita el servicio

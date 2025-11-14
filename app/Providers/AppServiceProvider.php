@@ -8,6 +8,18 @@ use App\Livewire\Tables\PurchaseOrdersTable;
 use App\Livewire\Ui\PurchaseOrderCard;
 use Illuminate\Support\Facades\Blade;
 use App\View\Components\Breadcrumb;
+use Carbon\Carbon;
+use App\Models\PurchaseOrder;
+use App\Models\ShippingDocument;
+use App\Observers\PurchaseOrderObserver;
+use App\Observers\ShippingDocumentObserver;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
+use Illuminate\Auth\Events\Failed;
+use App\Listeners\LogUserLogin;
+use App\Listeners\LogUserLogout;
+use App\Listeners\LogFailedLogin;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,13 +36,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Cargar vistas del módulo PO Confirmation manualmente
-        if (class_exists('RagaOrders\POConfirmation\POConfirmationServiceProvider')) {
-            $this->loadViewsFrom(base_path('internal_modules/laravel-po-confirmation/resources/views'), 'po-confirmation');
-        }
+        // Registrar observers para auditoría
+        PurchaseOrder::observe(PurchaseOrderObserver::class);
+        ShippingDocument::observe(ShippingDocumentObserver::class);
+
+        // Registrar listeners para eventos de autenticación
+        Event::listen(Login::class, LogUserLogin::class);
+        Event::listen(Logout::class, LogUserLogout::class);
+        Event::listen(Failed::class, LogFailedLogin::class);
 
         // Registrar componente de breadcrumb explícitamente
         Blade::component('breadcrumb', Breadcrumb::class);
+
 
         // Asegurarnos de que el componente breadcrumb esté disponible en todos los entornos
         try {            // Registro de componentes Livewire

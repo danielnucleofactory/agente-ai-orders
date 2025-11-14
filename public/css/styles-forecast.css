@@ -132,7 +132,7 @@ body {
 .filter-label {
   font-size: 14px;
   font-weight: 400;
-  color: #565aff;
+  color: #1AAD8A;
 }
 
 .date-range {
@@ -148,7 +148,7 @@ body {
 .date-input {
   width: 178px;
   height: 46px;
-  border: 2px solid #7288ff;
+  border: 2px solid #28C7A1;
   border-radius: 12px;
   padding: 0 48px 0 16px;
   font-size: 18px;
@@ -165,7 +165,7 @@ body {
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: #7288ff;
+  color: #28C7A1;
   font-size: 24px;
 }
 
@@ -178,7 +178,7 @@ body {
 .filter-select {
   width: 256px;
   height: 46px;
-  border: 2px solid #7288ff;
+  border: 2px solid #28C7A1;
   border-radius: 12px;
   padding: 0 16px;
   font-size: 18px;
@@ -195,7 +195,7 @@ body {
 .btn-primary {
   height: 46px;
   padding: 0 16px;
-  background-color: #565aff;
+  background-color: #1AAD8A;
   color: #f7f7f7;
   border: none;
   border-radius: 6px;
@@ -205,15 +205,15 @@ body {
 }
 
 .btn-primary:hover {
-  background-color: #4c51e6;
+  background-color: #28C7A1;
 }
 
 .btn-secondary {
   height: 46px;
   padding: 0 16px;
   background: white;
-  color: #565aff;
-  border: 2px solid #565aff;
+  color: #1AAD8A;
+  border: 2px solid #1AAD8A;
   border-radius: 6px;
   font-size: 18px;
   font-weight: 800;
@@ -224,7 +224,7 @@ body {
 }
 
 .btn-secondary:hover {
-  background-color: #f8f9ff;
+  background-color: #E6F9F4;
 }
 
 .btn-clear {
@@ -320,7 +320,7 @@ body {
 .treemap-select {
   width: 96px;
   height: 32px;
-  border: 1px solid #7288ff;
+  border: 1px solid #28C7A1;
   border-radius: 4px;
   padding: 0 8px;
   font-size: 14px;
@@ -331,7 +331,7 @@ body {
 .table-container {
   overflow: hidden;
   border-radius: 8px;
-  border: 2px solid #e0e5ff;
+  border: 2px solid #D4F5ED;
 }
 
 .forecast-table {
@@ -340,7 +340,7 @@ body {
 }
 
 .forecast-table thead {
-  background-color: #e0e5ff;
+  background-color: #D4F5ED;
 }
 
 .forecast-table th,
@@ -368,7 +368,7 @@ body {
 }
 
 .material-code {
-  color: #565aff;
+  color: #1AAD8A;
   font-weight: 500;
 }
 
@@ -388,7 +388,7 @@ body {
 }
 
 .total-row {
-  background-color: #e0e5ff !important;
+  background-color: #D4F5ED !important;
   font-weight: 700;
 }
 
@@ -462,7 +462,7 @@ body {
 }
 
 .vendor-item:hover {
-  background-color: #f8f9ff;
+  background-color: #E6F9F4;
   border-radius: 8px;
   transition: background-color 0.2s;
 }
@@ -520,7 +520,7 @@ body {
 }
 
 .vendor-percentage {
-  background-color: #eef0ff;
+  background-color: #D4F5ED;
   color: #2e2e2e;
   font-size: 14px;
   font-weight: 500;
@@ -564,7 +564,7 @@ body {
 .multi-select-trigger {
   width: 100%;
   padding: 8px 32px 8px 16px;
-  border: 2px solid #7288ff;
+  border: 2px solid #28C7A1;
   border-radius: 12px;
   font-size: 18px;
   background-color: white;
@@ -577,12 +577,12 @@ body {
 }
 
 .multi-select-trigger:hover {
-  border-color: #565aff;
+  border-color: #1AAD8A;
 }
 
 .multi-select-trigger.active {
-  border-color: #565aff;
-  box-shadow: 0 0 0 2px rgba(86, 90, 255, 0.1);
+  border-color: #1AAD8A;
+  box-shadow: 0 0 0 2px rgba(26, 173, 138, 0.1);
 }
 
 .multi-select-value {
@@ -598,7 +598,7 @@ body {
 }
 
 .multi-select-icon {
-  color: #7288ff;
+  color: #28C7A1;
   font-size: 16px;
   transition: transform 0.2s;
 }
@@ -613,7 +613,7 @@ body {
   left: 0;
   right: 0;
   background: white;
-  border: 2px solid #7288ff;
+  border: 2px solid #28C7A1;
   border-top: none;
   border-radius: 0 0 12px 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -629,8 +629,8 @@ body {
 
 .multi-select-clear {
   padding: 8px 16px;
-  border-bottom: 1px solid #e0e5ff;
-  background-color: #f8f9ff;
+  border-bottom: 1px solid #D4F5ED;
+  background-color: #E6F9F4;
   display: flex;
   gap: 8px;
 }
@@ -638,10 +638,10 @@ body {
 .multi-select-clear button {
   flex: 1;
   padding: 6px 12px;
-  border: 1px solid #7288ff;
+  border: 1px solid #28C7A1;
   border-radius: 6px;
   background: white;
-  color: #565aff;
+  color: #1AAD8A;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -649,17 +649,17 @@ body {
 }
 
 .multi-select-clear button:hover {
-  background-color: #565aff;
+  background-color: #1AAD8A;
   color: white;
 }
 
 .multi-select-clear .select-all {
-  background-color: #565aff;
+  background-color: #1AAD8A;
   color: white;
 }
 
 .multi-select-clear .select-all:hover {
-  background-color: #4c51e6;
+  background-color: #127A62;
 }
 
 .multi-select-options {
@@ -675,7 +675,7 @@ body {
 }
 
 .multi-select-option:hover {
-  background-color: #f8f9ff;
+  background-color: #E6F9F4;
 }
 
 .multi-select-option input[type="checkbox"] {
@@ -709,7 +709,7 @@ body {
   padding: 8px 12px;
   cursor: pointer;
   font-size: 14px;
-  color: #565aff;
+  color: #1AAD8A;
   border-top: 1px solid #f3f4f6;
   text-align: center;
 }

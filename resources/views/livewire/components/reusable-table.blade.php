@@ -8,7 +8,7 @@
                         type="text"
                         placeholder="Buscar"
                         wire:model.live="search"
-                        class="rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#9AABFF] w-full" />
+                        class="rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#28C7A1] w-full" />
                     <div class="pointer-events-none absolute top-1/2 -translate-y-1/2 left-[1.125rem] flex items-center">
                         <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                             xmlns="http://www.w3.org/2000/svg">
@@ -48,8 +48,8 @@
     </div>
 
     <div class="overflow-x-auto rounded-t-xl">
-        <table class="min-w-full divide-y divide-[#E0E5FF]">
-            <thead class="bg-[#E0E5FF]">
+        <table class="min-w-full divide-y divide-[#D4F5ED]">
+            <thead class="bg-[#D4F5ED]">
                 <tr>
                     @foreach ($headers as $key => $header)
                         <th scope="col"
@@ -75,7 +75,7 @@
                     @endforeach
                 </tr>
             </thead>
-            <tbody class="divide-y divide-[#E0E5FF] bg-white">
+            <tbody class="divide-y divide-[#D4F5ED] bg-white">
                 @forelse($processedRows as $row)
                     <tr>
                         @foreach ($headers as $key => $header)
@@ -95,7 +95,7 @@
                                             @endif
                                             @if ($actionsView)
                                                 <a href="{{ $this->getRouteFor('view', $row) }}"
-                                                    class="text-[#666666] hover:text-indigo-900">
+                                                    class="text-[#666666] hover:text-[#0F614D]">
                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor"
                                                         viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -128,7 +128,7 @@
                                         @if (is_array($row->$key))
                                             @foreach ($row->$key as $action => $url)
                                                 <a href="{{ $url }}"
-                                                    class="{{ $loop->first ? 'text-indigo-600 hover:text-indigo-900' : 'ml-2 text-blue-600 hover:text-blue-900' }}">{{ $action }}</a>
+                                                    class="{{ $loop->first ? 'text-[#1AAD8A] hover:text-[#0F614D]' : 'ml-2 text-[#1AAD8A] hover:text-[#0F614D]' }}">{{ $action }}</a>
                                             @endforeach
                                         @else
                                             @php
@@ -136,14 +136,14 @@
                                             @endphp
                                             @foreach ($actions as $index => $action)
                                                 <span
-                                                    class="{{ $index > 0 ? 'ml-2' : '' }} {{ $index === 0 ? 'text-indigo-600 hover:text-indigo-900' : 'text-blue-600 hover:text-blue-900' }}">{{ trim($action) }}</span>
+                                                    class="{{ $index > 0 ? 'ml-2' : '' }} {{ $index === 0 ? 'text-[#1AAD8A] hover:text-[#0F614D]' : 'text-[#1AAD8A] hover:text-[#0F614D]' }}">{{ trim($action) }}</span>
                                             @endforeach
                                         @endif
                                     @elseif(!$useModel && isset($row[$key]))
                                         @if (is_array($row[$key]))
                                             @foreach ($row[$key] as $action => $url)
                                                 <a href="{{ $url }}"
-                                                    class="{{ $loop->first ? 'text-indigo-600 hover:text-indigo-900' : 'ml-2 text-blue-600 hover:text-blue-900' }}">{{ $action }}</a>
+                                                    class="{{ $loop->first ? 'text-[#1AAD8A] hover:text-[#0F614D]' : 'ml-2 text-[#1AAD8A] hover:text-[#0F614D]' }}">{{ $action }}</a>
                                             @endforeach
                                         @else
                                             @php
@@ -151,7 +151,7 @@
                                             @endphp
                                             @foreach ($actions as $index => $action)
                                                 <span
-                                                    class="{{ $index > 0 ? 'ml-2' : '' }} {{ $index === 0 ? 'text-indigo-600 hover:text-indigo-900' : 'text-blue-600 hover:text-blue-900' }}">{{ trim($action) }}</span>
+                                                    class="{{ $index > 0 ? 'ml-2' : '' }} {{ $index === 0 ? 'text-[#1AAD8A] hover:text-[#0F614D]' : 'text-[#1AAD8A] hover:text-[#0F614D]' }}">{{ trim($action) }}</span>
                                             @endforeach
                                         @endif
                                     @endif
@@ -164,14 +164,14 @@
                                                 @if (is_array($row->$key))
                                                     @foreach ($row->$key as $item)
                                                         <span
-                                                            class="mr-2 inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                                                            class="mr-2 inline-flex items-center rounded-full bg-[#D4F5ED] px-2.5 py-0.5 text-xs font-medium text-[#0F614D]">
                                                             {{ $item }}
                                                         </span>
                                                     @endforeach
                                                 @elseif($row->$key instanceof \Illuminate\Support\Collection)
                                                     @foreach ($row->$key as $item)
                                                         <span
-                                                            class="mr-2 inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                                                            class="mr-2 inline-flex items-center rounded-full bg-[#D4F5ED] px-2.5 py-0.5 text-xs font-medium text-[#0F614D]">
                                                             {{ is_object($item) ? (method_exists($item, '__toString') ? $item : $item->id) : $item }}
                                                         </span>
                                                     @endforeach
@@ -214,7 +214,7 @@
                                                 @if (is_array($row[$key]))
                                                     @foreach ($row[$key] as $item)
                                                         <span
-                                                            class="mr-2 inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                                                            class="mr-2 inline-flex items-center rounded-full bg-[#D4F5ED] px-2.5 py-0.5 text-xs font-medium text-[#0F614D]">
                                                             {{ $item }}
                                                         </span>
                                                     @endforeach
@@ -263,7 +263,7 @@
 
                 @foreach ($processedRows->getUrlRange(max(1, $processedRows->currentPage() - 3), min($processedRows->lastPage(), $processedRows->currentPage() + 3)) as $page => $url)
                     @if ($page == $processedRows->currentPage())
-                        <span class="px-3 py-1 text-white bg-blue-600 rounded-md">{{ $page }}</span>
+                        <span class="px-3 py-1 text-white bg-[#1AAD8A] rounded-md">{{ $page }}</span>
                     @else
                         <button wire:click="gotoPage({{ $page }})" class="px-3 py-1 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">{{ $page }}</button>
                     @endif

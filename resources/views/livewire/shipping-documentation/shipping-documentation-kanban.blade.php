@@ -1,23 +1,23 @@
 <div>
-    <div class="w-full px-0 mx-0">
+    <div class="px-0 mx-0 w-full">
         @if($hasActiveFilters)
-        <div class="flex items-center justify-between p-3 mb-4 rounded-md bg-blue-50">
+        <div class="flex justify-between items-center p-3 mb-4 bg-[#E6F9F4] rounded-md">
             <div class="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 w-5 h-5 text-[#1AAD8A]" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
                 </svg>
-                <span class="text-sm font-medium text-blue-700">Mostrando documentos filtrados. Los resultados que estás viendo están limitados por los filtros activos.</span>
+                <span class="text-sm font-medium text-[#127A62]">Mostrando documentos filtrados. Los resultados que estás viendo están limitados por los filtros activos.</span>
             </div>
             <button
                 wire:click="$dispatch('clearShippingDocumentationFilters')"
-                class="px-3 py-1 ml-3 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200"
+                class="px-3 py-1 ml-3 text-xs font-medium text-[#127A62] bg-[#D4F5ED] rounded-md hover:bg-[#C0F0E5]"
             >
                 Limpiar filtros
             </button>
         </div>
         @endif
 
-        <div class="flex w-full gap-4 pb-4 overflow-x-auto kanban-container" wire:poll.10s>
+        <div class="flex overflow-x-auto gap-4 pb-4 w-full kanban-container" wire:poll.10s>
             @if(!$board)
                 <div class="p-6 bg-white rounded-lg shadow-md">
                     <h3 class="text-lg font-semibold text-gray-700">No hay tableros Kanban disponibles</h3>
@@ -77,12 +77,15 @@
                                 // Event listeners
                                 window.addEventListener('document-moved-successfully', () => {
                                     console.log('Document moved successfully');
-                                    $wire.loadData();
+                                    // Forzar recarga de datos para asegurar que la UI se actualice
+                                    $wire.loadData().then(() => {
+                                        console.log('Data reloaded successfully');
+                                    });
                                 });
 
                                 window.addEventListener('error', (e) => {
                                     console.error('Error moving document:', e.detail);
-                                    // Revertir el movimiento
+                                    // Revertir el movimiento visualmente
                                     const cards = document.querySelectorAll('.document-card');
                                     cards.forEach(card => {
                                         if (card.getAttribute('data-document-id') === documentId) {
@@ -92,6 +95,8 @@
                                             }
                                         }
                                     });
+                                    // Recargar datos para sincronizar con el backend
+                                    $wire.loadData();
                                 });
                             "
                         >
@@ -140,8 +145,8 @@
 
             <div class="mt-4">
 
-                <!-- Campo para la columna 1 -->
-                <div class="{{ $newColumnId == $columns[0]['id'] ? '' : 'hidden' }}">
+                <!-- Nueva -->
+                <div class="{{ (isset($columns[0]) && $newColumnId == $columns[0]['id']) ? '' : 'hidden' }}">
                     <x-form-input class="mb-4">
                         <x-slot:label>
                             Ingrese fecha de release
@@ -155,12 +160,17 @@
                     </x-form-input>
                 </div>
 
+                {{-- Consolidador --}}
+                <div class="{{ (isset($columns[3]) && $newColumnId == $columns[3]['id']) ? '' : 'hidden' }}">
+                    {{-- sin campos definidos en hoja Etapas --}}
+                </div>
+
                 {{-- Producción (ID: 2) --}}
-                <div class="{{ $newColumnId == $columns[1]['id'] ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[1]) && $newColumnId == $columns[1]['id']) ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {{-- 1) Carga Lista Variable --}}
                         <x-form-input class="mb-4">
-                            <x-slot:label>Carga Lista Variable</x-slot:label>
+                            <x-slot:label>Carga Lista Variable <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" wire:model="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('date_variable_date') }}</x-slot:error>
                         </x-form-input>
@@ -174,14 +184,14 @@
 
                         {{-- 3) Proveedor de Servicio --}}
                         <x-form-input class="mb-4">
-                            <x-slot:label>Proveedor de Servicio</x-slot:label>
+                            <x-slot:label>Proveedor de Servicio <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="text" wire:model="service_provider" placeholder="Ingrese proveedor de servicio" class="pr-10 {{ $errors->has('service_provider') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('service_provider') }}</x-slot:error>
                         </x-form-input>
 
                         {{-- 4) Agente de Carga --}}
                         <x-form-input class="mb-4">
-                            <x-slot:label>Agente de Carga</x-slot:label>
+                            <x-slot:label>Agente de Carga <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="text" wire:model="forwarder_name" placeholder="Ingrese agente de carga" class="pr-10 {{ $errors->has('forwarder_name') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('forwarder_name') }}</x-slot:error>
                         </x-form-input>
@@ -189,65 +199,64 @@
                 </div>
 
                 {{-- Booking (ID: 3) --}}
-                <div class="{{ $newColumnId == $columns[2]['id'] ? '' : 'hidden' }}">
+                <div class="{{ (isset($columns[2]) && $newColumnId == $columns[2]['id']) ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <x-form-input class="mb-4">
-                            <x-slot:label>Solicitud de Booking</x-slot:label>
+                            <x-slot:label>Solicitud de Booking <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" wire:model="date_booking_request" class="pr-10 {{ $errors->has('date_booking_request') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('date_booking_request') }}</x-slot:error>
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>Autorización de Booking</x-slot:label>
+                            <x-slot:label>Autorización de Booking <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" wire:model="date_booking_authorized" class="pr-10 {{ $errors->has('date_booking_authorized') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('date_booking_authorized') }}</x-slot:error>
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>ETD Inicial</x-slot:label>
+                            <x-slot:label>ETD Inicial <span class="text-red-500">*</span></x-slot:label>
                             {{-- reutiliza el existente si lo usas en tu flujo --}}
                             <x-slot:input type="date" wire:model="estimated_departure_date" class="pr-10 {{ $errors->has('estimated_departure_date') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('estimated_departure_date') }}</x-slot:error>
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>ETD Variable</x-slot:label>
+                            <x-slot:label>ETD Variable <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" wire:model="date_etd_updated" class="pr-10 {{ $errors->has('date_etd_updated') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('date_etd_updated') }}</x-slot:error>
                         </x-form-input>
 
-                        <x-form-input class="mb-4">
-                            <x-slot:label>Tipo de Contenedor</x-slot:label>
-                            <x-slot:input type="text" wire:model="container_type" placeholder="Ingrese tipo de contenedor" class="pr-10 {{ $errors->has('container_type') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('container_type') }}</x-slot:error>
-                        </x-form-input>
-
-                        <x-form-input class="mb-4">
-                            <x-slot:label>Modo de transporte</x-slot:label>
-                            <x-slot:input type="text" wire:model="mode" placeholder="Ingrese modo de transporte" class="pr-10 {{ $errors->has('mode') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('mode') }}</x-slot:error>
-                        </x-form-input>
+                        <div>
+                            <x-form-select
+                                label="Modo de transporte"
+                                name="mode"
+                                wire:model.live="mode"
+                                :options="['maritimo' => 'Marítimo', 'aereo' => 'Aéreo','terrestre' => 'Terrestre']" />
+                        </div>
                     </div>
                 </div>
 
-                {{-- Tránsito (ID: 4) --}}
-                <div class="{{ $newColumnId == $columns[3]['id'] ? '' : 'hidden' }}">
+                {{-- Tránsito (ID: 5) --}}
+                <div class="{{ (isset($columns[4]) && $newColumnId == $columns[4]['id']) ? '' : 'hidden' }}">
+                    <div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm">
+                        <p><strong>Nota:</strong> Debe proporcionar al menos uno de los siguientes: Número de Booking, MBL o Número de Contenedor.</p>
+                    </div>
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {{-- Fechas --}}
                         <x-form-input class="mb-4">
-                            <x-slot:label>ETD Real (ATD)</x-slot:label>
+                            <x-slot:label>ETD Real (ATD) <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" wire:model="actual_departure_date" class="pr-10 {{ $errors->has('actual_departure_date') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('actual_departure_date') }}</x-slot:error>
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>ETA Inicial</x-slot:label>
+                            <x-slot:label>ETA Inicial <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" wire:model="estimated_arrival_date" class="pr-10 {{ $errors->has('estimated_arrival_date') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('estimated_arrival_date') }}</x-slot:error>
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>ETA Variable</x-slot:label>
+                            <x-slot:label>ETA Variable <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" wire:model="date_eta_updated" class="pr-10 {{ $errors->has('date_eta_updated') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('date_eta_updated') }}</x-slot:error>
                         </x-form-input>
@@ -260,8 +269,14 @@
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>BL</x-slot:label>
-                            <x-slot:input type="text" wire:model="bill_of_lading" placeholder="Ingrese BL" class="pr-10 {{ $errors->has('bill_of_lading') ? 'border-red-500'  : '' }}"></x-slot:input>
+                            <x-slot:label>Tipo de Contenedor</x-slot:label>
+                            <x-slot:input type="text" wire:model="container_type" placeholder="Ingrese tipo de contenedor" class="pr-10 {{ $errors->has('container_type') ? 'border-red-500'  : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('container_type') }}</x-slot:error>
+                        </x-form-input>
+
+                        <x-form-input class="mb-4">
+                            <x-slot:label>MBL</x-slot:label>
+                            <x-slot:input type="text" wire:model="bill_of_lading" placeholder="Ingrese MBL" class="pr-10 {{ $errors->has('bill_of_lading') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('bill_of_lading') }}</x-slot:error>
                         </x-form-input>
 
@@ -272,14 +287,14 @@
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>Línea Naviera</x-slot:label>
+                            <x-slot:label>Línea Naviera <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="text" wire:model="shipping_line" placeholder="Ingrese línea naviera" class="pr-10 {{ $errors->has('shipping_line') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('shipping_line') }}</x-slot:error>
                         </x-form-input>
 
                         <x-form-input class="mb-4">
                             <x-slot:label>Estado</x-slot:label>
-                            <x-slot:input type="text" wire:model="arrival_status" placeholder="Ingrese estado" class="pr-10 {{ $errors->has('arrival_status') ? 'border-red-500'  : '' }}"></x-slot:input>
+                            <x-slot:input type="text" wire:model="arrival_status" placeholder="Se calcula automáticamente" readonly class="pr-10 bg-gray-100 {{ $errors->has('arrival_status') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('arrival_status') }}</x-slot:error>
                         </x-form-input>
 
@@ -290,53 +305,63 @@
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>Tracking ID</x-slot:label>
-                            <x-slot:input type="text" wire:model="tracking_id" placeholder="Ingrese ID de trackeo" class="pr-10 {{ $errors->has('tracking_id') ? 'border-red-500'  : '' }}"></x-slot:input>
+                            <x-slot:label>Número de Booking</x-slot:label>
+                            <x-slot:input type="text" wire:model="tracking_id" placeholder="Ingrese número de booking" class="pr-10 {{ $errors->has('tracking_id') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('tracking_id') }}</x-slot:error>
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>Puerto de Embarque</x-slot:label>
+                            <x-slot:label>Puerto de Embarque <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="text" wire:model="departure_port" placeholder="Ingrese puerto de embarque" class="pr-10 {{ $errors->has('departure_port') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('departure_port') }}</x-slot:error>
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>Puerto de Arribo</x-slot:label>
+                            <x-slot:label>Puerto de Arribo <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="text" wire:model="arrival_port" placeholder="Ingrese puerto de arribo" class="pr-10 {{ $errors->has('arrival_port') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('arrival_port') }}</x-slot:error>
                         </x-form-input>
                     </div>
                 </div>
 
-                {{-- Puerto (ID: 5) --}}
-                <div class="{{ $newColumnId == $columns[4]['id'] ? '' : 'hidden' }}">
+                {{-- Puerto (ID: 6) --}}
+                <div class="{{ (isset($columns[5]) && $newColumnId == $columns[5]['id']) ? '' : 'hidden' }}">
                     <x-form-input class="mb-4">
-                        <x-slot:label>ETA Real (ATA)</x-slot:label>
+                        <x-slot:label>ETA Real (ATA) <span class="text-red-500">*</span></x-slot:label>
                         <x-slot:input type="date" wire:model="actual_arrival_date" class="pr-10 {{ $errors->has('actual_arrival_date') ? 'border-red-500'  : '' }}"></x-slot:input>
                         <x-slot:error>{{ $errors->first('actual_arrival_date') }}</x-slot:error>
                     </x-form-input>
                 </div>
 
-                {{-- Almacén Fiscal (ID: 6) --}}
-                <div class="{{ $newColumnId == $columns[5]['id'] ? '' : 'hidden' }}">
+                {{-- Almacén Fiscal (ID: 7) --}}
+                <div class="{{ (isset($columns[6]) && $newColumnId == $columns[6]['id']) ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <x-form-input class="mb-4">
-                            <x-slot:label>Ingreso Almacén Fiscal</x-slot:label>
+                            <x-slot:label>Ingreso Almacén Fiscal <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" wire:model="bonded_warehouse_enter" class="pr-10 {{ $errors->has('bonded_warehouse_enter') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('bonded_warehouse_enter') }}</x-slot:error>
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>Salida Almacén Fiscal</x-slot:label>
+                            <x-slot:label>Salida Almacén Fiscal <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" wire:model="bonded_warehouse_exit" class="pr-10 {{ $errors->has('bonded_warehouse_exit') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('bonded_warehouse_exit') }}</x-slot:error>
                         </x-form-input>
                     </div>
                 </div>
 
-                {{-- Ingresada (ID: 7) --}}
-                <div class="{{ $newColumnId == $columns[6]['id'] ? '' : 'hidden' }}">
+                {{-- En otra ZF (ID: 8) --}}
+                <div class="{{ (isset($columns[7]) && $newColumnId == $columns[7]['id']) ? '' : 'hidden' }}">
+                    {{-- sin campos definidos en hoja Etapas --}}
+                </div>
+
+                {{-- Recibiendo CDI (ID: 9) --}}
+                <div class="{{ (isset($columns[8]) && $newColumnId == $columns[8]['id']) ? '' : 'hidden' }}">
+                    {{-- sin campos definidos en hoja Etapas --}}
+                </div>
+
+                {{-- Ingresada (ID: 10) --}}
+                <div class="{{ (isset($columns[9]) && $newColumnId == $columns[9]['id']) ? '' : 'hidden' }}">
                     <x-form-input class="mb-4">
                         <x-slot:label>Nota de Recibo</x-slot:label>
                         <x-slot:input type="text" wire:model="receipt_note" placeholder="Ingrese nota de recibo" class="pr-10 {{ $errors->has('receipt_note') ? 'border-red-500'  : '' }}"></x-slot:input>
@@ -344,18 +369,8 @@
                     </x-form-input>
                 </div>
 
-                {{-- En otra ZF (ID: 8) --}}
-                <div class="{{ $newColumnId == $columns[7]['id'] ? '' : 'hidden' }}">
-                    {{-- sin campos definidos en hoja Etapas --}}
-                </div>
-
-                {{-- Recibiendo CDI (ID: 9) --}}
-                <div class="{{ $newColumnId == $columns[8]['id'] ? '' : 'hidden' }}">
-                    {{-- sin campos definidos en hoja Etapas --}}
-                </div>
-
-                {{-- Anulada (ID: 10) --}}
-                <div class="{{ $newColumnId == $columns[9]['id'] ? '' : 'hidden' }}">
+                {{-- Anulada (ID: 11) --}}
+                <div class="{{ (isset($columns[10]) && $newColumnId == $columns[10]['id']) ? '' : 'hidden' }}">
                     {{-- sin campos definidos en hoja Etapas --}}
                 </div>
 
@@ -385,7 +400,7 @@
                     fill="none">
                     <path
                         d="M19.1525 9.89897L10.1369 18.9146C8.08662 20.9648 4.7625 20.9648 2.71225 18.9146C0.661997 16.8643 0.661998 13.5402 2.71225 11.49L11.7279 2.47435C13.0947 1.10751 15.3108 1.10751 16.6776 2.47434C18.0444 3.84118 18.0444 6.05726 16.6776 7.42409L8.01555 16.0862C7.33213 16.7696 6.22409 16.7696 5.54068 16.0862C4.85726 15.4027 4.85726 14.2947 5.54068 13.6113L13.1421 6.00988"
-                        stroke="#565AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        stroke="#1AAD8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                         class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
                 </svg>
 

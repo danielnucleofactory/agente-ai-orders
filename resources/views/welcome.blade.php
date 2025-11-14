@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Raga Ai</title>
+    <title>Next Ai</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -38,7 +38,7 @@
     <div class="flex flex-col items-center justify-center h-screen px-5 bg-center bg-no-repeat bg-[url('/public/img/home-bg.png')]">
         <div class="flex flex-col items-center justify-center">
             <figure class="mb-[30px]">
-                <img src="{{ asset("img/logo.svg") }}" alt="">
+                <img src="{{ asset("img/logo-olo.svg") }}" alt="OLO Logo">
             </figure>
             <a href="{{ route("login") }}"
                 class="h-[40px] border-[2px] rounded-[56px] border-[#3C5BFF] flex justify-center items-center w-[180px] text-[16px]  font-bold bg-[#3C5BFF] text-white hover:bg-transparent hover:text-[#3C5BFF] transition-all">

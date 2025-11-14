@@ -21,7 +21,7 @@
                                  alt="Profile"
                                  class="object-cover w-full h-full">
                         @else
-                            <div class="w-full h-full bg-[#190FDB] flex items-center justify-center text-white text-[60px] font-medium"
+                            <div class="w-full h-full bg-[#1AAD8A] flex items-center justify-center text-white text-[60px] font-medium"
                                 x-data="{
                                     name: '{{ $user->name }}',
                                     initials() {
@@ -38,7 +38,7 @@
                         @endif
                     </div>
 
-                    <label for="profile-image-input" class="absolute bottom-0 right-0 flex items-center justify-center w-10 h-10 text-white bg-indigo-500 rounded-lg cursor-pointer">
+                    <label for="profile-image-input" class="absolute bottom-0 right-0 flex items-center justify-center w-10 h-10 text-white bg-[#1AAD8A] rounded-lg cursor-pointer">
                         <i class="fas fa-pencil-alt"></i>
                     </label>
                     <input type="file"
@@ -48,7 +48,11 @@
                            accept="image/*">
                 </div>
                 <div class="text-center">
-                    <p class="text-red-500">{{ $errors->first('profileImage') }}</p>
+                    @error('profileImage')
+                        <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                            {{ $message }}
+                        </div>
+                    @enderror
                     <h2 class="text-2xl font-bold">{{ $user->name ?? 'Sin nombre' }}</h2>
                     <p class="text-lg text-gray-500">{{ $user->roles->first()->name ?? 'Sin rol' }}</p>
                 </div>
@@ -58,14 +62,14 @@
             <div class="flex-1 p-6 bg-white rounded-lg">
                 <!-- Tu plan -->
                 <div class="mb-4">
-                    <h3 class="text-sm font-medium text-indigo-500">Tu plan</h3>
+                    <h3 class="text-sm font-medium text-[#1AAD8A]">Tu plan</h3>
                 </div>
 
                 <!-- Plan Básico Mensual -->
                 <div class="mb-6">
                     <div class="flex items-center justify-between mb-2">
                         <h4 class="text-lg font-bold">Plan Básico Mensual</h4>
-                        <a href="#" class="text-sm text-indigo-500">Cambiar plan</a>
+                        <a href="#" class="text-sm text-[#1AAD8A]">Cambiar plan</a>
                     </div>
                     <div class="space-y-1">
                         <p class="text-sm text-gray-500">Ciclo de facturación: Mensual</p>
@@ -78,7 +82,7 @@
                 <div class="mb-6">
                     <div class="flex items-center justify-between mb-2">
                         <h4 class="text-lg font-bold">Facturación y pago</h4>
-                        <a href="#" class="text-sm text-indigo-500">Editar método de pago</a>
+                        <a href="#" class="text-sm text-[#1AAD8A]">Editar método de pago</a>
                     </div>
                     <div class="space-y-1">
                         <p class="text-sm text-gray-500">Método de pago: Tarjeta de credito</p>
@@ -90,7 +94,7 @@
                 <div>
                     <div class="flex items-center justify-between mb-2">
                         <h4 class="text-lg font-bold">Historial de facturación</h4>
-                        <a href="#" class="text-sm text-indigo-500">Ver historial</a>
+                        <a href="#" class="text-sm text-[#1AAD8A]">Ver historial</a>
                     </div>
                     <div class="space-y-1">
                         <p class="text-sm text-gray-500">Ultima facturación: 1/03/25 - 08:00am</p>
@@ -105,10 +109,10 @@
                 <!-- Información de usuario -->
                 <div class="mb-10">
                     <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-sm font-medium text-indigo-500">Informacion de ususario</h3>
+                        <h3 class="text-sm font-medium text-[#1AAD8A]">Informacion de ususario</h3>
 
                         @if (!$editProfile)
-                            <button type="button" class="flex items-center justify-center w-10 h-10 text-white bg-indigo-500 rounded-lg" wire:click="activeEditProfile">
+                            <button type="button" class="flex items-center justify-center w-10 h-10 text-white bg-[#1AAD8A] rounded-lg" wire:click="activeEditProfile">
                                 <i class="fas fa-pencil-alt"></i>
                             </button>
                         @else
@@ -137,7 +141,7 @@
 
                 <!-- Información de contacto -->
                 <div class="mb-8">
-                    <h3 class="mb-6 text-sm font-medium text-indigo-500">Informacion de contacto</h3>
+                    <h3 class="mb-6 text-sm font-medium text-[#1AAD8A]">Informacion de contacto</h3>
                     <div class="grid grid-cols-1 gap-4 mb-4 md:grid-cols-2">
                         <div>
                             <label class="block mb-1 text-xs text-gray-300">Empresa</label>
@@ -166,7 +170,7 @@
 
                 <!-- Sobre mí -->
                 <div>
-                    <h3 class="mb-6 text-sm font-medium text-indigo-500">Sobre mí</h3>
+                    <h3 class="mb-6 text-sm font-medium text-[#1AAD8A]">Sobre mí</h3>
                     <div>
                         <label class="block mb-1 text-xs text-gray-300">Escribe</label>
                         <textarea wire:model="description" class="w-full h-32 px-3 py-2 border border-gray-200 rounded-lg {{ $editProfile ? '!border-[#9AABFF]' : '' }}" placeholder="texto personal si se desea colocar"></textarea>

@@ -55,4 +55,27 @@ class Vendor extends Model
     {
         return $this->hasMany(PurchaseOrder::class);
     }
+
+    /**
+     * Check if the vendor has active purchase orders.
+     */
+    public function hasActivePurchaseOrders(): bool
+    {
+        return $this->purchaseOrders()->exists();
+    }
+
+    /**
+     * Boot method to add model events.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Prevent deletion if vendor has active purchase orders
+        static::deleting(function ($vendor) {
+            if ($vendor->hasActivePurchaseOrders()) {
+                throw new \Exception('No se puede eliminar el proveedor porque tiene órdenes de compra asociadas. Las órdenes de compra mantendrán la referencia al proveedor eliminado.');
+            }
+        });
+    }
 }

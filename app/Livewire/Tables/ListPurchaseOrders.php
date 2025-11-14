@@ -31,6 +31,12 @@ class ListPurchaseOrders extends Component
     public ?int $confirmingDeleteId = null;
     public ?string $confirmingDeleteOrderNumber = null;
 
+    // --- propiedades de confirmación para restauración de una PO ---
+    public bool $showConfirmModal = false;
+    public ?string $confirmMode = null;          // 'restore' o 'delete'
+    public ?int $confirmId = null;
+    public ?string $confirmOrderNumber = null;
+
     protected $queryString = [
         'search' => ['except' => ''],
         'sortField' => ['except' => 'created_at', 'updated_at'],
@@ -96,10 +102,36 @@ class ListPurchaseOrders extends Component
         $this->resetPage();
     }
 
+    public function getAvailableKanbanStatuses()
+    {
+        $companyId = auth()->user()->company_id ?? null;
+        
+        if (!$companyId) {
+            return \App\Models\KanbanStatus::select('id', 'name')
+                ->orderBy('id')
+                ->get();
+        }
+
+        // Obtener solo las etapas del tablero de Purchase Orders de la empresa del usuario
+        return \App\Models\KanbanStatus::whereHas('board', function ($query) use ($companyId) {
+            $query->where('company_id', $companyId)
+                  ->where(function($q) {
+                      $q->where('type', 'po_stages')
+                        ->orWhere('type', 'purchase_orders');
+                  })
+                  ->where('is_active', true);
+        })
+        ->select('id', 'name')
+        ->orderBy('position')
+        ->orderBy('id')
+        ->get();
+    }
+
     public function render()
     {
-        $purchaseOrders = PurchaseOrder::query()
-            ->withoutTrashed() // 👈 añade esto
+        $purchaseOrders = \App\Models\PurchaseOrder::query()
+            ->withTrashed() // incluye activas + anuladas
+            ->with('kanbanStatus') // cargar relación kanban status
             ->when($this->search, function ($query) {
                 $searchTerm = strtolower($this->search);
                 $query->where(function ($query) use ($searchTerm) {
@@ -108,12 +140,75 @@ class ListPurchaseOrders extends Component
                         ->orWhereRaw('LOWER(notes) LIKE ?', ['%' . $searchTerm . '%']);
                 });
             })
-            ->when($this->statusFilter, fn($q) => $q->where('status', $this->statusFilter))
+            ->when($this->statusFilter === '__trashed', function ($q) {
+                $q->onlyTrashed(); // ⬅️ muestra solo anuladas
+            })
+            ->when($this->statusFilter === '__no_kanban', function ($q) {
+                // filtra por órdenes sin kanban status
+                $q->whereNull('deleted_at')->whereNull('kanban_status_id');
+            })
+            ->when(str_starts_with($this->statusFilter, 'kanban_'), function ($q) {
+                // filtra por kanban status específico
+                $kanbanStatusId = (int) str_replace('kanban_', '', $this->statusFilter);
+                // Solo aplicar el filtro si el ID es válido (mayor a 0)
+                if ($kanbanStatusId > 0) {
+                    $q->whereNull('deleted_at')->where('kanban_status_id', $kanbanStatusId);
+                }
+            })
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
 
         return view('livewire.tables.list-purchase-orders', [
-            'purchaseOrders' => $purchaseOrders
+            'purchaseOrders' => $purchaseOrders,
+            'kanbanStatuses' => $this->getAvailableKanbanStatuses()
         ]);
     }
+
+    // == Flujo de restauración de una PO ==
+
+    public function confirmRestore(int $id): void
+    {
+        $po = \App\Models\PurchaseOrder::withTrashed()
+            ->select('id','order_number')
+            ->findOrFail($id);
+
+        $this->confirmId = $po->id;
+        $this->confirmOrderNumber = $po->order_number;
+        $this->confirmMode = 'restore';
+        $this->showConfirmModal = true;
+    }
+
+    // Cierra/cancela
+    public function cancelConfirm(): void
+    {
+        $this->reset(['showConfirmModal','confirmMode','confirmId','confirmOrderNumber']);
+    }
+
+    // Click en “Restaurar” dentro del modal
+    public function restoreConfirmed(): void
+    {
+        $id = $this->confirmId;
+        $this->cancelConfirm();      // cerrar modal de inmediato
+        $this->restore($id);         // reutiliza tu método restore() existente
+    }
+    public function restore(int $id): void
+    {
+        $po = PurchaseOrder::withTrashed()->findOrFail($id);
+
+        if (! $po->trashed()) {
+            session()->flash('message', 'La orden no está anulada.');
+            return;
+        }
+
+        \DB::transaction(function () use ($po) {
+            $po->restore(); // ← el trait SoftCascadeDeletes restaurará hijos/pivots
+        });
+
+        session()->flash('message', "Orden #{$po->order_number} restaurada con éxito.");
+        $this->resetPage(); // refresca la paginación de la tabla
+    }
+
+
+
+
 }

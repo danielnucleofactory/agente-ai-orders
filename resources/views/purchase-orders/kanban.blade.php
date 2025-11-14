@@ -99,7 +99,7 @@
             que aparece en la esquina superior derecha de cada tarjeta.
         </p>
 
-        <p class="mb-6 text-sm text-blue-600">
+        <p class="mb-6 text-sm text-[#1AAD8A]">
             <b>Nota:</b> Cada tarjeta tiene un botón "Ver detalle" para acceder directamente a la
             información de la orden de compra seleccionada.
         </p>

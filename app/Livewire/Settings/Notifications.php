@@ -39,13 +39,6 @@ class Notifications extends Component
                 'implemented' => true,
                 'controller' => 'KanbanBoard'
             ],
-            'po_hub_real' => [
-                'name' => 'Cambio de Hub en PO',
-                'description' => 'Notificaciones cuando una orden se crea con un hub real diferente al planificado',
-                'category' => 'purchase_orders',
-                'implemented' => true,
-                'controller' => 'CreatePurchaseOrder'
-            ]
         ];
     }
 

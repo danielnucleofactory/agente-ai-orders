@@ -42,39 +42,44 @@ class KanbanBoard extends Component
     public $date_booking_authorized;
     public $date_etd_initial;
     public $date_etd_updated;
-    public $container_type;
     public $mode;
     public $comment_stage_03;
 
+    // Consolidador (id 4)
+    public $comment_stage_04;
 
-    // En Tránsito (id 4)
+    // En Tránsito (id 5)
     public $date_atd;
     public $date_eta;
     public $date_eta_updated;
+    public $container_type;
     public $container_number;
     public $bill_of_lading;
+    public $shipment_amount;
     public $shipping_line;
+    public $shipment_status;
+    public $merchandise_invoice;
     public $tracking_id;
     public $departure_port;
     public $arrival_port;
-    public $comment_stage_04;
-
-    // Puerto (id 5)
-    public $date_ata;
     public $comment_stage_05;
 
-
-    // Almacén Fiscal (id 6)
-    public $bonded_warehouse_enter;
-    public $bonded_warehouse_exit;
+    // Puerto (id 6)
+    public $date_ata;
     public $comment_stage_06;
 
 
+    // Almacén Fiscal (id 7)
+    public $bonded_warehouse_enter;
+    public $bonded_warehouse_exit;
     public $comment_stage_07;
+
+
     public $comment_stage_08;
+    public $comment_stage_09;
 
 
-    // Ingresada (id 9)
+    // Ingresada (id 10)
     public $receipt_note;
 
 
@@ -165,36 +170,44 @@ class KanbanBoard extends Component
             return;
         }
 
-        // Obtener el estado por defecto
+        // Columnas del tablero actual
+        $this->loadColumns();
         $defaultStatus = $this->board->statuses()->where('is_default', true)->first();
 
         // Obtener los IDs de los estados de este tablero
         $statusIds = collect($this->columns)->pluck('id')->toArray();
 
-        // Cargar las órdenes de compra de la compañía del usuario
+        // Detectar el ID de la columna "Anulada" en este tablero (fallback 10 si no la encuentra)
+        $anuladaStatusId = optional(
+            collect($this->columns)->first(function ($c) {
+                return (isset($c['slug']) && strtolower($c['slug']) === 'anulada')
+                    || strtolower($c['name']) === 'anulada';
+            })
+        )['id'] ?? 10;
+
         $companyId = auth()->user()->company_id ?? null;
 
-        // excluir soft-deleted
-        $query = PurchaseOrder::with(['company', 'kanbanStatus', 'vendor'])
+        // === 1) PO activas (NO borradas) -> van a su columna actual ===
+        $activeQuery = \App\Models\PurchaseOrder::with(['company', 'kanbanStatus', 'vendor'])
             ->withoutTrashed()
             ->where('company_id', $companyId);
 
         // Aplicar filtros si están activos
-        $this->applyQueryFilters($query);
+        $this->applyQueryFilters($activeQuery);
 
-        $purchaseOrders = $query->get();
+        $activeOrders = $activeQuery->get();
 
         // Limpiar el array de tareas
         $this->tasks = [];
 
-        foreach ($purchaseOrders as $order) {
-            // Si la orden no tiene un estado de Kanban asignado, asignarle el estado por defecto
+        foreach ($activeOrders as $order) {
+            // Asignar estado por defecto si no tiene
             if (!$order->kanban_status_id && $defaultStatus) {
                 $order->update(['kanban_status_id' => $defaultStatus->id]);
                 $order->refresh();
             }
 
-            // Si después de intentar asignar un estado, sigue sin tenerlo, o si el estado no pertenece a este tablero, continuar
+            // Saltar si no tiene estado o no pertenece a este tablero
             if (!$order->kanban_status_id || !in_array($order->kanban_status_id, $statusIds)) {
                 continue;
             }
@@ -218,6 +231,39 @@ class KanbanBoard extends Component
                 'material_type' => $order->material_type,
             ];
         }
+
+        // === 2) PO ANULADAS = soft-deleted -> SIEMPRE a la columna "Anulada" ===
+        $trashedQuery = \App\Models\PurchaseOrder::onlyTrashed()
+            ->with(['company', 'kanbanStatus', 'vendor'])
+            ->where('company_id', $companyId);
+
+        $this->applyQueryFilters($trashedQuery); // respeta filtros activos
+
+        $trashedOrders = $trashedQuery->get();
+
+        foreach ($trashedOrders as $order) {
+            $this->tasks[] = [
+                'id' => $order->id,
+                'po' => $order->order_number,
+                'vendor' => $order->vendor->name ?? 'N/A',
+                'vendor_id' => $order->vendor_id,
+                'status' => $anuladaStatusId,          // <- forzamos columna "Anulada"
+                'status_slug' => 'anulada',
+                'order_date' => $order->order_date ? $order->order_date->format('Y-m-d') : null,
+                'requested_delivery_date' => $order->requested_delivery_date ? $order->requested_delivery_date->format('Y-m-d') : null,
+                'total' => $order->total,
+                'company' => $order->company->name ?? 'N/A',
+                'created_at' => $order->created_at,    // para mantener el orden cronológico
+                'currency' => $order->currency,
+                'incoterms' => $order->incoterms,
+                'planned_hub_id' => $order->planned_hub_id,
+                'actual_hub_id' => $order->actual_hub_id,
+                'material_type' => $order->material_type,
+            ];
+        }
+
+        // Finalmente organizar en columnas y ordenar por created_at desc
+        $this->organizeTasksByColumn();
     }
 
     protected function applyQueryFilters($query)
@@ -319,46 +365,43 @@ class KanbanBoard extends Component
         \Log::info("Moving task $taskId to status $newStatus");
 
         try {
+            // Trae también anuladas y bloquéalo si está soft-deleted
+            $task = \App\Models\PurchaseOrder::withTrashed()->findOrFail($taskId);
+
+            if ($task->trashed()) {
+                \Log::warning("Intento de mover PO anulada {$task->order_number} ({$task->id})");
+                // Refresca el kanban para devolver visualmente la tarjeta a su columna
+                $this->dispatch('refreshKanban');
+                session()->flash('message', 'Esta orden está anulada y no puede cambiar de etapa.');
+                return;
+            }
+
             // Obtener el estado anterior
-            $task = PurchaseOrder::findOrFail($taskId);
             $oldStatus = $task->kanban_status_id;
 
             // Obtener nombres de columnas para el mensaje
-            $oldColumnName = KanbanStatus::find($oldStatus)->name ?? 'desconocido';
-            $newColumnName = KanbanStatus::find($newStatus)->name ?? 'desconocido';
+            $oldColumnName = \App\Models\KanbanStatus::find($oldStatus)->name ?? 'desconocido';
+            $newColumnName = \App\Models\KanbanStatus::find($newStatus)->name ?? 'desconocido';
 
-            // Actualizar directamente en la base de datos
-            DB::table('purchase_orders')
-                ->where('id', $taskId)
-                ->update(['kanban_status_id' => $newStatus]);
+            // Actualizar usando Eloquent para que se dispare el Observer y se registre en el historial
+            $task->update(['kanban_status_id' => $newStatus]);
 
-            // Crear notificación para todos los usuarios
+            // Crear notificación para todos los usuarios (tu servicio actual)
             $notificationService = app(\App\Services\NotificationService::class);
             $notificationService->notifyAll(
                 'task_moved',
                 'Tarea Movida',
                 "La orden de compra {$task->order_number} fue movida de '{$oldColumnName}' a '{$newColumnName}' por " . auth()->user()->name,
                 [
-                    'task_id' => $task->id,
+                    'task_id'   => $task->id,
                     'po_number' => $task->order_number,
-                    'old_status' => $oldColumnName,
-                    'new_status' => $newColumnName,
-                    'moved_by' => auth()->user()->name
+                    'old_status'=> $oldColumnName,
+                    'new_status'=> $newColumnName,
                 ]
             );
 
-            // Log para depuración
-            \Log::info("Task moved successfully");
-
-            // Recargar los datos
+            // Recargar datos y refrescar vista
             $this->loadData();
-
-            // Limpiar los datos temporales
-            $this->currentTaskId = null;
-            $this->newColumnId = null;
-            $this->currentTask = null;
-
-            // Forzar la actualización de la vista
             $this->dispatch('refreshKanban');
             $this->dispatch('purchaseOrderStatusUpdated');
             $this->dispatch('notificationsUpdated');
@@ -372,6 +415,13 @@ class KanbanBoard extends Component
     {
         $poId = (int)($this->currentTaskId ?? 0);
         $stage = (int)($this->newColumnId ?? 0);
+
+        $po = PurchaseOrder::withTrashed()->find($poId);
+        if ($po && $po->trashed()) {
+            session()->flash('message', 'Esta orden está anulada y no puede cambiar de etapa.');
+            $this->dispatch('refreshKanban'); // revierte visualmente el movimiento
+            return;
+        }
 
         if (!$poId || !$stage) {
             session()->flash('message', 'Falta la PO o la etapa.');
@@ -401,25 +451,8 @@ class KanbanBoard extends Component
         $this->comment = '';
         $this->attachment = null;
 
-        // 5) Cerrar el modal desde Livewire (sin Alpine extra)
-        $this->dispatch('close-modal', $this->modalName($stage));
-    }
-
-    private function modalName(int $stage): string
-    {
-        return match ($stage) {
-            1 => 'modal-nuevo',
-            2 => 'modal-produccion',
-            3 => 'modal-booking',
-            4 => 'modal-en-transito',
-            5 => 'modal-puerto',
-            6 => 'modal-alm-fiscal',
-            7 => 'modal-en-otra-zf',
-            8 => 'modal-recibiendo-cdi',
-            9 => 'modal-ingresada',
-            10 => 'modal-anulada',
-            default => 'success-modal',
-        };
+        // 5) Cerrar el modal unificado
+        $this->dispatch('close-modal', 'modal-po-stage-change');
     }
 
     public function setCurrentTask($taskId, $newColumnId)
@@ -433,6 +466,48 @@ class KanbanBoard extends Component
                 $this->currentTask = $task;
                 break;
             }
+        }
+        
+        // NUEVO: Cargar datos de la PO en las propiedades del componente
+        $po = PurchaseOrder::find($taskId);
+        if ($po) {
+            // Producción - convertir fechas al formato Y-m-d para campos HTML date
+            $this->date_variable_date = $po->date_variable_date ? $po->date_variable_date->format('Y-m-d') : null;
+            $this->date_theorical_load = $po->date_theorical_load ? $po->date_theorical_load->format('Y-m-d') : null;
+            $this->service_provider = $po->service_provider;
+            $this->forwarder_name = $po->forwarder_name;
+            
+            // Booking - convertir fechas al formato Y-m-d
+            $this->date_booking_request = $po->date_booking_request ? $po->date_booking_request->format('Y-m-d') : null;
+            $this->date_booking_authorized = $po->date_booking_authorized ? $po->date_booking_authorized->format('Y-m-d') : null;
+            $this->date_etd_initial = $po->date_etd_initial ? $po->date_etd_initial->format('Y-m-d') : null;
+            $this->date_etd_updated = $po->date_etd_updated ? $po->date_etd_updated->format('Y-m-d') : null;
+            $this->mode = $po->mode;
+            
+            // En Tránsito - convertir fechas al formato Y-m-d
+            $this->date_atd = $po->date_atd ? $po->date_atd->format('Y-m-d') : null;
+            $this->date_eta = $po->date_eta ? $po->date_eta->format('Y-m-d') : null;
+            $this->date_eta_updated = $po->date_eta_updated ? $po->date_eta_updated->format('Y-m-d') : null;
+            $this->container_type = $po->container_type;
+            $this->container_number = $po->container_number;
+            $this->bill_of_lading = $po->bill_of_lading;
+            $this->shipment_amount = $po->shipment_amount ?? null;
+            $this->shipping_line = $po->shipping_line;
+            $this->shipment_status = $po->shipment_status ?? null;
+            $this->merchandise_invoice = $po->merchandise_invoice ?? null;
+            $this->tracking_id = $po->tracking_id;
+            $this->departure_port = $po->departure_port;
+            $this->arrival_port = $po->arrival_port;
+            
+            // Puerto - convertir fechas al formato Y-m-d
+            $this->date_ata = $po->date_ata ? $po->date_ata->format('Y-m-d') : null;
+            
+            // Almacén Fiscal - convertir fechas al formato Y-m-d
+            $this->bonded_warehouse_enter = $po->bonded_warehouse_enter ? $po->bonded_warehouse_enter->format('Y-m-d') : null;
+            $this->bonded_warehouse_exit = $po->bonded_warehouse_exit ? $po->bonded_warehouse_exit->format('Y-m-d') : null;
+            
+            // Ingresada
+            $this->receipt_note = $po->receipt_note;
         }
     }
 
@@ -519,15 +594,16 @@ class KanbanBoard extends Component
     {
         $operaciones = [
             1 => 'Nuevo',
-            2 => 'Producción',
-            3 => 'Booking',
-            4 => 'En Tránsito',
-            5 => 'Puerto',
-            6 => 'Alm Fiscal',
-            7 => 'En otra ZF',
-            8 => 'Recibiendo CDI',
-            9 => 'Ingresada',
-            10 => 'Anulada',
+            2 => 'Consolidador',
+            3 => 'Producción',
+            4 => 'Booking',
+            5 => 'En Tránsito',
+            6 => 'Puerto',
+            7 => 'Alm Fiscal',
+            8 => 'En otra ZF',
+            9 => 'Recibiendo CDI',
+            10 => 'Ingresada',
+            11 => 'Anulada',
         ];
 
         return $operaciones[$columnId] ?? 'Operación no especificada';
@@ -589,21 +665,42 @@ class KanbanBoard extends Component
         ])->layout('layouts.app');
     }
 
-    //Guardado de datos
+    /**
+     * Mapeo de campos por etapa del kanban.
+     * 
+     * NOTA: Los índices (2, 3, 4, etc.) corresponden a los IDs de las columnas KanbanStatus
+     * en la base de datos. Estos IDs pueden variar según la configuración del tablero.
+     * 
+     * Mapeo esperado de etapas:
+     * - 1: Nuevo
+     * - 2: Producción
+     * - 3: Booking
+     * - 4: Consolidador
+     * - 5: En Tránsito
+     * - 6: Puerto
+     * - 7: Almacén Fiscal
+     * - 8: En otra ZF
+     * - 9: Recibiendo CDI
+     * - 10: Ingresada
+     * - 11: Anulada
+     * 
+     * @return array<int, array<string>> Array indexado por ID de etapa con lista de campos
+     */
     private function fieldsByStage(): array
     {
         return [
             2 => ['date_variable_date', 'date_theorical_load', 'service_provider', 'forwarder_name'], // Producción
-            3 => ['date_booking_request', 'date_booking_authorized', 'date_etd_initial', 'date_etd_updated', 'container_type', 'mode'], // Booking
-            4 => [
-                'date_atd', 'date_eta', 'date_eta_updated',
+            3 => ['date_booking_request', 'date_booking_authorized', 'date_etd_initial', 'date_etd_updated', 'mode'], // Booking
+            4 => [], // Consolidador (sin campos específicos)
+            5 => [
+                'date_atd', 'date_eta', 'date_eta_updated', 'container_type',
                 'container_number', 'bill_of_lading',
                 'shipment_amount', 'shipping_line', 'shipment_status', 'merchandise_invoice',
                 'tracking_id', 'departure_port', 'arrival_port',
             ], // En transito
-            5 => ['date_ata'], // Puerto
-            6 => ['bonded_warehouse_enter', 'bonded_warehouse_exit', 'date_ata'], // Alm. Fiscal
-            9 => ['receipt_note'], // Ingresada
+            6 => ['date_ata'], // Puerto
+            7 => ['bonded_warehouse_enter', 'bonded_warehouse_exit', 'date_ata'], // Alm. Fiscal
+            10 => ['receipt_note'], // Ingresada
         ];
     }
 
@@ -647,6 +744,12 @@ class KanbanBoard extends Component
             // si quieres, puedes verificar que exista la PO
              if ($updated === 0) { throw new \RuntimeException('PO no encontrada'); }
 
+            // NUEVO: Actualizar automáticamente arrival_status y delay_days si se actualizó la ETA
+            $po = PurchaseOrder::find($poId);
+            if ($po && (isset($payload['date_eta']) || isset($payload['date_eta_updated']))) {
+                $po->updateArrivalStatus();
+            }
+
             DB::commit();
             return ['ok' => true, 'updated' => $updated];
         } catch (\Throwable $e) {
@@ -658,11 +761,21 @@ class KanbanBoard extends Component
         }
     }
 
-    //Validación de datos requeridos
+    /**
+     * Reglas de validación requeridas por etapa del kanban.
+     * 
+     * IMPORTANTE: Los índices deben coincidir con los IDs de las columnas KanbanStatus
+     * y con los campos definidos en fieldsByStage().
+     * 
+     * Validaciones complejas:
+     * - Etapa 5 (En Tránsito): Usa 'required_without_all' para container_number, bill_of_lading
+     *   y tracking_id. Esto significa que al menos uno de estos tres campos debe estar presente.
+     * 
+     * @return array<int, array<string, string>> Array indexado por ID de etapa con reglas de validación
+     */
     private function requiredRulesByStage(): array
     {
         return [
-            // 2) Producción
             2 => [
                 'date_variable_date' => 'required|date',
                 'service_provider'   => 'required|string',
@@ -671,42 +784,39 @@ class KanbanBoard extends Component
                 // 'date_theorical_load' => 'required|date',
             ],
 
-            // 3) Booking
             3 => [
                 'date_booking_request'    => 'required|date',
                 'date_booking_authorized' => 'required|date',
                 'date_etd_initial'        => 'required|date',
                 'date_etd_updated'        => 'required|date',
+                'mode'                    => 'required|string',
             ],
 
-            // 4) En Tránsito
-            4 => [
+            5 => [
                 'date_atd'         => 'required|date',
                 'date_eta'         => 'required|date',
                 'date_eta_updated' => 'required|date',
-                'container_number' => 'required|string',
-                'bill_of_lading'   => 'required',   // puede ser numérico o string según tu BD
+                // Validación compleja: al menos uno de estos tres campos debe estar presente
+                'container_number' => 'nullable|required_without_all:tracking_id,bill_of_lading|string',
+                'bill_of_lading'   => 'nullable|required_without_all:tracking_id,container_number',   
+                'tracking_id'      => 'nullable|required_without_all:container_number,bill_of_lading|string',
                 'shipping_line'    => 'required|string',
-                'tracking_id'      => 'required|string',
                 'departure_port'   => 'required|string',
                 'arrival_port'     => 'required|string',
-                // 'container_type' no está como requerido en el Excel
+                // 'container_type' no está como requerido
             ],
 
-            // 5) Puerto
-            5 => [
+            6 => [
                 'date_ata' => 'required|date',
             ],
 
-            // 6) Almacén Fiscal
-            6 => [
+            7 => [
                 'bonded_warehouse_enter' => 'required|date',
                 'bonded_warehouse_exit'  => 'required|date',
                 'date_ata'               => 'required|date',
             ],
 
-            // 9) Ingresada (Excel no lo exige)
-            9 => [
+            8 => [
                 // Si quisieras hacerlo requerido:
                 // 'receipt_note' => 'required|string',
             ],
@@ -724,6 +834,7 @@ class KanbanBoard extends Component
             'date_booking_authorized'=> 'Aut. Booking',
             'date_etd_initial'       => 'ETD Inicial',
             'date_etd_updated'       => 'ETD Variable',
+            'mode'                   => 'Modo de transporte',
             'date_atd'               => 'ETD Real',
             'date_eta'               => 'ETA inicial',
             'date_eta_updated'       => 'ETA variable',
@@ -741,6 +852,16 @@ class KanbanBoard extends Component
         ];
     }
 
+    /**
+     * Valida los campos requeridos para una etapa específica.
+     * 
+     * Si la validación falla, Livewire automáticamente mostrará los errores
+     * en la vista y no ejecutará el resto del método saveAndMove().
+     * 
+     * @param int $stage ID de la etapa (columna KanbanStatus)
+     * @return void
+     * @throws \Illuminate\Validation\ValidationException Si la validación falla
+     */
     private function validateStageRequirements(int $stage): void
     {
         $rules = $this->requiredRulesByStage()[$stage] ?? [];
@@ -751,6 +872,7 @@ class KanbanBoard extends Component
 
         $messages = [
             'required' => 'El campo es requerido.',
+            'required_without_all' => 'Debe proporcionar al menos uno: Número de Booking, MBL o Número de Contenedor.',
             'date'     => 'El campo debe ser una fecha válida.',
             'string'   => 'El campo debe ser texto.',
             'numeric'  => 'El campo debe ser numérico.',

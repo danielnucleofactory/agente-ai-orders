@@ -12,7 +12,7 @@
     <div class="grid gap-4 grid-cols-[auto_1fr]">
         <div class="space-y-10 rounded-2xl bg-white p-8 w-[448px]">
             <div class="relative w-fit mx-auto">
-                <div class="avatar-container flex h-[206px] w-[206px] items-center justify-center overflow-hidden rounded-full bg-[#190FDB] text-6xl font-medium text-white"
+                <div class="avatar-container flex h-[206px] w-[206px] items-center justify-center overflow-hidden rounded-full bg-[#1AAD8A] text-6xl font-medium text-white"
                     x-data="{
                         name: '{{ auth()->user()->name }}',
                         initials() {
@@ -44,7 +44,7 @@
         <form action="" class="row-span-2 space-y-10 rounded-2xl bg-white p-8">
             <div class="space-y-6">
                 <div class="flex  items-center justify-between">
-                    <h3 class="text-lg font-bold text-[#7288FF]">Información de usuario</h3>
+                    <h3 class="text-lg font-bold text-[#1AAD8A]">Información de usuario</h3>
 
                     <x-primary-button class="!p-[0.813rem]">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 22 22"
@@ -92,7 +92,7 @@
             </div>
 
             <div class="space-y-6">
-                <h3 class="text-lg font-bold text-[#7288FF]">Información de contacto</h3>
+                <h3 class="text-lg font-bold text-[#1AAD8A]">Información de contacto</h3>
 
                 <div class="space-y-6">
                     <div class="grid grid-cols-[1fr_1fr] gap-4">
@@ -139,7 +139,7 @@
             </div>
 
             <div class="space-y-6">
-                <h3 class="text-lg font-bold text-[#7288FF]">Sobre mí</h3>
+                <h3 class="text-lg font-bold text-[#1AAD8A]">Sobre mí</h3>
 
                 <x-form-textarea label="Escribe" rows="4" wire:model="description"
                     placeholder="Sobre mí" />
@@ -147,13 +147,13 @@
         </form>
 
         <div class="grid space-y-6 rounded-2xl bg-white p-8">
-            <h3 class="text-lg font-bold text-[#7288FF]">Tu plan</h2>
+            <h3 class="text-lg font-bold text-[#1AAD8A]">Tu plan</h2>
 
             <div>
                 <div class="flex items-center justify-between">
                     <h4 class="font-bold text-[#2E2E2E] text-2xl">Plan Básico Mensual</h4>
 
-                    <a href="#" class="text-sm text-light-blue underline">Cambiar plan</a>
+                    <a href="#" class="text-sm text-[#1AAD8A] underline">Cambiar plan</a>
                 </div>
 
                 <div class="space-y-2">
@@ -167,7 +167,7 @@
                 <div class="flex items-center justify-between">
                     <h4 class="font-bold text-[#2E2E2E] text-2xl">Facturación y pago</h4>
 
-                    <a href="#" class="text-sm text-light-blue underline">Editar método de pago</a>
+                    <a href="#" class="text-sm text-[#1AAD8A] underline">Editar método de pago</a>
                 </div>
 
                 <div class="space-y-2">
@@ -180,7 +180,7 @@
                 <div class="flex items-center justify-between">
                     <h4 class="font-bold text-[#2E2E2E] text-2xl">Historial de facturación</h4>
 
-                    <a href="#" class="text-sm text-light-blue underline">Ver historial</a>
+                    <a href="#" class="text-sm text-[#1AAD8A] underline">Ver historial</a>
                 </div>
 
                 <div class="space-y-2">

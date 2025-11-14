@@ -10,6 +10,14 @@
 
         <!-- Settings Dropdown -->
         <div class="hidden space-x-4 sm:flex sm:items-center sm:ms-6">
+            <!-- Company Selector -->
+            <div class="min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
+                <livewire:partials.company-selector/>
+            </div>
+
+            <div class="h-10 bg-[#B9B9B9] w-[1px]"></div>
+
             <x-dropdown align="left" width="48">
                 <x-slot name="trigger">
                     <button
@@ -102,6 +110,12 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+        </div>
+
+        <!-- Company Selector Mobile -->
+        <div class="px-4 py-3 border-t border-gray-200">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Empresa</label>
+            <livewire:partials.company-selector/>
         </div>
 
         <!-- Responsive Settings Options -->

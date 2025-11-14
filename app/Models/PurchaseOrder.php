@@ -59,6 +59,7 @@ class PurchaseOrder extends Model implements HasMedia
         'date_ata',
         'date_consolidation',
         'release_date',
+        'date_eta_initial',
         'insurance_cost',
         'ground_transport_cost_1',
         'ground_transport_cost_2',
@@ -80,6 +81,7 @@ class PurchaseOrder extends Model implements HasMedia
         'actual_hub_id',
         'material_type',
         'ensurence_type',
+        'insurance_type',
         'mode',
         'tracking_id',
         'pallet_quantity',
@@ -94,6 +96,9 @@ class PurchaseOrder extends Model implements HasMedia
         'hash_expires_at',
         'confirmation_email_sent',
         'confirmation_email_sent_at',
+        'last_email_type_sent',
+        'last_email_sent_at',
+        'email_sent_history',
         'update_date_po',
         'confirm_update_date_po',
 
@@ -152,6 +157,7 @@ class PurchaseOrder extends Model implements HasMedia
         'visibility_notes',
         'Invoice_amount',
         'freight_amount',
+        'total_amount',
         'container_free_days',
         'etd_dates_difference',
         'eta_dates_difference',
@@ -217,8 +223,7 @@ class PurchaseOrder extends Model implements HasMedia
 
         'delay_days' => 'integer',
 
-        'date_etd_updated' => 'datetime',
-        'date_eta_updated' => 'datetime',
+        'date_eta_initial' => 'datetime',
 
         'consolidator_name' => 'string',
         'port_of_loading_validated' => 'boolean',
@@ -369,17 +374,14 @@ class PurchaseOrder extends Model implements HasMedia
     /**
      * Determine if the purchase order is consolidable based on weight.
      *
-     * Rules:
-     * - 0 to 5000 kg: Not consolidable
-     * - 5001 to 15000 kg: Consolidable
-     * - 15001+ kg: Not consolidable
+     * Restricciones eliminadas - todas las órdenes son consolidables sin restricciones de peso
      *
      * @return bool
      */
     public function isConsolidable(): bool
     {
-        $weight = $this->weight_kg ?? 0;
-        return $weight > 1 && $weight <= 20000;
+        // Sin restricciones - todas las órdenes son consolidables
+        return true;
     }
 
     /**
@@ -393,23 +395,37 @@ class PurchaseOrder extends Model implements HasMedia
     }
 
     /**
+     * Accessor para peso_kg (alias de weight_kg)
+     *
+     * @return float|null
+     */
+    public function getPesoKgAttribute(): ?float
+    {
+        return $this->weight_kg;
+    }
+
+    /**
+     * Accessor para peso_lb (alias de weight_lb)
+     *
+     * @return float|null
+     */
+    public function getPesoLbAttribute(): ?float
+    {
+        return $this->weight_lb;
+    }
+
+    /**
      * Check if a collection of orders can be consolidated together.
+     *
+     * Restricciones eliminadas - todas las órdenes pueden consolidarse sin restricciones
      *
      * @param \Illuminate\Support\Collection $orders
      * @return bool
      */
     public static function canBeConsolidatedTogether($orders)
     {
-        // Check if all orders are consolidable individually
-        foreach ($orders as $order) {
-            if (!$order->isConsolidable()) {
-                return false;
-            }
-        }
-
-        // Check if the total weight of all orders is within the consolidable range
-        $totalWeight = $orders->sum('weight_kg');
-        return $totalWeight > 1 && $totalWeight <= 20000;
+        // Sin restricciones - todas las órdenes pueden consolidarse
+        return true;
     }
 
     /**
@@ -447,5 +463,56 @@ class PurchaseOrder extends Model implements HasMedia
     public function authorizationRequests(): MorphMany
     {
         return $this->morphMany(Authorization::class, 'authorizable');
+    }
+
+    /**
+     * Calcula automáticamente el estado de llegada y días de retraso basándose en la ETA
+     *
+     * @return array ['arrival_status' => string, 'delay_days' => int]
+     */
+    public function calculateArrivalStatus(): array
+    {
+        // Usar la ETA más reciente disponible (updated > initial > original)
+        $eta = $this->date_eta_updated ?? $this->date_eta ?? null;
+
+        if (!$eta) {
+            return [
+                'arrival_status' => null,
+                'delay_days' => null
+            ];
+        }
+
+        $today = now()->startOfDay();
+        $etaDate = $eta->startOfDay();
+
+        if ($today > $etaDate) {
+            // Atrasado
+            $delayDays = $etaDate->diffInDays($today);
+            return [
+                'arrival_status' => 'Atrasado',
+                'delay_days' => $delayDays
+            ];
+        } else {
+            // A tiempo
+            return [
+                'arrival_status' => 'A tiempo',
+                'delay_days' => 0
+            ];
+        }
+    }
+
+    /**
+     * Actualiza automáticamente el estado de llegada y días de retraso
+     *
+     * @return bool
+     */
+    public function updateArrivalStatus(): bool
+    {
+        $status = $this->calculateArrivalStatus();
+
+        $this->arrival_status = $status['arrival_status'];
+        $this->delay_days = $status['delay_days'];
+
+        return $this->save();
     }
 }

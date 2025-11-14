@@ -18,6 +18,7 @@ class ShippingDocument extends Model implements HasMedia
         'document_number',
         'status',
         'creation_date',
+        'porth_shipment_id',
         'estimated_departure_date',
         'estimated_arrival_date',
         'actual_departure_date',
@@ -147,5 +148,114 @@ class ShippingDocument extends Model implements HasMedia
     public function files()
     {
         return $this->media()->where('collection_name', 'shipping_documents');
+    }
+
+    /**
+     * Boot method to add event listeners
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Disparar sincronización automática cuando se crea o actualiza
+        static::saved(function ($document) {
+            static::dispatchPorthSync($document);
+        });
+
+        static::updated(function ($document) {
+            static::dispatchPorthSync($document);
+        });
+    }
+
+    /**
+     * Disparar sincronización con Porth
+     */
+    protected static function dispatchPorthSync($document)
+    {
+        // Verificar si la sincronización está habilitada
+        $syncEnabled = config('services.porth.sync_enabled', true);
+        if (!$syncEnabled) {
+            \Log::info('Porth sync disabled by configuration', [
+                'document_id' => $document->id,
+                'sync_enabled' => $syncEnabled
+            ]);
+            return;
+        }
+
+        // Verificar si hay campos que requieren sincronización
+        $syncFields = ['tracking_id', 'mbl_number', 'container_number', 'booking_code'];
+        $hasChanges = false;
+
+        foreach ($syncFields as $field) {
+            if ($document->isDirty($field) && !empty($document->$field)) {
+                $hasChanges = true;
+                break;
+            }
+        }
+
+        if ($hasChanges) {
+            \Log::info('Dispatching Porth sync job', [
+                'document_id' => $document->id,
+                'changed_fields' => array_filter($syncFields, function($field) use ($document) {
+                    return $document->isDirty($field) && !empty($document->$field);
+                })
+            ]);
+
+            // Disparar job de sincronización con delay
+            \App\Jobs\PorthSyncJob::dispatch($document->id, get_class($document))
+                ->onQueue('porth-sync')
+                ->delay(now()->addSeconds(5));
+        }
+    }
+
+    /**
+     * Calcula automáticamente el estado de llegada y días de retraso basándose en la ETA
+     * 
+     * @return array ['arrival_status' => string, 'delay_days' => int]
+     */
+    public function calculateArrivalStatus(): array
+    {
+        // Usar la ETA más reciente disponible (updated > initial)
+        $eta = $this->date_eta_updated ?? $this->estimated_arrival_date ?? null;
+        
+        if (!$eta) {
+            return [
+                'arrival_status' => null,
+                'delay_days' => null
+            ];
+        }
+
+        $today = now()->startOfDay();
+        $etaDate = $eta->startOfDay();
+        
+        if ($today > $etaDate) {
+            // Atrasado
+            $delayDays = $etaDate->diffInDays($today);
+            return [
+                'arrival_status' => 'Atrasado',
+                'delay_days' => $delayDays
+            ];
+        } else {
+            // A tiempo
+            return [
+                'arrival_status' => 'A tiempo',
+                'delay_days' => 0
+            ];
+        }
+    }
+
+    /**
+     * Actualiza automáticamente el estado de llegada y días de retraso
+     * 
+     * @return bool
+     */
+    public function updateArrivalStatus(): bool
+    {
+        $status = $this->calculateArrivalStatus();
+        
+        $this->arrival_status = $status['arrival_status'];
+        // Nota: ShippingDocument no tiene campo delay_days, solo arrival_status
+        
+        return $this->save();
     }
 }

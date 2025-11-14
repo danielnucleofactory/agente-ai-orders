@@ -180,283 +180,214 @@ class DashboardService
     }
 
     /**
-     * Get charts data
-     *
-     * @param array $filters
+     * Get canceled lines trend table data
+     * 
      * @return array
      */
-    public function getChartsData(array $filters): array
+    public function getCanceledLinesTrendTable(): array
     {
         try {
-            Log::info('DashboardService::getChartsData starting');
+            Log::info('DashboardService::getCanceledLinesTrendTable starting');
 
-            $result = [
-                'hub_distribution' => $this->getHubDistribution($filters),
-                'delivery_status' => $this->getDeliveryStatus($filters),
-                'transport_type' => $this->getTransportType($filters),
-                'delay_reasons' => $this->getDelayReasons($filters),
-                'pos_by_stage' => $this->getPosByStage($filters),
+            $currentYear = now()->year;
+            $companyId = auth()->user()->company_id ?? null;
+            
+            // Obtener POs anuladas (deleted_at IS NOT NULL) del año actual
+            $query = PurchaseOrder::withTrashed()
+                ->whereNotNull('deleted_at')
+                ->whereYear('order_date', $currentYear);
+            
+            // Filtrar por company_id si el usuario tiene uno asignado
+            if ($companyId) {
+                $query->where('company_id', $companyId);
+            }
+            
+            $canceledPOs = $query->with(['kanbanStatus'])->get();
+
+            // Obtener nombres de etapas del kanban para mapeo
+            // Filtrar por el kanban board de Purchase Orders de la compañía del usuario
+            $kanbanStagesQuery = \App\Models\KanbanStatus::whereHas('board', function ($query) use ($companyId) {
+                $query->where('company_id', $companyId)
+                      ->where(function($q) {
+                          $q->where('type', 'po_stages')
+                            ->orWhere('type', 'purchase_orders');
+                      })
+                      ->where('is_active', true);
+            });
+            
+            // Si no hay company_id, usar el board_id 1 como fallback
+            if (!$companyId) {
+                $kanbanStagesQuery = \App\Models\KanbanStatus::where('kanban_board_id', 1);
+            }
+            
+            $kanbanStages = $kanbanStagesQuery->pluck('name', 'id')->toArray();
+
+            // Inicializar estructura de categorías con meses (claves como strings "1" a "12")
+            $monthKeys = array_map('strval', range(1, 12));
+            $categories = [
+                'PO en Produccion' => array_fill_keys($monthKeys, 0),
+                'Cumplimiento de Carga lista' => array_fill_keys($monthKeys, 0),
+                'PO en booking' => array_fill_keys($monthKeys, 0),
+                'PO en transito' => array_fill_keys($monthKeys, 0),
+                'Allocation' => array_fill_keys($monthKeys, 0),
+                'PO En puerto de transbordo' => array_fill_keys($monthKeys, 0),
+                'Tiempo en puerto de transbordo' => array_fill_keys($monthKeys, 0),
+                'PO con ETA' => array_fill_keys($monthKeys, 0),
             ];
 
-            Log::info('DashboardService::getChartsData completed successfully');
+            // Procesar cada PO anulada
+            foreach ($canceledPOs as $po) {
+                $month = (int) \Carbon\Carbon::parse($po->order_date)->format('n'); // 1-12
+                $monthKey = (string)$month; // Clave como string
+                $amountInThousands = ($po->total_amount ?? 0) / 1000;
+
+                // Categorizar por etapa del kanban
+                if ($po->kanban_status_id && isset($kanbanStages[$po->kanban_status_id])) {
+                    $stageName = $kanbanStages[$po->kanban_status_id];
+                    
+                    // Mapear nombres de etapas a categorías
+                    if (stripos($stageName, 'producción') !== false || stripos($stageName, 'produccion') !== false) {
+                        $categories['PO en Produccion'][$monthKey] += $amountInThousands;
+                    } elseif (stripos($stageName, 'booking') !== false) {
+                        $categories['PO en booking'][$monthKey] += $amountInThousands;
+                    } elseif (stripos($stageName, 'tránsito') !== false || stripos($stageName, 'transito') !== false) {
+                        $categories['PO en transito'][$monthKey] += $amountInThousands;
+                    } elseif (stripos($stageName, 'puerto') !== false || stripos($stageName, 'transbordo') !== false) {
+                        $categories['PO En puerto de transbordo'][$monthKey] += $amountInThousands;
+                    }
+                }
+
+                // PO con ETA (independiente de la etapa)
+                if ($po->date_eta) {
+                    $categories['PO con ETA'][$monthKey] += $amountInThousands;
+                }
+            }
+
+            // Redondear valores y asegurar formato correcto
+            $formattedCategories = [];
+            foreach ($categories as $categoryName => $months) {
+                $formattedCategories[$categoryName] = [];
+                foreach ($months as $monthNum => $value) {
+                    $formattedCategories[$categoryName][$monthNum] = round($value, 2);
+                }
+            }
+
+            $result = [
+                'categories' => $formattedCategories,
+                'year' => $currentYear,
+            ];
+
+            Log::info('DashboardService::getCanceledLinesTrendTable completed', [
+                'year' => $currentYear,
+                'total_canceled_pos' => $canceledPOs->count()
+            ]);
+
             return $result;
         } catch (\Exception $e) {
-            Log::error('Error in DashboardService::getChartsData', [
+            Log::error('Error in DashboardService::getCanceledLinesTrendTable', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            throw $e;
-        }
-    }
-
-    private function getHubDistribution(array $filters): Collection
-    {
-        $filtersSinHub = $filters;
-        unset($filtersSinHub['hub_id']);
-        \Log::info('getHubDistribution - Filtros usados', $filtersSinHub);
-        
-        $baseQuery = $this->getBaseQuery($filtersSinHub);
-        $total = (clone $baseQuery)->count();
-        
-        // Obtener TODOS los hubs existentes
-        $allHubs = \App\Models\Hub::select('id', 'code', 'name')->get();
-        
-        // Agregar "Sin Hub" a la lista
-        $allHubs->prepend((object)[
-            'id' => 0,
-            'code' => 'Sin Hub',
-            'name' => 'Sin Hub'
-        ]);
-        
-        // Obtener datos de POs agrupados por hub
-        $query = $baseQuery
-            ->leftJoin('hubs as h', 'purchase_orders.actual_hub_id', '=', 'h.id')
-            ->selectRaw("COALESCE(h.code, 'Sin Hub') AS hub, COALESCE(h.id, 0) AS hub_id, COUNT(purchase_orders.id) AS total_pos")
-            ->groupBy(DB::raw("COALESCE(h.code, 'Sin Hub')"), DB::raw("COALESCE(h.id, 0)"))
-            ->orderBy('total_pos', 'desc');
-            
-        $rawResult = $query->get()->keyBy('hub_id');
-        
-        // Construir resultado con TODOS los hubs, incluso los que tienen 0 datos
-        $result = $allHubs->map(function($hub) use ($rawResult, $total) {
-            $data = $rawResult->get($hub->id);
-            
-            return [
-                'name' => $hub->code,
-                'id' => (int)$hub->id,
-                'value' => $data ? (int)$data->total_pos : 0,
-                'percentage' => $total > 0 && $data ? round(100.0 * $data->total_pos / $total, 1) : 0,
+            // Retornar estructura vacía en caso de error (con claves como strings)
+            $emptyCategories = [];
+            $categoryNames = [
+                'PO en Produccion',
+                'Cumplimiento de Carga lista',
+                'PO en booking',
+                'PO en transito',
+                'Allocation',
+                'PO En puerto de transbordo',
+                'Tiempo en puerto de transbordo',
+                'PO con ETA'
             ];
-        })->sortByDesc('value')->values();
-        
-
-        
-        return $result;
-    }
-
-    private function getDeliveryStatus(array $filters): Collection
-    {
-        $filtersSinStatus = $filters;
-        unset($filtersSinStatus['status']);
-        \Log::info('getDeliveryStatus - Filtros usados (SIN filtro status)', $filtersSinStatus);
-        
-        // Primero, obtenemos el total de órdenes con los filtros aplicados
-        $baseQueryTotal = $this->getBaseQuery($filtersSinStatus);
-        $totalOrders = (clone $baseQueryTotal)->count();
-        
-        // Luego, filtramos solo las que tienen las fechas necesarias para calcular el estado
-        $baseQuery = (clone $baseQueryTotal)
-            ->whereNotNull('date_ata')
-            ->whereNotNull('date_required_in_destination');
-        
-        $totalWithDates = (clone $baseQuery)->count();
-        $totalWithoutDates = $totalOrders - $totalWithDates;
-        
-        // NO aplicar filtro de estado aquí - calcular distribución total
-        $query = (clone $baseQuery)
-            ->selectRaw("CASE WHEN date_ata <= date_required_in_destination THEN 'On Time' ELSE 'Atrasado' END AS estado, COUNT(*) AS total_pos")
-            ->groupBy(DB::raw("CASE WHEN date_ata <= date_required_in_destination THEN 'On Time' ELSE 'Atrasado' END"));
-        $raw = $query->get();
-        $resultByName = collect($raw)->keyBy('estado');
-        
-        // Definimos todos los estados posibles
-        $allStatus = collect([
-            (object)['name' => 'On Time', 'color' => '#565aff'],
-            (object)['name' => 'Atrasado', 'color' => '#c9cfff'],
-            (object)['name' => 'Sin datos', 'color' => '#f0f0f0'],
-        ]);
-        
-        $result = $allStatus->map(function($cat) use ($resultByName, $totalOrders, $totalWithoutDates) {
-            if ($cat->name === 'Sin datos') {
-                // Para el estado "Sin datos", usamos el contador de órdenes sin fechas
-                return [
-                    'name' => $cat->name,
-                    'value' => $totalWithoutDates,
-                    'percentage' => $totalOrders > 0 ? round(100.0 * $totalWithoutDates / $totalOrders, 1) : 0,
-                    'color' => $cat->color,
-                    'values' => [$cat->name],
-                ];
-            } else {
-                // Para los otros estados, usamos los resultados de la consulta
-                $item = $resultByName->get($cat->name);
-                return [
-                    'name' => $cat->name,
-                    'value' => $item ? (int)$item->total_pos : 0,
-                    'percentage' => $totalOrders > 0 ? round(100.0 * ($item ? $item->total_pos : 0) / $totalOrders, 1) : 0,
-                    'color' => $cat->color,
-                    'values' => [$cat->name],
-                ];
+            foreach ($categoryNames as $catName) {
+                $emptyCategories[$catName] = array_fill_keys(array_map('strval', range(1, 12)), 0);
             }
-        })->filter(function($item) {
-            // Solo mostrar estados con valores > 0
-            return $item['value'] > 0;
-        })->values();
-        
-        return $result;
-    }
-
-    private function getTransportType(array $filters): Collection
-    {
-        $filtersSinMode = $filters;
-        unset($filtersSinMode['transport']);
-        \Log::info('getTransportType - Filtros usados', $filtersSinMode);
-        $baseQuery = $this->getBaseQuery($filtersSinMode);
-        $total = (clone $baseQuery)->count();
-        $query = (clone $baseQuery)
-            ->selectRaw('mode AS transport_mode, COUNT(*) AS total_pos')
-            ->groupBy('mode');
-        $raw = $query->get();
-        // Agrupar solo por los valores válidos
-        $counts = [ 'MARITIMO' => 0, 'AEREO' => 0, 'SIN ESPECIFICAR' => 0 ];
-        foreach ($raw as $item) {
-            $key = trim(strtolower($item->transport_mode ?? ''));
-            if ($key === 'maritimo') $cat = 'MARITIMO';
-            elseif ($key === 'aereo') $cat = 'AEREO';
-            else $cat = 'SIN ESPECIFICAR';
-            $counts[$cat] += (int)$item->total_pos;
-        }
-        $allTypes = collect([
-            (object)['name' => 'MARITIMO', 'color' => '#565aff', 'values' => ['maritimo']],
-            (object)['name' => 'AEREO', 'color' => '#ff3459', 'values' => ['aereo']],
-            (object)['name' => 'SIN ESPECIFICAR', 'color' => '#c9cfff', 'values' => ['SIN_ESPECIFICAR']],
-        ]);
-        return $allTypes->map(function($cat) use ($counts, $total) {
+            
             return [
-                'name' => $cat->name,
-                'value' => $counts[$cat->name],
-                'percentage' => $total > 0 ? round(100.0 * $counts[$cat->name] / $total, 1) : 0,
-                'color' => $cat->color,
-                'values' => $cat->values,
+                'categories' => $emptyCategories,
+                'year' => now()->year,
             ];
-        })->values(); // Mostrar TODOS los tipos de transporte, incluso con 0
+        }
     }
 
-    private function getDelayReasons(array $filters): Collection
-    {
-        $filtersSinDelay = $filters;
-        unset($filtersSinDelay['delay_reason']);
-        \Log::info('getDelayReasons - Filtros usados', $filtersSinDelay);
-        $baseQuery = $this->getBaseQuery($filtersSinDelay);
-        $total = (clone $baseQuery)->count();
 
-        // IDs de las órdenes filtradas
-        $poIds = (clone $baseQuery)->pluck('id');
-        if ($poIds->isEmpty()) {
-            // Si no hay órdenes, devuelve solo "Sin motivo" en 100%
-            return collect([
-                [
-                    'name' => 'Sin motivo',
-                    'value' => 0,
-                    'percentage' => 0,
-                    'color' => '#c9cfff',
-                ]
+    /**
+     * Get trend table export data formatted for CSV/Excel
+     *
+     * @return array
+     */
+    public function getTrendTableExportData(): array
+    {
+        try {
+            Log::info('DashboardService::getTrendTableExportData starting');
+
+            $trendData = $this->getCanceledLinesTrendTable();
+            $categories = $trendData['categories'];
+            $year = $trendData['year'];
+            
+            // Preparar datos para CSV/Excel
+            $rows = [];
+            
+            // Header con meses
+            $header = ['Descripción'];
+            for ($month = 1; $month <= 12; $month++) {
+                $header[] = "$month-$year";
+            }
+            $rows[] = $header;
+            
+            // Filas de datos
+            $categoryOrder = [
+                'PO en Produccion',
+                'Cumplimiento de Carga lista',
+                'PO en booking',
+                'PO en transito',
+                'Allocation',
+                'PO En puerto de transbordo',
+                'Tiempo en puerto de transbordo',
+                'PO con ETA'
+            ];
+            
+            foreach ($categoryOrder as $categoryName) {
+                $row = [$categoryName];
+                $categoryData = $categories[$categoryName] ?? [];
+                
+                for ($month = 1; $month <= 12; $month++) {
+                    $value = $categoryData[(string)$month] ?? 0;
+                    // Formatear con punto decimal y mostrar '-' si es 0
+                    $row[] = $value === 0 ? '-' : number_format($value, 2, '.', '');
+                }
+                
+                $rows[] = $row;
+            }
+            
+            Log::info('DashboardService::getTrendTableExportData completed', [
+                'rows_count' => count($rows),
+                'year' => $year
             ]);
-        }
 
-        // Extraer motivos de atraso de los comentarios de las órdenes filtradas
-        $reasons = \DB::table('purchase_order_comments as poc')
-            ->selectRaw(
-                "regexp_replace(poc.comment, '(?i)^motivo de atraso\\s*[-–—]\\s*(.*)$', '\\1') as motivo"
-            )
-            ->whereIn('poc.purchase_order_id', $poIds)
-            ->whereRaw("poc.comment ~* '^motivo de atraso\\s*[-–—]'")
-            ->pluck('motivo');
-
-        // Contar cada motivo
-        $counts = collect($reasons)
-            ->filter(fn($m) => trim($m) !== '')
-            ->countBy();
-
-        $sum_cnt = $counts->sum();
-        $result = $counts->map(function($cnt, $motivo) use ($total) {
-            return [
-                'name' => $motivo,
-                'value' => $cnt,
-                'percentage' => $total > 0 ? round(100.0 * $cnt / $total, 1) : 0,
-                'color' => '#565aff', // color fijo, puedes variar si quieres
-            ];
-        })->values();
-
-        // Agregar "Sin motivo"
-        $sinMotivo = [
-            'name' => 'Sin motivo',
-            'value' => $total - $sum_cnt,
-            'percentage' => $total > 0 ? round(100.0 * ($total - $sum_cnt) / $total, 1) : 0,
-            'color' => '#c9cfff',
-        ];
-        $result = $result->push($sinMotivo)->sortByDesc('percentage')->filter(function($item) {
-            return $item['value'] > 0; // Solo mostrar items con datos
-        })->values();
-
-        return $result;
-    }
-
-    private function getPosByStage(array $filters): Collection
-    {
-        $filtersSinStage = $filters;
-        unset($filtersSinStage['stage']);
-        \Log::info('getPosByStage - Filtros usados para gráfico de etapas', $filtersSinStage);
-        $baseQuery = $this->getBaseQuery($filtersSinStage);
-        $total = (clone $baseQuery)->count();
-
-        // Obtener todas las etapas del board 1
-        $allStages = \App\Models\KanbanStatus::where('kanban_board_id', 1)
-            ->orderBy('position')
-            ->get(['id', 'name', 'color']);
-
-        // Agrupar por etapa real de los POs filtrados (incluyendo las que no tienen etapa)
-        $query = $baseQuery
-            ->leftJoin('kanban_statuses as ks', 'purchase_orders.kanban_status_id', '=', 'ks.id')
-            ->select(
-                \DB::raw('COALESCE(ks.name, \'Sin etapa\') as stage'), 
-                \DB::raw('COUNT(purchase_orders.id) as total_pos')
-            )
-            ->groupBy(\DB::raw('COALESCE(ks.name, \'Sin etapa\')'));
-        $raw = $query->get()->keyBy('stage');
-
-        // Construir resultado con todas las etapas posibles
-        $result = $allStages->map(function($stage) use ($raw, $total) {
-            $item = $raw->get($stage->name);
-            return [
-                'name' => $stage->name,
-                'value' => $item ? (int)$item->total_pos : 0,
-                'percentage' => $total > 0 ? round(100.0 * ($item ? $item->total_pos : 0) / $total, 1) : 0,
-                'color' => $stage->color ?? '#c9cfff',
-            ];
-        });
-
-        // Agregar la categoría "Sin etapa" si hay POs sin etapa
-        $sinEtapaItem = $raw->get('Sin etapa');
-        if ($sinEtapaItem && (int)$sinEtapaItem->total_pos > 0) {
-            $result->push([
-                'name' => 'Sin etapa',
-                'value' => (int)$sinEtapaItem->total_pos,
-                'percentage' => $total > 0 ? round(100.0 * $sinEtapaItem->total_pos / $total, 1) : 0,
-                'color' => '#f0f0f0', // Color gris claro para "Sin etapa"
+            return $rows;
+        } catch (\Exception $e) {
+            Log::error('Error in getTrendTableExportData', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
+            
+            // Retornar estructura vacía en caso de error
+            return [
+                ['Descripción', '1-' . now()->year, '2-' . now()->year, '3-' . now()->year, '4-' . now()->year, 
+                 '5-' . now()->year, '6-' . now()->year, '7-' . now()->year, '8-' . now()->year, 
+                 '9-' . now()->year, '10-' . now()->year, '11-' . now()->year, '12-' . now()->year],
+                ['PO en Produccion', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['Cumplimiento de Carga lista', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['PO en booking', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['PO en transito', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['Allocation', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['PO En puerto de transbordo', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['Tiempo en puerto de transbordo', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['PO con ETA', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+            ];
         }
-
-        return $result->sortByDesc('value')->values(); // Mostrar TODAS las etapas, incluso con 0
     }
 
     /**
@@ -729,33 +660,7 @@ class DashboardService
                 $query->where('order_date', '<=', $filters['date_to']);
             }
 
-            // Product filter - Updated for multiple values
-            if (!empty($filters['product_id'])) {
-                Log::info('Applying product filter', ['product_id' => $filters['product_id']]);
-                $productIds = is_array($filters['product_id']) ? $filters['product_id'] : [$filters['product_id']];
-                $productIds = array_filter($productIds); // Remove empty values
 
-                if (!empty($productIds)) {
-                    $query->whereHas('products', function ($q) use ($productIds) {
-                        $q->whereIn('product_id', $productIds);
-                    });
-                }
-            }
-
-            // Material type filter - CAST a texto para LIKE sobre json
-            if (!empty($filters['material_type'])) {
-                Log::info('Applying material_type filter', ['material_type' => $filters['material_type']]);
-                $materialTypes = is_array($filters['material_type']) ? $filters['material_type'] : [$filters['material_type']];
-                $materialTypes = array_filter($materialTypes); // Remove empty values
-
-                if (!empty($materialTypes)) {
-                    $query->where(function($q) use ($materialTypes) {
-                        foreach ($materialTypes as $materialType) {
-                            $q->orWhereRaw('material_type::text LIKE ?', ['%' . $materialType . '%']);
-                        }
-                    });
-                }
-            }
 
             // Hub filter - Updated for multiple values (actual_hub_id only)
             if (!empty($filters['hub_id'])) {

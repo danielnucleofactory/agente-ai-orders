@@ -54,14 +54,14 @@ body {
     justify-content: center;
     align-items: center;
     border-radius: 4px;
-    background: #E0E5FF;
+    background: #D4F5ED;
     gap: 8px;
     font-size: 16px;
-    color:#7288FF;
+    color:#28C7A1;
 }
 
 .search-input::placeholder {
-    color: #7288FF;
+    color: #28C7A1;
 }
 
 .filter-button {
@@ -76,7 +76,7 @@ body {
     margin-bottom: 20px;
 }
 .tag {
-    background-color: #e0e7ff;
+    background-color: #D4F5ED;
     padding: 5px 10px;
     border-radius: 4px;
     display: flex;
@@ -102,12 +102,12 @@ body {
     cursor: pointer;
 }
 .add-button {
-    background-color: #6366f1;
+    background-color: #1AAD8A;
     color: white;
 }
 table {
     width: 100%;
-    border: 1px solid #E0E5FF;
+    border: 1px solid #D4F5ED;
     background-color: white;
     color: #2E2E2E;
 }
@@ -146,7 +146,7 @@ th {
     cursor: pointer;
 }
 .pagination button.active {
-    background-color: #6366f1;
+    background-color: #1AAD8A;
     color: white;
 }
 
@@ -156,7 +156,7 @@ th {
 }
 
 .login-title {
-    color: #190FDB;
+    color: #127A62;
     text-align: center;
     font-size: 18px;
     font-style: normal;
@@ -193,7 +193,7 @@ th {
 
 @layer utilities {
     .dashed-util {
-        background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='30' ry='30' stroke='%23C9CFFFFF' stroke-width='4' stroke-dasharray='25' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+        background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='30' ry='30' stroke='%2328C7A1FF' stroke-width='4' stroke-dasharray='25' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
     }
 }
 
@@ -346,5 +346,29 @@ th {
 
 .main-sidebar.sidebar-expanded .sidebar-toggler-btn {
     transform: rotate(0deg);
+}
+
+/* Estilos para los logos del sidebar */
+/* Logo del bottom - mostrar solo el logo cerrado por defecto */
+.sidebar-logo-bottom {
+    display: block;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-logo-bottom-closed {
+    display: block;
+}
+
+.sidebar-logo-bottom-expanded {
+    display: none;
+}
+
+/* Logo del bottom - cuando está expandido, mostrar solo el logo expandido */
+.main-sidebar.sidebar-expanded .sidebar-logo-bottom-closed {
+    display: none;
+}
+
+.main-sidebar.sidebar-expanded .sidebar-logo-bottom-expanded {
+    display: block;
 }
 

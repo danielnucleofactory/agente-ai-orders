@@ -99,7 +99,7 @@ class ShippingDocumentationKanban extends Component
             'attachment' => 'nullable|file|max:5120', // 5MB
         ];
 
-        // Columna 0: Consolidador
+        // Columna 0: Consolidador (Nueva)
         if ($this->newColumnId == $this->columns[0]['id']) {
             return $common + [
                     'release_date' => 'nullable|date',
@@ -110,9 +110,39 @@ class ShippingDocumentationKanban extends Component
         if ($this->newColumnId == $this->columns[1]['id']) {
             return $common + [
                     // Necesarios (no obligatorios): fecha teórica
-                    'date_theorical_load' => 'nullable|date',
+                    'date_theorical_load' => [
+                        'nullable',
+                        'date',
+                        function ($attribute, $value, $fail) {
+                            if ($value) {
+                                // Obtener la fecha de emisión de la PO relacionada
+                                $shippingDoc = \App\Models\ShippingDocument::find($this->shippingDocumentId);
+                                $emisionDate = $shippingDoc && $shippingDoc->purchaseOrder ? 
+                                    $shippingDoc->purchaseOrder->emision_date_po : 
+                                    null;
+                                
+                                if ($emisionDate && $value < $emisionDate) {
+                                    $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                                }
+                            }
+                        }
+                    ],
                     // Requeridos para pasar de etapa:
-                    'date_variable_date'  => 'required|date',
+                    'date_variable_date'  => [
+                        'required',
+                        'date',
+                        function ($attribute, $value, $fail) {
+                            // Obtener la fecha de emisión de la PO relacionada
+                            $shippingDoc = \App\Models\ShippingDocument::find($this->shippingDocumentId);
+                            $emisionDate = $shippingDoc && $shippingDoc->purchaseOrder ? 
+                                $shippingDoc->purchaseOrder->emision_date_po : 
+                                null;
+                            
+                            if ($emisionDate && $value < $emisionDate) {
+                                $fail('La fecha de carga lista variable no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                            }
+                        }
+                    ],
                     'service_provider'    => 'required|string|max:100',
                     'forwarder_name'      => 'required|string|max:100',
                 ];
@@ -127,54 +157,59 @@ class ShippingDocumentationKanban extends Component
                     'estimated_departure_date' => 'required|date', // ETD inicial (reusado)
                     'date_etd_updated'         => 'required|date', // ETD variable
                     // Necesarios/optativos
-                    'container_type' => 'nullable|string|max:100',
                     'mode'           => 'nullable|string|max:100',
                 ];
         }
 
-        // Columna 3: Tránsito
+        // Columna 3: Consolidador
         if ($this->newColumnId == $this->columns[3]['id']) {
+            return $common; // Sin campos específicos
+        }
+
+        // Columna 4: Tránsito
+        if ($this->newColumnId == $this->columns[4]['id']) {
             return $common + [
                     // Requeridos
                     'actual_departure_date'  => 'required|date', // ETD real
                     'estimated_arrival_date' => 'required|date', // ETA inicial
                     'date_eta_updated'       => 'required|date', // ETA variable
-                    'container_number'       => 'required|string|max:50',
+                    // Al menos uno de estos tres debe estar presente
+                    'container_number'       => 'nullable|required_without_all:tracking_id,bill_of_lading|string|max:50',
+                    'tracking_id'            => 'nullable|required_without_all:container_number,bill_of_lading|string|max:50',
+                    'bill_of_lading'         => 'nullable|required_without_all:tracking_id,container_number|string|max:100',
+                    // Otros campos requeridos
                     'shipping_line'          => 'required|string|max:100',
-                    'tracking_id'            => 'required|string|max:50',
                     'departure_port'         => 'required|string|max:100',
                     'arrival_port'           => 'required|string|max:100',
-                    'bill_of_lading'         => 'required|string|max:100',
                     // Necesarios/optativos según hoja
                     'Invoice_amount' => 'nullable|numeric|min:0',
                     'arrival_status' => 'nullable|string|max:100',
                     'factura_merca'  => 'nullable|string|max:100',
+                    'container_type' => 'nullable|string|max:100',
                 ];
         }
 
-        // Columna 4: Puerto
-        if ($this->newColumnId == $this->columns[4]['id']) {
+        // Columna 5: Puerto
+        if ($this->newColumnId == $this->columns[5]['id']) {
             return $common + [
                     'actual_arrival_date' => 'required|date', // ETA real
                 ];
         }
 
-        // Columna 5: Almacén Fiscal
-        if ($this->newColumnId == $this->columns[5]['id']) {
+        // Columna 6: Almacén Fiscal
+        if ($this->newColumnId == $this->columns[6]['id']) {
             return $common + [
                     'bonded_warehouse_enter' => 'required|date',
                     'bonded_warehouse_exit'  => 'required|date',
                 ];
         }
 
-        // Columna 6: Ingresada (necesario, no requerido)
-        if ($this->newColumnId == $this->columns[6]['id']) {
+        // Columna 9: Ingresada
+        if ($this->newColumnId == $this->columns[9]['id']) {
             return $common + [
                     'receipt_note' => 'nullable|string|max:255',
                 ];
         }
-
-        // Otras columnas (7, 8, 9…): solo comunes
         return $common;
     }
 
@@ -200,12 +235,12 @@ class ShippingDocumentationKanban extends Component
             'actual_departure_date.required'  => 'El campo es obligatorio.',
             'estimated_arrival_date.required' => 'El campo es obligatorio.',
             'date_eta_updated.required'       => 'El campo es obligatorio.',
-            'container_number.required'       => 'El campo es obligatorio.',
+            'container_number.required_without_all' => 'Debe proporcionar al menos uno: Número de Booking, MBL o Número de Contenedor.',
+            'tracking_id.required_without_all'      => 'Debe proporcionar al menos uno: Número de Booking, MBL o Número de Contenedor.',
+            'bill_of_lading.required_without_all'   => 'Debe proporcionar al menos uno: Número de Booking, MBL o Número de Contenedor.',
             'shipping_line.required'          => 'El campo es obligatorio.',
-            'tracking_id.required'            => 'El campo es obligatorio.',
             'departure_port.required'         => 'El campo es obligatorio.',
             'arrival_port.required'           => 'El campo es obligatorio.',
-            'bill_of_lading.required'         => 'El campo es obligatorio.',
 
 
             // Puerto
@@ -337,9 +372,9 @@ class ShippingDocumentationKanban extends Component
                 'po_count' => $doc->purchaseOrders->count(),
                 'company' => $doc->company->name ?? 'N/A',
                 'weight_kg' => $doc->total_weight_kg ?? 0,
-                'creation_date' => $doc->creation_date ? $doc->creation_date->format('d/m/Y') : 'N/A',
-                'estimated_departure_date' => $doc->estimated_departure_date ? $doc->estimated_departure_date->format('d/m/Y') : 'N/A',
-                'estimated_arrival_date' => $doc->estimated_arrival_date ? $doc->estimated_arrival_date->format('d/m/Y') : 'N/A',
+                'creation_date' => formatDate($doc->creation_date),
+                'estimated_departure_date' => formatDate($doc->estimated_departure_date),
+                'estimated_arrival_date' => formatDate($doc->estimated_arrival_date),
                 'hub_location' => $doc->hub_location ?? 'N/A',
                 'status' => $doc->status,
                 'kanban_status_id' => $kanbanStatusId,
@@ -603,6 +638,53 @@ class ShippingDocumentationKanban extends Component
                 break;
             }
         }
+        
+        // NUEVO: Cargar datos del ShippingDocument en las propiedades
+        $shippingDocId = str_replace('DOC-', '', $documentId);
+        $shippingDoc = ShippingDocument::find($shippingDocId);
+        
+        if ($shippingDoc) {
+            // Producción - convertir fechas al formato Y-m-d para campos HTML date
+            $this->date_theorical_load = $shippingDoc->date_theorical_load ? $shippingDoc->date_theorical_load->format('Y-m-d') : null;
+            $this->date_variable_date = $shippingDoc->date_variable_date ? $shippingDoc->date_variable_date->format('Y-m-d') : null;
+            $this->service_provider = $shippingDoc->service_provider;
+            $this->forwarder_name = $shippingDoc->forwarder_name;
+            
+            // Booking - convertir fechas al formato Y-m-d
+            $this->date_booking_request = $shippingDoc->date_booking_request ? $shippingDoc->date_booking_request->format('Y-m-d') : null;
+            $this->date_booking_authorized = $shippingDoc->date_booking_authorized ? $shippingDoc->date_booking_authorized->format('Y-m-d') : null;
+            $this->estimated_departure_date = $shippingDoc->estimated_departure_date ? $shippingDoc->estimated_departure_date->format('Y-m-d') : null;
+            $this->date_etd_updated = $shippingDoc->date_etd_updated ? $shippingDoc->date_etd_updated->format('Y-m-d') : null;
+            $this->container_type = $shippingDoc->container_type;
+            $this->mode = $shippingDoc->mode;
+            
+            // Tránsito - convertir fechas al formato Y-m-d
+            $this->actual_departure_date = $shippingDoc->actual_departure_date ? $shippingDoc->actual_departure_date->format('Y-m-d') : null;
+            $this->estimated_arrival_date = $shippingDoc->estimated_arrival_date ? $shippingDoc->estimated_arrival_date->format('Y-m-d') : null;
+            $this->date_eta_updated = $shippingDoc->date_eta_updated ? $shippingDoc->date_eta_updated->format('Y-m-d') : null;
+            $this->Invoice_amount = $shippingDoc->Invoice_amount;
+            $this->shipping_line = $shippingDoc->shipping_line;
+            $this->arrival_status = $shippingDoc->arrival_status;
+            $this->factura_merca = $shippingDoc->factura_merca;
+            $this->departure_port = $shippingDoc->departure_port;
+            $this->arrival_port = $shippingDoc->arrival_port;
+            $this->bill_of_lading = $shippingDoc->bill_of_lading;
+            $this->container_number = $shippingDoc->container_number;
+            $this->tracking_id = $shippingDoc->tracking_id;
+            
+            // Puerto - convertir fechas al formato Y-m-d
+            $this->actual_arrival_date = $shippingDoc->actual_arrival_date ? $shippingDoc->actual_arrival_date->format('Y-m-d') : null;
+            
+            // Almacén Fiscal - convertir fechas al formato Y-m-d
+            $this->bonded_warehouse_enter = $shippingDoc->bonded_warehouse_enter ? $shippingDoc->bonded_warehouse_enter->format('Y-m-d') : null;
+            $this->bonded_warehouse_exit = $shippingDoc->bonded_warehouse_exit ? $shippingDoc->bonded_warehouse_exit->format('Y-m-d') : null;
+            
+            // Ingresada
+            $this->receipt_note = $shippingDoc->receipt_note;
+            
+            // Otros campos - convertir fechas al formato Y-m-d
+            $this->release_date = $shippingDoc->release_date ? $shippingDoc->release_date->format('Y-m-d') : null;
+        }
     }
 
     public function setComments($documentId, $comment)
@@ -697,7 +779,7 @@ class ShippingDocumentationKanban extends Component
     // Helper method to update document fields based on column
     private function updateDocumentFields($shippingDoc)
     {
-        // Col 0: Consolidador
+        // Columna 0: Consolidador (Nueva)
         if ($this->newColumnId == $this->columns[0]['id']) {
             if (!is_null($this->release_date)) {
                 $shippingDoc->release_date = $this->release_date;
@@ -705,7 +787,7 @@ class ShippingDocumentationKanban extends Component
             return $shippingDoc;
         }
 
-        // Col 1: Producción
+        // Columna 1: Producción
         if ($this->newColumnId == $this->columns[1]['id']) {
             $shippingDoc->date_theorical_load = $this->date_theorical_load;
             $shippingDoc->date_variable_date  = $this->date_variable_date;
@@ -714,57 +796,66 @@ class ShippingDocumentationKanban extends Component
             return $shippingDoc;
         }
 
-        // Col 2: Booking
+        // Columna 2: Booking
         if ($this->newColumnId == $this->columns[2]['id']) {
             $shippingDoc->date_booking_request     = $this->date_booking_request;
             $shippingDoc->date_booking_authorized  = $this->date_booking_authorized;
             $shippingDoc->estimated_departure_date = $this->estimated_departure_date; // ETD inicial
             $shippingDoc->date_etd_updated         = $this->date_etd_updated;         // ETD variable
-            $shippingDoc->container_type           = $this->container_type;
             $shippingDoc->mode                     = $this->mode;
             return $shippingDoc;
         }
 
-        // Col 3: Tránsito
+        // Columna 3: Consolidador
         if ($this->newColumnId == $this->columns[3]['id']) {
+            // Sin campos específicos
+            return $shippingDoc;
+        }
+
+        // Columna 4: Tránsito
+        if ($this->newColumnId == $this->columns[4]['id']) {
             $shippingDoc->actual_departure_date   = $this->actual_departure_date;   // ETD real
             $shippingDoc->estimated_arrival_date  = $this->estimated_arrival_date;  // ETA inicial
             $shippingDoc->date_eta_updated        = $this->date_eta_updated;        // ETA variable
 
             $shippingDoc->container_number     = $this->container_number;
             $shippingDoc->bill_of_lading       = $this->bill_of_lading;
-
+            $shippingDoc->container_type       = $this->container_type;
 
             $shippingDoc->Invoice_amount = $this->Invoice_amount;
             $shippingDoc->shipping_line  = $this->shipping_line;
-            $shippingDoc->arrival_status = $this->arrival_status;
             $shippingDoc->factura_merca  = $this->factura_merca;
             $shippingDoc->tracking_id    = $this->tracking_id;
             $shippingDoc->departure_port = $this->departure_port;
             $shippingDoc->arrival_port   = $this->arrival_port;
+            
+            // NUEVO: Calcular automáticamente arrival_status basándose en la ETA
+            $status = $shippingDoc->calculateArrivalStatus();
+            $shippingDoc->arrival_status = $status['arrival_status'];
+            
             return $shippingDoc;
         }
 
-        // Col 4: Puerto
-        if ($this->newColumnId == $this->columns[4]['id']) {
+        // Columna 5: Puerto
+        if ($this->newColumnId == $this->columns[5]['id']) {
             $shippingDoc->actual_arrival_date = $this->actual_arrival_date; // ETA real
             return $shippingDoc;
         }
 
-        // Col 5: Almacén Fiscal
-        if ($this->newColumnId == $this->columns[5]['id']) {
+        // Columna 6: Almacén Fiscal
+        if ($this->newColumnId == $this->columns[6]['id']) {
             $shippingDoc->bonded_warehouse_enter = $this->bonded_warehouse_enter;
             $shippingDoc->bonded_warehouse_exit  = $this->bonded_warehouse_exit;
             return $shippingDoc;
         }
 
-        // Col 6: Ingresada
-        if ($this->newColumnId == $this->columns[6]['id']) {
+        // Columna 9: Ingresada
+        if ($this->newColumnId == $this->columns[9]['id']) {
             $shippingDoc->receipt_note = $this->receipt_note;
             return $shippingDoc;
         }
 
-        // Col 7,8,9: sin cambios
+        // Otras columnas: sin cambios
         return $shippingDoc;
     }
 
@@ -779,8 +870,8 @@ class ShippingDocumentationKanban extends Component
             $this->isValidating = true;
             $this->dispatch('validating-state-changed', isValidating: true);
 
-            // Verificamos que estamos en la columna que requiere validación
-            if ($this->newColumnId != $this->columns[1]['id']) {
+            // Verificamos que estamos en la columna que requiere validación (Tránsito)
+            if ($this->newColumnId != $this->columns[4]['id']) {
                 $this->isValidating = false;
                 $this->dispatch('validating-state-changed', isValidating: false);
                 return true; // No se requiere validación para otras columnas
@@ -912,12 +1003,12 @@ class ShippingDocumentationKanban extends Component
     // First, add a method that handles everything in one go
     public function saveAndMoveDocument()
     {
-
-        $this->validate($this->getRules());
+        // Validar los datos del formulario - Livewire mostrará los errores automáticamente
+        $this->validate($this->getRules(), $this->messages());
 
         try {
-            // Primero validamos los códigos de tracking si es necesario
-            if ($this->newColumnId == $this->columns[1]['id']) {
+            // Primero validamos los códigos de tracking si es necesario (columna Tránsito)
+            if ($this->newColumnId == $this->columns[4]['id']) {
                 // Activar indicador de validación
                 $this->isValidating = true;
                 $this->dispatch('validating-state-changed', isValidating: true);
@@ -949,8 +1040,9 @@ class ShippingDocumentationKanban extends Component
                 $this->updateDocumentFields($shippingDoc);
             } catch (\Exception $e) {
                 DB::rollBack();
-                $this->dispatch('error', [
-                    'message' => $e->getMessage()
+                $this->dispatch('notify', [
+                    'type' => 'error',
+                    'message' => 'Error al actualizar los campos del documento: ' . $e->getMessage()
                 ]);
                 return;
             }
@@ -995,6 +1087,8 @@ class ShippingDocumentationKanban extends Component
 
             // 5. Limpiar el formulario y cerrar modal
             $this->resetFormFields();
+
+            // Cerrar el modal después de un pequeño delay para asegurar que la UI se actualice
             $this->dispatch('close-modal', 'modal-document-move');
 
         } catch (\Exception $e) {
@@ -1003,9 +1097,13 @@ class ShippingDocumentationKanban extends Component
                 'trace' => $e->getTraceAsString()
             ]);
 
-            $this->dispatch('error', [
+            $this->dispatch('notify', [
+                'type' => 'error',
                 'message' => 'Error al actualizar el documento: ' . $e->getMessage()
             ]);
+
+            // No cerrar el modal en caso de error para que el usuario pueda corregir
+            return;
         } finally {
             // Asegurarnos de que isValidating se resetea al final de la función
             $this->isValidating = false;
@@ -1107,7 +1205,7 @@ class ShippingDocumentationKanban extends Component
     public function hydrate()
     {
         // Aseguramos que el estado de validación se mantiene controlado
-        if ($this->isValidating && !$this->newColumnId == $this->columns[1]['id']) {
+        if ($this->isValidating && $this->newColumnId != $this->columns[4]['id']) {
             $this->isValidating = false;
         }
     }

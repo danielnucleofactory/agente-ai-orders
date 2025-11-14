@@ -1,16 +1,21 @@
-@props(['icon', 'title', 'content'])
-
-<div
-    {{ $attributes->merge(['class' => 'flex h-full items-center gap-4 rounded-[1.875rem] bg-white px-4 py-8 shadow-[0_4px_10px_0_rgba(0,0,0,0.15)]']) }}>
-    <div {{ $icon->attributes }}>
-        {{ $icon }}
-    </div>
-    <div class="space-y-2">
-        <h3 {{ $title->attributes }}>
+<div class="bg-white p-6 rounded-lg shadow-sm border {{ $attributes->get('class') }}">
+    @if(isset($icon))
+        <div class="{{ $icon->attributes->get('class') }}">
+            {{ $icon }}
+        </div>
+    @endif
+    
+    @if(isset($title))
+        <div class="{{ $title->attributes->get('class') }}">
             {{ $title }}
-        </h3>
-        <p {{ $content->attributes }}>
+        </div>
+    @endif
+    
+    @if(isset($content))
+        <div class="{{ $content->attributes->get('class') }}">
             {{ $content }}
-        </p>
-    </div>
+        </div>
+    @endif
+    
+    {{ $slot }}
 </div>

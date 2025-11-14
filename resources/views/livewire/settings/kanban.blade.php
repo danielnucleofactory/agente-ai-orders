@@ -8,7 +8,7 @@
 
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-[#E0E5FF]">
+                <thead class="bg-[#D4F5ED]">
                     <tr>
                         <th scope="col" class="px-6 py-6 text-xs font-bold tracking-wider text-left text-black uppercase cursor-pointer" wire:click="sortBy('name')">
                             Nombre
@@ -76,7 +76,7 @@
                                 {{ $board['stages_count'] }}
                             </td>
                             <td class="px-6 py-4 text-sm font-medium whitespace-nowrap">
-                                <button wire:click="viewStages({{ $board['id'] }})" class="text-blue-600 hover:text-blue-900">
+                                <button wire:click="viewStages({{ $board['id'] }})" class="text-[#1AAD8A] hover:text-[#0F614D]">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -105,7 +105,7 @@
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
             <div class="inline-block w-full max-w-5xl py-6 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-7xl">
                 <div class="absolute top-0 right-0 hidden pt-4 pr-4 sm:block">
-                    <button type="button" wire:click="closeViewingStages" class="text-gray-400 bg-white rounded-md hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <button type="button" wire:click="closeViewingStages" class="text-gray-400 bg-white rounded-md hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1AAD8A]">
                         <span class="sr-only">Close</span>
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -136,7 +136,7 @@
                                             <td class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">{{ $stage->position }}</td>
                                             <td class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">{{ $stage->name }}</td>
                                             <td class="px-6 py-4 text-sm font-medium whitespace-nowrap">
-                                                <button wire:click="startEditStage({{ $stage->id }})" class="text-blue-600 hover:text-blue-900">
+                                                <button wire:click="startEditStage({{ $stage->id }})" class="text-[#1AAD8A] hover:text-[#0F614D]">
                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                                     </svg>
@@ -157,7 +157,7 @@
                 </div>
 
                 <div class="px-4 py-3 bg-gray-50 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="button" wire:click="closeViewingStages" class="inline-flex justify-center w-full px-4 py-2 text-base font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    <button type="button" wire:click="closeViewingStages" class="inline-flex justify-center w-full px-4 py-2 text-base font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1AAD8A] sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
                         Cerrar
                     </button>
                 </div>
@@ -174,7 +174,7 @@
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
             <div class="inline-block w-full max-w-lg py-6 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle">
                 <div class="absolute top-0 right-0 hidden pt-4 pr-4 sm:block">
-                    <button type="button" wire:click="closeEditingStage" class="text-gray-400 bg-white rounded-md hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <button type="button" wire:click="closeEditingStage" class="text-gray-400 bg-white rounded-md hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1AAD8A]">
                         <span class="sr-only">Close</span>
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -187,16 +187,16 @@
 
                     <div class="mb-4">
                         <label for="stageName" class="block text-sm font-medium text-gray-700">Nombre de la etapa</label>
-                        <input type="text" id="stageName" wire:model="stageName" class="block w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <input type="text" id="stageName" wire:model="stageName" class="block w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1AAD8A] focus:border-[#1AAD8A] sm:text-sm">
                         @error('stageName') <span class="text-sm text-red-600">{{ $message }}</span> @enderror
                     </div>
                 </div>
 
                 <div class="px-4 py-3 bg-gray-50 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="button" wire:click="updateStageName" class="inline-flex justify-center w-full px-4 py-2 text-base font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
+                    <button type="button" wire:click="updateStageName" class="inline-flex justify-center w-full px-4 py-2 text-base font-medium text-white bg-[#1AAD8A] border border-transparent rounded-md shadow-sm hover:bg-[#127A62] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1AAD8A] sm:ml-3 sm:w-auto sm:text-sm">
                         Guardar
                     </button>
-                    <button type="button" wire:click="closeEditingStage" class="inline-flex justify-center w-full px-4 py-2 mt-3 text-base font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    <button type="button" wire:click="closeEditingStage" class="inline-flex justify-center w-full px-4 py-2 mt-3 text-base font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1AAD8A] sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
                         Cancelar
                     </button>
                 </div>

@@ -48,8 +48,12 @@ class VendorsTable extends Component
     {
         $vendor = Vendor::find($id);
         if ($vendor) {
-            $vendor->delete();
-            session()->flash('message', 'Proveedor eliminado correctamente.');
+            try {
+                $vendor->delete();
+                session()->flash('message', 'Proveedor eliminado correctamente.');
+            } catch (\Exception $e) {
+                session()->flash('error', $e->getMessage());
+            }
         }
     }
 

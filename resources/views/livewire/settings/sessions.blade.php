@@ -1,6 +1,6 @@
 <div class="p-8 space-y-6 bg-white rounded-2xl">
     <div class="flex items-center justify-between">
-        <h2 class="text-lg font-bold text-[#7288FF]">Lista de sesiones</h2>
+        <h2 class="text-lg font-bold text-[#1AAD8A]">Lista de sesiones</h2>
     </div>
 
     @if (session()->has('message'))
@@ -14,7 +14,7 @@
             <div class="relative w-fit">
                 <input
                     wire:model.live.debounce.300ms="search"
-                    class="rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#9AABFF]"
+                    class="rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#28C7A1]"
                     placeholder="Buscar usuario, dispositivo o IP"
                 />
 
@@ -30,7 +30,7 @@
             @if ($search)
                 <button
                     wire:click="$set('search', '')"
-                    class="text-sm text-blue-600 hover:text-blue-800"
+                    class="text-sm text-[#1AAD8A] hover:text-[#0F614D]"
                 >
                     Limpiar búsqueda
                 </button>
@@ -39,7 +39,7 @@
     </div>
 
     <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-[#E0E5FF]">
+        <thead class="bg-[#D4F5ED]">
             <tr>
                 <th class="w-8 px-6 py-3">
                     <input type="checkbox" class="rounded">
@@ -69,28 +69,43 @@
                         </div>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                        {{ $this->getDeviceType($session->user_agent) }} - {{ $this->getBrowserType($session->user_agent) }}
+                        {{ $this->getDeviceType($session->user_agent ?? '') }} - {{ $this->getBrowserType($session->user_agent ?? '') }}
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                        <span class="px-2 py-1 text-sm text-green-800 bg-green-100 rounded-full">
-                            Activa
+                        <span class="px-2 py-1 text-sm font-semibold {{ $this->getEventTypeColor(trim($session->event_type_label ?? 'Sesión Activa')) }} rounded-full" style="{{ $this->getEventTypeStyle(trim($session->event_type_label ?? 'Sesión Activa')) }}">
+                            {{ $session->event_type_label ?? 'Sesión Activa' }}
                         </span>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                        {{ \Carbon\Carbon::createFromTimestamp($session->last_activity)->diffForHumans() }}
+                        @if(($session->status ?? 'Activa') === 'Activa')
+                            <span class="px-2 py-1 text-sm text-white bg-[#1AAD8A] rounded-full">
+                                Activa
+                            </span>
+                        @else
+                            <span class="px-2 py-1 text-sm text-gray-500">
+                                N/A
+                            </span>
+                        @endif
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                        País desconocido
+                        {{ $this->formatLastActivity($session->activity_timestamp ?? $session->last_activity ?? null) }}
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                        <button
-                            wire:click="closeSession('{{ $session->id }}')"
-                            class="inline-flex items-center text-gray-500 hover:text-gray-700"
-                        >
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-                            </svg>
-                        </button>
+                        {{ $session->ip_address ?? 'N/A' }}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                        @if(($session->source_type ?? 'session') === 'session')
+                            <button
+                                wire:click="closeSession('{{ $session->id }}')"
+                                class="inline-flex items-center text-gray-500 hover:text-gray-700"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                                </svg>
+                            </button>
+                        @else
+                            <span class="text-gray-400">-</span>
+                        @endif
                     </td>
                 </tr>
             @endforeach

@@ -1,6 +1,6 @@
 <div class="relative w-fit">
     <input
-        {{ $attributes->merge(['class' => 'rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#9AABFF]', 'type' => 'text', 'placeholder' => 'Buscar']) }} />
+        {{ $attributes->merge(['class' => 'rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#28C7A1]', 'type' => 'text', 'placeholder' => 'Buscar']) }} />
 
     <div class="pointer-events-none absolute top-1/2 -translate-y-1/2 left-[1.125rem] flex items-center">
         <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"

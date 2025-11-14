@@ -1,0 +1,12 @@
+"Nombre Frontend","Tabla","Nombre BD (Campo)","Tipo de Dato","Descripción","Obligatorio"
+"Compañía","ship_tos","company_id","ID Numérico","ID de la compañía a la que pertenece.","Sí"
+"Nombre","ship_tos","name","Texto","Nombre identificador de la dirección (ej: ""Almacén Principal"").","Sí"
+"Dirección","ship_tos","address","Texto","Dirección completa.","Sí"
+"Ciudad","ship_tos","city","Texto","Ciudad.","Sí"
+"Estado","ship_tos","state","Texto","Estado o provincia.","Sí"
+"País","ship_tos","country","Texto","País.","Sí"
+"Código Postal","ship_tos","zip_code","Texto","Código Postal.","Sí"
+
+company_id,name,address,city,state,country,zip_code
+
+

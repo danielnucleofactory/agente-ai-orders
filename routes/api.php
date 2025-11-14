@@ -13,10 +13,15 @@ Route::get('/status', function () {
     ]);
 });
 
-// Public endpoint for creating purchase orders from external API
+// Public endpoints for purchase orders from external API
 Route::post('/purchase-orders', [PurchaseOrderController::class, 'createFromApi']);
-
-Route::delete('/purchase-orders/cancel/{order_number}', [PurchaseOrderController::class, 'deleteFromApi']);
+Route::put('/purchase-orders/{po_id}', [PurchaseOrderController::class, 'updateFromApi']);
+Route::delete('/purchase-orders/cancel', [PurchaseOrderController::class, 'deleteFromApi']);
+Route::delete('/purchase-orders', [PurchaseOrderController::class, 'destroy']);
+Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
+Route::post('/purchase-orders/search', [PurchaseOrderController::class, 'index']);
+Route::post('/purchase-orders/bulk', [PurchaseOrderController::class, 'bulk']);
+Route::post('/purchase-orders/bulk-update', [PurchaseOrderController::class, 'bulkUpdate']);
 
 // Rutas protegidas con autenticación de token API
 Route::middleware('api.token')->group(function () {

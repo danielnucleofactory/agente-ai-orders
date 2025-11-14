@@ -22,7 +22,7 @@ class Breadcrumb extends Component
         'purchase-orders.edit' => 'Editar',
         'purchase-orders.tracking' => 'Seguimiento',
         'purchase-orders.kanban' => 'Kanban',
-        'purchase-orders.consolidated-orders' => 'Órdenes consolidadas',
+        'purchase-orders.consolidated-orders' => 'Documentación de embarque',
         'purchase-orders.consolidated-order-detail' => 'Detalle de orden consolidada',
         'products.index' => 'Productos',
         'products.create' => 'Nuevo producto',
@@ -36,8 +36,8 @@ class Breadcrumb extends Component
         'ship-to.index' => 'Direcciones de envío',
         'ship-to.create' => 'Nueva dirección',
         'ship-to.edit' => 'Editar dirección',
-        'shipping-documentation.index' => 'Documentación de envío',
-        'shipping-documentation.create' => 'Nueva documentación',
+        'shipping-documentation.index' => 'Embarques',
+        'shipping-documentation.create' => 'Nuevo embarque',
         'shipping-documentation.requests' => 'Solicitudes',
         'hub.index' => 'Hubs',
         'hub.create' => 'Nuevo hub',
@@ -54,6 +54,9 @@ class Breadcrumb extends Component
         'settings.users' => 'Usuarios',
         'settings.users.create' => 'Crear usuario',
         'settings.users.edit' => 'Editar usuario',
+        'settings.companies' => 'Empresas',
+        'settings.companies.create' => 'Crear empresa',
+        'settings.companies.edit' => 'Editar empresa',
         'settings.active-sessions' => 'Sesiones activas',
         'settings.profile' => 'Perfil',
         'settings.sessions' => 'Sesiones',
@@ -110,6 +113,10 @@ class Breadcrumb extends Component
         'tracking' => 'Seguimiento',
         'Kanban' => 'Kanban',
         'kanban' => 'Kanban',
+        'Companies' => 'Empresas',
+        'companies' => 'Empresas',
+        'Company' => 'Empresa',
+        'company' => 'Empresa',
     ];
 
     // Base path groups - maps a segment to its parent group name
@@ -186,7 +193,7 @@ class Breadcrumb extends Component
                 if (str_contains($this->currentPath, 'shipping-documentation')) {
                     $this->segments = [
                         [
-                            'name' => 'Documentación de envío',
+                            'name' => 'Embarques',
                             'url' => 'shipping-documentation'
                         ]
                     ];

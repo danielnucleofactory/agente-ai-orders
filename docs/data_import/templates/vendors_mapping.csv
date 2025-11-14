@@ -1,0 +1,10 @@
+"Nombre Frontend","Tabla","Nombre BD (Campo)","Tipo de Dato","Descripción","Obligatorio"
+"Compañía","vendors","company_id","ID Numérico","ID de la compañía a la que está asociado.","Sí"
+"Nombre","vendors","name","Texto","Nombre comercial del proveedor.","Sí"
+"Contacto","vendors","contact_name","Texto","Nombre de la persona de contacto.","No"
+"Email","vendors","contact_email","Email","Correo del contacto.","No"
+"Teléfono","vendors","phone_number","Texto","Teléfono del contacto.","No"
+"Dirección","vendors","address","Texto","Dirección física del proveedor.","No"
+
+company_id,name,contact_name,contact_email,phone_number,address
+

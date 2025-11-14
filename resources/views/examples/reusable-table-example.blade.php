@@ -27,8 +27,8 @@
                     'status' => 'pending',
                     'status_formatted' => '<span class="inline-flex px-2 text-xs font-semibold leading-5 text-yellow-800 bg-yellow-100 rounded-full">Pendiente</span>',
                     'actions' => 'Ver, Editar',
-                    'actions_html' => '<a href="#" class="text-indigo-600 hover:text-indigo-900">Ver</a>
-                                        <a href="#" class="ml-2 text-blue-600 hover:text-blue-900">Editar</a>'
+                    'actions_html' => '<a href="#" class="text-[#1AAD8A] hover:text-[#0F614D]">Ver</a>
+                                        <a href="#" class="ml-2 text-[#1AAD8A] hover:text-blue-900">Editar</a>'
                 ],
                 [
                     'id' => 2,
@@ -63,7 +63,7 @@
                     'weight_kg_formatted' => '<strong>1,800 kg</strong>',
                     'creation_date' => '02/06/2023',
                     'status' => 'in_transit',
-                    'status_formatted' => '<span class="inline-flex px-2 text-xs font-semibold leading-5 text-blue-800 bg-blue-100 rounded-full">En Tránsito</span>',
+                    'status_formatted' => '<span class="inline-flex px-2 text-xs font-semibold leading-5 text-[#0F614D] bg-[#D4F5ED] rounded-full">En Tránsito</span>',
                     'actions' => 'Ver, Editar'
                 ],
                 [

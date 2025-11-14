@@ -14,7 +14,7 @@
     <div class="flex items-center justify-between">
         <x-view-title>
             <x-slot:title>
-                Órdenes consolidadas
+                Seguimiento de Embarques
             </x-slot:title>
 
             <x-slot:content>

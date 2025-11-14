@@ -40,8 +40,7 @@ class DashboardController extends Controller
             $dashboardData = $this->getDashboardData($filters);
             Log::info('Dashboard data retrieved', [
                 'metrics_count' => count($dashboardData['metrics'] ?? []),
-                'charts_count' => count($dashboardData['charts'] ?? []),
-                'detail_table_count' => count($dashboardData['detail_table'] ?? [])
+                'trend_table_year' => $dashboardData['trend_table']['year'] ?? null,
             ]);
 
             $filterOptions = $this->dashboardService->getFilterOptions();
@@ -127,7 +126,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Export dashboard data
+     * Export dashboard trend table data
      *
      * @param Request $request
      * @return StreamedResponse
@@ -140,12 +139,12 @@ class DashboardController extends Controller
                 'request_data' => $request->all()
             ]);
 
-            $filters = $this->getFilters($request);
-            $exportData = $this->dashboardService->getExportData($filters);
+            // Exportar tabla de tendencias en lugar de POs individuales
+            $exportData = $this->dashboardService->getTrendTableExportData();
 
-            Log::info('Export data retrieved', ['records_count' => $exportData->count()]);
+            Log::info('Export data retrieved', ['rows_count' => count($exportData)]);
 
-            $filename = 'dashboard_export_' . now()->format('Y-m-d_H-i-s') . '.csv';
+            $filename = 'tendencia_lineas_canceladas_' . now()->format('Y-m-d_H-i-s') . '.csv';
 
             return response()->streamDownload(function () use ($exportData) {
                 $handle = fopen('php://output', 'w');
@@ -153,23 +152,10 @@ class DashboardController extends Controller
                 // Add BOM for proper UTF-8 encoding in Excel
                 fwrite($handle, "\xEF\xBB\xBF");
 
-                // CSV Headers
-                fputcsv($handle, [
-                    'Número PO',
-                    'Fecha Salida',
-                    'Fecha Estimada',
-                    'Fecha Real Llegada',
-                    'Cantidad KG',
-                    'Estado',
-                    'Hub Planeado',
-                    'Hub Real',
-                    'Proveedor',
-                    'Modo de Transporte'
-                ]);
-
-                // CSV Data
+                // CSV Data (ya incluye headers en la primera fila)
                 foreach ($exportData as $row) {
-                    fputcsv($handle, $row);
+                    // Usar punto y coma como delimitador para mejor compatibilidad con Excel en español
+                    fputcsv($handle, $row, ';');
                 }
 
                 fclose($handle);
@@ -204,8 +190,6 @@ class DashboardController extends Controller
         $filters = [
             'date_from' => $request->get('date_from'),
             'date_to' => $request->get('date_to'),
-            'product_id' => $request->get('product_id'),
-            'material_type' => $request->get('material_type'),
             'hub_id' => $request->get('hub_id'),
             'vendor_id' => $request->get('vendor_id'),
             'status' => $request->get('status'),
@@ -229,24 +213,13 @@ class DashboardController extends Controller
             $metrics = $this->dashboardService->getMetrics($filters);
             Log::info('Metrics retrieved', ['metrics' => $metrics]);
 
-            Log::info('Getting charts data...');
-            $chartsData = $this->dashboardService->getChartsData($filters);
-            Log::info('Charts data retrieved', [
-                'hub_distribution_count' => $chartsData['hub_distribution']->count(),
-                'delivery_status_count' => $chartsData['delivery_status']->count(),
-                'transport_type_count' => $chartsData['transport_type']->count(),
-                'delay_reasons_count' => $chartsData['delay_reasons']->count(),
-                'pos_by_stage_count' => $chartsData['pos_by_stage']->count(),
-            ]);
-
-            Log::info('Getting detail table data...');
-            $detailData = $this->dashboardService->getDetailTableData($filters);
-            Log::info('Detail data retrieved', ['detail_count' => $detailData->count()]);
+            Log::info('Getting trend table data...');
+            $trendTableData = $this->dashboardService->getCanceledLinesTrendTable();
+            Log::info('Trend table data retrieved', ['year' => $trendTableData['year'] ?? null]);
 
             return [
                 'metrics' => $metrics,
-                'charts' => $chartsData,
-                'detail_table' => $detailData->toArray(),
+                'trend_table' => $trendTableData,
             ];
         } catch (\Exception $e) {
             Log::error('Error in getDashboardData', [
@@ -273,14 +246,19 @@ class DashboardController extends Controller
                 'delayed_percentage' => 0,
                 'material_count' => 0,
             ],
-            'charts' => [
-                'hub_distribution' => collect([]),
-                'delivery_status' => collect([]),
-                'transport_type' => collect([]),
-                'delay_reasons' => collect([]),
-                'pos_by_stage' => collect([]),
+            'trend_table' => [
+                'categories' => [
+                    'PO en Produccion' => array_fill_keys(range(1, 12), 0),
+                    'Cumplimiento de Carga lista' => array_fill_keys(range(1, 12), 0),
+                    'PO en booking' => array_fill_keys(range(1, 12), 0),
+                    'PO en transito' => array_fill_keys(range(1, 12), 0),
+                    'Allocation' => array_fill_keys(range(1, 12), 0),
+                    'PO En puerto de transbordo' => array_fill_keys(range(1, 12), 0),
+                    'Tiempo en puerto de transbordo' => array_fill_keys(range(1, 12), 0),
+                    'PO con ETA' => array_fill_keys(range(1, 12), 0),
+                ],
+                'year' => now()->year,
             ],
-            'detail_table' => [],
         ];
     }
 

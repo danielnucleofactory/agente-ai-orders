@@ -1,6 +1,6 @@
 <div class="p-8 space-y-10 bg-white rounded-2xl">
     <div class="flex items-center justify-between">
-        <h2 class="text-lg font-bold text-[#7288FF]">Lista de roles</h2>
+        <h2 class="text-lg font-bold text-[#1AAD8A]">Lista de roles</h2>
 
         <div class="flex space-x-4">
             <a href="{{ route('settings.roles.create') }}">

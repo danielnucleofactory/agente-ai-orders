@@ -41,13 +41,13 @@
     }
 }" class="w-full overflow-hidden" x-init="init()">
     <button @click="toggleDropdown()"
-        class="sidebar-dropdown {{ $active ? 'bg-[#E0E5FF]' : '' }} group flex w-full items-center justify-between rounded-lg px-2 py-1 sm:px-3 sm:py-[0.625rem]">
+        class="sidebar-dropdown {{ $active ? 'bg-[#D4F5ED]' : '' }} group flex w-full items-center justify-between rounded-lg px-2 py-1 sm:px-3 sm:py-[0.625rem]">
         <div class="flex items-center sidebar-dropdown-text-container">
             <div class="flex items-center justify-center w-5 h-5">
                 {{ $icon }}
             </div>
             <span
-                class="{{ $active ? 'text-[#565AFF]' : 'group-hover:text-black' }} sidebar-dropdown-text transition-colors duration-500">
+                class="{{ $active ? 'text-[#1AAD8A]' : 'group-hover:text-black' }} sidebar-dropdown-text transition-colors duration-500">
                 {{ $title }}
             </span>
         </div>
@@ -57,7 +57,7 @@
                 class="transition-all duration-100" :class="{ 'transform rotate-180': open }">
                 <path
                     d="M8.52868 5.47142C8.78903 5.73177 9.21114 5.73177 9.47149 5.47142C9.73184 5.21108 9.73184 4.78897 9.47149 4.52862L5.47149 0.528616C5.21114 0.268267 4.78903 0.268267 4.52868 0.528616L0.528678 4.52862C0.268328 4.78897 0.268328 5.21108 0.528678 5.47142C0.789027 5.73177 1.21114 5.73177 1.47149 5.47142L5.00008 1.94283L8.52868 5.47142Z"
-                    fill="{{ $active ? '#565AFF' : '#898989' }}" />
+                    fill="{{ $active ? '#1AAD8A' : '#898989' }}" />
             </svg>
         </div>
     </button>

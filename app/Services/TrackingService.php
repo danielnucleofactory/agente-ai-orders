@@ -380,16 +380,16 @@ class TrackingService
 
         $trackingData = null;
 
-        // Primero intentamos con el tracking ID si está disponible
-        if ($trackingId) {
-            \Log::info('Attempting to get Porth tracking data using ID', ['id' => $trackingId]);
-            $trackingData = $this->getPorthTracking($trackingId);
-        }
-
-        // Si no tenemos datos por tracking ID o no se proporcionó, intentamos con MBL
-        if (!$trackingData && $mblNumber) {
+        // Primero intentamos con el MBL si está disponible (más confiable)
+        if ($mblNumber) {
             \Log::info('Attempting to get Porth tracking data using Master BL', ['mbl' => $mblNumber]);
             $trackingData = $this->getPorthTrackingByMasterBl($mblNumber);
+        }
+
+        // Si no tenemos datos por MBL o no se proporcionó, intentamos con tracking ID
+        if (!$trackingData && $trackingId) {
+            \Log::info('Attempting to get Porth tracking data using ID', ['id' => $trackingId]);
+            $trackingData = $this->getPorthTracking($trackingId);
         }
 
         // Si ambos métodos fallan, devolver datos de prueba como fallback

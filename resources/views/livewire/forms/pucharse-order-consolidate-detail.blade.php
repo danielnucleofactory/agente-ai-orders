@@ -47,7 +47,7 @@
                         wire:model.debounce.300ms="searchPO"
                         wire:keyup="searchPurchaseOrders"
                         placeholder="Buscar por número de PO..."
-                        class="rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#9AABFF] w-full"
+                        class="rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#28C7A1] w-full"
                     >
                 </div>
             </div>
@@ -55,7 +55,7 @@
             @if(count($searchResults) > 0)
                 <div class="overflow-hidden mt-2 rounded-lg border">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-[#E0E5FF]">
+                        <thead class="bg-[#D4F5ED]">
                             <tr>
                                 <th class="px-6 py-6 text-xs font-bold text-left uppercase textblack">Número PO</th>
                                 <th class="px-6 py-6 text-xs font-bold text-left uppercase textblack">Proveedor</th>
@@ -74,7 +74,7 @@
                                     <td class="px-6 py-4 text-sm whitespace-nowrap">
                                         <button
                                             wire:click="attachPurchaseOrder({{ $result['id'] }})"
-                                            class="text-blue-600 hover:text-blue-900"
+                                            class="text-[#1AAD8A] hover:text-[#0F614D]"
                                         >
                                             Agregar
                                         </button>
@@ -116,7 +116,7 @@
                 </x-slot:icon>
             </x-label>
 
-            <x-label class="bg-[#E0E5FF] py-[0.625rem] text-neutral-blue">
+            <x-label class="bg-[#D4F5ED] py-[0.625rem] text-neutral-blue">
                 <p class="text-base">HUB: <span>{{ $hubLocation ?? 'No especificado' }}</span></p>
 
                 <x-slot:icon>
@@ -124,7 +124,7 @@
                         fill="none">
                         <path
                             d="M5.66667 14.1663H12.3333M8.18141 2.30297L2.52949 6.6989C2.15168 6.99275 1.96278 7.13968 1.82669 7.32368C1.70614 7.48667 1.61633 7.67029 1.56169 7.86551C1.5 8.0859 1.5 8.32521 1.5 8.80384V14.833C1.5 15.7664 1.5 16.2331 1.68166 16.5896C1.84144 16.9032 2.09641 17.1582 2.41002 17.318C2.76654 17.4996 3.23325 17.4996 4.16667 17.4996H13.8333C14.7668 17.4996 15.2335 17.4996 15.59 17.318C15.9036 17.1582 16.1586 16.9032 16.3183 16.5896C16.5 16.2331 16.5 15.7664 16.5 14.833V8.80384C16.5 8.32521 16.5 8.0859 16.4383 7.86551C16.3837 7.67029 16.2939 7.48667 16.1733 7.32368C16.0372 7.13968 15.8483 6.99275 15.4705 6.69891L9.81859 2.30297C9.52582 2.07526 9.37943 1.9614 9.21779 1.91763C9.07516 1.87902 8.92484 1.87902 8.78221 1.91763C8.62057 1.9614 8.47418 2.07526 8.18141 2.30297Z"
-                            stroke="#7288FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            stroke="#28C7A1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                 </x-slot:icon>
             </x-label>
@@ -162,7 +162,6 @@
 
             <div>
                 <p>Carga total: <span>{{ number_format($totalWeight, 0) }} kg</span></p>
-                <p>Compañía: <span>{{ $shippingDocument->company->name ?? 'N/A' }}</span></p>
                 <p>Master BL: <span>{{ $shippingDocument->mbl_number ?? 'N/A' }}</span></p>
                 <p>Container: <span>{{ $shippingDocument->container_number ?? 'N/A' }}</span></p>
             </div>
@@ -240,7 +239,7 @@
                                 </p>
                                 @if($phase['date'])
                                     <p class="mb-1 text-xs font-medium {{ $phase['is_completed'] || $phase['is_current'] ? 'text-gray-600' : 'text-gray-400' }}">
-                                        {{ \Carbon\Carbon::parse($phase['date'])->format('d/m/Y') }}
+                                        {{ formatDate($phase['date']) }}
                                         <span class="{{ $phase['is_completed'] || $phase['is_current'] ? 'text-dark-blue font-bold' : 'text-gray-400' }}">
                                             {{ \Carbon\Carbon::parse($phase['date'])->format('H:i') }}
                                         </span>
@@ -255,7 +254,7 @@
                 <div class="p-6 mt-12 bg-white rounded-lg border border-gray-100 shadow-sm">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center space-x-4">
-                            <div class="p-3 bg-blue-50 rounded-full">
+                            <div class="p-3 bg-[#E6F9F4] rounded-full">
                                 <svg class="w-6 h-6 text-dark-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                           d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -264,12 +263,12 @@
                             <div>
                                 <p class="text-sm text-gray-500">Entrega estimada</p>
                                 <p class="text-lg font-bold text-dark-blue">
-                                    {{ \Carbon\Carbon::parse($trackingData['estimated_delivery'])->format('d/m/Y') }}
+                                    {{ formatDate($trackingData['estimated_delivery']) }}
                                 </p>
                             </div>
                         </div>
                         <div class="flex items-center space-x-4">
-                            <div class="p-3 bg-blue-50 rounded-full">
+                            <div class="p-3 bg-[#E6F9F4] rounded-full">
                                 <svg class="w-6 h-6 text-dark-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                           d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -319,7 +318,7 @@
 
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-[#E0E5FF]">
+                        <thead class="bg-[#D4F5ED]">
                             <tr>
                                 <th scope="col"
                                     class="px-6 py-5 text-xs font-bold tracking-wider text-left text-black uppercase cursor-pointer"
@@ -528,7 +527,7 @@
                                     </td>
                                     <td class="flex gap-2 items-center px-6 py-4 text-sm font-medium whitespace-nowrap">
                                         <a href="{{ route('purchase-orders.detail', $order['id']) }}"
-                                            class="text-indigo-600 hover:text-indigo-900">
+                                            class="text-[#1AAD8A] hover:text-[#0F614D]">
                                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M1.61342 8.4761C1.52262 8.33234 1.47723 8.26046 1.45182 8.1496C1.43273 8.06632 1.43273 7.93498 1.45182 7.85171C1.47723 7.74084 1.52262 7.66896 1.61341 7.5252C2.36369 6.33721 4.59693 3.33398 8.00027 3.33398C11.4036 3.33398 13.6369 6.33721 14.3871 7.5252C14.4779 7.66896 14.5233 7.74084 14.5487 7.85171C14.5678 7.93498 14.5678 8.06632 14.5487 8.1496C14.5233 8.26046 14.4779 8.33234 14.3871 8.4761C13.6369 9.66409 11.4036 12.6673 8.00027 12.6673C4.59693 12.6673 2.36369 9.66409 1.61342 8.4761Z" stroke="#666666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                                 <path d="M8.00027 10.0007C9.10484 10.0007 10.0003 9.10522 10.0003 8.00065C10.0003 6.89608 9.10484 6.00065 8.00027 6.00065C6.8957 6.00065 6.00027 6.89608 6.00027 8.00065C6.00027 9.10522 6.8957 10.0007 8.00027 10.0007Z" stroke="#666666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -589,7 +588,7 @@
                                 viewBox="0 0 21 22" fill="none">
                                 <path
                                     d="M19.1527 9.89994L10.1371 18.9156C8.08686 20.9658 4.76275 20.9658 2.71249 18.9156C0.662241 16.8653 0.662242 13.5412 2.71249 11.4909L11.7281 2.47532C13.0949 1.10849 15.311 1.10849 16.6779 2.47532C18.0447 3.84216 18.0447 6.05823 16.6779 7.42507L8.01579 16.0871C7.33238 16.7705 6.22434 16.7705 5.54092 16.0871C4.8575 15.4037 4.8575 14.2957 5.54092 13.6123L13.1423 6.01086"
-                                    stroke="#565AFF" stroke-width="2" stroke-linecap="round"
+                                    stroke="#1AAD8A" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round" />
                             </svg>
 
@@ -599,7 +598,7 @@
                 </div>
 
                 <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-[#E0E5FF]">
+                    <thead class="bg-[#D4F5ED]">
                         <tr>
                             <th scope="col"
                                 class="px-6 py-5 text-xs font-bold tracking-wider text-left text-black uppercase cursor-pointer">
@@ -628,7 +627,7 @@
                             <tr>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-medium text-gray-900">
-                                        <a href="{{ route('purchase-orders.detail', $poData['id']) }}" class="text-[#190FDB] underline underline-offset-4">
+                                        <a href="{{ route('purchase-orders.detail', $poData['id']) }}" class="text-[#127A62] underline underline-offset-4">
                                             {{ $poData['order_number'] }}
                                         </a>
                                     </div>
@@ -696,7 +695,7 @@
                                 viewBox="0 0 21 22" fill="none">
                                 <path
                                     d="M19.1527 9.89994L10.1371 18.9156C8.08686 20.9658 4.76275 20.9658 2.71249 18.9156C0.662241 16.8653 0.662242 13.5412 2.71249 11.4909L11.7281 2.47532C13.0949 1.10849 15.311 1.10849 16.6779 2.47532C18.0447 3.84216 18.0447 6.05823 16.6779 7.42507L8.01579 16.0871C7.33238 16.7705 6.22434 16.7705 5.54092 16.0871C4.8575 15.4037 4.8575 14.2957 5.54092 13.6123L13.1423 6.01086"
-                                    stroke="#565AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                    stroke="#1AAD8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                                     class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
                             </svg>
 
@@ -721,7 +720,7 @@
                 <!-- Tabla para comentarios y archivos adjuntos -->
                 <div class="overflow-x-auto w-full">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-[#E0E5FF]">
+                        <thead class="bg-[#D4F5ED]">
                             <tr>
                                 <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
                                     <input type="checkbox" class="rounded text-primary-600">
@@ -739,6 +738,9 @@
                                     Operación
                                 </th>
                                 <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
+                                    Tipo
+                                </th>
+                                <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
                                     Estado
                                 </th>
                                 <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
@@ -746,6 +748,9 @@
                                 </th>
                                 <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
                                     Archivos adjuntos
+                                </th>
+                                <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
+                                    Acciones
                                 </th>
                             </tr>
                         </thead>
@@ -756,7 +761,7 @@
                                         <input type="checkbox" class="rounded text-primary-600">
                                     </td>
                                     <td class="px-6 py-4 text-sm whitespace-nowrap">
-                                        {{ \Carbon\Carbon::parse($comment['created_at'])->format('d/m/Y H:i') }}
+                                        {{ formatDateTime($comment['created_at']) }}
                                     </td>
                                     <td class="px-6 py-4 text-sm whitespace-nowrap">
                                         {{ $comment['user_name'] }}
@@ -766,6 +771,29 @@
                                     </td>
                                     <td class="px-6 py-4 text-sm whitespace-nowrap">
                                         {{ $comment['stage'] ?? 'Shipping Document' }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        @if(($comment['action_type'] ?? 'comment') === 'comment')
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                Comentario
+                                            </span>
+                                        @elseif($comment['action_type'] === 'field_change')
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                Cambio de Datos
+                                            </span>
+                                        @elseif($comment['action_type'] === 'status_change')
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                                Cambio de Estado
+                                            </span>
+                                        @elseif($comment['action_type'] === 'record_create')
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                Creación
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                Otro
+                                            </span>
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         @if($comment['status'] === 'Aprobado')
@@ -789,7 +817,7 @@
                                         @if(count($comment['attachments'] ?? []) > 0)
                                             @foreach($comment['attachments'] as $attachment)
                                                 <a href="{{ $attachment['url'] }}"
-                                                   class="flex gap-1 items-center mb-1 text-blue-600 hover:text-blue-800"
+                                                   class="flex gap-1 items-center mb-1 text-[#1AAD8A] hover:text-[#0F614D]"
                                                    target="_blank">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -800,10 +828,20 @@
                                             @endforeach
                                         @endif
                                     </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        @if($comment['has_changes'] ?? false)
+                                            <button wire:click="$dispatchTo('partials.activity-detail-modal', 'openActivityDetail', @js($comment))" 
+                                                    class="text-[#1AAD8A] hover:text-[#0F614D] hover:underline">
+                                                Ver cambios
+                                            </button>
+                                        @else
+                                            <span class="text-gray-400">-</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="px-6 py-4 text-sm text-center text-gray-500">
+                                    <td colspan="9" class="px-6 py-4 text-sm text-center text-gray-500">
                                         No hay registros disponibles
                                     </td>
                                 </tr>
@@ -849,7 +887,7 @@
                             fill="none">
                             <path
                                 d="M19.1525 9.89897L10.1369 18.9146C8.08662 20.9648 4.7625 20.9648 2.71225 18.9146C0.661997 16.8643 0.661998 13.5402 2.71225 11.49L11.7279 2.47435C13.0947 1.10751 15.3108 1.10751 16.6776 2.47434C18.0444 3.84118 18.0444 6.05726 16.6776 7.42409L8.01555 16.0862C7.33213 16.7696 6.22409 16.7696 5.54068 16.0862C4.85726 15.4027 4.85726 14.2947 5.54068 13.6113L13.1421 6.00988"
-                                stroke="#565AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                stroke="#1AAD8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                                 class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
                         </svg>
 
@@ -916,4 +954,6 @@
             </x-primary-button>
         </div>
     </x-modal>
+
+    @livewire('partials.activity-detail-modal')
 </div>
