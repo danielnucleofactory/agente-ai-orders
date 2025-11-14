@@ -1224,7 +1224,7 @@ class CreatePucharseOrder extends Component
 
                     'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
                     'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
-                    'used_rate_ok'              => (bool) ($this->used_rate_ok ?? false),
+                    'used_rate_ok'              => false, // Siempre false
                     'uses_bonded_warehouse'     => (bool) ($this->uses_bonded_warehouse ?? false),
                     'apply_technical_note'      => (bool) ($this->apply_technical_note ?? false),
                     'etd_initial_validated'     => (bool) ($this->etd_initial_validated ?? false),
@@ -1559,7 +1559,7 @@ class CreatePucharseOrder extends Component
 
                 'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
                 'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
-                'used_rate_ok'              => (bool) ($this->used_rate_ok ?? false),
+                'used_rate_ok'              => false, // Siempre false
                 'uses_bonded_warehouse'     => (bool) ($this->uses_bonded_warehouse ?? false),
                 'apply_technical_note'      => (bool) ($this->apply_technical_note ?? false),
                 'etd_initial_validated'     => (bool) ($this->etd_initial_validated ?? false),
