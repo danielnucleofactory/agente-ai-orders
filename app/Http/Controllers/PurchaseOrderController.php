@@ -416,8 +416,14 @@ class PurchaseOrderController extends Controller
 
         // Helpers
         $parseDate = static function ($v) {
-            if ($v === null || $v === '') return null;
-            return \Illuminate\Support\Carbon::parse($v);
+            if ($v === null || $v === '' || $v === false) return null;
+            try {
+                return \Illuminate\Support\Carbon::parse($v);
+            } catch (\Exception $e) {
+                // Si falla el parseo, retornar null en lugar de lanzar excepción
+                \Log::warning("Error parsing date: {$v} - " . $e->getMessage());
+                return null;
+            }
         };
         $toBool = static function ($v) {
             if (is_bool($v)) return $v;
@@ -500,7 +506,7 @@ class PurchaseOrderController extends Controller
             'net_total'    => $netTotal,
             'total'        => $netTotal,
             'material_type'  => json_encode(['Standard']),
-            'ensurence_type' => 'pending',
+            'ensurence_type' => data_get($general, 'ensurence_type', 'pending'),
             'mode'           => data_get($general, 'mode'),
             'kanban_status_id' => $kanbanStatusId,
             'length_cm' => (float) data_get($general, 'length_cm', 0),
@@ -522,7 +528,7 @@ class PurchaseOrderController extends Controller
                      'cargo_invoice_number','tariff_type','route_label','arrival_status','arrival_port','departure_port',
                      'retail_group','customer_type','trading_company','service_provider','customs_dua','invoice',
                      'factura_merca','receipt_note','visibility_notes','price_incoterm','consolidator_name','vendor_number',
-                     'insurance_type',
+                     'insurance_type','tracking_id',
                  ] as $f) {
             // Verificar si el campo existe en el array (incluso si el valor es null)
             if (array_key_exists($f, $general)) {
@@ -544,25 +550,35 @@ class PurchaseOrderController extends Controller
                      'is_dropship','applies_tlc','applies_af','port_of_loading_validated','has_facture_merca',
                      'uses_bonded_warehouse','apply_technical_note','etd_initial_validated',
                  ] as $f) {
-            $poData[$f] = $toBool(data_get($general, $f, false));
+            // Verificar si el campo existe en el array
+            if (array_key_exists($f, $general) || isset($general[$f])) {
+                $poData[$f] = $toBool($general[$f]);
+            } else {
+                $poData[$f] = false;
+            }
         }
         // Forzar used_rate_ok siempre como false
         $poData['used_rate_ok'] = false;
 
         // NEW FIELDS FOR OLO (int)
         foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference','pallet_quantity','pallet_quantity_real'] as $f) {
-            if (($v = data_get($general, $f)) !== null && $v !== '') {
-                $poData[$f] = (int) $v;
+            // Verificar si el campo existe en el array
+            if (array_key_exists($f, $general) || isset($general[$f])) {
+                $v = $general[$f];
+                if ($v !== null && $v !== '') {
+                    $poData[$f] = (int) $v;
+                }
             }
         }
 
         // NEW FIELDS FOR OLO (decimal)
         foreach (['Invoice_amount','freight_amount','cbm','total_amount','other_expenses','estimated_pallet_cost','real_cost_estimated_po','real_cost_real_po','weight_kg','weight_lb'] as $f) {
-            // Si viene en el JSON, usarlo (incluso si es 0)
-            $v = data_get($general, $f);
-            if ($v !== null && $v !== '') {
-                // Convertir a float, incluso si viene como string numérico
-                $poData[$f] = (float) $v;
+            // Verificar si el campo existe en el array
+            if (array_key_exists($f, $general) || isset($general[$f])) {
+                $v = $general[$f];
+                if ($v !== null && $v !== '') {
+                    $poData[$f] = (float) $v;
+                }
             } elseif ($f === 'weight_kg' && $totalWeight > 0) {
                 // Si no viene weight_kg pero hay peso calculado de items, usarlo
                 $poData[$f] = (float) $totalWeight;
@@ -581,8 +597,15 @@ class PurchaseOrderController extends Controller
                      'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','dif_load_date','emision_date_po','forwader_date',
                      'date_consolidation','release_date',
                  ] as $f) {
-            if (array_key_exists($f, $general)) {
-                $poData[$f] = $parseDate($general[$f]);
+            // Verificar si el campo existe en el array (usar array_key_exists para verificar existencia real)
+            if (array_key_exists($f, $general) || isset($general[$f])) {
+                $dateValue = $general[$f];
+                if ($dateValue !== null && $dateValue !== '') {
+                    $parsedDate = $parseDate($dateValue);
+                    if ($parsedDate !== null) {
+                        $poData[$f] = $parsedDate;
+                    }
+                }
             }
         }
 
@@ -613,14 +636,28 @@ class PurchaseOrderController extends Controller
                          'net_total', 'total', 'length_cm', 'width_cm', 'height_cm',
                          'pallet_quantity', 'pallet_quantity_real', 'delay_days', 'container_free_days',
                          'etd_dates_difference', 'eta_dates_difference'];
-        $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields) {
-            // Permitir siempre estos campos opcionales, incluso si son null (para que se guarden explícitamente)
+        // Campos de fecha que deben preservarse incluso si vienen del JSON (pueden ser null si no vienen)
+        $dateFields = ['date_booking_request', 'date_booking_authorized', 'date_theorical_load', 'date_variable_date',
+                      'date_carga_po', 'date_received', 'date_etd_initial', 'date_etd_updated', 'date_eta_updated',
+                      'date_eta_initial', 'date_etd', 'date_atd', 'date_eta', 'date_ata',
+                      'date_estimated_hub_arrival', 'date_actual_hub_arrival', 'inspection_date', 'vgm_cut_date',
+                      'balance_payment_date', 'local_charges_payment_date', 'bonded_warehouse_enter',
+                      'bonded_warehouse_exit', 'receipt_note_date', 'estimated_dc_availability_date',
+                      'date_invoice_received', 'date_vendor_document_received', 'dif_load_date', 'emision_date_po',
+                      'forwader_date', 'date_consolidation', 'release_date', 'date_required_in_destination'];
+        $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields, $dateFields) {
+            // Permitir null para campos de texto opcionales (para que se guarden explícitamente como null)
             if (in_array($k, $optionalTextFields)) {
                 return true; // Mantener siempre estos campos, incluso si son null
             }
             // Permitir valores numéricos 0 (que son válidos)
             if (in_array($k, $numericFields)) {
                 return $v !== null && $v !== '';
+            }
+            // Permitir campos de fecha si vienen del JSON (incluso si se parsean como null)
+            if (in_array($k, $dateFields)) {
+                // Si el campo existe en $poData, mantenerlo (incluso si es null, significa que vino del JSON)
+                return true;
             }
             // Para otros campos, eliminar null y strings vacíos, pero permitir 0 y false
             return $v !== null && $v !== '' && $v !== false;
@@ -1149,113 +1186,81 @@ class PurchaseOrderController extends Controller
                 ->where('trading_company', $tradingCompany)
                 ->first();
 
-            if (!$po) {
-                // Si no está activa, verificar si existe eliminada
-                $deleted = PurchaseOrder::onlyTrashed()
-                    ->where('order_number', $orderNumber)
-                    ->where('trading_company', $tradingCompany)
-                    ->first();
+            // Si la PO ya existe, rechazarla (no actualizar)
+            if ($po) {
+                $results[] = [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'trading_company' => $tradingCompany,
+                    'status' => 'already_exists',
+                    'message' => 'Purchase order already exists',
+                    'id' => $po->id,
+                    'created_at' => $po->created_at?->toISOString(),
+                ];
+                continue;
+            }
 
-                if ($deleted) {
+            // Si no está activa, verificar si existe eliminada
+            $deleted = PurchaseOrder::onlyTrashed()
+                ->where('order_number', $orderNumber)
+                ->where('trading_company', $tradingCompany)
+                ->first();
+
+            if ($deleted) {
+                $results[] = [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'trading_company' => $tradingCompany,
+                    'status' => 'deleted',
+                    'message' => 'Purchase order is deleted',
+                    'deleted_at' => $deleted->deleted_at,
+                ];
+                continue;
+            }
+
+            // Si no existe, intentar crearla
+            try {
+                DB::beginTransaction();
+
+                // Preparar el item como si fuera para createFromApi
+                $createPayload = [
+                    'general' => $item,
+                    'items' => $item['items'] ?? []
+                ];
+
+                // Crear la PO usando la misma lógica de createFromApi
+                $createdPo = $this->createSinglePurchaseOrder($createPayload);
+
+                if ($createdPo) {
+                    DB::commit();
                     $results[] = [
                         'index' => $index,
                         'order_number' => $orderNumber,
                         'trading_company' => $tradingCompany,
-                        'status' => 'deleted',
-                        'message' => 'Purchase order is deleted',
-                        'deleted_at' => $deleted->deleted_at,
-                    ];
-                    continue;
-                }
-
-                // Si no existe, intentar crearla
-                try {
-                    DB::beginTransaction();
-
-                    // Preparar el item como si fuera para createFromApi
-                    $createPayload = [
-                        'general' => $item,
-                        'items' => $item['items'] ?? []
-                    ];
-
-                    // Crear la PO usando la misma lógica de createFromApi
-                    $createdPo = $this->createSinglePurchaseOrder($createPayload);
-
-                    if ($createdPo) {
-                        DB::commit();
-                        $results[] = [
-                            'index' => $index,
-                            'order_number' => $orderNumber,
-                            'trading_company' => $tradingCompany,
-                            'status' => 'created',
-                            'message' => 'Purchase order created successfully',
-                            'id' => $createdPo->id,
-                            'created_at' => $createdPo->created_at?->toISOString(),
+                        'status' => 'created',
+                        'message' => 'Purchase order created successfully',
+                        'id' => $createdPo->id,
+                        'created_at' => $createdPo->created_at?->toISOString(),
                     ];
                 } else {
-                        DB::rollBack();
-                    $results[] = [
-                        'index' => $index,
-                        'order_number' => $orderNumber,
-                            'trading_company' => $tradingCompany,
-                            'status' => 'failed',
-                            'message' => 'Failed to create purchase order',
-                        ];
-                    }
-                } catch (\Throwable $e) {
                     DB::rollBack();
                     $results[] = [
                         'index' => $index,
                         'order_number' => $orderNumber,
                         'trading_company' => $tradingCompany,
                         'status' => 'failed',
-                        'message' => 'Error creating purchase order: ' . $e->getMessage(),
-                        'error' => $e->getMessage(),
+                        'message' => 'Failed to create purchase order',
                     ];
                 }
-                continue;
-            }
-
-            // Construir payload de actualización: permitir todos los campos excepto order_number/trading_company
-            $updatePayload = $item;
-            unset($updatePayload['order_number'], $updatePayload['trading_company']);
-
-            if (empty($updatePayload)) {
-                $results[] = [
-                    'index' => $index,
-                    'order_number' => $orderNumber,
-                    'trading_company' => $tradingCompany,
-                    'status' => 'skipped',
-                    'message' => 'No updatable fields provided'
-                ];
-                continue;
-            }
-
-            try {
-                DB::beginTransaction();
-                // Reutilizar el mapeo/validaciones de processUpdateChanges
-                $changes = $this->processUpdateChanges($po, $updatePayload);
-                $po->save();
-
-                $this->logAudit($po, $changes, $request);
-                DB::commit();
-
-                $results[] = [
-                    'index' => $index,
-                    'order_number' => $orderNumber,
-                    'trading_company' => $tradingCompany,
-                    'status' => 'updated',
-                    'updated_at' => $po->updated_at?->toISOString(),
-                    'changes' => $changes,
-                ];
             } catch (\Throwable $e) {
                 DB::rollBack();
                 $results[] = [
                     'index' => $index,
                     'order_number' => $orderNumber,
                     'trading_company' => $tradingCompany,
-                    'status' => 'error',
-                    'message' => $e->getMessage(),
+                    'status' => 'failed',
+                    'message' => 'Error creating purchase order: ' . $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ];
             }
         }
@@ -1263,17 +1268,16 @@ class PurchaseOrderController extends Controller
         // Resumen
         $summary = [
             'total' => count($results),
-            'updated' => collect($results)->where('status', 'updated')->count(),
+            'created' => collect($results)->where('status', 'created')->count(),
+            'already_exists' => collect($results)->where('status', 'already_exists')->count(),
             'deleted' => collect($results)->where('status', 'deleted')->count(),
-            'not_found' => collect($results)->where('status', 'not_found')->count(),
-            'skipped' => collect($results)->where('status', 'skipped')->count(),
+            'failed' => collect($results)->where('status', 'failed')->count(),
             'validation_error' => collect($results)->where('status', 'validation_error')->count(),
-            'error' => collect($results)->where('status', 'error')->count(),
         ];
 
         return response()->json([
             'success' => true,
-            'message' => 'Bulk update processed',
+            'message' => 'Bulk create processed',
             'summary' => $summary,
             'results' => $results,
         ]);

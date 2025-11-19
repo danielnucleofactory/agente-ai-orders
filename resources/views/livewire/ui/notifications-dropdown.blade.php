@@ -28,7 +28,7 @@
                     <div class="flex p-3 border-b hover:bg-gray-50 {{ !$notification->isRead() ? 'bg-[#E6F9F4]' : '' }}">
                         <div class="flex-1 w-full">
                             <p class="text-sm font-semibold text-gray-800">{{ $notification->title }}</p>
-                            <p class="text-sm text-gray-600">{{ $notification->message }}</p>
+                            <p class="text-sm text-gray-600">{!! $this->formatNotificationMessage($notification) !!}</p>
                             <div class="flex items-center justify-between mt-1">
                                 <p class="text-xs text-gray-500">{{ $notification->created_at->diffForHumans() }}</p>
                                 @if(!$notification->isRead())
