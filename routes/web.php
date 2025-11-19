@@ -144,17 +144,17 @@ Route::middleware(['auth'])->group(function () {
     Route::get('purchase-orders/kanban-boards', \App\Livewire\Kanban\KanbanBoardList::class)
         ->name('purchase-orders.kanban-boards');
 
-    // Ver detalles de una orden de compra
-    Route::get('purchase-orders/{id}', ShowPucharseOrder::class)
-        ->name('purchase-orders.show');
-
-    // TODO: La ruta de arriba es lo mismo que esta (?)
+    // Ver detalles de una orden de compra (ruta más específica debe ir primero)
     Route::get('purchase-orders/{id}/detail', PucharseOrderDetail::class)
         ->name('purchase-orders.detail');
 
-    // Editar una orden de compra
+    // Editar una orden de compra (ruta más específica debe ir primero)
     Route::view('purchase-orders/{id}/edit', 'purchase-orders.edit')
         ->name('purchase-orders.edit');
+
+    // Ver detalles de una orden de compra (ruta genérica debe ir después de las específicas)
+    Route::get('purchase-orders/{id}', ShowPucharseOrder::class)
+        ->name('purchase-orders.show');
 
     // Rutas para hubs
     Route::view('hub', 'hub.index')

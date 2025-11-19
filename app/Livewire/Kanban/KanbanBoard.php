@@ -387,18 +387,41 @@ class KanbanBoard extends Component
             $task->update(['kanban_status_id' => $newStatus]);
 
             // Crear notificación para todos los usuarios (tu servicio actual)
-            $notificationService = app(\App\Services\NotificationService::class);
-            $notificationService->notifyAll(
-                'task_moved',
-                'Tarea Movida',
-                "La orden de compra {$task->order_number} fue movida de '{$oldColumnName}' a '{$newColumnName}' por " . auth()->user()->name,
-                [
-                    'task_id'   => $task->id,
-                    'po_number' => $task->order_number,
-                    'old_status'=> $oldColumnName,
-                    'new_status'=> $newColumnName,
-                ]
-            );
+            \Log::info("Attempting to create notifications for task move", [
+                'task_id' => $task->id,
+                'order_number' => $task->order_number,
+                'old_status' => $oldColumnName,
+                'new_status' => $newColumnName,
+                'user' => auth()->user()->name
+            ]);
+
+            try {
+                $notificationService = app(\App\Services\NotificationService::class);
+                $notifications = $notificationService->notifyAll(
+                    'task_moved',
+                    'Tarea Movida',
+                    "La orden de compra {$task->order_number} fue movida de '{$oldColumnName}' a '{$newColumnName}' por " . auth()->user()->name,
+                    [
+                        'order_id'  => $task->id,
+                        'task_id'   => $task->id,
+                        'order_number' => $task->order_number,
+                        'po_number' => $task->order_number,
+                        'old_status'=> $oldColumnName,
+                        'new_status'=> $newColumnName,
+                    ]
+                );
+
+                \Log::info("Notifications created successfully", [
+                    'task_id' => $task->id,
+                    'notifications_count' => count($notifications)
+                ]);
+            } catch (\Exception $e) {
+                \Log::error("Error creating notifications", [
+                    'task_id' => $task->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
 
             // Recargar datos y refrescar vista
             $this->loadData();
