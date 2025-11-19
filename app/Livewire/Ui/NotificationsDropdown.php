@@ -4,6 +4,7 @@ namespace App\Livewire\Ui;
 
 use Livewire\Component;
 use App\Models\Notification;
+use App\Models\PurchaseOrder;
 
 class NotificationsDropdown extends Component {
     public $notifications = [];
@@ -56,6 +57,71 @@ class NotificationsDropdown extends Component {
             ->update(['read_at' => now()]);
 
         $this->loadNotifications();
+    }
+
+    /**
+     * Formatear el mensaje de notificación convirtiendo números de PO en hipervínculos
+     *
+     * @param Notification $notification
+     * @return string
+     */
+    public function formatNotificationMessage($notification)
+    {
+        $message = $notification->message;
+        $data = $notification->data ?? [];
+        
+        // Intentar obtener el order_id del campo data
+        $orderId = $data['order_id'] ?? $data['task_id'] ?? null;
+        $orderNumber = $data['order_number'] ?? $data['po_number'] ?? null;
+        
+        // Si tenemos el order_id pero no el order_number, obtenerlo de la base de datos
+        if ($orderId && !$orderNumber) {
+            $purchaseOrder = PurchaseOrder::find($orderId);
+            if ($purchaseOrder) {
+                $orderNumber = $purchaseOrder->order_number;
+            }
+        }
+        
+        // Si no tenemos el order_id, intentar extraer el número de PO del mensaje
+        if (!$orderId && !$orderNumber) {
+            // Buscar el patrón "La orden de compra {número}" en el mensaje
+            if (preg_match('/La orden de compra\s+([^\s]+)/i', $message, $matches)) {
+                $orderNumber = $matches[1];
+            }
+        }
+        
+        // Si tenemos el order_number pero no el order_id, buscar en la base de datos
+        if ($orderNumber && !$orderId) {
+            $purchaseOrder = PurchaseOrder::where('order_number', $orderNumber)->first();
+            if ($purchaseOrder) {
+                $orderId = $purchaseOrder->id;
+            }
+        }
+        
+        // Si tenemos el order_id y el order_number, crear el enlace
+        if ($orderId && $orderNumber) {
+            $url = route('purchase-orders.detail', $orderId);
+            
+            // Crear el enlace HTML con el número de PO escapado
+            $escapedOrderNumber = e($orderNumber);
+            $link = '<a href="' . e($url) . '" class="text-blue-600 hover:text-blue-800 underline font-semibold">' . $escapedOrderNumber . '</a>';
+            
+            // Reemplazar el número de PO en el mensaje con el enlace
+            // Usar un marcador temporal para evitar problemas con caracteres especiales
+            $placeholder = '___PO_LINK_PLACEHOLDER___';
+            $messageWithPlaceholder = str_replace($orderNumber, $placeholder, $message);
+            
+            // Escapar el mensaje completo (el placeholder no se escapará porque no contiene caracteres especiales)
+            $escapedMessage = e($messageWithPlaceholder);
+            
+            // Reemplazar el placeholder con el enlace HTML
+            $formattedMessage = str_replace($placeholder, $link, $escapedMessage);
+            
+            return $formattedMessage;
+        }
+        
+        // Si no se puede crear el enlace, retornar el mensaje escapado
+        return e($message);
     }
 
     public function render()
