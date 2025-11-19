@@ -52,7 +52,7 @@ class PurchaseOrderObserver
         'dif_load_date',
         'emision_date_po',
         'update_date_po',
-        
+
         // Montos
         'net_total',
         'total',
@@ -75,11 +75,11 @@ class PurchaseOrderObserver
         'Invoice_amount',
         'freight_amount',
         'total_amount',
-        
+
         // Estados
         'status',
         'kanban_status_id',
-        
+
         // Campos comerciales
         'currency',
         'incoterms',
@@ -87,7 +87,7 @@ class PurchaseOrderObserver
         'price_incoterm',
         'payment_terms',
         'order_place',
-        
+
         // Campos de transporte/logística
         'departure_port',
         'arrival_port',
@@ -103,7 +103,7 @@ class PurchaseOrderObserver
         'factory_proforma_number',
         'bill_of_lading',
         'consolidator_name',
-        
+
         // Otros campos importantes
         'reason',
         'category',
@@ -123,10 +123,10 @@ class PurchaseOrderObserver
 
             // Obtener campos modificados
             $changes = $purchaseOrder->getDirty();
-            
+
             // Filtrar solo campos trackeados
             $trackedChanges = array_intersect_key($changes, array_flip($this->trackedFields));
-            
+
             if (empty($trackedChanges)) {
                 return;
             }
@@ -134,15 +134,15 @@ class PurchaseOrderObserver
             // Obtener valores originales y filtrar cambios que realmente son diferentes
             $oldValues = [];
             $realChanges = [];
-            
+
             foreach ($trackedChanges as $field => $newValue) {
                 try {
                     $oldValue = $purchaseOrder->getOriginal($field);
-                    
+
                     // Normalizar valores para comparación
                     $normalizedOld = $this->normalizeValue($oldValue);
                     $normalizedNew = $this->normalizeValue($newValue);
-                    
+
                     // Solo registrar si realmente cambió
                     if ($normalizedOld !== $normalizedNew) {
                         $oldValues[$field] = $oldValue;
@@ -154,12 +154,12 @@ class PurchaseOrderObserver
                     continue;
                 }
             }
-            
+
             // Si no hay cambios reales, no registrar nada
             if (empty($realChanges)) {
                 return;
             }
-            
+
             $trackedChanges = $realChanges;
 
             // Determinar tipo de acción
@@ -180,7 +180,7 @@ class PurchaseOrderObserver
             }
 
             // Crear comentario después del commit de la transacción
-            DB::afterCommit(function () use ($purchaseOrder, $actionType, $oldValues, $trackedChanges, $description) {
+            DB::afterCommit(function () use ($purchaseOrder, $actionType, $oldValues, $trackedChanges, $description, $isStatusChange) {
                 try {
                     PurchaseOrderComment::create([
                         'purchase_order_id' => $purchaseOrder->id,
@@ -192,6 +192,18 @@ class PurchaseOrderObserver
                         'ip_address' => request()->ip(),
                         'user_agent' => request()->userAgent(),
                     ]);
+
+                    // Dispatch webhook event if status changed
+                    if ($isStatusChange && function_exists('dispatch_webhook')) {
+                        $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                        dispatch_webhook('purchase_order.status_changed', [
+                            'purchase_order_id' => $purchaseOrder->id,
+                            'order_number' => $purchaseOrder->order_number,
+                            'old_status' => $oldValues['status'] ?? $oldValues['kanban_status_id'] ?? null,
+                            'new_status' => $trackedChanges['status'] ?? $trackedChanges['kanban_status_id'] ?? null,
+                            'data' => $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus'])->toArray(), // Incluye todos los campos (143 campos)
+                        ]);
+                    }
                 } catch (\Exception $e) {
                     // Si falla la creación del comentario, solo loguear el error
                     // No interrumpir el flujo principal
@@ -220,22 +232,22 @@ class PurchaseOrderObserver
         if ($value === null) {
             return '';
         }
-        
+
         // Si es una fecha/Carbon, convertir a string ISO
         if ($value instanceof \Carbon\Carbon) {
             return $value->format('Y-m-d H:i:s');
         }
-        
+
         if ($value instanceof \DateTime) {
             return $value->format('Y-m-d H:i:s');
         }
-        
+
         // Si es string numérico o numérico, convertir a float para comparación
         // Esto maneja casos como "0.00" vs 0 vs "0"
         if (is_numeric($value)) {
             return (float) $value;
         }
-        
+
         if (is_string($value)) {
             $trimmed = trim($value);
             // Si después de trim es numérico, convertir a float
@@ -245,17 +257,17 @@ class PurchaseOrderObserver
             // Si no, devolver el string trimmed
             return $trimmed;
         }
-        
+
         // Si es boolean, convertir a int
         if (is_bool($value)) {
             return $value ? 1 : 0;
         }
-        
+
         // Si es array, convertir a JSON string para comparación
         if (is_array($value)) {
             return json_encode($value, JSON_UNESCAPED_UNICODE);
         }
-        
+
         // Para otros tipos, convertir a string
         return (string) $value;
     }

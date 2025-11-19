@@ -382,6 +382,20 @@ class PurchaseOrderController extends Controller
 
             DB::commit();
 
+            // Dispatch webhook events for created purchase orders
+            foreach ($results as $result) {
+                if ($result['status'] === 'success') {
+                    $po = PurchaseOrder::with(['products', 'vendor', 'shipTo', 'kanbanStatus'])->find($result['id']);
+                    if ($po && function_exists('dispatch_webhook')) {
+                        dispatch_webhook('purchase_order.created', [
+                            'purchase_order_id' => $po->id,
+                            'order_number' => $po->order_number,
+                            'data' => $po->toArray(), // Incluye todos los campos (143 campos)
+                        ]);
+                    }
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Purchase orders created successfully',
@@ -825,6 +839,17 @@ class PurchaseOrderController extends Controller
             $this->logAudit($purchaseOrder, $changes, $request);
 
             DB::commit();
+
+            // Dispatch webhook event for updated purchase order
+            if (function_exists('dispatch_webhook')) {
+                $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                dispatch_webhook('purchase_order.updated', [
+                    'purchase_order_id' => $purchaseOrder->id,
+                    'order_number' => $purchaseOrder->order_number,
+                    'changes' => $changes,
+                    'data' => $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus'])->toArray(), // Incluye todos los campos (143 campos)
+                ]);
+            }
 
             return response()->json($response, 200);
 

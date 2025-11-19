@@ -259,6 +259,14 @@
                             </x-sidebar-dropdown-item>
                         </li>
                         @endif
+
+                        @if(config('webhook.enabled', false))
+                        <li>
+                            <x-sidebar-dropdown-item href="{{ route('webhook.settings.index') }}" :active="request()->routeIs('webhook.settings.*')">
+                                Webhooks
+                            </x-sidebar-dropdown-item>
+                        </li>
+                        @endif
                     </ul>
                 </x-sidebar-dropdown>
             </li>
