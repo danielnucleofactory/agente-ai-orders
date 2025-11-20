@@ -21,7 +21,7 @@
             </div>
             <div>
                 <p class="text-sm text-gray-500">Fecha</p>
-                <p class="text-sm font-medium">{{ $order->order_date ? $order->order_date->format('d/m/Y') : 'N/A' }}</p>
+                <p class="text-sm font-medium">{{ $order->order_date ? formatDate($order->order_date) : 'N/A' }}</p>
             </div>
             <div>
                 <p class="text-sm text-gray-500">Total</p>

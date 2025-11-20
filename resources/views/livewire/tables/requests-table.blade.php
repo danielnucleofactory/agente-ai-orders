@@ -187,7 +187,7 @@
         <x-slot name="date">
             <p class="text-gray-700">
                 @if(isset($selectedRequest->created_at))
-                    {{ \Carbon\Carbon::parse($selectedRequest->created_at)->format('d/m/Y') }}
+                    {{ formatDate($selectedRequest->created_at) }}
                 @else
                     --/--/----
                 @endif
@@ -233,7 +233,7 @@
                 </span>
                 @if(isset($selectedRequest->authorized_at))
                     <p class="mt-1 text-sm text-gray-500">
-                        Autorizado: {{ \Carbon\Carbon::parse($selectedRequest->authorized_at)->format('d/m/Y H:i:s') }}
+                        Autorizado: {{ formatDateTime($selectedRequest->authorized_at) }}
                     </p>
                 @endif
             @else

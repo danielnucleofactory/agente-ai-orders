@@ -57,7 +57,7 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                            {{ $user->created_at->format('d/m/Y') }}
+                            {{ formatDate($user->created_at) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="px-2 py-1 text-sm text-white bg-green-500 rounded-[5px]">

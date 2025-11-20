@@ -21,7 +21,7 @@
 
     // Helper para formatear fechas solo si existen
     $fmt = function ($date) {
-        return $date ? \Carbon\Carbon::parse($date)->format('d/m/Y') : null;
+        return $date ? formatDate($date) : null;
     };
 
     // Valores seguros

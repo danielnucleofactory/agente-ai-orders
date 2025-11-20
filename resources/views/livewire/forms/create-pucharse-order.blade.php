@@ -242,8 +242,14 @@
                         </div>
 
                         <div class="space-y-2">
-                            <x-form-select label="Puerto de Embarque" name="departure_port" wireModel="departure_port"
-                                :options="$portsArray" :error="$errors->has('departure_port') ? true : false" />
+                            <x-form-input>
+                                <x-slot:label>Puerto de Embarque</x-slot:label>
+                                <x-slot:input name="departure_port" placeholder="Ingrese puerto de embarque" wire:model="departure_port" class="pr-10 {{ $errors->has('departure_port') ? 'border-red-500' : '' }}">
+                                </x-slot:input>
+                                <x-slot:error>
+                                    {{ $errors->first('departure_port') }}
+                                </x-slot:error>
+                            </x-form-input>
                             <div class="flex items-center">
                                 <input id="port_of_loading_validated" type="checkbox" wire:model="port_of_loading_validated"
                                        class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
@@ -251,19 +257,37 @@
                             </div>
                         </div>
 
-                        <x-form-select label="Puerto de Arribo" name="arrival_port" wireModel="arrival_port"
-                            :options="$portsArray" :error="$errors->has('arrival_port') ? true : false" />
+                        <x-form-input>
+                            <x-slot:label>Puerto de Arribo</x-slot:label>
+                            <x-slot:input name="arrival_port" placeholder="Ingrese puerto de arribo" wire:model="arrival_port" class="pr-10 {{ $errors->has('arrival_port') ? 'border-red-500' : '' }}">
+                            </x-slot:input>
+                            <x-slot:error>
+                                {{ $errors->first('arrival_port') }}
+                            </x-slot:error>
+                        </x-form-input>
 
-                        <x-form-select label="Línea Naviera" name="shipping_line" wireModel="shipping_line"
-                            :options="$shippingLineArray" :error="$errors->has('shipping_line') ? true : false" />
+                        <x-form-input>
+                            <x-slot:label>Línea Naviera</x-slot:label>
+                            <x-slot:input name="shipping_line" placeholder="Ingrese línea naviera" wire:model="shipping_line" class="pr-10 {{ $errors->has('shipping_line') ? 'border-red-500' : '' }}">
+                            </x-slot:input>
+                            <x-slot:error>
+                                {{ $errors->first('shipping_line') }}
+                            </x-slot:error>
+                        </x-form-input>
 
                         <!-- Naviera y equipo -->
                         <div class="col-span-3">
                             <h4 class="text-sm font-semibold text-[#1AAD8A]">Naviera y equipo</h4>
                         </div>
 
-                        <x-form-select label="Tipo de Contenedor" name="container_type" wireModel="container_type"
-                            :options="$containerTypeArray" :error="$errors->has('container_type') ? true : false" />
+                        <x-form-input>
+                            <x-slot:label>Tipo de Contenedor</x-slot:label>
+                            <x-slot:input name="container_type" placeholder="Ingrese tipo de contenedor" wire:model="container_type" class="pr-10 {{ $errors->has('container_type') ? 'border-red-500' : '' }}">
+                            </x-slot:input>
+                            <x-slot:error>
+                                {{ $errors->first('container_type') }}
+                            </x-slot:error>
+                        </x-form-input>
 
                         <x-form-input>
                             <x-slot:label>Número de Contenedor</x-slot:label>
@@ -961,8 +985,14 @@
                             <h4 class="text-sm font-semibold text-[#1AAD8A]">Tarifas y ruta</h4>
                         </div>
 
-                        <x-form-select label="Tipo Tarifa" name="tariff_type" wireModel="tariff_type"
-                            :options="$tariffTypeArray" :error="$errors->has('tariff_type') ? true : false" />
+                        <x-form-input>
+                            <x-slot:label>Tipo Tarifa</x-slot:label>
+                            <x-slot:input name="tariff_type" placeholder="Ingrese tipo de tarifa" wire:model="tariff_type" class="pr-10 {{ $errors->has('tariff_type') ? 'border-red-500' : '' }}">
+                            </x-slot:input>
+                            <x-slot:error>
+                                {{ $errors->first('tariff_type') }}
+                            </x-slot:error>
+                        </x-form-input>
 
                         <x-form-input>
                             <x-slot:label>Ruta Logística</x-slot:label>

@@ -84,7 +84,7 @@
                                                 $date = $activity['created_at'] instanceof \Carbon\Carbon 
                                                     ? $activity['created_at'] 
                                                     : \Carbon\Carbon::parse($activity['created_at']);
-                                                echo $date->format('d/m/Y H:i');
+                                                echo formatDateTime($date);
                                             } catch (\Exception $e) {
                                                 echo 'N/A';
                                             }

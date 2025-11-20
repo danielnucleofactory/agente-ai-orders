@@ -106,18 +106,13 @@
                     </x-slot:error>
                 </x-form-input>
 
-                <x-form-select>
-                    <x-slot:label>
-                        Estado
-                    </x-slot:label>
-                    <x-slot:select name="status" wire:model="status">
-                        <option value="active">Activo</option>
-                        <option value="inactive">Inactivo</option>
-                    </x-slot:select>
-                    <x-slot:error>
-                        {{ $errors->first('status') }}
-                    </x-slot:error>
-                </x-form-select>
+                <x-form-select
+                    label="Estado"
+                    name="status"
+                    :options="$statusOptions"
+                    wireModel="status"
+                    :error="$errors->has('status')"
+                />
             </div>
 
             <div class="mt-6">

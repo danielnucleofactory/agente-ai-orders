@@ -26,6 +26,11 @@ class VendorForm extends Component
     public $title;
     public $subtitle;
 
+    public $statusOptions = [
+        'active' => 'Activo',
+        'inactive' => 'Inactivo',
+    ];
+
     protected $rules = [
         'name' => 'required|string|max:255',
         'vendo_code' => 'nullable|string|max:255',

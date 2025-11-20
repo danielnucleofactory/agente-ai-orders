@@ -158,7 +158,7 @@
                                         <svg class="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a4 4 0 118 0v4m-4 8a2 2 0 100-4 2 2 0 000 4zm0 0v4a2 2 0 002 2h6a2 2 0 002-2v-4"></path>
                                         </svg>
-                                        <span>Creado: {{ $token->created_at->format('d/m/Y H:i') }}</span>
+                                        <span>Creado: {{ formatDateTime($token->created_at) }}</span>
                                     </div>
 
                                     <div class="flex items-center">
@@ -166,7 +166,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                         </svg>
                                         @if($token->last_used_at)
-                                            <span>Último uso: {{ $token->last_used_at->format('d/m/Y H:i') }}</span>
+                                            <span>Último uso: {{ formatDateTime($token->last_used_at) }}</span>
                                         @else
                                             <span class="text-gray-400">Nunca usado</span>
                                         @endif
@@ -177,7 +177,7 @@
                                             <svg class="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a4 4 0 118 0v4m-4 8a2 2 0 100-4 2 2 0 000 4zm0 0v4a2 2 0 002 2h6a2 2 0 002-2v-4"></path>
                                             </svg>
-                                            <span>Expira: {{ $token->expires_at->format('d/m/Y H:i') }}</span>
+                                            <span>Expira: {{ formatDateTime($token->expires_at) }}</span>
                                         </div>
                                     @endif
                                 </div>
