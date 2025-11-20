@@ -795,7 +795,7 @@
                                        class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="applies_tlc" class="block ml-2 text-sm text-gray-700">Aplica TLC</label>
                             </div>
-                            <div class="flex items-center">
+                            <div class="flex items-center hidden">
                                 <input id="applies_af" type="checkbox" wire:model="applies_af"
                                        class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="applies_af" class="block ml-2 text-sm text-gray-700">Aplica AF</label>
@@ -826,7 +826,7 @@
 
                         @error('is_dropship')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         @error('applies_tlc')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                        @error('applies_af')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        @error('applies_af')<p class="mt-1 text-sm text-red-600 hidden">{{ $message }}</p>@enderror
                     </div>
 
 
