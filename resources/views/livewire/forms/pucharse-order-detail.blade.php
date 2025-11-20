@@ -469,7 +469,7 @@
                            class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A] opacity-75">
                     <label class="block ml-2 text-sm text-gray-700">Aplica TLC</label>
                 </div>
-                <div class="flex items-center">
+                <div class="flex items-center hidden">
                     <input type="checkbox" {{ ($purchaseOrder->applies_af ?? false) ? 'checked' : '' }} disabled
                            class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A] opacity-75">
                     <label class="block ml-2 text-sm text-gray-700">Aplica AF</label>
