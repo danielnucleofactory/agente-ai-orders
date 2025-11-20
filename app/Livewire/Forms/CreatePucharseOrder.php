@@ -641,8 +641,8 @@ class CreatePucharseOrder extends Component
                 $this->ancho = $this->purchaseOrder->width;
                 $this->alto = $this->purchaseOrder->height;
                 $this->volumen = $this->purchaseOrder->volume;
-                $this->peso_kg = $this->purchaseOrder->weight_kg;
-                $this->peso_lb = $this->purchaseOrder->weight_lb;
+                $this->peso_kg = $this->purchaseOrder->weight_kg ? (float) $this->purchaseOrder->weight_kg : null;
+                $this->peso_lb = $this->purchaseOrder->weight_lb ? (float) $this->purchaseOrder->weight_lb : null;
                 $this->tracking_id = $this->purchaseOrder->tracking_id;
                 $this->pallet_quantity = $this->purchaseOrder->pallet_quantity;
                 $this->pallet_quantity_real = $this->purchaseOrder->pallet_quantity_real;
