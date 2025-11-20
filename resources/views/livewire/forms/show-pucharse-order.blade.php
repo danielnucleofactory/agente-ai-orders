@@ -214,11 +214,11 @@
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">Peso (kg)</p>
-                    <p class="text-lg">{{ number_format($purchaseOrder->peso_kg ?? 0, 2) }}</p>
+                    <p class="text-lg">{{ number_format($purchaseOrder->weight_kg ?? 0, 2) }}</p>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">Peso (lb)</p>
-                    <p class="text-lg">{{ number_format($purchaseOrder->peso_lb ?? 0, 2) }}</p>
+                    <p class="text-lg">{{ number_format($purchaseOrder->weight_lb ?? 0, 2) }}</p>
                 </div>
             </div>
         </div>
