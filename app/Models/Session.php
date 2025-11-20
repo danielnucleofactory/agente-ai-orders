@@ -23,6 +23,14 @@ class Session extends Model
 
     public function getLastActivityAttribute()
     {
-        return Carbon::createFromTimestamp($this->attributes['last_activity'])->format('d/m/Y H:i:s');
+        if (!isset($this->attributes['last_activity'])) return null;
+        $carbon = Carbon::createFromTimestamp($this->attributes['last_activity']);
+        // Usar formatDateTime pero agregar segundos al formato
+        $dateFormat = getUserDateFormat();
+        $timeFormat = auth()->check() 
+            ? (auth()->user()->time_format ?? '24hrs')
+            : '24hrs';
+        $timePart = $timeFormat === '12hrs' ? 'h:i:s A' : 'H:i:s';
+        return $carbon->format($dateFormat . ' ' . $timePart);
     }
 }

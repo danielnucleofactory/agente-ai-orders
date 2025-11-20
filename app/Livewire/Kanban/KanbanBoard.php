@@ -644,7 +644,7 @@ class KanbanBoard extends Component
                     'id' => $comment->id,
                     'comment' => $comment->comment,
                     'user' => $comment->user->name,
-                    'created_at' => $comment->created_at->format('d/m/Y H:i'),
+                    'created_at' => formatDateTime($comment->created_at),
                     'attachment' => $comment->getAttachment() ? [
                         'name' => $comment->getAttachment()->name,
                         'url' => $comment->getAttachment()->getUrl()

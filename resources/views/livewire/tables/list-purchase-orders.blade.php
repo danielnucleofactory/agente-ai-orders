@@ -256,7 +256,7 @@
 
                             @if($visibleColumns['updated_at'])
                             <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $order->updated_at ? $order->updated_at->format('d/m/Y / H:i') : 'N/A' }}
+                                {{ $order->updated_at ? formatDateTime($order->updated_at) : 'N/A' }}
                             </td>
                             @endif
                                 @if($visibleColumns['actions'])

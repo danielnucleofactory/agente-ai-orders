@@ -441,8 +441,8 @@ class DashboardService
 
                 return [
                     'po_number' => $item->order_number, // Show actual PO number instead of count
-                    'fecha_salida' => $item->dispatch_date ? Carbon::parse($item->dispatch_date)->format('d/m/Y') : '-',
-                    'fecha_estimada' => $item->eta ? Carbon::parse($item->eta)->format('d/m/Y') : '-',
+                    'fecha_salida' => $item->dispatch_date ? formatDate($item->dispatch_date) : '-',
+                    'fecha_estimada' => $item->eta ? formatDate($item->eta) : '-',
                     'fecha_real' => '-', // Not used in this aggregated view
                     'cantidad_kg' => number_format((float)($item->total_kgs ?? 0), 2),
                 ];
@@ -480,9 +480,9 @@ class DashboardService
                 ->map(function ($po) {
                     return [
                         $po->order_number,
-                        $po->date_atd ? Carbon::parse($po->date_atd)->format('d/m/Y') : '',
-                        $po->date_eta ? Carbon::parse($po->date_eta)->format('d/m/Y') : '',
-                        $po->date_ata ? Carbon::parse($po->date_ata)->format('d/m/Y') : '',
+                        $po->date_atd ? formatDate($po->date_atd) : '',
+                        $po->date_eta ? formatDate($po->date_eta) : '',
+                        $po->date_ata ? formatDate($po->date_ata) : '',
                         $po->weight_kg ?? 0,
                         $po->status ?? '',
                         $po->plannedHub->name ?? '',

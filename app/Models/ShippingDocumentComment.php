@@ -26,7 +26,8 @@ class ShippingDocumentComment extends Model implements HasMedia {
     }
 
     public function getCreatedAtAttribute($value) {
-        return Carbon::parse($value)->format('d/m/Y H:i');
+        if (!$value) return null;
+        return formatDateTime(Carbon::parse($value));
     }
 
     public function registerMediaCollections(): void

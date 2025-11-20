@@ -35,7 +35,7 @@
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">Fecha de Orden</p>
-                    <p class="text-lg">{{ $purchaseOrder->order_date ? $purchaseOrder->order_date->format('d/m/Y') : 'N/A' }}</p>
+                    <p class="text-lg">{{ $purchaseOrder->order_date ? formatDate($purchaseOrder->order_date) : 'N/A' }}</p>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">Moneda</p>
@@ -229,39 +229,39 @@
             <div class="grid grid-cols-3 gap-4">
                 <div>
                     <p class="text-sm font-medium text-gray-500">Fecha de entrega solicitada</p>
-                    <p class="text-lg">{{ $purchaseOrder->requested_delivery_date ? $purchaseOrder->requested_delivery_date->format('d/m/Y H:i') : 'N/A' }}</p>
+                    <p class="text-lg">{{ $purchaseOrder->requested_delivery_date ? formatDateTime($purchaseOrder->requested_delivery_date) : 'N/A' }}</p>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">Fecha estimada de recogida</p>
-                    <p class="text-lg">{{ $purchaseOrder->estimated_pickup_date ? $purchaseOrder->estimated_pickup_date->format('d/m/Y H:i') : 'N/A' }}</p>
+                    <p class="text-lg">{{ $purchaseOrder->estimated_pickup_date ? formatDateTime($purchaseOrder->estimated_pickup_date) : 'N/A' }}</p>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">Fecha real de recogida</p>
-                    <p class="text-lg">{{ $purchaseOrder->actual_pickup_date ? $purchaseOrder->actual_pickup_date->format('d/m/Y H:i') : 'N/A' }}</p>
+                    <p class="text-lg">{{ $purchaseOrder->actual_pickup_date ? formatDateTime($purchaseOrder->actual_pickup_date) : 'N/A' }}</p>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">Llegada estimada al hub</p>
-                    <p class="text-lg">{{ $purchaseOrder->estimated_hub_arrival ? $purchaseOrder->estimated_hub_arrival->format('d/m/Y H:i') : 'N/A' }}</p>
+                    <p class="text-lg">{{ $purchaseOrder->estimated_hub_arrival ? formatDateTime($purchaseOrder->estimated_hub_arrival) : 'N/A' }}</p>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">Llegada real al hub</p>
-                    <p class="text-lg">{{ $purchaseOrder->actual_hub_arrival ? $purchaseOrder->actual_hub_arrival->format('d/m/Y H:i') : 'N/A' }}</p>
+                    <p class="text-lg">{{ $purchaseOrder->actual_hub_arrival ? formatDateTime($purchaseOrder->actual_hub_arrival) : 'N/A' }}</p>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">ETD (Fecha estimada de salida)</p>
-                    <p class="text-lg">{{ $purchaseOrder->etd_date ? $purchaseOrder->etd_date->format('d/m/Y H:i') : 'N/A' }}</p>
+                    <p class="text-lg">{{ $purchaseOrder->etd_date ? formatDateTime($purchaseOrder->etd_date) : 'N/A' }}</p>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">ATD (Fecha real de salida)</p>
-                    <p class="text-lg">{{ $purchaseOrder->atd_date ? $purchaseOrder->atd_date->format('d/m/Y H:i') : 'N/A' }}</p>
+                    <p class="text-lg">{{ $purchaseOrder->atd_date ? formatDateTime($purchaseOrder->atd_date) : 'N/A' }}</p>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">ETA (Fecha estimada de llegada)</p>
-                    <p class="text-lg">{{ $purchaseOrder->eta_date ? $purchaseOrder->eta_date->format('d/m/Y H:i') : 'N/A' }}</p>
+                    <p class="text-lg">{{ $purchaseOrder->eta_date ? formatDateTime($purchaseOrder->eta_date) : 'N/A' }}</p>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">ATA (Fecha real de llegada)</p>
-                    <p class="text-lg">{{ $purchaseOrder->ata_date ? $purchaseOrder->ata_date->format('d/m/Y H:i') : 'N/A' }}</p>
+                    <p class="text-lg">{{ $purchaseOrder->ata_date ? formatDateTime($purchaseOrder->ata_date) : 'N/A' }}</p>
                 </div>
             </div>
         </div>
