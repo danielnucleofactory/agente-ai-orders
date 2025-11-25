@@ -386,12 +386,26 @@ class PurchaseOrderController extends Controller
             foreach ($results as $result) {
                 if ($result['status'] === 'success') {
                     $po = PurchaseOrder::with(['products', 'vendor', 'shipTo', 'kanbanStatus'])->find($result['id']);
-                    if ($po && function_exists('dispatch_webhook')) {
-                        dispatch_webhook('purchase_order.created', [
-                            'purchase_order_id' => $po->id,
+                    if ($po) {
+                        \Log::info('Attempting to dispatch webhook for PO', [
+                            'po_id' => $po->id,
                             'order_number' => $po->order_number,
-                            'data' => $po->toArray(), // Incluye todos los campos (143 campos)
+                            'function_exists' => function_exists('dispatch_webhook'),
+                            'webhook_enabled' => config('webhook.enabled', false),
                         ]);
+
+                        if (function_exists('dispatch_webhook')) {
+                            dispatch_webhook('purchase_order.created', [
+                                'purchase_order_id' => $po->id,
+                                'order_number' => $po->order_number,
+                                'data' => $po->toArray(), // Incluye todos los campos (143 campos)
+                            ]);
+                        } else {
+                            \Log::warning('dispatch_webhook function does not exist', [
+                                'po_id' => $po->id,
+                                'order_number' => $po->order_number,
+                            ]);
+                        }
                     }
                 }
             }
