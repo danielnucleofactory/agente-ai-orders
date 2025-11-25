@@ -1444,6 +1444,21 @@ class PurchaseOrderController extends Controller
                 $this->logAudit($po, $changes, $request);
                 DB::commit();
 
+                // Dispatch webhook event for updated purchase order
+                if (function_exists('dispatch_webhook')) {
+                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                    \Log::info('Dispatching webhook for bulk updated PO', [
+                        'po_id' => $po->id,
+                        'order_number' => $po->order_number,
+                    ]);
+                    dispatch_webhook('purchase_order.updated', [
+                        'purchase_order_id' => $po->id,
+                        'order_number' => $po->order_number,
+                        'changes' => $changes,
+                        'data' => $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus'])->toArray(), // Incluye todos los campos (143 campos)
+                    ]);
+                }
+
                 $results[] = [
                     'index' => $index,
                     'order_number' => $orderNumber,
