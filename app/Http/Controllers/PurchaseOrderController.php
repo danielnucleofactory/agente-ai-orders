@@ -1272,6 +1272,21 @@ class PurchaseOrderController extends Controller
 
                 if ($createdPo) {
                     DB::commit();
+
+                    // Dispatch webhook event for created purchase order
+                    $po = PurchaseOrder::with(['products', 'vendor', 'shipTo', 'kanbanStatus'])->find($createdPo->id);
+                    if ($po && function_exists('dispatch_webhook')) {
+                        \Log::info('Dispatching webhook for bulk created PO', [
+                            'po_id' => $po->id,
+                            'order_number' => $po->order_number,
+                        ]);
+                        dispatch_webhook('purchase_order.created', [
+                            'purchase_order_id' => $po->id,
+                            'order_number' => $po->order_number,
+                            'data' => $po->toArray(), // Incluye todos los campos (143 campos)
+                        ]);
+                    }
+
                     $results[] = [
                         'index' => $index,
                         'order_number' => $orderNumber,
