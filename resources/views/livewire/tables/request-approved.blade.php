@@ -61,7 +61,7 @@
                     @forelse($requests as $request)
                         <tr>
                             <td class="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                                {{ $request->created_at->format('Y-m-d H:i') }}
+                                {{ formatDateTime($request->created_at) }}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                                 {{ $request->operation_id }}

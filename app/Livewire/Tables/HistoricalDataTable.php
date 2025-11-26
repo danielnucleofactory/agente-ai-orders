@@ -10,6 +10,8 @@ class HistoricalDataTable extends Component
 {
     use WithPagination;
 
+    protected $paginationTheme = 'tailwind';
+
     public $search = '';
     public $filters = [
         'vendor' => '',
@@ -76,8 +78,19 @@ class HistoricalDataTable extends Component
             $query->where('trading_company', $this->filters['trading_company']);
         }
 
+        // Ordenar por fecha de emisión descendente
         $historicalData = $query->orderBy('emision_date_po', 'desc')
+                                ->orderBy('id', 'desc')
                                 ->paginate($this->perPage);
+
+        // Log para debugging (remover en producción si es necesario)
+        \Log::debug('HistoricalDataTable render', [
+            'total' => $historicalData->total(),
+            'count' => $historicalData->count(),
+            'current_page' => $historicalData->currentPage(),
+            'search' => $this->search,
+            'filters' => $this->filters,
+        ]);
 
         // Obtener opciones para filtros
         $vendors = HistoricalPurchaseOrder::select('vendor_id', 'vendor_name')

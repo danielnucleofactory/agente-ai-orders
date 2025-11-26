@@ -11,12 +11,16 @@ echo "Configurando permisos..."
 chmod -R 755 .
 chmod -R 775 storage bootstrap/cache
 
+echo "Ejecutando migraciones..."
+php artisan migrate --force || echo "Warning: No se pudieron ejecutar las migraciones"
+
 echo "Limpiando caches..."
 php artisan cache:clear || echo "Warning: No se pudo limpiar la caché"
 php artisan view:clear || echo "Warning: No se pudieron limpiar las vistas"
 php artisan route:clear || echo "Warning: No se pudieron limpiar las rutas"
 php artisan config:clear || echo "Warning: No se pudo limpiar config"
 php artisan event:clear || echo "Warning: No se pudieron limpiar eventos"
+php artisan permission:cache-reset || echo "Warning: No se pudo limpiar caché de permisos"
 
 echo "Optimizando la aplicación..."
 php artisan optimize || echo "Warning: No se pudo optimizar la aplicación"
