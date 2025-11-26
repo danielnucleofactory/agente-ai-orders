@@ -149,6 +149,15 @@
                             </x-sidebar-dropdown-item>
                         </li>
                         @endcan
+
+                        @can('has_view_historical_data')
+                        <li>
+                            <x-sidebar-dropdown-item href="{{ route('historical-data.index') }}"
+                                :active="request()->routeIs('historical-data.index')">
+                                Histórico de Datos
+                            </x-sidebar-dropdown-item>
+                        </li>
+                        @endcan
                     </ul>
                 </x-sidebar-dropdown>
             </li>
@@ -290,6 +299,11 @@
                         <li>
                             <x-sidebar-dropdown-item href="{{ route('support.index') }}" :active="request()->routeIs('support.index')">
                                 FAQS
+                            </x-sidebar-dropdown-item>
+                        </li>
+                        <li>
+                            <x-sidebar-dropdown-item href="{{ route('support.contact') }}" :active="request()->routeIs('support.contact')">
+                                Contactar Soporte
                             </x-sidebar-dropdown-item>
                         </li>
                     </ul>

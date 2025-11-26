@@ -249,9 +249,17 @@ Route::middleware(['auth'])->group(function () {
     })->name('logout-session');
 });
 
-Route::view('support', 'support.index')
-    ->middleware(['auth'])
-    ->name('support.index');
+Route::middleware(['auth'])->group(function () {
+    Route::view('support', 'support.index')
+        ->name('support.index');
+    
+    Route::get('support/contact', \App\Livewire\Support\ContactForm::class)
+        ->name('support.contact');
+
+    Route::view('historical-data', 'historical-data.index')
+        ->middleware('permission:has_view_historical_data')
+        ->name('historical-data.index');
+});
 
 // Ruta de prueba para el módulo PO Confirmation
 Route::get('/po-confirmation-test', function () {

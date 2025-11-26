@@ -50,6 +50,10 @@ class PermissionsSeeder extends Seeder
             'has_approve_requests' => 'Aprobar solicitudes',
             'has_reject_requests' => 'Rechazar solicitudes',
 
+            // Histórico de Datos
+            'has_view_historical_data' => 'Ver histórico de datos',
+            'has_import_historical_data' => 'Importar datos históricos desde CSV',
+
             // Documentación de Envío
             'has_view_shipping_docs' => 'Ver documentación de envío',
             'has_create_shipping_docs' => 'Crear documentación de envío',
@@ -169,6 +173,7 @@ class PermissionsSeeder extends Seeder
             'has_view_products', 'has_create_products', 'has_show_products', 'has_edit_products',
             'has_view_forecast', 'has_view_forecast_graph', 'has_view_forecast_table', 'has_edit_forecast',
             'has_view_requests', 'has_approve_requests', 'has_reject_requests',
+            'has_view_historical_data', 'has_import_historical_data',
             'has_view_shipping_docs', 'has_create_shipping_docs', 'has_edit_shipping_docs',
             'has_view_vendors', 'has_create_vendors', 'has_show_vendors', 'has_edit_vendors',
             'has_view_ship_to', 'has_create_ship_to', 'has_edit_ship_to',
@@ -198,6 +203,7 @@ class PermissionsSeeder extends Seeder
             'has_view_products', 'has_create_products', 'has_show_products', 'has_edit_products',
             'has_view_forecast', 'has_view_forecast_graph', 'has_view_forecast_table',
             'has_view_requests',
+            'has_view_historical_data',
             'has_view_shipping_docs', 'has_create_shipping_docs',
             'has_view_vendors', 'has_show_vendors',
             'has_view_ship_to', 'has_view_bill_to', 'has_view_hubs',
@@ -218,6 +224,7 @@ class PermissionsSeeder extends Seeder
             'has_view_products', 'has_show_products',
             'has_view_forecast', 'has_view_forecast_graph', 'has_view_forecast_table',
             'has_view_requests',
+            'has_view_historical_data',
             'has_view_shipping_docs',
             'has_view_vendors', 'has_show_vendors',
             'has_view_ship_to', 'has_view_bill_to', 'has_view_hubs',
@@ -237,6 +244,7 @@ class PermissionsSeeder extends Seeder
             'has_view_products', 'has_show_products',
             'has_view_forecast', 'has_view_forecast_graph', 'has_view_forecast_table',
             'has_view_requests', 'has_approve_requests', 'has_reject_requests',
+            'has_view_historical_data',
             'has_view_shipping_docs',
             'has_view_vendors', 'has_show_vendors',
             'has_view_ship_to', 'has_view_bill_to', 'has_view_hubs',

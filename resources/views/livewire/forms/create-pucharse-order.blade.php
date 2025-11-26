@@ -994,12 +994,13 @@
                             </x-slot:error>
                         </x-form-input>
 
-                        <x-form-input>
-                            <x-slot:label>Ruta Logística</x-slot:label>
-                            <x-slot:input name="route_label" placeholder="Ingrese la ruta logística" wire:model="route_label" class="pr-10 {{ $errors->has('route_label') ? 'border-red-500' : '' }}">
-                            </x-slot:input>
-                            <x-slot:error>{{ $errors->first('route_label') }}</x-slot:error>
-                        </x-form-input>
+                        <x-form-select
+                            label="Ruta Logística"
+                            name="route_label"
+                            :options="$routeLabelArray"
+                            wire:model="route_label"
+                            :error="$errors->has('route_label')"
+                        />
 
                         <!-- Segmento / cliente -->
                         <div class="col-span-3">
