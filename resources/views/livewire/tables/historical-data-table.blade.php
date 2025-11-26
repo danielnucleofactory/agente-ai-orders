@@ -45,6 +45,15 @@
             </div>
         </div>
 
+        <!-- Debug info (temporal) -->
+        @if(config('app.debug'))
+            <div class="mb-4 p-2 bg-yellow-100 text-xs">
+                Total: {{ $historicalData->total() }}, 
+                En página: {{ $historicalData->count() }}, 
+                Página: {{ $historicalData->currentPage() }}
+            </div>
+        @endif
+
         <!-- Tabla -->
         <div class="overflow-x-auto bg-white rounded-lg shadow">
             <table class="min-w-full divide-y divide-gray-200">
@@ -73,7 +82,7 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $record->emision_date_po?->format('Y-m-d') ?? 'N/A' }}
+                                {{ $record->emision_date_po ? formatDate($record->emision_date_po) : 'N/A' }}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                                 @if($record->net_total)
@@ -86,10 +95,10 @@
                                 {{ $record->container_number ?? 'N/A' }}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $record->date_etd?->format('Y-m-d') ?? 'N/A' }}
+                                {{ $record->date_etd ? formatDate($record->date_etd) : 'N/A' }}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $record->date_eta?->format('Y-m-d') ?? 'N/A' }}
+                                {{ $record->date_eta ? formatDate($record->date_eta) : 'N/A' }}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                                 {{ $record->trading_company ?? 'N/A' }}

@@ -58,7 +58,7 @@
                     <strong style="color: #333333;">Número de solicitud:</strong> #{{ $supportRequest->id }}
                 </p>
                 <p style="color: #666666; font-size: 12px; margin: 5px 0;">
-                    <strong style="color: #333333;">Fecha:</strong> {{ $supportRequest->created_at->format('d/m/Y H:i') }}
+                    <strong style="color: #333333;">Fecha:</strong> {{ formatDateTime($supportRequest->created_at) }}
                 </p>
             </div>
         </td>

@@ -14,11 +14,33 @@
                     stroke="#5DD595" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
 
-            <h3 class="text-lg font-bold text-center text-success">
-                {{ $title ?? 'Operación Exitosa' }}
-            </h3>
+            @if(isset($title))
+                <h3 class="text-lg font-bold text-center text-success">
+                    {{ $title }}
+                </h3>
+            @elseif(isset($slot->title))
+                <div class="text-lg font-bold text-center text-success">
+                    {{ $slot->title }}
+                </div>
+            @else
+                <h3 class="text-lg font-bold text-center text-success">
+                    Operación Exitosa
+                </h3>
+            @endif
         </div>
 
-        {{ $slot }}
+        @if(isset($slot->description))
+            <div class="text-center text-gray-600 mb-4">
+                {{ $slot->description }}
+            </div>
+        @endif
+
+        @if(isset($slot->button))
+            <div class="mt-4">
+                {{ $slot->button }}
+            </div>
+        @else
+            {{ $slot }}
+        @endif
     </x-modal>
 </div>

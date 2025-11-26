@@ -303,7 +303,7 @@
                         </li>
                         <li>
                             <x-sidebar-dropdown-item href="{{ route('support.contact') }}" :active="request()->routeIs('support.contact')">
-                                Contactar Soporte
+                                Contacto
                             </x-sidebar-dropdown-item>
                         </li>
                     </ul>

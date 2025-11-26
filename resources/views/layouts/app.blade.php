@@ -21,7 +21,7 @@
         @livewireStyles
     </head>
 
-    <body class="bg-[#F7F7F7] grid grid-cols-[auto,1fr]">
+    <body class="bg-[#F7F7F7] grid grid-cols-[auto,1fr]" data-date-format="{{ auth()->check() ? (auth()->user()->date_format ?? 'DD/MM/YYYY') : 'DD/MM/YYYY' }}">
         <!-- Aqui debe ir el componente sidebar -->
         <livewire:partials.main-sidebar />
         <!-- Aqui debe ir el componente sidebar -->

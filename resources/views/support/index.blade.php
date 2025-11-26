@@ -22,7 +22,7 @@
             </x-primary-button>
 
             <a href="{{ route('support.contact') }}" class="px-6 py-2 text-white bg-[#1AAD8A] rounded-lg hover:bg-[#0F614D] transition">
-                Contactar Soporte
+                Contacto
             </a>
         </div>
 

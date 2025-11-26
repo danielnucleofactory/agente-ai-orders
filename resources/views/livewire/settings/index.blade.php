@@ -12,12 +12,7 @@
     ];
 @endphp
 
-@if (session()->has('message'))
-    <div class="p-4 text-green-700 bg-green-100 rounded-lg">
-        {{ session('message') }}
-    </div>
-@endif
-
+<div>
 <form wire:submit.prevent="saveSettings" wire:ignore class="px-6 py-4 space-y-6 bg-white rounded-2xl" >
     <div class="hidden">
         <div class="flex flex-col mb-6">
@@ -186,3 +181,18 @@
         Guardar cambios
     </button>
 </form>
+
+<x-modal-success name="settings-saved-modal">
+    <x-slot:title>
+        Configuraciones guardadas
+    </x-slot:title>
+
+    <x-slot:description>
+        Tus configuraciones han sido actualizadas correctamente.
+    </x-slot:description>
+
+    <x-primary-button wire:click="closeModal" class="w-full">
+        Aceptar
+    </x-primary-button>
+</x-modal-success>
+</div>
