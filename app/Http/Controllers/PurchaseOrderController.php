@@ -478,7 +478,8 @@ class PurchaseOrderController extends Controller
         // Relaciones (se buscan por nombre/código y se crean si no existen)
         $vendorId = data_get($general, 'vendor_id');
         $vendorName = data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
-        $companyId = data_get($general, 'company_id', 1);
+        $vendorCompanyId = data_get($general, 'company_id', 1);
+        $vendorCompanyId = is_numeric($vendorCompanyId) ? (int) $vendorCompanyId : 1;
 
         // Buscar o crear vendor
         $vendor = null;
@@ -493,7 +494,7 @@ class PurchaseOrderController extends Controller
             }
             if (!$vendor) {
                 $vendor = Vendor::create([
-                    'company_id' => $companyId,
+                    'company_id' => $vendorCompanyId,
                     'vendo_code' => (string) $vendorId,
                     'name' => $vendorName ?: ('Proveedor ' . $vendorId),
                     'status' => 'active',
@@ -503,7 +504,7 @@ class PurchaseOrderController extends Controller
             $vendor = Vendor::where('name', $vendorName)->first();
             if (!$vendor) {
                 $vendor = Vendor::create([
-                    'company_id' => $companyId,
+                    'company_id' => $vendorCompanyId,
                     'name' => $vendorName,
                     'vendo_code' => 'VENDOR_' . time(),
                     'status' => 'active',
@@ -521,8 +522,9 @@ class PurchaseOrderController extends Controller
 
         // Kanban inicial
         $kanbanStatusId = null;
-        $companyId = data_get($general, 'company_id', 1);
-        $kanbanBoard = KanbanBoard::where('company_id', $companyId)
+        $kanbanCompanyId = data_get($general, 'company_id', 1);
+        $kanbanCompanyId = is_numeric($kanbanCompanyId) ? (int) $kanbanCompanyId : 1;
+        $kanbanBoard = KanbanBoard::where('company_id', $kanbanCompanyId)
             ->where('type', 'po_stages')
             ->where('is_active', true)
             ->first();
@@ -534,8 +536,11 @@ class PurchaseOrderController extends Controller
         }
 
         // Campos base
+        $companyId = data_get($general, 'company_id', 1);
+        $companyId = is_numeric($companyId) ? (int) $companyId : 1;
+
         $poData = [
-            'company_id'   => data_get($general, 'company_id', 1),
+            'company_id'   => $companyId,
             'order_number' => data_get($general, 'order_number') ?? \Illuminate\Support\Str::uuid()->toString(),
             'status'       => 'draft',
             'order_date'   => $parseDate(data_get($general, 'emision_date_po')) ?? now(),
@@ -641,14 +646,15 @@ class PurchaseOrderController extends Controller
                      'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','dif_load_date','emision_date_po','forwader_date',
                      'date_consolidation','release_date',
                  ] as $f) {
-            // Verificar si el campo existe en el array (usar array_key_exists para verificar existencia real)
-            if (array_key_exists($f, $general) || isset($general[$f])) {
+            // Verificar si el campo existe en el array y tiene valor
+            if (isset($general[$f]) && $general[$f] !== null && $general[$f] !== '') {
                 $dateValue = $general[$f];
-                if ($dateValue !== null && $dateValue !== '') {
-                    $parsedDate = $parseDate($dateValue);
-                    if ($parsedDate !== null) {
-                        $poData[$f] = $parsedDate;
-                    }
+                $parsedDate = $parseDate($dateValue);
+                if ($parsedDate !== null) {
+                    $poData[$f] = $parsedDate;
+                } else {
+                    // Log si falla el parseo para debugging
+                    \Log::warning("Failed to parse date field {$f} with value: {$dateValue}");
                 }
             }
         }
@@ -673,14 +679,27 @@ class PurchaseOrderController extends Controller
             $poData['eta_dates_difference'] = (int) $general['eta_dates_difference'];
         }
 
-        // Limpiar null pero mantener campos opcionales con null y valores numéricos 0
-        $optionalTextFields = ['mbl_number', 'factory_proforma_number', 'factura_merca', 'case_number_file', 'comments'];
+        // Lista de todos los campos booleanos que deben preservarse incluso si son false
+        $booleanFields = ['is_dropship', 'applies_tlc', 'applies_af', 'port_of_loading_validated', 'has_facture_merca',
+                         'uses_bonded_warehouse', 'apply_technical_note', 'etd_initial_validated', 'used_rate_ok'];
+
+        // Lista de todos los campos de texto opcionales que pueden ser null
+        $optionalTextFields = ['mbl_number', 'factory_proforma_number', 'factura_merca', 'case_number_file', 'comments',
+                              'container_number', 'container_type', 'shipping_line', 'logistics_incoterm', 'reason',
+                              'category', 'forwarder_name', 'cargo_invoice_number', 'tariff_type', 'route_label',
+                              'arrival_status', 'arrival_port', 'departure_port', 'retail_group', 'customer_type',
+                              'trading_company', 'service_provider', 'customs_dua', 'invoice', 'receipt_note',
+                              'visibility_notes', 'price_incoterm', 'consolidator_name', 'vendor_number',
+                              'insurance_type', 'tracking_id'];
+
+        // Lista de todos los campos numéricos
         $numericFields = ['weight_kg', 'weight_lb', 'cbm', 'Invoice_amount', 'freight_amount', 'other_expenses',
                          'total_amount', 'estimated_pallet_cost', 'real_cost_estimated_po', 'real_cost_real_po',
                          'net_total', 'total', 'length_cm', 'width_cm', 'height_cm',
                          'pallet_quantity', 'pallet_quantity_real', 'delay_days', 'container_free_days',
                          'etd_dates_difference', 'eta_dates_difference', 'company_id'];
-        // Campos de fecha que deben preservarse incluso si vienen del JSON (pueden ser null si no vienen)
+
+        // Lista de todos los campos de fecha
         $dateFields = ['date_booking_request', 'date_booking_authorized', 'date_theorical_load', 'date_variable_date',
                       'date_carga_po', 'date_received', 'date_etd_initial', 'date_etd_updated', 'date_eta_updated',
                       'date_eta_initial', 'date_etd', 'date_atd', 'date_eta', 'date_ata',
@@ -689,29 +708,36 @@ class PurchaseOrderController extends Controller
                       'bonded_warehouse_exit', 'receipt_note_date', 'estimated_dc_availability_date',
                       'date_invoice_received', 'date_vendor_document_received', 'dif_load_date', 'emision_date_po',
                       'forwader_date', 'date_consolidation', 'release_date', 'date_required_in_destination', 'order_date'];
+
         // Campos que siempre deben mantenerse (incluso si son null o false)
         $alwaysKeepFields = ['company_id', 'order_number', 'status', 'currency', 'incoterms', 'mode', 'kanban_status_id',
                             'material_type', 'ensurence_type', 'vendor_id', 'vendor_number'];
-        $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields, $dateFields, $alwaysKeepFields) {
+
+        // Filtrar solo campos que realmente son null o strings vacíos, pero mantener todos los campos procesados
+        $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields, $dateFields, $alwaysKeepFields, $booleanFields) {
             // Mantener siempre campos críticos
             if (in_array($k, $alwaysKeepFields)) {
                 return true;
             }
-            // Permitir null para campos de texto opcionales (para que se guarden explícitamente como null)
-            if (in_array($k, $optionalTextFields)) {
-                return true; // Mantener siempre estos campos, incluso si son null
+            // Mantener campos booleanos (incluso si son false)
+            if (in_array($k, $booleanFields)) {
+                return true;
             }
-            // Permitir valores numéricos 0 (que son válidos)
+            // Mantener campos de texto opcionales (incluso si son null)
+            if (in_array($k, $optionalTextFields)) {
+                return true;
+            }
+            // Mantener campos numéricos si tienen valor (incluyendo 0)
             if (in_array($k, $numericFields)) {
                 return $v !== null && $v !== '';
             }
-            // Permitir campos de fecha si vienen del JSON (incluso si se parsean como null)
+            // Mantener campos de fecha si fueron procesados
             if (in_array($k, $dateFields)) {
-                // Si el campo existe en $poData, mantenerlo (incluso si es null, significa que vino del JSON)
                 return true;
             }
-            // Para otros campos, eliminar null y strings vacíos, pero permitir 0 y false
-            return $v !== null && $v !== '' && $v !== false;
+            // Para cualquier otro campo que fue agregado a $poData, mantenerlo si tiene valor
+            // Solo eliminar null y strings vacíos, pero permitir 0, false, y cualquier otro valor
+            return $v !== null && $v !== '';
         }, ARRAY_FILTER_USE_BOTH);
 
         // Crear PO
