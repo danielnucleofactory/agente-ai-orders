@@ -634,27 +634,34 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        // Fechas OLO
-        foreach ([
-                     'date_booking_request','date_booking_authorized','date_theorical_load','date_variable_date',
-                     'date_carga_po','date_received',
-                     'date_etd_initial','date_etd_updated','date_eta_updated','date_eta_initial',
-                     'date_etd', 'date_atd', 'date_eta', 'date_ata',
-                     'date_estimated_hub_arrival', 'date_actual_hub_arrival',
-                     'inspection_date','vgm_cut_date','balance_payment_date','local_charges_payment_date',
-                     'bonded_warehouse_enter','bonded_warehouse_exit','receipt_note_date',
-                     'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','dif_load_date','emision_date_po','forwader_date',
-                     'date_consolidation','release_date',
-                 ] as $f) {
+        // Fechas OLO - Procesar todas las fechas del JSON
+        $dateFieldsToProcess = [
+            'date_booking_request','date_booking_authorized','date_theorical_load','date_variable_date',
+            'date_carga_po','date_received',
+            'date_etd_initial','date_etd_updated','date_eta_updated','date_eta_initial',
+            'date_etd', 'date_atd', 'date_eta', 'date_ata',
+            'date_estimated_hub_arrival', 'date_actual_hub_arrival',
+            'inspection_date','vgm_cut_date','balance_payment_date','local_charges_payment_date',
+            'bonded_warehouse_enter','bonded_warehouse_exit','receipt_note_date',
+            'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','dif_load_date','emision_date_po','forwader_date',
+            'date_consolidation','release_date',
+        ];
+
+        foreach ($dateFieldsToProcess as $f) {
             // Verificar si el campo existe en el array y tiene valor
-            if (isset($general[$f]) && $general[$f] !== null && $general[$f] !== '') {
+            if (array_key_exists($f, $general) && $general[$f] !== null && $general[$f] !== '') {
                 $dateValue = $general[$f];
-                $parsedDate = $parseDate($dateValue);
-                if ($parsedDate !== null) {
-                    $poData[$f] = $parsedDate;
+                // Asegurar que el valor sea string antes de parsear
+                if (is_string($dateValue) || is_numeric($dateValue)) {
+                    $parsedDate = $parseDate($dateValue);
+                    if ($parsedDate !== null) {
+                        $poData[$f] = $parsedDate;
+                    } else {
+                        // Log si falla el parseo para debugging
+                        \Log::warning("Failed to parse date field {$f} with value: {$dateValue} (type: " . gettype($dateValue) . ")");
+                    }
                 } else {
-                    // Log si falla el parseo para debugging
-                    \Log::warning("Failed to parse date field {$f} with value: {$dateValue}");
+                    \Log::warning("Date field {$f} has invalid type: " . gettype($dateValue) . " with value: " . json_encode($dateValue));
                 }
             }
         }
