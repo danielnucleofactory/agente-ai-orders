@@ -45,4 +45,8 @@ return [
         'sync_enabled' => env('PORTH_SYNC_ENABLED', true),
     ],
 
+    'whatsapp' => [
+        'phone' => env('WHATSAPP_PHONE', '50670715265'),
+    ],
+
 ];

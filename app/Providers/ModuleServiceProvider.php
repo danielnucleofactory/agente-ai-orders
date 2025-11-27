@@ -22,7 +22,15 @@ class ModuleServiceProvider extends ServiceProvider
             'routes' => true,
             'views' => true,
         ],
-        // Aquí puedes agregar más módulos en el futuro
+        'webhook' => [
+            'enabled' => false,
+            'path' => 'internal_modules/orders-module-webhook',
+            'provider' => 'RagaOrders\\Webhook\\WebhookServiceProvider',
+            'config' => 'webhook',
+            'migrations' => true,
+            'routes' => true,
+            'views' => true,
+        ],
     ];
 
     /**
@@ -34,6 +42,7 @@ class ModuleServiceProvider extends ServiceProvider
 
         // Configurar el estado de cada módulo desde .env
         $modules['po_confirmation']['enabled'] = env('PO_CONFIRMATION_ENABLED', false);
+        $modules['webhook']['enabled'] = env('WEBHOOK_MODULE_ENABLED', false);
 
         return $modules;
     }
@@ -133,7 +142,12 @@ class ModuleServiceProvider extends ServiceProvider
             $loader = require base_path('vendor/autoload.php');
 
             if ($loader instanceof \Composer\Autoload\ClassLoader) {
-                $loader->addPsr4("RagaOrders\\POConfirmation\\", "{$srcPath}/");
+                // Registrar autoloader según el módulo
+                if ($moduleName === 'po_confirmation') {
+                    $loader->addPsr4("RagaOrders\\POConfirmation\\", "{$srcPath}/");
+                } elseif ($moduleName === 'webhook') {
+                    $loader->addPsr4("RagaOrders\\Webhook\\", "{$srcPath}/");
+                }
                 $this->logModuleInfo($moduleName, "Autoloader registrado para {$moduleName} (siempre disponible)");
             }
         }

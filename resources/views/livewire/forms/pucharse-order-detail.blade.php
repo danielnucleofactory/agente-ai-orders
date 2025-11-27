@@ -261,11 +261,11 @@
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Peso (kg)</p>
-                    <p class="font-semibold">{{ number_format($purchaseOrder->peso_kg ?? 0, 2) }}</p>
+                    <p class="font-semibold">{{ number_format($purchaseOrder->weight_kg ?? 0, 2) }}</p>
                 </div>
                 <div>
                     <p class="text-gray-500 mb-1">Peso (lb)</p>
-                    <p class="font-semibold">{{ number_format($purchaseOrder->peso_lb ?? 0, 2) }}</p>
+                    <p class="font-semibold">{{ number_format($purchaseOrder->weight_lb ?? 0, 2) }}</p>
                 </div>
             </div>
             </div>
@@ -469,7 +469,7 @@
                            class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A] opacity-75">
                     <label class="block ml-2 text-sm text-gray-700">Aplica TLC</label>
                 </div>
-                <div class="flex items-center">
+                <div class="flex items-center hidden">
                     <input type="checkbox" {{ ($purchaseOrder->applies_af ?? false) ? 'checked' : '' }} disabled
                            class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A] opacity-75">
                     <label class="block ml-2 text-sm text-gray-700">Aplica AF</label>

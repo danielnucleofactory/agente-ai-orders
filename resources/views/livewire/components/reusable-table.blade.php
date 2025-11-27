@@ -176,7 +176,7 @@
                                                         </span>
                                                     @endforeach
                                                 @elseif($row->$key instanceof \Carbon\Carbon)
-                                                    {{ $row->$key->format('d/m/Y') }}
+                                                    {{ formatDate($row->$key) }}
                                                 @elseif(strpos($key, '.') !== false && str_contains($key, '_count'))
                                                     {{ $row->$key }}
                                                 @elseif(is_object($row->$key))

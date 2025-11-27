@@ -1,7 +1,88 @@
 @import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
+@import 'flatpickr/dist/flatpickr.min.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Flatpickr Custom Styles */
+.flatpickr-calendar {
+    @apply shadow-lg border border-gray-200 rounded-xl;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.selected.inRange,
+.flatpickr-day.startRange.inRange,
+.flatpickr-day.endRange.inRange,
+.flatpickr-day.selected:focus,
+.flatpickr-day.startRange:focus,
+.flatpickr-day.endRange:focus,
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange:hover,
+.flatpickr-day.selected.prevMonthDay,
+.flatpickr-day.startRange.prevMonthDay,
+.flatpickr-day.endRange.prevMonthDay,
+.flatpickr-day.selected.nextMonthDay,
+.flatpickr-day.startRange.nextMonthDay,
+.flatpickr-day.endRange.nextMonthDay {
+    @apply bg-[#1AAD8A] border-[#1AAD8A];
+}
+
+.flatpickr-day.today {
+    @apply border-[#28C7A1];
+}
+
+.flatpickr-day.today:hover,
+.flatpickr-day.today:focus {
+    @apply bg-[#28C7A1] border-[#28C7A1] text-white;
+}
+
+.flatpickr-months .flatpickr-month {
+    @apply bg-[#1AAD8A] rounded-t-xl;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year {
+    @apply text-white font-semibold;
+}
+
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+    @apply text-white fill-white;
+}
+
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg {
+    @apply fill-white;
+}
+
+span.flatpickr-weekday {
+    @apply text-[#1AAD8A] font-semibold;
+}
+
+/* Estilos para el input de Flatpickr */
+input.flatpickr-input {
+    @apply cursor-pointer;
+}
+
+/* El input visible de Flatpickr (altInput) - aplicar estilos del diseño */
+input.flatpickr-alt-input {
+    @apply rounded-xl border-2 border-[#28C7A1] py-[0.625rem] px-3 text-lg text-[#2E2E2E] placeholder:text-[#AFAFAF] w-full leading-none cursor-pointer bg-white;
+}
+
+/* Ocultar el input original cuando altInput está activo */
+input.flatpickr-input.flatpickr-initialized {
+    position: absolute !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    opacity: 0 !important;
+}
 html,
 body {
     height: 100%;

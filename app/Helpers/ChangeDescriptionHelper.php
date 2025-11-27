@@ -276,7 +276,7 @@ class ChangeDescriptionHelper
         if (str_starts_with($field, 'date_') || str_ends_with($field, '_date') || $field === 'order_date' || $field === 'emision_date_po' || $field === 'update_date_po') {
             if ($value) {
                 try {
-                    return Carbon::parse($value)->format('d/m/Y H:i');
+                    return formatDateTime($value);
                 } catch (\Exception $e) {
                     return (string) $value;
                 }
@@ -323,7 +323,7 @@ class ChangeDescriptionHelper
         if (str_starts_with($field, 'date_') || str_ends_with($field, '_date') || $field === 'creation_date') {
             if ($value) {
                 try {
-                    return Carbon::parse($value)->format('d/m/Y H:i');
+                    return formatDateTime($value);
                 } catch (\Exception $e) {
                     return (string) $value;
                 }

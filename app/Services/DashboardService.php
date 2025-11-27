@@ -180,32 +180,92 @@ class DashboardService
     }
 
     /**
-     * Get canceled lines trend table data
+     * Get trend table data counting PO by stage and month
      * 
+     * @param array $filters Optional filters to apply
      * @return array
      */
-    public function getCanceledLinesTrendTable(): array
+    public function getCanceledLinesTrendTable(array $filters = []): array
     {
         try {
-            Log::info('DashboardService::getCanceledLinesTrendTable starting');
+            Log::info('DashboardService::getCanceledLinesTrendTable starting', ['filters' => $filters]);
 
             $currentYear = now()->year;
             $companyId = auth()->user()->company_id ?? null;
             
-            // Obtener POs anuladas (deleted_at IS NOT NULL) del año actual
+            // Obtener todas las PO del año actual (no solo anuladas)
             $query = PurchaseOrder::withTrashed()
-                ->whereNotNull('deleted_at')
                 ->whereYear('order_date', $currentYear);
             
             // Filtrar por company_id si el usuario tiene uno asignado
             if ($companyId) {
                 $query->where('company_id', $companyId);
             }
+
+            // Aplicar filtros adicionales
+            if (!empty($filters['po_retraso_cl'])) {
+                $query->whereNotNull('date_carga_po')
+                      ->whereNotNull('date_theorical_load')
+                      ->whereRaw('DATEDIFF(date_carga_po, date_theorical_load) >= 7');
+            }
+
+            if (!empty($filters['po_adelanto_cl'])) {
+                $query->whereNotNull('date_carga_po')
+                      ->whereNotNull('date_theorical_load')
+                      ->whereRaw('DATEDIFF(date_carga_po, date_theorical_load) <= -7');
+            }
+
+            if (!empty($filters['indicador_capacidad'])) {
+                $query->whereNull('date_etd_initial');
+            }
+
+            // Aplicar otros filtros del getBaseQuery si existen
+            if (!empty($filters['vendor_id'])) {
+                $vendorIds = is_array($filters['vendor_id']) ? $filters['vendor_id'] : [$filters['vendor_id']];
+                $vendorIds = array_filter($vendorIds);
+                if (!empty($vendorIds)) {
+                    $query->whereIn('vendor_id', $vendorIds);
+                }
+            }
+
+            if (!empty($filters['hub_id'])) {
+                $hubIds = is_array($filters['hub_id']) ? $filters['hub_id'] : [$filters['hub_id']];
+                $hubIds = array_filter($hubIds, function($value) {
+                    return $value !== null && $value !== '';
+                });
+                if (!empty($hubIds)) {
+                    $query->where(function ($q) use ($hubIds) {
+                        $hasZero = in_array('0', $hubIds) || in_array(0, $hubIds);
+                        $nonZeroHubIds = array_filter($hubIds, function($id) {
+                            return $id != 0;
+                        });
+                        if ($hasZero) {
+                            $q->whereNull('actual_hub_id');
+                        }
+                        if (!empty($nonZeroHubIds)) {
+                            if ($hasZero) {
+                                $q->orWhereIn('actual_hub_id', $nonZeroHubIds);
+                            } else {
+                                $q->whereIn('actual_hub_id', $nonZeroHubIds);
+                            }
+                        }
+                    });
+                }
+            }
+
+            if (!empty($filters['stage'])) {
+                $stages = is_array($filters['stage']) ? $filters['stage'] : [$filters['stage']];
+                $stages = array_filter($stages);
+                if (!empty($stages)) {
+                    $query->whereHas('kanbanStatus', function ($q) use ($stages) {
+                        $q->whereIn('name', $stages);
+                    });
+                }
+            }
             
-            $canceledPOs = $query->with(['kanbanStatus'])->get();
+            $purchaseOrders = $query->with(['kanbanStatus'])->get();
 
             // Obtener nombres de etapas del kanban para mapeo
-            // Filtrar por el kanban board de Purchase Orders de la compañía del usuario
             $kanbanStagesQuery = \App\Models\KanbanStatus::whereHas('board', function ($query) use ($companyId) {
                 $query->where('company_id', $companyId)
                       ->where(function($q) {
@@ -215,7 +275,6 @@ class DashboardService
                       ->where('is_active', true);
             });
             
-            // Si no hay company_id, usar el board_id 1 como fallback
             if (!$companyId) {
                 $kanbanStagesQuery = \App\Models\KanbanStatus::where('kanban_board_id', 1);
             }
@@ -225,61 +284,70 @@ class DashboardService
             // Inicializar estructura de categorías con meses (claves como strings "1" a "12")
             $monthKeys = array_map('strval', range(1, 12));
             $categories = [
-                'PO en Produccion' => array_fill_keys($monthKeys, 0),
-                'Cumplimiento de Carga lista' => array_fill_keys($monthKeys, 0),
-                'PO en booking' => array_fill_keys($monthKeys, 0),
-                'PO en transito' => array_fill_keys($monthKeys, 0),
-                'Allocation' => array_fill_keys($monthKeys, 0),
-                'PO En puerto de transbordo' => array_fill_keys($monthKeys, 0),
-                'Tiempo en puerto de transbordo' => array_fill_keys($monthKeys, 0),
-                'PO con ETA' => array_fill_keys($monthKeys, 0),
+                'Producción' => array_fill_keys($monthKeys, 0),
+                'Booking' => array_fill_keys($monthKeys, 0),
+                'Transito' => array_fill_keys($monthKeys, 0),
+                'Puerto' => array_fill_keys($monthKeys, 0),
+                'Recibiendo CDI' => array_fill_keys($monthKeys, 0),
+                'Ingresada' => array_fill_keys($monthKeys, 0),
+                'Anulada' => array_fill_keys($monthKeys, 0),
             ];
 
-            // Procesar cada PO anulada
-            foreach ($canceledPOs as $po) {
-                $month = (int) \Carbon\Carbon::parse($po->order_date)->format('n'); // 1-12
+            // Función helper para mapear nombre de etapa a categoría
+            $mapStageToCategory = function($stageName) {
+                $stageNameLower = strtolower($stageName);
+                if (stripos($stageName, 'producción') !== false || stripos($stageName, 'produccion') !== false) {
+                    return 'Producción';
+                } elseif (stripos($stageName, 'booking') !== false) {
+                    return 'Booking';
+                } elseif (stripos($stageName, 'tránsito') !== false || stripos($stageName, 'transito') !== false) {
+                    return 'Transito';
+                } elseif (stripos($stageName, 'puerto') !== false || stripos($stageName, 'llegada al hub') !== false) {
+                    return 'Puerto';
+                } elseif (stripos($stageName, 'recibiendo cdi') !== false) {
+                    return 'Recibiendo CDI';
+                } elseif (stripos($stageName, 'ingresada') !== false) {
+                    return 'Ingresada';
+                } elseif (stripos($stageName, 'anulada') !== false) {
+                    return 'Anulada';
+                }
+                return null;
+            };
+
+            // Procesar cada PO
+            foreach ($purchaseOrders as $po) {
+                // Determinar el mes: usar order_date para todas excepto Anulada que usa deleted_at
+                $dateToUse = $po->deleted_at ? $po->deleted_at : $po->order_date;
+                if (!$dateToUse) {
+                    continue;
+                }
+                
+                $month = (int) \Carbon\Carbon::parse($dateToUse)->format('n'); // 1-12
                 $monthKey = (string)$month; // Clave como string
-                $amountInThousands = ($po->total_amount ?? 0) / 1000;
 
                 // Categorizar por etapa del kanban
                 if ($po->kanban_status_id && isset($kanbanStages[$po->kanban_status_id])) {
                     $stageName = $kanbanStages[$po->kanban_status_id];
+                    $category = $mapStageToCategory($stageName);
                     
-                    // Mapear nombres de etapas a categorías
-                    if (stripos($stageName, 'producción') !== false || stripos($stageName, 'produccion') !== false) {
-                        $categories['PO en Produccion'][$monthKey] += $amountInThousands;
-                    } elseif (stripos($stageName, 'booking') !== false) {
-                        $categories['PO en booking'][$monthKey] += $amountInThousands;
-                    } elseif (stripos($stageName, 'tránsito') !== false || stripos($stageName, 'transito') !== false) {
-                        $categories['PO en transito'][$monthKey] += $amountInThousands;
-                    } elseif (stripos($stageName, 'puerto') !== false || stripos($stageName, 'transbordo') !== false) {
-                        $categories['PO En puerto de transbordo'][$monthKey] += $amountInThousands;
+                    if ($category && isset($categories[$category])) {
+                        $categories[$category][$monthKey] += 1; // Contar PO, no sumar montos
                     }
-                }
-
-                // PO con ETA (independiente de la etapa)
-                if ($po->date_eta) {
-                    $categories['PO con ETA'][$monthKey] += $amountInThousands;
+                } elseif ($po->deleted_at) {
+                    // PO anulada sin etapa asignada
+                    $categories['Anulada'][$monthKey] += 1;
                 }
             }
 
-            // Redondear valores y asegurar formato correcto
-            $formattedCategories = [];
-            foreach ($categories as $categoryName => $months) {
-                $formattedCategories[$categoryName] = [];
-                foreach ($months as $monthNum => $value) {
-                    $formattedCategories[$categoryName][$monthNum] = round($value, 2);
-                }
-            }
-
+            // Los valores ya son enteros (conteos), no necesitan redondeo
             $result = [
-                'categories' => $formattedCategories,
+                'categories' => $categories,
                 'year' => $currentYear,
             ];
 
             Log::info('DashboardService::getCanceledLinesTrendTable completed', [
                 'year' => $currentYear,
-                'total_canceled_pos' => $canceledPOs->count()
+                'total_pos' => $purchaseOrders->count()
             ]);
 
             return $result;
@@ -291,14 +359,13 @@ class DashboardService
             // Retornar estructura vacía en caso de error (con claves como strings)
             $emptyCategories = [];
             $categoryNames = [
-                'PO en Produccion',
-                'Cumplimiento de Carga lista',
-                'PO en booking',
-                'PO en transito',
-                'Allocation',
-                'PO En puerto de transbordo',
-                'Tiempo en puerto de transbordo',
-                'PO con ETA'
+                'Producción',
+                'Booking',
+                'Transito',
+                'Puerto',
+                'Recibiendo CDI',
+                'Ingresada',
+                'Anulada'
             ];
             foreach ($categoryNames as $catName) {
                 $emptyCategories[$catName] = array_fill_keys(array_map('strval', range(1, 12)), 0);
@@ -315,14 +382,15 @@ class DashboardService
     /**
      * Get trend table export data formatted for CSV/Excel
      *
+     * @param array $filters Optional filters to apply
      * @return array
      */
-    public function getTrendTableExportData(): array
+    public function getTrendTableExportData(array $filters = []): array
     {
         try {
             Log::info('DashboardService::getTrendTableExportData starting');
 
-            $trendData = $this->getCanceledLinesTrendTable();
+            $trendData = $this->getCanceledLinesTrendTable($filters);
             $categories = $trendData['categories'];
             $year = $trendData['year'];
             
@@ -336,16 +404,15 @@ class DashboardService
             }
             $rows[] = $header;
             
-            // Filas de datos
+            // Filas de datos - orden de las 7 etapas
             $categoryOrder = [
-                'PO en Produccion',
-                'Cumplimiento de Carga lista',
-                'PO en booking',
-                'PO en transito',
-                'Allocation',
-                'PO En puerto de transbordo',
-                'Tiempo en puerto de transbordo',
-                'PO con ETA'
+                'Producción',
+                'Booking',
+                'Transito',
+                'Puerto',
+                'Recibiendo CDI',
+                'Ingresada',
+                'Anulada'
             ];
             
             foreach ($categoryOrder as $categoryName) {
@@ -354,8 +421,8 @@ class DashboardService
                 
                 for ($month = 1; $month <= 12; $month++) {
                     $value = $categoryData[(string)$month] ?? 0;
-                    // Formatear con punto decimal y mostrar '-' si es 0
-                    $row[] = $value === 0 ? '-' : number_format($value, 2, '.', '');
+                    // Mostrar conteo entero o '-' si es 0
+                    $row[] = $value === 0 ? '-' : (string)$value;
                 }
                 
                 $rows[] = $row;
@@ -374,19 +441,25 @@ class DashboardService
             ]);
             
             // Retornar estructura vacía en caso de error
-            return [
-                ['Descripción', '1-' . now()->year, '2-' . now()->year, '3-' . now()->year, '4-' . now()->year, 
-                 '5-' . now()->year, '6-' . now()->year, '7-' . now()->year, '8-' . now()->year, 
-                 '9-' . now()->year, '10-' . now()->year, '11-' . now()->year, '12-' . now()->year],
-                ['PO en Produccion', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
-                ['Cumplimiento de Carga lista', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
-                ['PO en booking', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
-                ['PO en transito', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
-                ['Allocation', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
-                ['PO En puerto de transbordo', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
-                ['Tiempo en puerto de transbordo', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
-                ['PO con ETA', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+            $year = now()->year;
+            $header = ['Descripción'];
+            for ($month = 1; $month <= 12; $month++) {
+                $header[] = "$month-$year";
+            }
+            $rows = [$header];
+            $categoryOrder = [
+                'Producción',
+                'Booking',
+                'Transito',
+                'Puerto',
+                'Recibiendo CDI',
+                'Ingresada',
+                'Anulada'
             ];
+            foreach ($categoryOrder as $catName) {
+                $rows[] = array_merge([$catName], array_fill(0, 12, '-'));
+            }
+            return $rows;
         }
     }
 
@@ -441,8 +514,8 @@ class DashboardService
 
                 return [
                     'po_number' => $item->order_number, // Show actual PO number instead of count
-                    'fecha_salida' => $item->dispatch_date ? Carbon::parse($item->dispatch_date)->format('d/m/Y') : '-',
-                    'fecha_estimada' => $item->eta ? Carbon::parse($item->eta)->format('d/m/Y') : '-',
+                    'fecha_salida' => $item->dispatch_date ? formatDate($item->dispatch_date) : '-',
+                    'fecha_estimada' => $item->eta ? formatDate($item->eta) : '-',
                     'fecha_real' => '-', // Not used in this aggregated view
                     'cantidad_kg' => number_format((float)($item->total_kgs ?? 0), 2),
                 ];
@@ -480,9 +553,9 @@ class DashboardService
                 ->map(function ($po) {
                     return [
                         $po->order_number,
-                        $po->date_atd ? Carbon::parse($po->date_atd)->format('d/m/Y') : '',
-                        $po->date_eta ? Carbon::parse($po->date_eta)->format('d/m/Y') : '',
-                        $po->date_ata ? Carbon::parse($po->date_ata)->format('d/m/Y') : '',
+                        $po->date_atd ? formatDate($po->date_atd) : '',
+                        $po->date_eta ? formatDate($po->date_eta) : '',
+                        $po->date_ata ? formatDate($po->date_ata) : '',
                         $po->weight_kg ?? 0,
                         $po->status ?? '',
                         $po->plannedHub->name ?? '',

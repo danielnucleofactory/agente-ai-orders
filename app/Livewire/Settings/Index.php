@@ -28,7 +28,15 @@ class Index extends Component
             'time_format' => $this->timeFormat,
         ]);
 
-        session()->flash('message', 'Configuraciones actualizadas correctamente.');
+        // Refrescar el modelo para que los cambios se reflejen inmediatamente
+        $user->refresh();
+
+        // Emitir evento para abrir el modal de éxito
+        $this->dispatch('open-modal', 'settings-saved-modal');
+    }
+
+    public function closeModal() {
+        $this->dispatch('close-modal', 'settings-saved-modal');
     }
 
     public function render()

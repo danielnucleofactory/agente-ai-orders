@@ -35,7 +35,8 @@
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/",
-            "RagaOrders\\POConfirmation\\": "internal_modules/laravel-po-confirmation/src/"
+            "RagaOrders\\POConfirmation\\": "internal_modules/laravel-po-confirmation/src/",
+            "RagaOrders\\Webhook\\": "internal_modules/orders-module-webhook/src/"
         },
         "files": [
             "app/helpers.php"

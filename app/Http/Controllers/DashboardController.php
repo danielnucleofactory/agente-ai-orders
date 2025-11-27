@@ -140,7 +140,8 @@ class DashboardController extends Controller
             ]);
 
             // Exportar tabla de tendencias en lugar de POs individuales
-            $exportData = $this->dashboardService->getTrendTableExportData();
+            $filters = $this->getFilters($request);
+            $exportData = $this->dashboardService->getTrendTableExportData($filters);
 
             Log::info('Export data retrieved', ['rows_count' => count($exportData)]);
 
@@ -195,6 +196,9 @@ class DashboardController extends Controller
             'status' => $request->get('status'),
             'transport' => $request->get('transport'),
             'stage' => $request->get('stage'),
+            'po_retraso_cl' => $request->boolean('po_retraso_cl', false),
+            'po_adelanto_cl' => $request->boolean('po_adelanto_cl', false),
+            'indicador_capacidad' => $request->boolean('indicador_capacidad', false),
         ];
         Log::info('Valor recibido en filtro stage:', ['stage' => $filters['stage']]);
         return $filters;
@@ -214,7 +218,7 @@ class DashboardController extends Controller
             Log::info('Metrics retrieved', ['metrics' => $metrics]);
 
             Log::info('Getting trend table data...');
-            $trendTableData = $this->dashboardService->getCanceledLinesTrendTable();
+            $trendTableData = $this->dashboardService->getCanceledLinesTrendTable($filters);
             Log::info('Trend table data retrieved', ['year' => $trendTableData['year'] ?? null]);
 
             return [
@@ -248,14 +252,13 @@ class DashboardController extends Controller
             ],
             'trend_table' => [
                 'categories' => [
-                    'PO en Produccion' => array_fill_keys(range(1, 12), 0),
-                    'Cumplimiento de Carga lista' => array_fill_keys(range(1, 12), 0),
-                    'PO en booking' => array_fill_keys(range(1, 12), 0),
-                    'PO en transito' => array_fill_keys(range(1, 12), 0),
-                    'Allocation' => array_fill_keys(range(1, 12), 0),
-                    'PO En puerto de transbordo' => array_fill_keys(range(1, 12), 0),
-                    'Tiempo en puerto de transbordo' => array_fill_keys(range(1, 12), 0),
-                    'PO con ETA' => array_fill_keys(range(1, 12), 0),
+                    'Producción' => array_fill_keys(range(1, 12), 0),
+                    'Booking' => array_fill_keys(range(1, 12), 0),
+                    'Transito' => array_fill_keys(range(1, 12), 0),
+                    'Puerto' => array_fill_keys(range(1, 12), 0),
+                    'Recibiendo CDI' => array_fill_keys(range(1, 12), 0),
+                    'Ingresada' => array_fill_keys(range(1, 12), 0),
+                    'Anulada' => array_fill_keys(range(1, 12), 0),
                 ],
                 'year' => now()->year,
             ],

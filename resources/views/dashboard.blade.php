@@ -152,14 +152,14 @@
       </div>
     </div>
 
-    <!-- Trend Table Section - Full Width -->
+    <!-- Trend Table Section with Filters Panel -->
     <div class="trend-table-section" style="position: relative; margin-top: 24px; width: calc(100% + 5rem); max-width: calc(100% + 5rem); margin-left: -2.5rem; margin-right: -2.5rem; padding-left: 2.5rem; padding-right: 2.5rem; box-sizing: border-box;">
       <!-- Header with metadata -->
       <div class="trend-table-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 16px; background: #f9fafb; border-radius: 8px; width: 100%; box-sizing: border-box;">
         <div class="header-left" style="display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
           <span style="font-size: 14px; color: #374151;">Vista: Global</span>
           <span style="font-size: 14px; color: #374151;">CC: Todas</span>
-          <span style="font-size: 14px; color: #374151;">Unidades: Miles de Dolares</span>
+          <span style="font-size: 14px; color: #374151;">Unidades: Cantidad de PO</span>
         </div>
         <div class="header-right" style="display: flex; flex-direction: column; gap: 4px; text-align: right; flex-shrink: 0;">
           <span style="font-size: 14px; color: #374151;">Fecha: Actual</span>
@@ -168,32 +168,133 @@
         </div>
       </div>
 
-      <!-- Trend Table -->
-      <div class="table-card" style="display: flex; flex-direction: column; width: 100%; max-width: 100%; box-sizing: border-box;">
-        <h3 class="chart-title" style="text-align: center; margin-bottom: 16px;">Tendencia para Lineas canceladas con inventario</h3>
-        <div class="table-container" style="overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px; width: 100%; max-width: 100%; box-sizing: border-box;">
-          <table class="trend-table" id="trendTable" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-            <thead>
-              <tr style="background: #f9fafb;">
-                <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: 15%;">Descripción</th>
-                <th class="month-header" data-month="1" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">1-<span class="year">{{ now()->year }}</span></th>
-                <th class="month-header" data-month="2" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">2-<span class="year">{{ now()->year }}</span></th>
-                <th class="month-header" data-month="3" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">3-<span class="year">{{ now()->year }}</span></th>
-                <th class="month-header" data-month="4" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">4-<span class="year">{{ now()->year }}</span></th>
-                <th class="month-header" data-month="5" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">5-<span class="year">{{ now()->year }}</span></th>
-                <th class="month-header" data-month="6" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">6-<span class="year">{{ now()->year }}</span></th>
-                <th class="month-header" data-month="7" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">7-<span class="year">{{ now()->year }}</span></th>
-                <th class="month-header" data-month="8" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">8-<span class="year">{{ now()->year }}</span></th>
-                <th class="month-header" data-month="9" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">9-<span class="year">{{ now()->year }}</span></th>
-                <th class="month-header" data-month="10" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">10-<span class="year">{{ now()->year }}</span></th>
-                <th class="month-header" data-month="11" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">11-<span class="year">{{ now()->year }}</span></th>
-                <th class="month-header" data-month="12" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">12-<span class="year">{{ now()->year }}</span></th>
-              </tr>
-            </thead>
-            <tbody id="trendTableBody">
-              <!-- Populated by JavaScript -->
-            </tbody>
-          </table>
+      <!-- Table and Filters Container -->
+      <div style="display: flex; gap: 16px; width: 100%; box-sizing: border-box;">
+        <!-- Trend Table - 2/3 width -->
+        <div class="table-card" style="display: flex; flex-direction: column; width: 66.67%; box-sizing: border-box;">
+          <h3 class="chart-title" style="text-align: center; margin-bottom: 16px;">Tendencia por Etapas del Kanban</h3>
+          <div class="table-container" style="overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px; width: 100%; max-width: 100%; box-sizing: border-box;">
+            <table class="trend-table" id="trendTable" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+              <thead>
+                <tr style="background: #f9fafb;">
+                  <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: 15%;">Descripción</th>
+                  <th class="month-header" data-month="1" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">1-<span class="year">{{ now()->year }}</span></th>
+                  <th class="month-header" data-month="2" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">2-<span class="year">{{ now()->year }}</span></th>
+                  <th class="month-header" data-month="3" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">3-<span class="year">{{ now()->year }}</span></th>
+                  <th class="month-header" data-month="4" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">4-<span class="year">{{ now()->year }}</span></th>
+                  <th class="month-header" data-month="5" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">5-<span class="year">{{ now()->year }}</span></th>
+                  <th class="month-header" data-month="6" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">6-<span class="year">{{ now()->year }}</span></th>
+                  <th class="month-header" data-month="7" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">7-<span class="year">{{ now()->year }}</span></th>
+                  <th class="month-header" data-month="8" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">8-<span class="year">{{ now()->year }}</span></th>
+                  <th class="month-header" data-month="9" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">9-<span class="year">{{ now()->year }}</span></th>
+                  <th class="month-header" data-month="10" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">10-<span class="year">{{ now()->year }}</span></th>
+                  <th class="month-header" data-month="11" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">11-<span class="year">{{ now()->year }}</span></th>
+                  <th class="month-header" data-month="12" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">12-<span class="year">{{ now()->year }}</span></th>
+                </tr>
+              </thead>
+              <tbody id="trendTableBody">
+                <!-- Populated by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Filters Panel - 1/3 width -->
+        <div class="filters-panel" style="width: 33.33%; box-sizing: border-box;">
+          <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <h3 style="font-size: 18px; font-weight: 600; color: #374151; margin-bottom: 20px; font-family: 'Lato', sans-serif;">Filtros</h3>
+            
+            <!-- Vendor Filter -->
+            <div class="filter-group" style="margin-bottom: 20px;">
+              <label class="filter-label" style="color: #1AAD8A; font-size: 14px; font-weight: 500; margin-bottom: 8px; display: block; font-family: 'Lato', sans-serif;">Vendor</label>
+              <div class="multi-select" data-multiselect data-placeholder="Seleccionar vendors" style="height: 40px; width: 100%; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
+                <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
+                  <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar vendors</span>
+                  <i class="fas fa-chevron-down multi-select-icon"></i>
+                </button>
+                <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #28C7A1; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(26,173,138,0.08); max-height: 70vh; overflow-y: auto;">
+                  <div class="multi-select-search">
+                    <input type="text" placeholder="Buscar vendors... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
+                  </div>
+                  <div class="multi-select-options"></div>
+                  <div class="multi-select-clear">Limpiar selección</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hub Filter -->
+            <div class="filter-group" style="margin-bottom: 20px;">
+              <label class="filter-label" style="color: #1AAD8A; font-size: 14px; font-weight: 500; margin-bottom: 8px; display: block; font-family: 'Lato', sans-serif;">Hub</label>
+              <div class="multi-select" data-multiselect data-placeholder="Seleccionar hubs" style="height: 40px; width: 100%; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
+                <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
+                  <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar hubs</span>
+                  <i class="fas fa-chevron-down multi-select-icon"></i>
+                </button>
+                <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #28C7A1; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(26,173,138,0.08); max-height: 70vh; overflow-y: auto;">
+                  <div class="multi-select-search">
+                    <input type="text" placeholder="Buscar hubs... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
+                  </div>
+                  <div class="multi-select-options"></div>
+                  <div class="multi-select-clear">Limpiar selección</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stage Filter -->
+            <div class="filter-group" style="margin-bottom: 20px;">
+              <label class="filter-label" style="color: #1AAD8A; font-size: 14px; font-weight: 500; margin-bottom: 8px; display: block; font-family: 'Lato', sans-serif;">Etapa</label>
+              <div class="multi-select" data-multiselect data-placeholder="Seleccionar etapas" style="height: 40px; width: 100%; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
+                <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
+                  <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar etapas</span>
+                  <i class="fas fa-chevron-down multi-select-icon"></i>
+                </button>
+                <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #28C7A1; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(26,173,138,0.08); max-height: 70vh; overflow-y: auto;">
+                  <div class="multi-select-search">
+                    <input type="text" placeholder="Buscar etapas... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
+                  </div>
+                  <div class="multi-select-options"></div>
+                  <div class="multi-select-clear">Limpiar selección</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Additional Filters -->
+            <div class="additional-filters" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              <h4 style="font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 16px; font-family: 'Lato', sans-serif;">Filtros Adicionales</h4>
+              
+              <!-- PO Retraso CL -->
+              <div style="margin-bottom: 16px;">
+                <label style="display: flex; align-items: center; cursor: pointer; font-family: 'Lato', sans-serif;">
+                  <input type="checkbox" id="filter-po-retraso-cl" name="po_retraso_cl" value="1" style="width: 18px; height: 18px; margin-right: 10px; cursor: pointer; accent-color: #1AAD8A;">
+                  <span style="font-size: 14px; color: #374151;">PO Retraso CL</span>
+                </label>
+                <p style="font-size: 12px; color: #6b7280; margin-top: 4px; margin-left: 28px;">Retraso > 7 días en carga lista</p>
+              </div>
+
+              <!-- PO Adelanto CL -->
+              <div style="margin-bottom: 16px;">
+                <label style="display: flex; align-items: center; cursor: pointer; font-family: 'Lato', sans-serif;">
+                  <input type="checkbox" id="filter-po-adelanto-cl" name="po_adelanto_cl" value="1" style="width: 18px; height: 18px; margin-right: 10px; cursor: pointer; accent-color: #1AAD8A;">
+                  <span style="font-size: 14px; color: #374151;">PO Adelanto CL</span>
+                </label>
+                <p style="font-size: 12px; color: #6b7280; margin-top: 4px; margin-left: 28px;">Adelanto > 7 días en carga lista</p>
+              </div>
+
+              <!-- Indicador Capacidad -->
+              <div style="margin-bottom: 16px;">
+                <label style="display: flex; align-items: center; cursor: pointer; font-family: 'Lato', sans-serif;">
+                  <input type="checkbox" id="filter-indicador-capacidad" name="indicador_capacidad" value="1" style="width: 18px; height: 18px; margin-right: 10px; cursor: pointer; accent-color: #1AAD8A;">
+                  <span style="font-size: 14px; color: #374151;">Indicador Capacidad</span>
+                </label>
+                <p style="font-size: 12px; color: #6b7280; margin-top: 4px; margin-left: 28px;">PO sin fecha ETD</p>
+              </div>
+            </div>
+
+            <!-- Apply Filters Button -->
+            <button id="apply-filters-btn" class="btn-primary" style="width: 100%; height: 40px; margin-top: 20px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: none; background: #1AAD8A; color: #F7F7F7; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+              Aplicar Filtros
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -238,6 +339,8 @@
             window.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
             // Pass initial dashboard data to JavaScript
             window.dashboardData = @json($dashboardData ?? []);
+            // Pass filter options to JavaScript
+            window.filterOptions = @json($filterOptions ?? []);
         </script>
         <script src="{{ asset('js/dashboard-dynamic.js') }}"></script>
         <script src="{{ asset('js/main.js') }}"></script>

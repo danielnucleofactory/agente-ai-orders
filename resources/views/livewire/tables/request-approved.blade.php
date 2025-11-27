@@ -61,7 +61,7 @@
                     @forelse($requests as $request)
                         <tr>
                             <td class="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                                {{ $request->created_at->format('Y-m-d H:i') }}
+                                {{ formatDateTime($request->created_at) }}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                                 {{ $request->operation_id }}
@@ -190,7 +190,7 @@
         <x-slot name="date">
             <p class="text-gray-700">
                 @if(isset($selectedRequest->created_at))
-                    {{ \Carbon\Carbon::parse($selectedRequest->created_at)->format('d/m/Y') }}
+                    {{ formatDate($selectedRequest->created_at) }}
                 @else
                     --/--/----
                 @endif
@@ -225,7 +225,7 @@
                 </span>
                 @if(isset($selectedRequest->authorized_at))
                     <p class="mt-1 text-sm text-gray-500">
-                        Autorizado: {{ \Carbon\Carbon::parse($selectedRequest->authorized_at)->format('d/m/Y H:i:s') }}
+                        Autorizado: {{ formatDateTime($selectedRequest->authorized_at) }}
                     </p>
                 @endif
             @else

@@ -382,6 +382,34 @@ class PurchaseOrderController extends Controller
 
             DB::commit();
 
+            // Dispatch webhook events for created purchase orders
+            foreach ($results as $result) {
+                if ($result['status'] === 'success') {
+                    $po = PurchaseOrder::with(['products', 'vendor', 'shipTo', 'kanbanStatus'])->find($result['id']);
+                    if ($po) {
+                        \Log::info('Attempting to dispatch webhook for PO', [
+                            'po_id' => $po->id,
+                            'order_number' => $po->order_number,
+                            'function_exists' => function_exists('dispatch_webhook'),
+                            'webhook_enabled' => config('webhook.enabled', false),
+                        ]);
+
+                        if (function_exists('dispatch_webhook')) {
+                            dispatch_webhook('purchase_order.created', [
+                                'purchase_order_id' => $po->id,
+                                'order_number' => $po->order_number,
+                                'data' => $po->toArray(), // Incluye todos los campos (143 campos)
+                            ]);
+                        } else {
+                            \Log::warning('dispatch_webhook function does not exist', [
+                                'po_id' => $po->id,
+                                'order_number' => $po->order_number,
+                            ]);
+                        }
+                    }
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Purchase orders created successfully',
@@ -826,6 +854,17 @@ class PurchaseOrderController extends Controller
 
             DB::commit();
 
+            // Dispatch webhook event for updated purchase order
+            if (function_exists('dispatch_webhook')) {
+                $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                dispatch_webhook('purchase_order.updated', [
+                    'purchase_order_id' => $purchaseOrder->id,
+                    'order_number' => $purchaseOrder->order_number,
+                    'changes' => $changes,
+                    'data' => $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus'])->toArray(), // Incluye todos los campos (143 campos)
+                ]);
+            }
+
             return response()->json($response, 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -1233,6 +1272,21 @@ class PurchaseOrderController extends Controller
 
                 if ($createdPo) {
                     DB::commit();
+
+                    // Dispatch webhook event for created purchase order
+                    $po = PurchaseOrder::with(['products', 'vendor', 'shipTo', 'kanbanStatus'])->find($createdPo->id);
+                    if ($po && function_exists('dispatch_webhook')) {
+                        \Log::info('Dispatching webhook for bulk created PO', [
+                            'po_id' => $po->id,
+                            'order_number' => $po->order_number,
+                        ]);
+                        dispatch_webhook('purchase_order.created', [
+                            'purchase_order_id' => $po->id,
+                            'order_number' => $po->order_number,
+                            'data' => $po->toArray(), // Incluye todos los campos (143 campos)
+                        ]);
+                    }
+
                     $results[] = [
                         'index' => $index,
                         'order_number' => $orderNumber,
@@ -1389,6 +1443,21 @@ class PurchaseOrderController extends Controller
 
                 $this->logAudit($po, $changes, $request);
                 DB::commit();
+
+                // Dispatch webhook event for updated purchase order
+                if (function_exists('dispatch_webhook')) {
+                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                    \Log::info('Dispatching webhook for bulk updated PO', [
+                        'po_id' => $po->id,
+                        'order_number' => $po->order_number,
+                    ]);
+                    dispatch_webhook('purchase_order.updated', [
+                        'purchase_order_id' => $po->id,
+                        'order_number' => $po->order_number,
+                        'changes' => $changes,
+                        'data' => $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus'])->toArray(), // Incluye todos los campos (143 campos)
+                    ]);
+                }
 
                 $results[] = [
                     'index' => $index,
