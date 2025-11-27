@@ -478,14 +478,22 @@ class PurchaseOrderController extends Controller
         // Relaciones (se buscan por nombre/código y se crean si no existen)
         $vendorId = data_get($general, 'vendor_id');
         $vendorName = data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
+        $companyId = data_get($general, 'company_id', 1);
 
         // Buscar o crear vendor
         $vendor = null;
         if ($vendorId) {
-            $vendor = Vendor::where('vendo_code', $vendorId)->first();
+            // Primero intentar buscar por ID si es numérico
+            if (is_numeric($vendorId)) {
+                $vendor = Vendor::find($vendorId);
+            }
+            // Si no se encuentra, buscar por código
+            if (!$vendor) {
+                $vendor = Vendor::where('vendo_code', $vendorId)->first();
+            }
             if (!$vendor) {
                 $vendor = Vendor::create([
-                    'company_id' => 1,
+                    'company_id' => $companyId,
                     'vendo_code' => (string) $vendorId,
                     'name' => $vendorName ?: ('Proveedor ' . $vendorId),
                     'status' => 'active',
@@ -495,7 +503,7 @@ class PurchaseOrderController extends Controller
             $vendor = Vendor::where('name', $vendorName)->first();
             if (!$vendor) {
                 $vendor = Vendor::create([
-                    'company_id' => 1,
+                    'company_id' => $companyId,
                     'name' => $vendorName,
                     'vendo_code' => 'VENDOR_' . time(),
                     'status' => 'active',
@@ -508,11 +516,13 @@ class PurchaseOrderController extends Controller
         foreach ($items as $item) {
             $totalWeight += (float) data_get($item, 'peso_kg', data_get($item, 'kgs', 0));
         }
-        $netTotal = (float) (data_get($general, 'netValue', data_get($general, 'net_total', 0)));
+        // Priorizar total_amount del JSON, luego net_total, luego netValue
+        $netTotal = (float) (data_get($general, 'total_amount', data_get($general, 'net_total', data_get($general, 'netValue', 0))));
 
         // Kanban inicial
         $kanbanStatusId = null;
-        $kanbanBoard = KanbanBoard::where('company_id', 1)
+        $companyId = data_get($general, 'company_id', 1);
+        $kanbanBoard = KanbanBoard::where('company_id', $companyId)
             ->where('type', 'po_stages')
             ->where('is_active', true)
             ->first();
@@ -525,14 +535,14 @@ class PurchaseOrderController extends Controller
 
         // Campos base
         $poData = [
-            'company_id'   => 1,
+            'company_id'   => data_get($general, 'company_id', 1),
             'order_number' => data_get($general, 'order_number') ?? \Illuminate\Support\Str::uuid()->toString(),
             'status'       => 'draft',
-            'order_date'   => now(),
+            'order_date'   => $parseDate(data_get($general, 'emision_date_po')) ?? now(),
             'currency'     => data_get($general, 'currency', 'USD'),
             'incoterms'    => data_get($general, 'incoterms', 'EXW'),
             'net_total'    => $netTotal,
-            'total'        => $netTotal,
+            'total'        => (float) (data_get($general, 'total_amount', $netTotal)),
             'material_type'  => json_encode(['Standard']),
             'ensurence_type' => data_get($general, 'ensurence_type', 'pending'),
             'mode'           => data_get($general, 'mode'),
@@ -543,10 +553,18 @@ class PurchaseOrderController extends Controller
             'date_required_in_destination' => $parseDate(data_get($general, 'date_required_in_destination')),
         ];
 
+        // Mapear comments si viene en el JSON
+        if (array_key_exists('comments', $general)) {
+            $poData['comments'] = $general['comments'];
+        }
+
         // Asignar relación con vendor si se resolvió
         if ($vendor) {
             $poData['vendor_id'] = $vendor->id;
-            $poData['vendor_number'] = $vendor->vendo_code;
+            // Solo usar el código del vendor si no viene vendor_number en el JSON
+            if (!array_key_exists('vendor_number', $general)) {
+                $poData['vendor_number'] = $vendor->vendo_code;
+            }
         }
 
         // NEW FIELDS FOR OLO (string)
@@ -576,7 +594,7 @@ class PurchaseOrderController extends Controller
         // NEW FIELDS FOR OLO (boolean)
         foreach ([
                      'is_dropship','applies_tlc','applies_af','port_of_loading_validated','has_facture_merca',
-                     'uses_bonded_warehouse','apply_technical_note','etd_initial_validated',
+                     'uses_bonded_warehouse','apply_technical_note','etd_initial_validated','used_rate_ok',
                  ] as $f) {
             // Verificar si el campo existe en el array
             if (array_key_exists($f, $general) || isset($general[$f])) {
@@ -585,8 +603,6 @@ class PurchaseOrderController extends Controller
                 $poData[$f] = false;
             }
         }
-        // Forzar used_rate_ok siempre como false
-        $poData['used_rate_ok'] = false;
 
         // NEW FIELDS FOR OLO (int)
         foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference','pallet_quantity','pallet_quantity_real'] as $f) {
@@ -658,12 +674,12 @@ class PurchaseOrderController extends Controller
         }
 
         // Limpiar null pero mantener campos opcionales con null y valores numéricos 0
-        $optionalTextFields = ['mbl_number', 'factory_proforma_number', 'factura_merca', 'case_number_file'];
+        $optionalTextFields = ['mbl_number', 'factory_proforma_number', 'factura_merca', 'case_number_file', 'comments'];
         $numericFields = ['weight_kg', 'weight_lb', 'cbm', 'Invoice_amount', 'freight_amount', 'other_expenses',
                          'total_amount', 'estimated_pallet_cost', 'real_cost_estimated_po', 'real_cost_real_po',
                          'net_total', 'total', 'length_cm', 'width_cm', 'height_cm',
                          'pallet_quantity', 'pallet_quantity_real', 'delay_days', 'container_free_days',
-                         'etd_dates_difference', 'eta_dates_difference'];
+                         'etd_dates_difference', 'eta_dates_difference', 'company_id'];
         // Campos de fecha que deben preservarse incluso si vienen del JSON (pueden ser null si no vienen)
         $dateFields = ['date_booking_request', 'date_booking_authorized', 'date_theorical_load', 'date_variable_date',
                       'date_carga_po', 'date_received', 'date_etd_initial', 'date_etd_updated', 'date_eta_updated',
@@ -672,8 +688,15 @@ class PurchaseOrderController extends Controller
                       'balance_payment_date', 'local_charges_payment_date', 'bonded_warehouse_enter',
                       'bonded_warehouse_exit', 'receipt_note_date', 'estimated_dc_availability_date',
                       'date_invoice_received', 'date_vendor_document_received', 'dif_load_date', 'emision_date_po',
-                      'forwader_date', 'date_consolidation', 'release_date', 'date_required_in_destination'];
-        $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields, $dateFields) {
+                      'forwader_date', 'date_consolidation', 'release_date', 'date_required_in_destination', 'order_date'];
+        // Campos que siempre deben mantenerse (incluso si son null o false)
+        $alwaysKeepFields = ['company_id', 'order_number', 'status', 'currency', 'incoterms', 'mode', 'kanban_status_id',
+                            'material_type', 'ensurence_type', 'vendor_id', 'vendor_number'];
+        $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields, $dateFields, $alwaysKeepFields) {
+            // Mantener siempre campos críticos
+            if (in_array($k, $alwaysKeepFields)) {
+                return true;
+            }
             // Permitir null para campos de texto opcionales (para que se guarden explícitamente como null)
             if (in_array($k, $optionalTextFields)) {
                 return true; // Mantener siempre estos campos, incluso si son null
@@ -897,18 +920,22 @@ class PurchaseOrderController extends Controller
         $fieldMapping = [
             // Campos básicos
             'order_number'            => 'order_number',
+            'vendor_id'               => 'vendor_id',
             'vendor_number'           => 'vendor_number',
             'vendor_name'             => 'vendor_name',
             'route_label'             => 'route_label',
             'net_total'               => 'net_total',
+            'total'                   => 'total',
             'currency'                => 'currency',
             'emision_date_po'         => 'emision_date_po',
+            'order_date'              => 'order_date',
             'category'                => 'category',
             'incoterms'               => 'incoterms',
             'logistics_incoterm'      => 'logistics_incoterm',
             'price_incoterm'          => 'price_incoterm',
             'trading_company'         => 'trading_company',
             'mode'                    => 'mode',
+            'company_id'              => 'company_id',
 
             // Transporte y contenedores
             'shipping_line'           => 'shipping_line',
@@ -955,9 +982,9 @@ class PurchaseOrderController extends Controller
             'local_charges_payment_date' => 'local_charges_payment_date',
             'date_invoice_received'   => 'date_invoice_received',
             'date_vendor_document_received' => 'date_vendor_document_received',
+            'dif_load_date'           => 'dif_load_date',
 
             // Diferencias y enteros
-            'dif_load_date'           => 'dif_load_date',
             'etd_dates_difference'    => 'etd_dates_difference',
             'eta_dates_difference'    => 'eta_dates_difference',
             'container_free_days'     => 'container_free_days',
@@ -1014,6 +1041,26 @@ class PurchaseOrderController extends Controller
             $oldValue = $po->$modelField;
 
             switch ($apiField) {
+                case 'vendor_id': {
+                    // Si viene como ID numérico, buscar directamente
+                    if (is_numeric($value)) {
+                        $vendor = \App\Models\Vendor::find($value);
+                        if (!$vendor) {
+                            throw new \Exception("Vendor not found with ID: {$value}");
+                        }
+                        $po->vendor_id = $vendor->id;
+                        $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->id];
+                    } else {
+                        // Si viene como código, buscar por código
+                        $vendor = \App\Models\Vendor::where('vendo_code', $value)->first();
+                        if (!$vendor) {
+                            throw new \Exception("Vendor not found with code: {$value}");
+                        }
+                        $po->vendor_id = $vendor->id;
+                        $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->id];
+                    }
+                    break;
+                }
                 case 'vendor_name': {
                     $vendor = \App\Models\Vendor::where('name', $value)->first();
                     if (!$vendor) {
@@ -1029,12 +1076,14 @@ class PurchaseOrderController extends Controller
                         throw new \Exception("Vendor not found with code: {$value}");
                     }
                     $po->vendor_id = $vendor->id;
+                    $po->vendor_number = $vendor->vendo_code;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->vendo_code];
                     break;
                 }
 
                 // Fechas
                 case 'emision_date_po':
+                case 'order_date':
                 case 'date_booking_request':
                 case 'date_booking_authorized':
                 case 'forwader_date':
@@ -1058,7 +1107,8 @@ class PurchaseOrderController extends Controller
                 case 'balance_payment_date':
                 case 'local_charges_payment_date':
                 case 'date_invoice_received':
-                case 'date_vendor_document_received': {
+                case 'date_vendor_document_received':
+                case 'dif_load_date': {
                     $po->$modelField = $value ? \Carbon\Carbon::parse($value) : null;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
                     break;
@@ -1066,6 +1116,7 @@ class PurchaseOrderController extends Controller
 
                 // Montos (decimales)
                 case 'net_total':
+                case 'total':
                 case 'Invoice_amount':
                 case 'freight_amount':
                 case 'other_expenses':
@@ -1097,11 +1148,11 @@ class PurchaseOrderController extends Controller
                 // Enteros
                 case 'etd_dates_difference':
                 case 'eta_dates_difference':
-                case 'dif_load_date':
                 case 'container_free_days':
                 case 'delay_days':
                 case 'pallet_quantity':
-                case 'pallet_quantity_real': {
+                case 'pallet_quantity_real':
+                case 'company_id': {
                     $po->$modelField = ($value !== null && $value !== '') ? (int) $value : null;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => ($value !== null && $value !== '') ? (int) $value : null];
                     break;
@@ -1149,9 +1200,16 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        // Recalcular totales si se actualizó net_total
+        // Recalcular totales si se actualizó net_total o total_amount
         if (isset($payload['net_total'])) {
             $po->total = $po->net_total;
+        } elseif (isset($payload['total_amount'])) {
+            $po->total = $po->total_amount;
+        }
+
+        // Actualizar order_date si viene emision_date_po
+        if (isset($payload['emision_date_po'])) {
+            $po->order_date = $po->emision_date_po;
         }
 
         return $changes;
