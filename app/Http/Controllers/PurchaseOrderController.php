@@ -27,6 +27,16 @@ class PurchaseOrderController extends Controller
     public function createFromApi(Request $request): JsonResponse
     {
         try {
+            // Log del request completo para debugging
+            \Log::info('PO Individual - Request recibido', [
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'headers' => $request->headers->all(),
+                'json_payload' => $request->json()->all(),
+                'all_payload' => $request->all(),
+                'content_type' => $request->header('Content-Type'),
+            ]);
+
             DB::beginTransaction();
 
             // 1) Soporte JSON o x-www-form-urlencoded
@@ -34,6 +44,11 @@ class PurchaseOrderController extends Controller
             if (empty($payload)) {
                 $payload = $request->all();
             }
+
+            \Log::info('PO Individual - Payload procesado', [
+                'payload' => $payload,
+                'payload_size' => count($payload),
+            ]);
 
             // 2) Normalizar a array de órdenes
             if (isset($payload['purchase_orders']) && is_array($payload['purchase_orders'])) {
@@ -52,11 +67,26 @@ class PurchaseOrderController extends Controller
 
             $results = [];
 
-            foreach ($orders as $orderData) {
+            foreach ($orders as $index => $orderData) {
+                // Log del order individual que se está procesando
+                \Log::info("PO Individual - Procesando orden #{$index}", [
+                    'index' => $index,
+                    'order_data' => $orderData,
+                    'order_number' => data_get($orderData, 'general.order_number') ?? data_get($orderData, 'order_number'),
+                    'trading_company' => data_get($orderData, 'general.trading_company') ?? data_get($orderData, 'trading_company'),
+                ]);
+
                 // 3) Asegurar estructuras
                 $general = data_get($orderData, 'general', $orderData) ?? [];
                 $items   = data_get($orderData, 'items', []);
                 if (!is_array($items)) $items = [];
+
+                \Log::info("PO Individual - Estructura procesada", [
+                    'index' => $index,
+                    'general_keys' => array_keys($general),
+                    'general_size' => count($general),
+                    'items_count' => count($items),
+                ]);
 
                 // Helpers
                 $parseDate = static function ($v) {
@@ -1270,10 +1300,25 @@ class PurchaseOrderController extends Controller
 
     public function bulk(Request $request): JsonResponse
     {
+        // Log del request completo para debugging
+        \Log::info('PO Bulk - Request recibido', [
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
+            'headers' => $request->headers->all(),
+            'json_payload' => $request->json()->all(),
+            'all_payload' => $request->all(),
+            'content_type' => $request->header('Content-Type'),
+        ]);
+
         $payload = $request->json()->all();
         if (empty($payload)) {
             $payload = $request->all();
         }
+
+        \Log::info('PO Bulk - Payload procesado', [
+            'payload' => $payload,
+            'payload_size' => count($payload),
+        ]);
 
         // Normalizar a lista de items
         $items = [];
@@ -1296,11 +1341,24 @@ class PurchaseOrderController extends Controller
         $results = [];
 
         foreach ($items as $index => $item) {
+            // Log del item individual que se está procesando
+            \Log::info("PO Bulk - Procesando item #{$index}", [
+                'index' => $index,
+                'item' => $item,
+                'order_number' => data_get($item, 'order_number'),
+                'trading_company' => data_get($item, 'trading_company'),
+            ]);
+
             // Validar únicamente order_number y trading_company
             $orderNumber = data_get($item, 'order_number');
             $tradingCompany = data_get($item, 'trading_company');
 
             if (!$orderNumber || !$tradingCompany) {
+                \Log::warning("PO Bulk - Validación fallida para item #{$index}", [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'trading_company' => $tradingCompany,
+                ]);
                 $results[] = [
                     'index' => $index,
                     'order_number' => $orderNumber,
@@ -1436,10 +1494,25 @@ class PurchaseOrderController extends Controller
      */
     public function bulkUpdate(Request $request): JsonResponse
     {
+        // Log del request completo para debugging
+        \Log::info('PO Bulk Update - Request recibido', [
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
+            'headers' => $request->headers->all(),
+            'json_payload' => $request->json()->all(),
+            'all_payload' => $request->all(),
+            'content_type' => $request->header('Content-Type'),
+        ]);
+
         $payload = $request->json()->all();
         if (empty($payload)) {
             $payload = $request->all();
         }
+
+        \Log::info('PO Bulk Update - Payload procesado', [
+            'payload' => $payload,
+            'payload_size' => count($payload),
+        ]);
 
         // Normalizar a lista de items
         $items = [];
@@ -1462,11 +1535,24 @@ class PurchaseOrderController extends Controller
         $results = [];
 
         foreach ($items as $index => $item) {
+            // Log del item individual que se está procesando
+            \Log::info("PO Bulk Update - Procesando item #{$index}", [
+                'index' => $index,
+                'item' => $item,
+                'order_number' => data_get($item, 'order_number'),
+                'trading_company' => data_get($item, 'trading_company'),
+            ]);
+
             // Validar únicamente order_number y trading_company
             $orderNumber = data_get($item, 'order_number');
             $tradingCompany = data_get($item, 'trading_company');
 
             if (!$orderNumber || !$tradingCompany) {
+                \Log::warning("PO Bulk Update - Validación fallida para item #{$index}", [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'trading_company' => $tradingCompany,
+                ]);
                 $results[] = [
                     'index' => $index,
                     'order_number' => $orderNumber,
