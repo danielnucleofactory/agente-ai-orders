@@ -1272,12 +1272,16 @@ function applyTopFilters() {
 
 // Inicialización principal del dashboard
 document.addEventListener('DOMContentLoaded', () => {
-  // Configurar botón Aceptar
-  const aceptarBtn = document.querySelector('.action-buttons .btn-primary');
+  // Configurar botón Aceptar (usar DashboardManager si está disponible)
+  const aceptarBtn = document.getElementById('apply-filters-btn-top') || document.querySelector('.action-buttons .btn-primary');
   if (aceptarBtn) {
     aceptarBtn.addEventListener('click', () => {
-      applyTopFilters();
-      updateDashboardUI();
+      if (window.dashboardManager) {
+        window.dashboardManager.applyFilters();
+      } else {
+        applyTopFilters();
+        updateDashboardUI();
+      }
     });
   }
   
