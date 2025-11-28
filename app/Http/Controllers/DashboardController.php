@@ -191,16 +191,17 @@ class DashboardController extends Controller
         $filters = [
             'date_from' => $request->get('date_from'),
             'date_to' => $request->get('date_to'),
-            'hub_id' => $request->get('hub_id'),
+            'customer_type' => $request->get('customer_type'),
+            'arrival_status' => $request->get('arrival_status'),
             'vendor_id' => $request->get('vendor_id'),
-            'status' => $request->get('status'),
-            'transport' => $request->get('transport'),
-            'stage' => $request->get('stage'),
+            'departure_port' => $request->get('departure_port'),
+            'arrival_port' => $request->get('arrival_port'),
+            'shipping_line' => $request->get('shipping_line'),
+            'service_provider' => $request->get('service_provider'),
             'po_retraso_cl' => $request->boolean('po_retraso_cl', false),
             'po_adelanto_cl' => $request->boolean('po_adelanto_cl', false),
             'indicador_capacidad' => $request->boolean('indicador_capacidad', false),
         ];
-        Log::info('Valor recibido en filtro stage:', ['stage' => $filters['stage']]);
         return $filters;
     }
 

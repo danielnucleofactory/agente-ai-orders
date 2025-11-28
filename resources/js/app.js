@@ -254,9 +254,11 @@ document.addEventListener('livewire:init', function() {
     });
     
     // Escuchar cuando Livewire actualiza el DOM después de un commit
-    Livewire.hook('morph', ({ el, component, cleanup }) => {
-        cleanup(() => {
-            // Después de que Livewire actualiza el DOM, sincronizar los date pickers
+    Livewire.hook('morph', (params) => {
+        const { el, component, cleanup } = params || {};
+        
+        // Función para sincronizar los date pickers
+        const syncDatePickers = () => {
             setTimeout(function() {
                 const placeholder = getDatePlaceholder();
                 document.querySelectorAll('input.flatpickr-initialized').forEach(function(input) {
@@ -279,6 +281,13 @@ document.addEventListener('livewire:init', function() {
                     }
                 });
             }, 100);
-        });
+        };
+        
+        // Si cleanup existe y es una función, usarlo; de lo contrario, ejecutar directamente
+        if (cleanup && typeof cleanup === 'function') {
+            cleanup(syncDatePickers);
+        } else {
+            syncDatePickers();
+        }
     });
 });
