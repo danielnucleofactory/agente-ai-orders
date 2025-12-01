@@ -7,6 +7,7 @@ use App\Models\Vendor;
 use App\Models\ShipTo;
 use App\Models\Hub;
 use App\Models\BillTo;
+use App\Services\MaestrosApiService;
 use Livewire\Component;
 
 class CreatePucharseOrder extends Component
@@ -36,8 +37,16 @@ class CreatePucharseOrder extends Component
     public $paymentTermsArray = ["30" => "30 días", "60" => "60 días", "90" => "90 días"];
     public $vendorArray = [];
     public $shipToArray = [];
-    
-    // Arrays para dropdowns de datos maestros
+
+    // Arrays para dropdowns de datos maestros desde API
+    public $tradingCompanyArray = [];
+    public $departurePortArray = [];
+    public $arrivalPortArray = [];
+    public $serviceProviderArray = [];
+    public $transportTypeArray = [];
+    public $rateTypeArray = [];
+
+    // Arrays para dropdowns de datos maestros (legacy - se reemplazará con API)
     public $containerTypeArray = [
         'Contenedor 20ft' => 'Contenedor 20ft',
         'Contenedor 40 HC' => 'Contenedor 40 HC',
@@ -50,7 +59,7 @@ class CreatePucharseOrder extends Component
         'Plataforma 20ft' => 'Plataforma 20ft',
         'Plataforma 40ft' => 'Plataforma 40ft',
     ];
-    
+
     public $portsArray = [
         'ACAJUTLA, EL SALVADOR' => 'ACAJUTLA, EL SALVADOR',
         'ALAJUELA, COSTA RICA' => 'ALAJUELA, COSTA RICA',
@@ -316,7 +325,7 @@ class CreatePucharseOrder extends Component
         'ZHEJIANG, CHINA' => 'ZHEJIANG, CHINA',
         'ZHONGSHAN, CHINA' => 'ZHONGSHAN, CHINA',
     ];
-    
+
     public $shippingLineArray = [
         'CMA CGM' => 'CMA CGM',
         'COSCO' => 'COSCO',
@@ -337,7 +346,7 @@ class CreatePucharseOrder extends Component
         'ZIM' => 'ZIM',
         'ZIM LINES' => 'ZIM LINES',
     ];
-    
+
     public $routeLabelArray = [
         'Directo AR - Cencosud S.A.' => 'Directo AR - Cencosud S.A.',
         'Directo AR - Comercial Taffel SRL' => 'Directo AR - Comercial Taffel SRL',
@@ -649,6 +658,7 @@ class CreatePucharseOrder extends Component
         $this->material_type = ['general'];
         $this->ensurence_type = 'pending';
 
+
         if ($this->id) {
             $this->purchaseOrder = \App\Models\PurchaseOrder::with('products')->find($this->id);
 
@@ -862,9 +872,23 @@ class CreatePucharseOrder extends Component
             // Inicializar el array de productos vacío
             $this->orderProducts = [];
 
+            // Auto-completar trading_company con el nombre de la compañía activa al crear
+            $currentCompany = auth()->user()->getCurrentCompany();
+            if ($currentCompany) {
+                $this->trading_company = $currentCompany->name;
+            }
+
             // Generar un número de orden único
             //$this->generateUniqueOrderNumber();
         }
+    }
+
+    /**
+     * Get MaestrosApiService instance
+     */
+    protected function getMaestrosApiService(): MaestrosApiService
+    {
+        return app(MaestrosApiService::class);
     }
 
     protected function loadHubs()
@@ -877,6 +901,118 @@ class CreatePucharseOrder extends Component
     {
         $billTo = BillTo::orderBy('name')->get();
         $this->billToArray = $billTo->pluck('name', 'id')->toArray();
+    }
+
+    /**
+     * Load maestros options from API
+     * Al editar, asegura que los valores guardados en DB estén en los arrays
+     */
+    protected function loadMaestrosOptions()
+    {
+        $currentCompany = auth()->user()->getCurrentCompany();
+        if (!$currentCompany) {
+            return;
+        }
+
+        $apiService = $this->getMaestrosApiService();
+        $tradingCompany = $this->trading_company ?? $currentCompany->name;
+        $companyName = $currentCompany->name;
+
+        // Parámetros comunes para las llamadas a la API
+        $apiParams = [
+            'company' => $companyName,
+            'trading_company' => $tradingCompany,
+            'active' => 'true',
+            'per_page' => 1000, // Obtener todos los registros activos
+        ];
+
+        // Cargar Trading Companies (usando el nombre de la compañía actual)
+        $this->tradingCompanyArray = [$currentCompany->name => $currentCompany->name];
+        // Si estamos creando, asegurar que la compañía actual esté en el array
+        if (!$this->id && $currentCompany->name && !isset($this->tradingCompanyArray[$currentCompany->name])) {
+            $this->tradingCompanyArray[$currentCompany->name] = $currentCompany->name;
+        }
+        // Al editar, asegurar que el valor guardado esté en el array
+        if ($this->id && $this->trading_company && !isset($this->tradingCompanyArray[$this->trading_company])) {
+            $this->tradingCompanyArray[$this->trading_company] = $this->trading_company;
+        }
+
+        // Cargar Puertos (para origen y destino)
+        $portsResponse = $apiService->getPorts($apiParams);
+        $portsArray = $this->processApiResponse($portsResponse, 'name', 'name');
+        $this->departurePortArray = $portsArray;
+        $this->arrivalPortArray = $portsArray;
+
+        // Al editar, asegurar que los valores guardados estén en los arrays
+        if ($this->id) {
+            if ($this->departure_port && !isset($this->departurePortArray[$this->departure_port])) {
+                $this->departurePortArray[$this->departure_port] = $this->departure_port;
+            }
+            if ($this->arrival_port && !isset($this->arrivalPortArray[$this->arrival_port])) {
+                $this->arrivalPortArray[$this->arrival_port] = $this->arrival_port;
+            }
+        }
+
+        // Cargar Shipping Lines
+        $shippingLinesResponse = $apiService->getShippingLines($apiParams);
+        $this->shippingLineArray = $this->processApiResponse($shippingLinesResponse, 'name', 'name');
+        if ($this->id && $this->shipping_line && !isset($this->shippingLineArray[$this->shipping_line])) {
+            $this->shippingLineArray[$this->shipping_line] = $this->shipping_line;
+        }
+
+        // Cargar Container Types
+        $containerTypesResponse = $apiService->getContainerTypes($apiParams);
+        $this->containerTypeArray = $this->processApiResponse($containerTypesResponse, 'name', 'name');
+        if ($this->id && $this->container_type && !isset($this->containerTypeArray[$this->container_type])) {
+            $this->containerTypeArray[$this->container_type] = $this->container_type;
+        }
+
+        // Cargar Service Providers
+        $serviceProvidersResponse = $apiService->getServiceProviders($apiParams);
+        $this->serviceProviderArray = $this->processApiResponse($serviceProvidersResponse, 'name', 'name');
+        if ($this->id && $this->service_provider && !isset($this->serviceProviderArray[$this->service_provider])) {
+            $this->serviceProviderArray[$this->service_provider] = $this->service_provider;
+        }
+
+        // Cargar Transport Types
+        $transportTypesResponse = $apiService->getTransportTypes($apiParams);
+        $this->transportTypeArray = $this->processApiResponse($transportTypesResponse, 'name', 'name');
+        if ($this->id && $this->mode && !isset($this->transportTypeArray[$this->mode])) {
+            $this->transportTypeArray[$this->mode] = $this->mode;
+        }
+
+        // Cargar Rate Types
+        $rateTypesResponse = $apiService->getRateTypes($apiParams);
+        $this->rateTypeArray = $this->processApiResponse($rateTypesResponse, 'name', 'name');
+        if ($this->id && $this->tariff_type && !isset($this->rateTypeArray[$this->tariff_type])) {
+            $this->rateTypeArray[$this->tariff_type] = $this->tariff_type;
+        }
+    }
+
+    /**
+     * Process API response and convert to array format for dropdowns
+     *
+     * @param array|null $response
+     * @param string $keyField Field to use as array key
+     * @param string $valueField Field to use as array value
+     * @return array
+     */
+    protected function processApiResponse($response, $keyField = 'name', $valueField = 'name')
+    {
+        if (!$response || !isset($response['data'])) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($response['data'] as $item) {
+            $key = $item[$keyField] ?? $item['name'] ?? '';
+            $value = $item[$valueField] ?? $item['name'] ?? '';
+            if ($key && $value) {
+                $result[$key] = $value;
+            }
+        }
+
+        return $result;
     }
 
     public function generateUniqueOrderNumber()
@@ -984,6 +1120,15 @@ class CreatePucharseOrder extends Component
     public function updatedBillToId()
     {
         $this->onBillToSelected();
+    }
+
+    /**
+     * Listener para cuando cambia trading_company
+     * Recarga las opciones de los demás dropdowns
+     */
+    public function updatedTradingCompany()
+    {
+        $this->loadMaestrosOptions();
     }
 
     public function searchProducts()
@@ -1167,7 +1312,7 @@ class CreatePucharseOrder extends Component
                     'date',
                     function ($attribute, $value, $fail) {
                         $emisionDate = $this->emision_date_po;
-                        
+
                         if ($emisionDate && $value < $emisionDate) {
                             $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
                         }
@@ -1500,7 +1645,7 @@ class CreatePucharseOrder extends Component
                 'date',
                 function ($attribute, $value, $fail) {
                     $emisionDate = $this->emision_date_po;
-                    
+
                     if ($emisionDate && $value < $emisionDate) {
                         $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
                     }
@@ -1512,7 +1657,7 @@ class CreatePucharseOrder extends Component
                 function ($attribute, $value, $fail) {
                     if ($value) {
                         $emisionDate = $this->emision_date_po;
-                        
+
                         if ($emisionDate && $value < $emisionDate) {
                             $fail('La fecha de carga lista variable no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
                         }
@@ -1757,6 +1902,9 @@ class CreatePucharseOrder extends Component
                           ->get();
         $this->shipToArray = $shipTos->pluck('name', 'id')->toArray();
 
+        // Cargar opciones de maestros desde la API
+        $this->loadMaestrosOptions();
+
         return view('livewire.forms.create-pucharse-order');
     }
 
@@ -1818,7 +1966,7 @@ class CreatePucharseOrder extends Component
     public function updatedFreightAmount()         { $this->calculateTotals(); }
     public function updatedCostNationalization()   { $this->calculateTotals(); }
     public function updatedOtherCosts()            { $this->calculateTotals(); }
-    
+
     // NUEVO: Listeners para actualizar arrival_status automáticamente cuando cambie la ETA
     public function updatedDateEta()               { $this->computeDateDiffs(); }
     public function updatedDateEtaInitial()        { $this->computeDateDiffs(); }
@@ -1850,7 +1998,7 @@ class CreatePucharseOrder extends Component
     {
         // Usar la ETA más reciente disponible (updated > initial > original)
         $eta = $this->date_eta_initial ?? $this->date_eta ?? null;
-        
+
         if (!$eta) {
             $this->arrival_status = null;
             $this->delay_days = null;
@@ -1859,7 +2007,7 @@ class CreatePucharseOrder extends Component
 
         $today = now()->startOfDay();
         $etaDate = \Carbon\Carbon::parse($eta)->startOfDay();
-        
+
         if ($today > $etaDate) {
             // Atrasado
             $delayDays = $etaDate->diffInDays($today);
@@ -1882,7 +2030,7 @@ class CreatePucharseOrder extends Component
         $realDate = \Carbon\Carbon::parse($this->date_carga_po);
 
         $difference = $realDate->diffInDays($theoricalDate, false);
-        
+
         return $difference;
     }
 
