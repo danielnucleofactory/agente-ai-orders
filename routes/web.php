@@ -252,13 +252,32 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::view('support', 'support.index')
         ->name('support.index');
-    
+
     Route::get('support/contact', \App\Livewire\Support\ContactForm::class)
         ->name('support.contact');
 
     Route::view('historical-data', 'historical-data.index')
         ->middleware('permission:has_view_historical_data')
         ->name('historical-data.index');
+
+    // Rutas para Maestros
+    Route::view('maestros/container-types', 'maestros.container-types.index')
+        ->name('maestros.container-types.index');
+
+    Route::view('maestros/ports', 'maestros.ports.index')
+        ->name('maestros.ports.index');
+
+    Route::view('maestros/transport-types', 'maestros.transport-types.index')
+        ->name('maestros.transport-types.index');
+
+    Route::view('maestros/shipping-lines', 'maestros.shipping-lines.index')
+        ->name('maestros.shipping-lines.index');
+
+    Route::view('maestros/service-providers', 'maestros.service-providers.index')
+        ->name('maestros.service-providers.index');
+
+    Route::view('maestros/rate-types', 'maestros.rate-types.index')
+        ->name('maestros.rate-types.index');
 });
 
 // Ruta de prueba para el módulo PO Confirmation

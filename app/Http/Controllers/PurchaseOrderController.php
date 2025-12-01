@@ -678,6 +678,16 @@ class PurchaseOrderController extends Controller
         ];
 
         foreach ($dateFieldsToProcess as $f) {
+            // Log específico para date_etd_initial y date_eta_initial
+            if ($f === 'date_etd_initial' || $f === 'date_eta_initial') {
+                \Log::info("Procesando fecha especial: {$f}", [
+                    'field' => $f,
+                    'exists_in_general' => array_key_exists($f, $general),
+                    'value' => $general[$f] ?? 'NOT_SET',
+                    'general_keys' => array_keys($general),
+                ]);
+            }
+
             // Verificar si el campo existe en el array y tiene valor
             if (array_key_exists($f, $general) && $general[$f] !== null && $general[$f] !== '') {
                 $dateValue = $general[$f];
@@ -686,6 +696,14 @@ class PurchaseOrderController extends Controller
                     $parsedDate = $parseDate($dateValue);
                     if ($parsedDate !== null) {
                         $poData[$f] = $parsedDate;
+                        // Log específico para confirmar que se guardó
+                        if ($f === 'date_etd_initial' || $f === 'date_eta_initial') {
+                            \Log::info("Fecha {$f} parseada y agregada a poData", [
+                                'field' => $f,
+                                'original_value' => $dateValue,
+                                'parsed_date' => $parsedDate->toDateTimeString(),
+                            ]);
+                        }
                     } else {
                         // Log si falla el parseo para debugging
                         \Log::warning("Failed to parse date field {$f} with value: {$dateValue} (type: " . gettype($dateValue) . ")");
@@ -693,6 +711,13 @@ class PurchaseOrderController extends Controller
                 } else {
                     \Log::warning("Date field {$f} has invalid type: " . gettype($dateValue) . " with value: " . json_encode($dateValue));
                 }
+            } elseif ($f === 'date_etd_initial' || $f === 'date_eta_initial') {
+                // Log si la fecha no existe o está vacía
+                \Log::warning("Fecha {$f} no encontrada o vacía en general", [
+                    'field' => $f,
+                    'exists' => array_key_exists($f, $general),
+                    'value' => $general[$f] ?? 'NOT_SET',
+                ]);
             }
         }
 
@@ -750,6 +775,16 @@ class PurchaseOrderController extends Controller
         $alwaysKeepFields = ['company_id', 'order_number', 'status', 'currency', 'incoterms', 'mode', 'kanban_status_id',
                             'material_type', 'ensurence_type', 'vendor_id', 'vendor_number'];
 
+        // Log antes del filtro para verificar que date_etd_initial y date_eta_initial están en poData
+        if (isset($poData['date_etd_initial']) || isset($poData['date_eta_initial'])) {
+            \Log::info("Antes del filtro - Fechas especiales en poData", [
+                'date_etd_initial' => $poData['date_etd_initial'] ?? 'NOT_SET',
+                'date_eta_initial' => $poData['date_eta_initial'] ?? 'NOT_SET',
+                'date_etd_initial_type' => isset($poData['date_etd_initial']) ? gettype($poData['date_etd_initial']) : 'NOT_SET',
+                'date_eta_initial_type' => isset($poData['date_eta_initial']) ? gettype($poData['date_eta_initial']) : 'NOT_SET',
+            ]);
+        }
+
         // Filtrar solo campos que realmente son null o strings vacíos, pero mantener todos los campos procesados
         $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields, $dateFields, $alwaysKeepFields, $booleanFields) {
             // Mantener siempre campos críticos
@@ -770,6 +805,14 @@ class PurchaseOrderController extends Controller
             }
             // Mantener campos de fecha si fueron procesados
             if (in_array($k, $dateFields)) {
+                // Log específico para date_etd_initial y date_eta_initial
+                if ($k === 'date_etd_initial' || $k === 'date_eta_initial') {
+                    \Log::info("Filtro - Manteniendo fecha {$k}", [
+                        'field' => $k,
+                        'value' => $v ? $v->toDateTimeString() : 'NULL',
+                        'in_dateFields' => in_array($k, $dateFields),
+                    ]);
+                }
                 return true;
             }
             // Para cualquier otro campo que fue agregado a $poData, mantenerlo si tiene valor
@@ -777,8 +820,38 @@ class PurchaseOrderController extends Controller
             return $v !== null && $v !== '';
         }, ARRAY_FILTER_USE_BOTH);
 
+        // Log después del filtro para verificar que date_etd_initial y date_eta_initial siguen en poData
+        if (isset($poData['date_etd_initial']) || isset($poData['date_eta_initial'])) {
+            \Log::info("Después del filtro - Fechas especiales en poData", [
+                'date_etd_initial' => $poData['date_etd_initial'] ?? 'NOT_SET',
+                'date_eta_initial' => $poData['date_eta_initial'] ?? 'NOT_SET',
+            ]);
+        } else {
+            \Log::warning("Después del filtro - Fechas especiales NO están en poData", [
+                'poData_keys' => array_keys($poData),
+            ]);
+        }
+
+        // Log final antes de crear la PO con las fechas especiales
+        \Log::info("Antes de crear PO - Verificando fechas especiales", [
+            'date_etd_initial' => $poData['date_etd_initial'] ?? 'NOT_SET',
+            'date_eta_initial' => $poData['date_eta_initial'] ?? 'NOT_SET',
+            'date_etd_initial_in_array' => isset($poData['date_etd_initial']),
+            'date_eta_initial_in_array' => isset($poData['date_eta_initial']),
+            'poData_keys_count' => count($poData),
+            'poData_sample_keys' => array_slice(array_keys($poData), 0, 20),
+        ]);
+
         // Crear PO
         $purchaseOrder = PurchaseOrder::create($poData);
+
+        // Log después de crear para verificar que se guardaron
+        \Log::info("Después de crear PO - Verificando fechas especiales guardadas", [
+            'po_id' => $purchaseOrder->id,
+            'order_number' => $purchaseOrder->order_number,
+            'date_etd_initial' => $purchaseOrder->date_etd_initial ? $purchaseOrder->date_etd_initial->toDateTimeString() : 'NULL',
+            'date_eta_initial' => $purchaseOrder->date_eta_initial ? $purchaseOrder->date_eta_initial->toDateTimeString() : 'NULL',
+        ]);
 
         // Ítems (si existen)
         if ($items) {

@@ -280,6 +280,69 @@
                 </x-sidebar-dropdown>
             </li>
 
+            <li>
+                <x-sidebar-dropdown active="{{ request()->is('maestros') || request()->is('maestros/*') }}" route="{{ route('maestros.container-types.index') }}">
+                    <x-slot:icon>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20"
+                            fill="none">
+                            <path fill-rule="evenodd" clip-rule="evenodd"
+                                d="M3 4C3 2.89543 3.89543 2 5 2H15C16.1046 2 17 2.89543 17 4V16C17 17.1046 16.1046 18 15 18H5C3.89543 18 3 17.1046 3 16V4ZM5 4V16H15V4H5Z"
+                                class="{{ request()->is('maestros') || request()->is('maestros/*') ? 'fill-[#1AAD8A]' : 'group-hover:fill-black fill-[#898989]' }} transition-colors duration-500" />
+                            <path fill-rule="evenodd" clip-rule="evenodd"
+                                d="M6 6C6 5.44772 6.44772 5 7 5H13C13.5523 5 14 5.44772 14 6C14 6.55228 13.5523 7 13 7H7C6.44772 7 6 6.55228 6 6Z"
+                                class="{{ request()->is('maestros') || request()->is('maestros/*') ? 'fill-[#1AAD8A]' : 'group-hover:fill-black fill-[#898989]' }} transition-colors duration-500" />
+                            <path fill-rule="evenodd" clip-rule="evenodd"
+                                d="M6 10C6 9.44772 6.44772 9 7 9H13C13.5523 9 14 9.44772 14 10C14 10.5523 13.5523 11 13 11H7C6.44772 11 6 10.5523 6 10Z"
+                                class="{{ request()->is('maestros') || request()->is('maestros/*') ? 'fill-[#1AAD8A]' : 'group-hover:fill-black fill-[#898989]' }} transition-colors duration-500" />
+                            <path fill-rule="evenodd" clip-rule="evenodd"
+                                d="M6 14C6 13.4477 6.44772 13 7 13H10C10.5523 13 11 13.4477 11 14C11 14.5523 10.5523 15 10 15H7C6.44772 15 6 14.5523 6 14Z"
+                                class="{{ request()->is('maestros') || request()->is('maestros/*') ? 'fill-[#1AAD8A]' : 'group-hover:fill-black fill-[#898989]' }} transition-colors duration-500" />
+                        </svg>
+                    </x-slot:icon>
+
+                    <x-slot:title>Maestros</x-slot:title>
+
+                    <ul
+                        class="{{ request()->is('maestros') || request()->is('maestros/*') ? 'border-[#1AAD8A]' : 'border-gray-200' }} ml-[0.625rem] mt-2 flex flex-col space-y-1 border-l-2 pl-2.5">
+                        <li>
+                            <x-sidebar-dropdown-item href="{{ route('maestros.container-types.index') }}" :active="request()->routeIs('maestros.container-types.index')">
+                                Tipos de Contenedor
+                            </x-sidebar-dropdown-item>
+                        </li>
+
+                        <li>
+                            <x-sidebar-dropdown-item href="{{ route('maestros.ports.index') }}" :active="request()->routeIs('maestros.ports.index')">
+                                Puertos
+                            </x-sidebar-dropdown-item>
+                        </li>
+
+                        <li>
+                            <x-sidebar-dropdown-item href="{{ route('maestros.transport-types.index') }}" :active="request()->routeIs('maestros.transport-types.index')">
+                                Tipos de Transporte
+                            </x-sidebar-dropdown-item>
+                        </li>
+
+                        <li>
+                            <x-sidebar-dropdown-item href="{{ route('maestros.shipping-lines.index') }}" :active="request()->routeIs('maestros.shipping-lines.index')">
+                                Líneas de Envío
+                            </x-sidebar-dropdown-item>
+                        </li>
+
+                        <li>
+                            <x-sidebar-dropdown-item href="{{ route('maestros.service-providers.index') }}" :active="request()->routeIs('maestros.service-providers.index')">
+                                Proveedores de Servicio
+                            </x-sidebar-dropdown-item>
+                        </li>
+
+                        <li>
+                            <x-sidebar-dropdown-item href="{{ route('maestros.rate-types.index') }}" :active="request()->routeIs('maestros.rate-types.index')">
+                                Tipos de Tarifa
+                            </x-sidebar-dropdown-item>
+                        </li>
+                    </ul>
+                </x-sidebar-dropdown>
+            </li>
+
             @can('has_view_support')
             <li>
                 <x-sidebar-dropdown active="{{ request()->is('support') || request()->is('support/*') }}" route="{{ route('support.index') }}">
