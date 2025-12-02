@@ -1,8 +1,29 @@
 <div>
-    <!-- Notification area for errors and success messages -->
-    <div x-data="{ showNotification: false, notificationMessage: '', notificationType: 'error' }"
+    <!-- Notification area for errors, success messages, and loading -->
+    <div x-data="{
+            showNotification: false,
+            notificationMessage: '',
+            notificationType: 'error'
+         }"
          @show-error.window="showNotification = true; notificationMessage = $event.detail; notificationType = 'error'; setTimeout(() => showNotification = false, 5000)"
          @show-success.window="showNotification = true; notificationMessage = $event.detail; notificationType = 'success'; setTimeout(() => showNotification = false, 5000)">
+
+        <!-- Loading Notification (usando wire:loading para detectar cuando Livewire está procesando) -->
+        <div wire:loading.delay wire:target="trading_company"
+             class="fixed top-4 right-4 z-50 p-4 max-w-sm text-blue-700 bg-blue-100 rounded-lg border border-blue-400 shadow-lg">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <!-- Spinner de carga -->
+                    <svg class="w-5 h-5 text-blue-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium">Buscando datos del cliente en la API...</p>
+                </div>
+            </div>
+        </div>
 
         <!-- Error/Success Notification -->
         <div x-show="showNotification"
@@ -974,25 +995,27 @@
                             :error="false"
                         />
 
-                        @if($id)
-                            <x-form-select
-                                label="Cliente"
-                                name="trading_company"
-                                wire:model.live="trading_company"
-                                :options="$tradingCompanyArray"
-                                :error="false"
-                                class="bg-gray-100 cursor-not-allowed"
-                                disabled
-                            />
-                        @else
-                            <x-form-select
-                                label="Cliente"
-                                name="trading_company"
-                                wire:model.live="trading_company"
-                                :options="$tradingCompanyArray"
-                                :error="false"
-                            />
-                        @endif
+                        <div class="relative">
+                            <x-form-input>
+                                <x-slot:label>
+                                    Cliente <span class="text-red-500">*</span>
+                                    <span wire:loading wire:target="trading_company" class="ml-2 text-xs text-blue-500 animate-pulse">(Buscando...)</span>
+                                </x-slot:label>
+                                <x-slot:input
+                                    name="trading_company"
+                                    placeholder="Ingrese nombre del cliente (ej: OLO1)"
+                                    wire:model.live.debounce.500ms="trading_company"
+                                    :readonly="$id ? true : false"
+                                    class="{{ $id ? 'bg-gray-100 cursor-not-allowed' : '' }}">
+                                </x-slot:input>
+                            </x-form-input>
+                            <div wire:loading wire:target="trading_company" class="flex absolute right-3 top-9 items-center">
+                                <svg class="w-4 h-4 text-blue-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                        </div>
 
                         <!-- Tarifas y ruta -->
                         <div class="col-span-3">

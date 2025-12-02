@@ -548,6 +548,9 @@ class CreatePucharseOrder extends Component
     // Añade esta propiedad junto con las otras propiedades de dimensiones
     public $pallets;
 
+    // Estado de carga para la API de maestros
+    public $isLoadingMaestros = false;
+
     // Watchers
     protected $listeners = [
         'vendorSelected' => 'onVendorSelected',
@@ -855,6 +858,11 @@ class CreatePucharseOrder extends Component
                 //Recalcular las fechas
                 $this->computeDateDiffs();
 
+                // Cargar opciones de maestros usando el trading_company guardado
+                if ($this->trading_company) {
+                    $this->loadMaestrosOptions();
+                }
+
                 // Cargar productos
                 $this->orderProducts = [];
                 foreach ($this->purchaseOrder->products as $product) {
@@ -872,11 +880,8 @@ class CreatePucharseOrder extends Component
             // Inicializar el array de productos vacío
             $this->orderProducts = [];
 
-            // Auto-completar trading_company con el nombre de la compañía activa al crear
-            $currentCompany = auth()->user()->getCurrentCompany();
-            if ($currentCompany) {
-                $this->trading_company = $currentCompany->name;
-            }
+            // El campo trading_company se deja vacío para que el usuario lo llene
+            // Al escribir el nombre del cliente, se cargarán las opciones de maestros automáticamente
 
             // Generar un número de orden único
             //$this->generateUniqueOrderNumber();
@@ -906,36 +911,33 @@ class CreatePucharseOrder extends Component
     /**
      * Load maestros options from API
      * Al editar, asegura que los valores guardados en DB estén en los arrays
+     * Usa el valor del campo trading_company para filtrar los datos
      */
     protected function loadMaestrosOptions()
     {
-        $currentCompany = auth()->user()->getCurrentCompany();
-        if (!$currentCompany) {
+        // Si no hay trading_company, no cargar opciones de la API
+        $tradingCompanyValue = trim($this->trading_company ?? '');
+        if (empty($tradingCompanyValue)) {
+            // Limpiar los arrays si no hay cliente
+            $this->departurePortArray = [];
+            $this->arrivalPortArray = [];
+            $this->shippingLineArray = [];
+            $this->containerTypeArray = [];
+            $this->serviceProviderArray = [];
+            $this->transportTypeArray = [];
+            $this->rateTypeArray = [];
             return;
         }
 
         $apiService = $this->getMaestrosApiService();
-        $tradingCompany = $this->trading_company ?? $currentCompany->name;
-        $companyName = $currentCompany->name;
 
-        // Parámetros comunes para las llamadas a la API
+        // Parámetros comunes para las llamadas a la API usando el valor de trading_company
         $apiParams = [
-            'company' => $companyName,
-            'trading_company' => $tradingCompany,
+            'company' => $tradingCompanyValue,
+            'trading_company' => $tradingCompanyValue,
             'active' => 'true',
             'per_page' => 1000, // Obtener todos los registros activos
         ];
-
-        // Cargar Trading Companies (usando el nombre de la compañía actual)
-        $this->tradingCompanyArray = [$currentCompany->name => $currentCompany->name];
-        // Si estamos creando, asegurar que la compañía actual esté en el array
-        if (!$this->id && $currentCompany->name && !isset($this->tradingCompanyArray[$currentCompany->name])) {
-            $this->tradingCompanyArray[$currentCompany->name] = $currentCompany->name;
-        }
-        // Al editar, asegurar que el valor guardado esté en el array
-        if ($this->id && $this->trading_company && !isset($this->tradingCompanyArray[$this->trading_company])) {
-            $this->tradingCompanyArray[$this->trading_company] = $this->trading_company;
-        }
 
         // Cargar Puertos (para origen y destino)
         $portsResponse = $apiService->getPorts($apiParams);
@@ -991,6 +993,7 @@ class CreatePucharseOrder extends Component
 
     /**
      * Process API response and convert to array format for dropdowns
+     * Los resultados se ordenan alfabéticamente
      *
      * @param array|null $response
      * @param string $keyField Field to use as array key
@@ -1011,6 +1014,9 @@ class CreatePucharseOrder extends Component
                 $result[$key] = $value;
             }
         }
+
+        // Ordenar alfabéticamente por valor
+        asort($result);
 
         return $result;
     }
@@ -1125,10 +1131,71 @@ class CreatePucharseOrder extends Component
     /**
      * Listener para cuando cambia trading_company
      * Recarga las opciones de los demás dropdowns
+     * Muestra una alerta mientras carga los datos de la API
      */
     public function updatedTradingCompany()
     {
-        $this->loadMaestrosOptions();
+        $tradingCompanyValue = trim($this->trading_company ?? '');
+
+        // Si el campo está vacío o tiene menos de 2 caracteres, limpiar los arrays
+        if (strlen($tradingCompanyValue) < 2) {
+            $this->departurePortArray = [];
+            $this->arrivalPortArray = [];
+            $this->shippingLineArray = [];
+            $this->containerTypeArray = [];
+            $this->serviceProviderArray = [];
+            $this->transportTypeArray = [];
+            $this->rateTypeArray = [];
+            return;
+        }
+
+        // Cargar datos de la API
+        $this->loadMaestrosFromApi($tradingCompanyValue);
+    }
+
+    /**
+     * Carga los datos de maestros desde la API
+     * Método separado para poder mostrar las alertas correctamente
+     */
+    public function loadMaestrosFromApi($tradingCompanyValue)
+    {
+        $this->isLoadingMaestros = true;
+
+        try {
+            // Cargar las opciones de la API
+            $this->loadMaestrosOptions();
+
+            // Contar cuántos datos se cargaron
+            $totalItems = count($this->departurePortArray) + count($this->shippingLineArray) +
+                          count($this->containerTypeArray) + count($this->serviceProviderArray) +
+                          count($this->transportTypeArray) + count($this->rateTypeArray);
+
+            if ($totalItems > 0) {
+                // Mostrar mensaje de éxito usando JavaScript
+                $this->js("
+                    window.dispatchEvent(new CustomEvent('show-success', {
+                        detail: 'Datos cargados correctamente para: {$tradingCompanyValue} ({$totalItems} opciones encontradas)'
+                    }));
+                ");
+            } else {
+                // No se encontraron datos
+                $this->js("
+                    window.dispatchEvent(new CustomEvent('show-error', {
+                        detail: 'No se encontraron datos para el cliente: {$tradingCompanyValue}'
+                    }));
+                ");
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error al cargar maestros: ' . $e->getMessage());
+            $errorMessage = addslashes($e->getMessage());
+            $this->js("
+                window.dispatchEvent(new CustomEvent('show-error', {
+                    detail: 'Error al cargar datos: {$errorMessage}'
+                }));
+            ");
+        } finally {
+            $this->isLoadingMaestros = false;
+        }
     }
 
     public function searchProducts()
@@ -1902,8 +1969,7 @@ class CreatePucharseOrder extends Component
                           ->get();
         $this->shipToArray = $shipTos->pluck('name', 'id')->toArray();
 
-        // Cargar opciones de maestros desde la API
-        $this->loadMaestrosOptions();
+        // Las opciones de maestros se cargan solo cuando cambia trading_company (en updatedTradingCompany)
 
         return view('livewire.forms.create-pucharse-order');
     }
