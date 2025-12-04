@@ -121,14 +121,16 @@
                                 </x-slot:error>
                             </x-form-input>
 
-                            <x-form-input>
-                                <x-slot name="label">Fecha emisión PO</x-slot>
-                                <x-slot:input
-                                    type="date"
-                                    name="emision_date_po"
-                                    wire:model="emision_date_po">
-                                </x-slot:input>
-                            </x-form-input>
+                            <div wire:ignore>
+                                <x-form-input>
+                                    <x-slot name="label">Fecha emisión PO</x-slot>
+                                    <x-slot:input
+                                        type="date"
+                                        name="emision_date_po"
+                                        wire:model="emision_date_po">
+                                    </x-slot:input>
+                                </x-form-input>
+                            </div>
 
                             {{-- Fecha de creación --}}
                             <x-form-input>
@@ -512,58 +514,74 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Booking y coordinación</h4>
                     </div>
 
-                    <x-form-input>
-                        <x-slot:label>Solicitud de Booking</x-slot:label>
-                        <x-slot:input type="date" name="date_booking_request" wire:model="date_booking_request"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Solicitud de Booking</x-slot:label>
+                            <x-slot:input type="date" name="date_booking_request" wire:model="date_booking_request"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Autorización Booking</x-slot:label>
-                        <x-slot:input type="date" name="date_booking_authorized" wire:model="date_booking_authorized"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Autorización Booking</x-slot:label>
+                            <x-slot:input type="date" name="date_booking_authorized" wire:model="date_booking_authorized"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha de asignación de agente de carga</x-slot:label>
-                        <x-slot:input
-                            type="date"
-                            name="forwader_date"
-                            wire:model="forwader_date">
-                        </x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha de asignación de agente de carga</x-slot:label>
+                            <x-slot:input
+                                type="date"
+                                name="forwader_date"
+                                wire:model="forwader_date">
+                            </x-slot:input>
+                        </x-form-input>
+                    </div>
 
                     <!-- Origen: preparación y carga -->
                     <div class="col-span-3">
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Origen: preparación y carga</h4>
                     </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Inspección</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="inspection_date"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Inspección</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="inspection_date"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Corte VGM</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="vgm_cut_date"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Corte VGM</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="vgm_cut_date"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Carga Lista Teórica</x-slot:label>
-                        <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" class="pr-10 {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
-                        </x-slot:input>
-                        <x-slot:error>{{ $errors->first('date_theorical_load') }}</x-slot:error>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Carga Lista Teórica</x-slot:label>
+                            <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" class="pr-10 {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
+                            </x-slot:input>
+                            <x-slot:error>{{ $errors->first('date_theorical_load') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Carga Lista Variable</x-slot:label>
-                        <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500' : '' }}"></x-slot:input>
-                        <x-slot:error>{{ $errors->first('date_variable_date') }}</x-slot:error>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Carga Lista Variable</x-slot:label>
+                            <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('date_variable_date') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Carga Lista Real</x-slot:label>
-                        <x-slot:input type="date" name="date_carga_po" wire:model="date_carga_po" class="pr-10 {{ $errors->has('date_carga_po') ? 'border-red-500' : '' }}"></x-slot:input>
-                        <x-slot:error>{{ $errors->first('date_carga_po') }}</x-slot:error>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Carga Lista Real</x-slot:label>
+                            <x-slot:input type="date" name="date_carga_po" wire:model="date_carga_po" class="pr-10 {{ $errors->has('date_carga_po') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('date_carga_po') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
                     <x-form-input class="hidden">
                         <x-slot:label>Fecha pickup planificada</x-slot:label>
@@ -575,15 +593,19 @@
                         <x-slot:input type="date" name="date_actual_pickup" wire:model="date_actual_pickup"></x-slot:input>
                     </x-form-input>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha de consolidado</x-slot:label>
-                        <x-slot:input type="date" name="date_consolidation" wire:model="date_consolidation"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha de consolidado</x-slot:label>
+                            <x-slot:input type="date" name="date_consolidation" wire:model="date_consolidation"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha de release</x-slot:label>
-                        <x-slot:input type="date" name="release_date" wire:model="release_date"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha de release</x-slot:label>
+                            <x-slot:input type="date" name="release_date" wire:model="release_date"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
                     <x-form-input>
                         <x-slot:label>Diferencia de fecha de carga lista</x-slot:label>
@@ -610,7 +632,7 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Salida (origen)</h4>
                     </div>
 
-                    <div class="space-y-2">
+                    <div class="space-y-2" wire:ignore>
                         <x-form-input>
                             <x-slot:label>ETD Inicial</x-slot:label>
                             <x-slot:input type="date" wire:model.live="date_etd_initial"></x-slot:input>
@@ -622,15 +644,19 @@
                         </div>
                     </div>
 
-                    <x-form-input>
-                        <x-slot:label>ETD </x-slot:label>
-                        <x-slot:input type="date" name="date_etd" wire:model="date_etd"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>ETD </x-slot:label>
+                            <x-slot:input type="date" name="date_etd" wire:model="date_etd"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>ATD </x-slot:label>
-                        <x-slot:input type="date" name="date_atd" wire:model="date_atd"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>ATD </x-slot:label>
+                            <x-slot:input type="date" name="date_atd" wire:model="date_atd"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
                     <x-form-input class="hidden">
                         <x-slot:label>Fecha estimada de llegada al hub</x-slot:label>
@@ -648,20 +674,26 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Arribo a destino</h4>
                     </div>
 
-                    <x-form-input>
-                        <x-slot:label>ETA</x-slot:label>
-                        <x-slot:input type="date" name="date_eta" wire:model="date_eta"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>ETA</x-slot:label>
+                            <x-slot:input type="date" name="date_eta" wire:model="date_eta"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>ETA Inicial</x-slot:label>
-                        <x-slot:input type="date" name="date_eta_updated" wire:model="date_eta_updated"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>ETA Inicial</x-slot:label>
+                            <x-slot:input type="date" name="date_eta_updated" wire:model="date_eta_updated"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>ATA</x-slot:label>
-                        <x-slot:input type="date" name="date_ata" wire:model="date_ata"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>ATA</x-slot:label>
+                            <x-slot:input type="date" name="date_ata" wire:model="date_ata"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
                     <x-form-input class="hidden">
                         <x-slot:label>Fecha requerida en destino</x-slot:label>
@@ -681,49 +713,61 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Almacén fiscal y recepción</h4>
                     </div>
 
-                    <x-form-input>
-                        <x-slot:label>Ingreso Almacén Fiscal</x-slot:label>
-                        <x-slot:input type="date" name="bonded_warehouse_enter" wire:model.live="bonded_warehouse_enter" class="pr-10 {{ $errors->has('bonded_warehouse_enter') ? 'border-red-500' : '' }}">
-                        </x-slot:input>
-                        <x-slot:error>{{ $errors->first('bonded_warehouse_enter') }}</x-slot:error>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Ingreso Almacén Fiscal</x-slot:label>
+                            <x-slot:input type="date" name="bonded_warehouse_enter" wire:model.live="bonded_warehouse_enter" class="pr-10 {{ $errors->has('bonded_warehouse_enter') ? 'border-red-500' : '' }}">
+                            </x-slot:input>
+                            <x-slot:error>{{ $errors->first('bonded_warehouse_enter') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Salida Almacén Fiscal</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="bonded_warehouse_exit" name="bonded_warehouse_exit" class="pr-10 {{ $errors->has('bonded_warehouse_exit') ? 'border-red-500' : '' }}">
-                        </x-slot:input>
-                        <x-slot:error>{{ $errors->first('bonded_warehouse_exit') }}</x-slot:error>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Salida Almacén Fiscal</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="bonded_warehouse_exit" name="bonded_warehouse_exit" class="pr-10 {{ $errors->has('bonded_warehouse_exit') ? 'border-red-500' : '' }}">
+                            </x-slot:input>
+                            <x-slot:error>{{ $errors->first('bonded_warehouse_exit') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
                     <x-form-input class="hidden">
                         <x-slot:label>Fecha Recepción</x-slot:label>
                         <x-slot:input type="date" name="date_received" wire:model="date_received"></x-slot:input>
                     </x-form-input>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Nota de Recibo</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="receipt_note_date"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Nota de Recibo</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="receipt_note_date"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Disp. Bogeda Estimada</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="estimated_dc_availability_date"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Disp. Bogeda Estimada</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="estimated_dc_availability_date"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
                     <!-- Pagos y cargos -->
                     <div class="col-span-3">
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Pagos y cargos</h4>
                     </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Pago Balance</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="balance_payment_date"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Pago Balance</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="balance_payment_date"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Pago Cargos Locales</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="local_charges_payment_date"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Pago Cargos Locales</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="local_charges_payment_date"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
                     <!-- Métricas y varios -->
                     <div class="col-span-3">
@@ -1063,15 +1107,19 @@
                             <x-slot:input type="text" placeholder="Ingrese factura" wire:model.live="invoice"></x-slot:input>
                         </x-form-input>
 
-                        <x-form-input>
-                            <x-slot:label>Fecha recepción de factura</x-slot:label>
-                            <x-slot:input type="date" name="date_invoice_received" wire:model="date_invoice_received"></x-slot:input>
-                        </x-form-input>
+                        <div wire:ignore>
+                            <x-form-input>
+                                <x-slot:label>Fecha recepción de factura</x-slot:label>
+                                <x-slot:input type="date" name="date_invoice_received" wire:model="date_invoice_received"></x-slot:input>
+                            </x-form-input>
+                        </div>
 
-                        <x-form-input>
-                            <x-slot:label>Fecha recepción doc. proveedor</x-slot:label>
-                            <x-slot:input type="date" name="date_vendor_document_received" wire:model="date_vendor_document_received"></x-slot:input>
-                        </x-form-input>
+                        <div wire:ignore>
+                            <x-form-input>
+                                <x-slot:label>Fecha recepción doc. proveedor</x-slot:label>
+                                <x-slot:input type="date" name="date_vendor_document_received" wire:model="date_vendor_document_received"></x-slot:input>
+                            </x-form-input>
+                        </div>
 
                         <x-form-input>
                             <x-slot:label>Factura Flete</x-slot:label>
