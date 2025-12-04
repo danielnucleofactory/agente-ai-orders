@@ -816,6 +816,10 @@ class CreatePucharseOrder extends Component
                 $this->cargo_invoice_number = $this->purchaseOrder->cargo_invoice_number;
                 $this->tariff_type = $this->purchaseOrder->tariff_type;
                 $this->route_label = $this->purchaseOrder->route_label;
+                // Asegurar que el valor guardado esté en el array de opciones
+                if ($this->route_label && !isset($this->routeLabelArray[$this->route_label])) {
+                    $this->routeLabelArray[$this->route_label] = $this->route_label;
+                }
                 $this->retail_group     = $this->purchaseOrder->retail_group;
                 $this->customer_type    = $this->purchaseOrder->customer_type;
                 $this->trading_company  = $this->purchaseOrder->trading_company;
@@ -1513,7 +1517,7 @@ class CreatePucharseOrder extends Component
 
                     'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
                     'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
-                    'used_rate_ok'              => false, // Siempre false
+                    'used_rate_ok'              => (bool) ($this->used_rate_ok ?? false),
                     'uses_bonded_warehouse'     => (bool) ($this->uses_bonded_warehouse ?? false),
                     'apply_technical_note'      => (bool) ($this->apply_technical_note ?? false),
                     'etd_initial_validated'     => (bool) ($this->etd_initial_validated ?? false),
@@ -1848,7 +1852,7 @@ class CreatePucharseOrder extends Component
 
                 'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
                 'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
-                'used_rate_ok'              => false, // Siempre false
+                'used_rate_ok'              => (bool) ($this->used_rate_ok ?? false),
                 'uses_bonded_warehouse'     => (bool) ($this->uses_bonded_warehouse ?? false),
                 'apply_technical_note'      => (bool) ($this->apply_technical_note ?? false),
                 'etd_initial_validated'     => (bool) ($this->etd_initial_validated ?? false),

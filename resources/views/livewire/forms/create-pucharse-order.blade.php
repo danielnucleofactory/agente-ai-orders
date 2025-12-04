@@ -684,7 +684,7 @@
                     <div wire:ignore>
                         <x-form-input>
                             <x-slot:label>ETA Inicial</x-slot:label>
-                            <x-slot:input type="date" name="date_eta_updated" wire:model="date_eta_updated"></x-slot:input>
+                            <x-slot:input type="date" name="date_eta_initial" wire:model="date_eta_initial"></x-slot:input>
                         </x-form-input>
                     </div>
 
