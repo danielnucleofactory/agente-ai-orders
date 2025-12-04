@@ -439,28 +439,8 @@ document.addEventListener('livewire:init', function() {
     Livewire.hook('morph.updated', ({ el, component }) => {
         // Sincronizar valores desde Livewire hacia inputs con wire:ignore
         // Esto es necesario porque wire:ignore previene que Livewire actualice esos elementos
-        if (component) {
-            setTimeout(() => {
-                document.querySelectorAll('div[wire\\:ignore] input[type="date"], div[wire\\:ignore] input.flatpickr-initialized').forEach(function(input) {
-                    const wireModel = input.getAttribute('wire:model') ||
-                                      input.getAttribute('wire:model.live') ||
-                                      input.getAttribute('wire:model.defer') ||
-                                      input.getAttribute('wire:model.lazy');
-                    if (wireModel && component.get(wireModel)) {
-                        const serverValue = component.get(wireModel);
-                        if (serverValue && input._flatpickr) {
-                            const currentValue = input._flatpickr.selectedDates.length > 0
-                                ? input._flatpickr.formatDate(input._flatpickr.selectedDates[0], 'Y-m-d')
-                                : '';
-                            if (serverValue !== currentValue) {
-                                input._flatpickr.setDate(serverValue, false);
-                                input.setAttribute('data-date-value', serverValue);
-                            }
-                        }
-                    }
-                });
-            }, 100);
-        }
+        // Nota: Esta sincronización se hace principalmente usando data-date-value que se preserva antes del morph
+        // Por lo tanto, no necesitamos acceder directamente a component.get() que puede no estar disponible
 
         // PASO 1: Cambiar inmediatamente todos los inputs type="date" a "text" antes de inicializar
         // Esto evita el flash visual (solo los que NO tienen wire:ignore)
