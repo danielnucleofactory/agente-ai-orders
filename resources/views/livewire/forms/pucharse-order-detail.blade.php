@@ -43,14 +43,14 @@
     </div>
 
     {{-- SECCIÓN CON LOS CAMPOS DE LA PO (IGUAL QUE EN EDICIÓN) --}}
-    <div class="rounded-[0.625rem] bg-white p-6 space-y-4" x-data="{ 
-        datosGenerales: false, 
-        identificadores: false, 
-        proveedor: false, 
-        dimensiones: false, 
-        fechas: false, 
-        infoAdicional: false, 
-        datosNegocio: false, 
+    <div class="rounded-[0.625rem] bg-white p-6 space-y-4" x-data="{
+        datosGenerales: false,
+        identificadores: false,
+        proveedor: false,
+        dimensiones: false,
+        fechas: false,
+        infoAdicional: false,
+        datosNegocio: false,
         estadoLlegada: false,
         expandAll() {
             this.datosGenerales = true;
@@ -74,7 +74,7 @@
         }
     }">
         {{-- Botones para expandir/contraer todo --}}
-        <div class="flex justify-end gap-2 mb-2">
+        <div class="flex gap-2 justify-end mb-2">
             <button @click="expandAll()" class="text-sm text-[#1AAD8A] hover:text-[#127A62] font-medium">
                 Expandir todo
             </button>
@@ -84,8 +84,8 @@
             </button>
         </div>
         {{-- Datos generales --}}
-        <div class="border border-gray-200 rounded-lg">
-            <button @click="datosGenerales = !datosGenerales" class="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+        <div class="rounded-lg border border-gray-200">
+            <button @click="datosGenerales = !datosGenerales" class="flex justify-between items-center p-4 w-full transition-colors hover:bg-gray-50">
                 <h2 class="text-lg font-bold text-[#1AAD8A]">Datos generales</h2>
                 <svg :class="{ 'rotate-180': datosGenerales }" class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -95,52 +95,52 @@
 
             {{-- Identificación de la OC --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Identificación de la OC</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Número de Orden (PO)</p>
+                    <p class="mb-1 text-gray-500">Número de Orden (PO)</p>
                     <p class="font-semibold">{{ $purchaseOrder->order_number ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha emisión PO</p>
+                    <p class="mb-1 text-gray-500">Fecha emisión PO</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->emision_date_po) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha de creación en Next</p>
+                    <p class="mb-1 text-gray-500">Fecha de creación en Next</p>
                     <p class="font-semibold">{{ $purchaseOrder->created_at ? formatDate($purchaseOrder->created_at) : '-' }}</p>
                 </div>
             </div>
 
             {{-- Condiciones comerciales --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Condiciones comerciales</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Moneda</p>
+                    <p class="mb-1 text-gray-500">Moneda</p>
                     <p class="font-semibold">{{ $purchaseOrder->currency ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Incoterm Precios</p>
+                    <p class="mb-1 text-gray-500">Incoterm Precios</p>
                     <p class="font-semibold">{{ $purchaseOrder->price_incoterm ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Incoterm de Compra</p>
+                    <p class="mb-1 text-gray-500">Incoterm de Compra</p>
                     <p class="font-semibold">{{ $purchaseOrder->incoterms ?? '-' }}</p>
                 </div>
             </div>
 
             {{-- Planificación logística --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Planificación logística</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Incoterm logístico</p>
+                    <p class="mb-1 text-gray-500">Incoterm logístico</p>
                     <p class="font-semibold">{{ $purchaseOrder->logistics_incoterm ?? '-' }}</p>
                 </div>
             </div>
 
             {{-- Clasificación --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Clasificación</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Categoría</p>
+                    <p class="mb-1 text-gray-500">Categoría</p>
                     <p class="font-semibold">{{ $purchaseOrder->category ?? '-' }}</p>
                 </div>
             </div>
@@ -149,7 +149,7 @@
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Notas / Motivo</h4>
             <div class="grid grid-cols-1 gap-4 text-sm">
                 <div>
-                    <p class="text-gray-500 mb-1">Motivo</p>
+                    <p class="mb-1 text-gray-500">Motivo</p>
                     <p class="font-semibold">{{ $purchaseOrder->reason ?? '-' }}</p>
                 </div>
             </div>
@@ -157,8 +157,8 @@
         </div>
 
         {{-- Identificadores y transporte --}}
-        <div class="border border-gray-200 rounded-lg">
-            <button @click="identificadores = !identificadores" class="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+        <div class="rounded-lg border border-gray-200">
+            <button @click="identificadores = !identificadores" class="flex justify-between items-center p-4 w-full transition-colors hover:bg-gray-50">
                 <h2 class="text-lg font-bold text-[#1AAD8A]">Identificadores y transporte</h2>
                 <svg :class="{ 'rotate-180': identificadores }" class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -168,15 +168,15 @@
 
             {{-- Itinerario --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Itinerario</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Puerto de Embarque</p>
+                    <p class="mb-1 text-gray-500">Puerto de Embarque</p>
                     <p class="font-semibold">{{ $purchaseOrder->departure_port ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Puerto de Embarque Validado</p>
+                    <p class="mb-1 text-gray-500">Puerto de Embarque Validado</p>
                     <div class="flex items-center">
-                        <input id="port_of_loading_validated" type="checkbox" 
+                        <input id="port_of_loading_validated" type="checkbox"
                                {{ $purchaseOrder->port_of_loading_validated ? 'checked' : '' }}
                                disabled
                                class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
@@ -186,37 +186,37 @@
                     </div>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Puerto de Arribo</p>
+                    <p class="mb-1 text-gray-500">Puerto de Arribo</p>
                     <p class="font-semibold">{{ $purchaseOrder->arrival_port ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Línea Naviera</p>
+                    <p class="mb-1 text-gray-500">Línea Naviera</p>
                     <p class="font-semibold">{{ $purchaseOrder->shipping_line ?? '-' }}</p>
                 </div>
             </div>
 
             {{-- Naviera y equipo --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Naviera y equipo</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Tipo de Contenedor</p>
+                    <p class="mb-1 text-gray-500">Tipo de Contenedor</p>
                     <p class="font-semibold">{{ $purchaseOrder->container_type ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Número de Contenedor</p>
+                    <p class="mb-1 text-gray-500">Número de Contenedor</p>
                     <p class="font-semibold">{{ $purchaseOrder->container_number ?? '-' }}</p>
                 </div>
             </div>
 
             {{-- Identificadores de embarque --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Identificadores de embarque</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">MBL Number</p>
+                    <p class="mb-1 text-gray-500">MBL Number</p>
                     <p class="font-semibold">{{ $purchaseOrder->mbl_number ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Proforma de Fábrica</p>
+                    <p class="mb-1 text-gray-500">Proforma de Fábrica</p>
                     <p class="font-semibold">{{ $purchaseOrder->factory_proforma_number ?? '-' }}</p>
                 </div>
             </div>
@@ -224,47 +224,47 @@
         </div>
 
         {{-- Datos Proveedor --}}
-        <div class="border border-gray-200 rounded-lg">
-            <button @click="proveedor = !proveedor" class="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+        <div class="rounded-lg border border-gray-200">
+            <button @click="proveedor = !proveedor" class="flex justify-between items-center p-4 w-full transition-colors hover:bg-gray-50">
                 <h2 class="text-lg font-bold text-[#1AAD8A]">Datos Proveedor</h2>
                 <svg :class="{ 'rotate-180': proveedor }" class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                 </svg>
             </button>
             <div x-show="proveedor" x-collapse class="px-4 pb-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Nombre del Proveedor</p>
+                    <p class="mb-1 text-gray-500">Nombre del Proveedor</p>
                     <p class="font-semibold">{{ $purchaseOrder->vendor->name ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Código de Proveedor</p>
-                    <p class="font-semibold">{{ $purchaseOrder->vendor->vendo_code ?? '-' }}</p>
+                    <p class="mb-1 text-gray-500">Código de Proveedor</p>
+                    <p class="font-semibold">{{ $purchaseOrder->vendor_number ?? $purchaseOrder->vendor->vendo_code ?? '-' }}</p>
                 </div>
             </div>
             </div>
         </div>
 
         {{-- Dimensiones --}}
-        <div class="border border-gray-200 rounded-lg">
-            <button @click="dimensiones = !dimensiones" class="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+        <div class="rounded-lg border border-gray-200">
+            <button @click="dimensiones = !dimensiones" class="flex justify-between items-center p-4 w-full transition-colors hover:bg-gray-50">
                 <h2 class="text-lg font-bold text-[#1AAD8A]">Dimensiones</h2>
                 <svg :class="{ 'rotate-180': dimensiones }" class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                 </svg>
             </button>
             <div x-show="dimensiones" x-collapse class="px-4 pb-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">CBM (m³)</p>
+                    <p class="mb-1 text-gray-500">CBM (m³)</p>
                     <p class="font-semibold">{{ number_format($purchaseOrder->cbm ?? 0, 2) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Peso (kg)</p>
+                    <p class="mb-1 text-gray-500">Peso (kg)</p>
                     <p class="font-semibold">{{ number_format($purchaseOrder->weight_kg ?? 0, 2) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Peso (lb)</p>
+                    <p class="mb-1 text-gray-500">Peso (lb)</p>
                     <p class="font-semibold">{{ number_format($purchaseOrder->weight_lb ?? 0, 2) }}</p>
                 </div>
             </div>
@@ -272,8 +272,8 @@
         </div>
 
         {{-- Fechas --}}
-        <div class="border border-gray-200 rounded-lg">
-            <button @click="fechas = !fechas" class="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+        <div class="rounded-lg border border-gray-200">
+            <button @click="fechas = !fechas" class="flex justify-between items-center p-4 w-full transition-colors hover:bg-gray-50">
                 <h2 class="text-lg font-bold text-[#1AAD8A]">Fechas</h2>
                 <svg :class="{ 'rotate-180': fechas }" class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -283,73 +283,73 @@
 
             {{-- Booking y coordinación --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Booking y coordinación</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Solicitud de Booking</p>
+                    <p class="mb-1 text-gray-500">Solicitud de Booking</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_booking_request) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Autorización Booking</p>
+                    <p class="mb-1 text-gray-500">Autorización Booking</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_booking_authorized) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha de asignación de agente de carga</p>
+                    <p class="mb-1 text-gray-500">Fecha de asignación de agente de carga</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->forwader_date) }}</p>
                 </div>
             </div>
 
             {{-- Origen: preparación y carga --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Origen: preparación y carga</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha Inspección</p>
+                    <p class="mb-1 text-gray-500">Fecha Inspección</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->inspection_date) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha Corte VGM</p>
+                    <p class="mb-1 text-gray-500">Fecha Corte VGM</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->vgm_cut_date) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha Carga Lista Teórica</p>
+                    <p class="mb-1 text-gray-500">Fecha Carga Lista Teórica</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_theorical_load) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha Carga Lista Variable</p>
+                    <p class="mb-1 text-gray-500">Fecha Carga Lista Variable</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_variable_date) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha Carga Lista Real</p>
+                    <p class="mb-1 text-gray-500">Fecha Carga Lista Real</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_carga_po) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha de consolidado</p>
+                    <p class="mb-1 text-gray-500">Fecha de consolidado</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_consolidation) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha de release</p>
+                    <p class="mb-1 text-gray-500">Fecha de release</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->release_date) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Diferencia de fecha de carga lista</p>
+                    <p class="mb-1 text-gray-500">Diferencia de fecha de carga lista</p>
                     <p class="font-semibold">{{ $this->calculateLoadDateDifference($purchaseOrder) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Nombre del Consolidador</p>
+                    <p class="mb-1 text-gray-500">Nombre del Consolidador</p>
                     <p class="font-semibold">{{ $purchaseOrder->consolidator_name ?? '-' }}</p>
                 </div>
             </div>
 
             {{-- Salida (origen) --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Salida (origen)</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">ETD Inicial</p>
+                    <p class="mb-1 text-gray-500">ETD Inicial</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_etd_initial) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">ETD Inicial Validada</p>
+                    <p class="mb-1 text-gray-500">ETD Inicial Validada</p>
                     <div class="flex items-center">
-                        <input id="etd_initial_validated" type="checkbox" 
+                        <input id="etd_initial_validated" type="checkbox"
                                {{ $purchaseOrder->etd_initial_validated ? 'checked' : '' }}
                                disabled
                                class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
@@ -359,79 +359,79 @@
                     </div>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">ETD</p>
+                    <p class="mb-1 text-gray-500">ETD</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_etd) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">ATD</p>
+                    <p class="mb-1 text-gray-500">ATD</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_atd) }}</p>
                 </div>
             </div>
 
             {{-- Arribo a destino --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Arribo a destino</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">ETA</p>
+                    <p class="mb-1 text-gray-500">ETA</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_eta) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">ETA Inicial</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_eta_updated) }}</p>
+                    <p class="mb-1 text-gray-500">ETA Inicial</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_eta_initial) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">ATA</p>
+                    <p class="mb-1 text-gray-500">ATA</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_ata) }}</p>
                 </div>
             </div>
 
             {{-- Almacén fiscal y recepción --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Almacén fiscal y recepción</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Ingreso Almacén Fiscal</p>
+                    <p class="mb-1 text-gray-500">Ingreso Almacén Fiscal</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->bonded_warehouse_enter) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Salida Almacén Fiscal</p>
+                    <p class="mb-1 text-gray-500">Salida Almacén Fiscal</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->bonded_warehouse_exit) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha Nota de Recibo</p>
+                    <p class="mb-1 text-gray-500">Fecha Nota de Recibo</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->receipt_note_date) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha Disp. Bogeda Estimada</p>
+                    <p class="mb-1 text-gray-500">Fecha Disp. Bogeda Estimada</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->estimated_dc_availability_date) }}</p>
                 </div>
             </div>
 
             {{-- Pagos y cargos --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Pagos y cargos</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha Pago Balance</p>
+                    <p class="mb-1 text-gray-500">Fecha Pago Balance</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->balance_payment_date) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha Pago Cargos Locales</p>
+                    <p class="mb-1 text-gray-500">Fecha Pago Cargos Locales</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->local_charges_payment_date) }}</p>
                 </div>
             </div>
 
             {{-- Métricas y varios --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Métricas y varios</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Días Libres Contenedor</p>
+                    <p class="mb-1 text-gray-500">Días Libres Contenedor</p>
                     <p class="font-semibold">{{ $purchaseOrder->container_free_days ?? '0' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Dif Fechas ETD (días)</p>
+                    <p class="mb-1 text-gray-500">Dif Fechas ETD (días)</p>
                     <p class="font-semibold">{{ $purchaseOrder->etd_dates_difference ?? '0' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Dif Fechas ETA (días)</p>
+                    <p class="mb-1 text-gray-500">Dif Fechas ETA (días)</p>
                     <p class="font-semibold">{{ $purchaseOrder->eta_dates_difference ?? '0' }}</p>
                 </div>
             </div>
@@ -439,8 +439,8 @@
         </div>
 
         {{-- Información Adicional --}}
-        <div class="border border-gray-200 rounded-lg">
-            <button @click="infoAdicional = !infoAdicional" class="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+        <div class="rounded-lg border border-gray-200">
+            <button @click="infoAdicional = !infoAdicional" class="flex justify-between items-center p-4 w-full transition-colors hover:bg-gray-50">
                 <h2 class="text-lg font-bold text-[#1AAD8A]">Información Adicional</h2>
                 <svg :class="{ 'rotate-180': infoAdicional }" class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -450,26 +450,26 @@
 
             {{-- Configuración del envío --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Configuración del envío</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Tipo de Transporte</p>
+                    <p class="mb-1 text-gray-500">Tipo de Transporte</p>
                     <p class="font-semibold">{{ ucfirst($purchaseOrder->mode ?? '-') }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Número de Booking</p>
+                    <p class="mb-1 text-gray-500">Número de Booking</p>
                     <p class="font-semibold">{{ $purchaseOrder->tracking_id ?? '-' }}</p>
                 </div>
             </div>
 
             {{-- Opciones --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Opciones</h4>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-2 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div class="flex items-center">
                     <input type="checkbox" {{ ($purchaseOrder->applies_tlc ?? false) ? 'checked' : '' }} disabled
                            class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A] opacity-75">
                     <label class="block ml-2 text-sm text-gray-700">Aplica TLC</label>
                 </div>
-                <div class="flex items-center hidden">
+                <div class="flex hidden items-center">
                     <input type="checkbox" {{ ($purchaseOrder->applies_af ?? false) ? 'checked' : '' }} disabled
                            class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A] opacity-75">
                     <label class="block ml-2 text-sm text-gray-700">Aplica AF</label>
@@ -498,51 +498,51 @@
 
             {{-- Volúmenes / pallets --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Volúmenes / pallets</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Cantidad estimada de pallets</p>
+                    <p class="mb-1 text-gray-500">Cantidad estimada de pallets</p>
                     <p class="font-semibold">{{ $purchaseOrder->pallet_quantity ?? '0' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Cantidad Real de Pallets</p>
+                    <p class="mb-1 text-gray-500">Cantidad Real de Pallets</p>
                     <p class="font-semibold">{{ $purchaseOrder->pallet_quantity_real ?? '0' }}</p>
                 </div>
             </div>
 
             {{-- Costos base --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Costos base</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Monto Factura</p>
+                    <p class="mb-1 text-gray-500">Monto Factura</p>
                     <p class="font-semibold">$ {{ number_format($purchaseOrder->Invoice_amount ?? 0, 2) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Monto Flete</p>
+                    <p class="mb-1 text-gray-500">Monto Flete</p>
                     <p class="font-semibold">$ {{ number_format($purchaseOrder->freight_amount ?? 0, 2) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Otros Gastos</p>
+                    <p class="mb-1 text-gray-500">Otros Gastos</p>
                     <p class="font-semibold">$ {{ number_format($purchaseOrder->other_expenses ?? 0, 2) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Monto Total</p>
+                    <p class="mb-1 text-gray-500">Monto Total</p>
                     <p class="font-semibold">$ {{ number_format($purchaseOrder->total_amount ?? 0, 2) }}</p>
                 </div>
             </div>
 
             {{-- Totales y cálculos --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Totales y cálculos</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Costo Estimado de Pallets</p>
+                    <p class="mb-1 text-gray-500">Costo Estimado de Pallets</p>
                     <p class="font-semibold">$ {{ number_format($purchaseOrder->estimated_pallet_cost ?? 0, 2) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Costo Total Estimado PO</p>
+                    <p class="mb-1 text-gray-500">Costo Total Estimado PO</p>
                     <p class="font-semibold">$ {{ number_format($purchaseOrder->real_cost_estimated_po ?? 0, 2) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Costo Real PO</p>
+                    <p class="mb-1 text-gray-500">Costo Real PO</p>
                     <p class="font-semibold">$ {{ number_format($purchaseOrder->real_cost_real_po ?? 0, 2) }}</p>
                 </div>
             </div>
@@ -550,8 +550,8 @@
         </div>
 
         {{-- Datos de negocio --}}
-        <div class="border border-gray-200 rounded-lg">
-            <button @click="datosNegocio = !datosNegocio" class="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+        <div class="rounded-lg border border-gray-200">
+            <button @click="datosNegocio = !datosNegocio" class="flex justify-between items-center p-4 w-full transition-colors hover:bg-gray-50">
                 <h2 class="text-lg font-bold text-[#1AAD8A]">Datos de negocio</h2>
                 <svg :class="{ 'rotate-180': datosNegocio }" class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -561,80 +561,80 @@
 
             {{-- Proveedores y contratación --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Proveedores y contratación</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Agente de Carga</p>
+                    <p class="mb-1 text-gray-500">Agente de Carga</p>
                     <p class="font-semibold">{{ $purchaseOrder->forwarder_name ?? '-' }}</p>
                 </div>
                 <div class="hidden">
-                    <p class="text-gray-500 mb-1">Proveedor de Servicio</p>
+                    <p class="mb-1 text-gray-500">Proveedor de Servicio</p>
                     <p class="font-semibold">{{ $purchaseOrder->service_provider ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Cliente</p>
+                    <p class="mb-1 text-gray-500">Cliente</p>
                     <p class="font-semibold">{{ $purchaseOrder->trading_company ?? '-' }}</p>
                 </div>
             </div>
 
             {{-- Tarifas y ruta --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Tarifas y ruta</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Tipo Tarifa</p>
+                    <p class="mb-1 text-gray-500">Tipo Tarifa</p>
                     <p class="font-semibold">{{ $purchaseOrder->tariff_type ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Ruta Logística</p>
+                    <p class="mb-1 text-gray-500">Ruta Logística</p>
                     <p class="font-semibold">{{ $purchaseOrder->route_label ?? '-' }}</p>
                 </div>
             </div>
 
             {{-- Segmento / cliente --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Segmento / cliente</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Grupo Repositor</p>
+                    <p class="mb-1 text-gray-500">Grupo Repositor</p>
                     <p class="font-semibold">{{ $purchaseOrder->retail_group ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Tipo Cliente</p>
+                    <p class="mb-1 text-gray-500">Tipo Cliente</p>
                     <p class="font-semibold">{{ $purchaseOrder->customer_type ?? '-' }}</p>
                 </div>
             </div>
 
             {{-- Documentos y referencias --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Documentos y referencias</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+            <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="text-gray-500 mb-1">Factura</p>
+                    <p class="mb-1 text-gray-500">Factura</p>
                     <p class="font-semibold">{{ $purchaseOrder->invoice ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha recepción de factura</p>
+                    <p class="mb-1 text-gray-500">Fecha recepción de factura</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_invoice_received) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Fecha recepción doc. proveedor</p>
+                    <p class="mb-1 text-gray-500">Fecha recepción doc. proveedor</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_vendor_document_received) }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Factura Flete</p>
+                    <p class="mb-1 text-gray-500">Factura Flete</p>
                     <p class="font-semibold">{{ $purchaseOrder->cargo_invoice_number ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Factura Mercancía</p>
+                    <p class="mb-1 text-gray-500">Factura Mercancía</p>
                     <p class="font-semibold">{{ $purchaseOrder->factura_merca ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">DUA Internamiento</p>
+                    <p class="mb-1 text-gray-500">DUA Internamiento</p>
                     <p class="font-semibold">{{ $purchaseOrder->customs_dua ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Expediente</p>
+                    <p class="mb-1 text-gray-500">Expediente</p>
                     <p class="font-semibold">{{ $purchaseOrder->case_number_file ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Nota de Recibo</p>
+                    <p class="mb-1 text-gray-500">Nota de Recibo</p>
                     <p class="font-semibold">{{ $purchaseOrder->receipt_note ?? '-' }}</p>
                 </div>
             </div>
@@ -643,7 +643,7 @@
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Notas</h4>
             <div class="grid grid-cols-1 gap-4 text-sm">
                 <div>
-                    <p class="text-gray-500 mb-1">Notas de Visibilidad</p>
+                    <p class="mb-1 text-gray-500">Notas de Visibilidad</p>
                     <p class="font-semibold">{{ $purchaseOrder->visibility_notes ?? '-' }}</p>
                 </div>
             </div>
@@ -651,21 +651,21 @@
         </div>
 
         {{-- Estado de llegada --}}
-        <div class="border border-gray-200 rounded-lg">
-            <button @click="estadoLlegada = !estadoLlegada" class="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+        <div class="rounded-lg border border-gray-200">
+            <button @click="estadoLlegada = !estadoLlegada" class="flex justify-between items-center p-4 w-full transition-colors hover:bg-gray-50">
                 <h2 class="text-lg font-bold text-[#1AAD8A]">Estado de llegada</h2>
                 <svg :class="{ 'rotate-180': estadoLlegada }" class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                 </svg>
             </button>
             <div x-show="estadoLlegada" x-collapse class="px-4 pb-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
                 <div>
-                    <p class="text-gray-500 mb-1">Estado</p>
+                    <p class="mb-1 text-gray-500">Estado</p>
                     <p class="font-semibold">{{ $purchaseOrder->arrival_status ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500 mb-1">Días de retraso</p>
+                    <p class="mb-1 text-gray-500">Días de retraso</p>
                     <p class="font-semibold">{{ $purchaseOrder->delay_days ?? '0' }}</p>
                 </div>
             </div>
@@ -692,12 +692,12 @@
                     <table class="w-full">
                         <thead class="bg-[#D4F5ED]">
                             <tr>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-900">Fecha</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-900">Usuario</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-900">Tipo</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-900">Comentario</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-900">Archivos</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-900">Acciones</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Fecha</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Usuario</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Tipo</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Comentario</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Archivos</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
@@ -711,23 +711,23 @@
                                     </td>
                                     <td class="px-4 py-3 text-sm whitespace-nowrap">
                                         @if(($comment['action_type'] ?? 'comment') === 'comment')
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">
                                                 Comentario
                                             </span>
                                         @elseif($comment['action_type'] === 'field_change')
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-yellow-800 bg-yellow-100 rounded-full">
                                                 Cambio de Datos
                                             </span>
                                         @elseif($comment['action_type'] === 'status_change')
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-purple-800 bg-purple-100 rounded-full">
                                                 Cambio de Estado
                                             </span>
                                         @elseif($comment['action_type'] === 'record_create')
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-green-800 bg-green-100 rounded-full">
                                                 Creación
                                             </span>
                                         @else
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-gray-800 bg-gray-100 rounded-full">
                                                 Otro
                                             </span>
                                         @endif
@@ -738,11 +738,11 @@
                                     <td class="px-4 py-3 text-sm">
                                         @if(!empty($comment['attachment']))
                                             <div class="space-y-1">
-                                                <a href="{{ $comment['attachment']['url'] }}" target="_blank" 
-                                                   class="text-blue-600 hover:text-blue-800 block">
+                                                <a href="{{ $comment['attachment']['url'] }}" target="_blank"
+                                                   class="block text-blue-600 hover:text-blue-800">
                                                     {{ $comment['attachment']['name'] }}
                                                     @if($comment['attachment']['is_pending'])
-                                                        <span class="text-orange-600 text-xs">(pendiente de aprobación)</span>
+                                                        <span class="text-xs text-orange-600">(pendiente de aprobación)</span>
                                                     @endif
                                                 </a>
                                             </div>
@@ -752,7 +752,7 @@
                                     </td>
                                     <td class="px-4 py-3 text-sm whitespace-nowrap">
                                         @if($comment['has_changes'] ?? false)
-                                            <button wire:click="$dispatchTo('partials.activity-detail-modal', 'openActivityDetail', @js($comment))" 
+                                            <button wire:click="$dispatchTo('partials.activity-detail-modal', 'openActivityDetail', @js($comment))"
                                                     class="text-[#1AAD8A] hover:text-[#0F614D] hover:underline">
                                                 Ver cambios
                                             </button>
@@ -763,7 +763,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500">
+                                    <td colspan="6" class="px-4 py-8 text-sm text-center text-gray-500">
                                         No hay comentarios registrados
                                     </td>
                                 </tr>
