@@ -75,7 +75,7 @@
     </tr>
     <tr>
         <td style="text-align: center; padding: 30px 0;">
-            <a href="{{ route('support.index') }}" style="
+            <a href="{{ route('support.contact') }}" style="
                 background-color: #1AAD8A;
                 color: #ffffff;
                 padding: 12px 30px;

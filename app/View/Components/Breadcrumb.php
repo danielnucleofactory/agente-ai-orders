@@ -65,7 +65,7 @@ class Breadcrumb extends Component
         'bill-to.edit' => 'Editar facturación',
         'authorizations.index' => 'Autorizaciones',
         'authorizations.show' => 'Detalle de autorización',
-        'support.index' => 'Soporte',
+        'support.contact' => 'Soporte',
 
         // Text-based translations (exact text that appears in breadcrumb)
         'Purchase orders' => 'Órdenes de compra',

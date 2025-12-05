@@ -250,9 +250,6 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth'])->group(function () {
-    Route::view('support', 'support.index')
-        ->name('support.index');
-
     Route::get('support/contact', \App\Livewire\Support\ContactForm::class)
         ->name('support.contact');
 

@@ -35,6 +35,7 @@
                 width: 500px !important;
                 min-width: 500px !important;
                 max-width: 500px !important;
+                position: relative !important;
             }
             
             .historical-filters-section .search-input-wrapper input,
@@ -47,6 +48,12 @@
                 max-height: 40px !important;
                 box-sizing: border-box !important;
                 padding: 8px 14px 8px 44px !important;
+                position: relative !important;
+                z-index: 10 !important;
+                pointer-events: auto !important;
+                -webkit-appearance: none !important;
+                -moz-appearance: none !important;
+                appearance: none !important;
             }
             
             /* Inputs de fecha - altura exacta de 40px (incluyendo border) */
@@ -123,11 +130,24 @@
         <div class="historical-filters-section">
             <!-- Buscador -->
             <div class="search-input-wrapper">
-                <x-search-input 
-                    class="w-full md:w-64" 
-                    wire:model.debounce.300ms="search" 
-                    placeholder="Buscar por orden, proveedor, contenedor..." 
-                />
+                <label for="historical-search-input" class="sr-only">Buscar</label>
+                <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <input
+                        type="text"
+                        id="historical-search-input"
+                        wire:model.live.debounce.300ms="search"
+                        placeholder="Buscar por orden, proveedor, contenedor..."
+                        class="rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#28C7A1] block w-full"
+                        autocomplete="off"
+                    />
+                </div>
             </div>
 
             <!-- Filtros -->
