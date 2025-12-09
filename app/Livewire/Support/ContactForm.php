@@ -58,7 +58,15 @@ class ContactForm extends Component
 
             $this->reset(['subject', 'description']);
             $this->showSuccessModal = true;
+            
+            // Método 1: Dispatch de Livewire (método principal)
             $this->dispatch('open-modal', 'modal-support-request-sent');
+            
+            // Método 2: Fallback con JavaScript directo
+            $this->js('
+                console.log("Abriendo modal de éxito");
+                window.dispatchEvent(new CustomEvent("open-modal", { detail: "modal-support-request-sent" }));
+            ');
 
             session()->flash('success', 'Tu solicitud de soporte ha sido enviada exitosamente.');
         } catch (\Exception $e) {

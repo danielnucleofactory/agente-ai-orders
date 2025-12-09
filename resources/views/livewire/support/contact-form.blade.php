@@ -171,18 +171,102 @@
         </div>
     </div>
 
-    <!-- Modal de éxito -->
-    @if($showSuccessModal)
-        <x-modal-success>
-            <x-slot:title>
+    <!-- Modal de éxito - Implementación robusta con múltiples métodos -->
+    <div id="modal-support-request-sent-container"
+        x-data="{ show: false }"
+        x-init="
+            // Método 2: Listener en x-init (JavaScript puro)
+            window.addEventListener('open-modal', function(event) {
+                if (event.detail === 'modal-support-request-sent' || 
+                    (event.detail && event.detail.name === 'modal-support-request-sent')) {
+                    show = true;
+                }
+            });
+            
+            // Bloqueo del scroll del body cuando el modal está abierto
+            $watch('show', value => {
+                if (value) {
+                    document.body.classList.add('overflow-y-hidden');
+                } else {
+                    document.body.classList.remove('overflow-y-hidden');
+                }
+            });
+        "
+        x-on:open-modal.window="
+            // Método 1: Listeners de Alpine.js (x-on)
+            if ($event.detail === 'modal-support-request-sent' || 
+                ($event.detail && $event.detail.name === 'modal-support-request-sent')) {
+                show = true;
+            }
+        "
+        x-show="show"
+        x-cloak
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        style="display: none;"
+        class="fixed inset-0 z-[9999] flex items-center justify-center">
+        
+        <!-- Fondo oscuro -->
+        <div @click="show = false; $dispatch('close-modal', 'modal-support-request-sent')" 
+             class="absolute inset-0 bg-black bg-opacity-50"></div>
+        
+        <!-- Modal -->
+        <div @click.stop
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 transform scale-95"
+             x-transition:enter-end="opacity-100 transform scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 transform scale-100"
+             x-transition:leave-end="opacity-0 transform scale-95"
+             class="contact-success-modal relative z-10">
+            
+            <!-- Icono de éxito -->
+            <div class="modal-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="104" height="104" viewBox="0 0 94 93" fill="none">
+                    <path
+                        d="M27.5001 46.5013L40.5001 59.5013L66.5001 33.5013M90.3334 46.5013C90.3334 70.4336 70.9324 89.8346 47.0001 89.8346C23.0677 89.8346 3.66675 70.4336 3.66675 46.5013C3.66675 22.569 23.0677 3.16797 47.0001 3.16797C70.9324 3.16797 90.3334 22.569 90.3334 46.5013Z"
+                        stroke="#5DD595" 
+                        stroke-width="6" 
+                        stroke-linecap="round" 
+                        stroke-linejoin="round" />
+                </svg>
+            </div>
+            
+            <!-- Título -->
+            <h3 class="modal-title">
                 Solicitud enviada correctamente
-            </x-slot:title>
-            <x-slot:content>
+            </h3>
+            
+            <!-- Descripción -->
+            <p class="modal-description">
                 Tu solicitud de soporte ha sido enviada correctamente. Te contactaremos pronto.
-            </x-slot:content>
-            <x-slot:button wire:click="closeModal">
-                Cerrar
-            </x-slot:button>
-        </x-modal-success>
-    @endif
+            </p>
+            
+            <!-- Botón de aceptar -->
+            <button 
+                @click="show = false; $dispatch('close-modal', 'modal-support-request-sent')"
+                wire:click="closeModal"
+                class="modal-button">
+                Aceptar
+            </button>
+        </div>
+    </div>
+    
+    <!-- Método 3: Script adicional (Respaldo final) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            window.addEventListener('open-modal', function(event) {
+                if (event.detail === 'modal-support-request-sent') {
+                    const modal = document.getElementById('modal-support-request-sent-container');
+                    if (modal && modal.__x && modal.__x.$data) {
+                        modal.__x.$data.show = true;
+                    }
+                }
+            });
+        });
+    </script>
 </div>
