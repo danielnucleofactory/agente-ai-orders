@@ -113,4 +113,17 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Support and Admin Email Addresses
+    |--------------------------------------------------------------------------
+    |
+    | These email addresses are used for sending notifications to the support
+    | team and administrators when support requests are created.
+    |
+    */
+
+    'support_email' => env('MAIL_SUPPORT_EMAIL', null),
+    'admin_email' => env('MAIL_ADMIN_EMAIL', null),
+
 ];

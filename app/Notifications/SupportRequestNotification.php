@@ -8,7 +8,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use App\Models\SupportRequest;
 
-class SupportRequestReceived extends Notification
+class SupportRequestNotification extends Notification
 {
     use Queueable;
 
@@ -36,10 +36,10 @@ class SupportRequestReceived extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Solicitud de Soporte Recibida - Next')
-            ->view('emails.support-request-received', [
+            ->subject('Nueva Solicitud de Soporte - Next')
+            ->view('emails.support-request-notification', [
                 'supportRequest' => $this->supportRequest,
-                'user' => $notifiable
+                'user' => $this->supportRequest->user
             ]);
     }
 
@@ -53,6 +53,7 @@ class SupportRequestReceived extends Notification
         return [
             'support_request_id' => $this->supportRequest->id,
             'subject' => $this->supportRequest->subject,
+            'user_id' => $this->supportRequest->user_id,
         ];
     }
 }

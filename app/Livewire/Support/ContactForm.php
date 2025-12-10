@@ -5,7 +5,10 @@ namespace App\Livewire\Support;
 use Livewire\Component;
 use App\Models\SupportRequest;
 use App\Notifications\SupportRequestReceived;
+use App\Notifications\SupportRequestNotification;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Log;
 
 class ContactForm extends Component
 {
@@ -54,7 +57,36 @@ class ContactForm extends Component
                 'status' => 'pending',
             ]);
 
+            // 1. Enviar confirmación al usuario
             Auth::user()->notify(new SupportRequestReceived($supportRequest));
+
+            // 2. Enviar notificación al equipo de soporte
+            $supportEmail = config('mail.support_email');
+            if ($supportEmail) {
+                try {
+                    Notification::route('mail', $supportEmail)
+                        ->notify(new SupportRequestNotification($supportRequest));
+                } catch (\Exception $e) {
+                    Log::error('Error enviando notificación a soporte', [
+                        'email' => $supportEmail,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            // 3. Enviar notificación al administrador
+            $adminEmail = config('mail.admin_email');
+            if ($adminEmail && $adminEmail !== $supportEmail) {
+                try {
+                    Notification::route('mail', $adminEmail)
+                        ->notify(new SupportRequestNotification($supportRequest));
+                } catch (\Exception $e) {
+                    Log::error('Error enviando notificación a admin', [
+                        'email' => $adminEmail,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
 
             $this->reset(['subject', 'description']);
             $this->showSuccessModal = true;
@@ -70,6 +102,10 @@ class ContactForm extends Component
 
             session()->flash('success', 'Tu solicitud de soporte ha sido enviada exitosamente.');
         } catch (\Exception $e) {
+            Log::error('Error al crear solicitud de soporte', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             session()->flash('error', 'Hubo un error al enviar tu solicitud. Por favor, intenta nuevamente.');
         }
     }
