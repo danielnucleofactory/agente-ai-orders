@@ -70,9 +70,9 @@ class MaestrosApiService
             'order' => $params['order'] ?? 'desc',
         ];
 
-        // Only add search if it's not empty - normalize to lowercase for case-insensitive search
+        // Only add search if it's not empty - send original text (backend handles case-insensitive search)
         if (!empty($params['search'])) {
-            $defaultParams['search'] = mb_strtolower(trim($params['search']), 'UTF-8');
+            $defaultParams['search'] = trim($params['search']);
         }
 
         // Only add active if it's provided - ensure it's always a string 'true' or 'false'
@@ -110,9 +110,9 @@ class MaestrosApiService
             'order' => $params['order'] ?? 'desc',
         ];
 
-        // Only add search if it's not empty - normalize to lowercase for case-insensitive search
+        // Only add search if it's not empty - send original text (backend handles case-insensitive search)
         if (!empty($params['search'])) {
-            $defaultParams['search'] = mb_strtolower(trim($params['search']), 'UTF-8');
+            $defaultParams['search'] = trim($params['search']);
         }
 
         // Only add active if it's provided - ensure it's always a string 'true' or 'false'
@@ -150,9 +150,9 @@ class MaestrosApiService
             'order' => $params['order'] ?? 'desc',
         ];
 
-        // Only add search if it's not empty - normalize to lowercase for case-insensitive search
+        // Only add search if it's not empty - send original text (backend handles case-insensitive search)
         if (!empty($params['search'])) {
-            $defaultParams['search'] = mb_strtolower(trim($params['search']), 'UTF-8');
+            $defaultParams['search'] = trim($params['search']);
         }
 
         // Only add active if it's provided - ensure it's always a string 'true' or 'false'
@@ -190,9 +190,9 @@ class MaestrosApiService
             'order' => $params['order'] ?? 'desc',
         ];
 
-        // Only add search if it's not empty - normalize to lowercase for case-insensitive search
+        // Only add search if it's not empty - send original text (backend handles case-insensitive search)
         if (!empty($params['search'])) {
-            $defaultParams['search'] = mb_strtolower(trim($params['search']), 'UTF-8');
+            $defaultParams['search'] = trim($params['search']);
         }
 
         // Only add active if it's provided - ensure it's always a string 'true' or 'false'
@@ -230,9 +230,9 @@ class MaestrosApiService
             'order' => $params['order'] ?? 'desc',
         ];
 
-        // Only add search if it's not empty - normalize to lowercase for case-insensitive search
+        // Only add search if it's not empty - send original text (backend handles case-insensitive search)
         if (!empty($params['search'])) {
-            $defaultParams['search'] = mb_strtolower(trim($params['search']), 'UTF-8');
+            $defaultParams['search'] = trim($params['search']);
         }
 
         // Only add active if it's provided - ensure it's always a string 'true' or 'false'
@@ -270,9 +270,9 @@ class MaestrosApiService
             'order' => $params['order'] ?? 'desc',
         ];
 
-        // Only add search if it's not empty - normalize to lowercase for case-insensitive search
+        // Only add search if it's not empty - send original text (backend handles case-insensitive search)
         if (!empty($params['search'])) {
-            $defaultParams['search'] = mb_strtolower(trim($params['search']), 'UTF-8');
+            $defaultParams['search'] = trim($params['search']);
         }
 
         // Only add active if it's provided - ensure it's always a string 'true' or 'false'

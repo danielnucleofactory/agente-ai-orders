@@ -256,6 +256,10 @@ Route::middleware(['auth'])->group(function () {
     Route::view('historical-data', 'historical-data.index')
         ->middleware('permission:has_view_historical_data')
         ->name('historical-data.index');
+    
+    Route::get('historical-data/export', [\App\Http\Controllers\HistoricalDataController::class, 'export'])
+        ->middleware('permission:has_view_historical_data')
+        ->name('historical-data.export');
 
     // Rutas para Maestros
     Route::view('maestros/container-types', 'maestros.container-types.index')

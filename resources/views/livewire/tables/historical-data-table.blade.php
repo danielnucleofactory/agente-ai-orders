@@ -190,8 +190,17 @@
             </div>
         </div>
 
-        <!-- Controles superiores: Por página -->
-        <div class="flex justify-end mb-4">
+        <!-- Controles superiores: Botón de descarga y Por página -->
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <button onclick="exportHistoricalData()" 
+                   class="inline-flex items-center px-4 py-2 bg-[#1AAD8A] text-white rounded-lg hover:bg-[#159a7a] transition-colors duration-200 font-medium text-sm">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Descargar Excel
+                </button>
+            </div>
             <div>
                 <label for="perPage" class="sr-only">Por página</label>
                 <select wire:model.live="perPage" id="perPage" class="block w-full border-gray-300 rounded-md focus:border-[#1AAD8A] focus:ring-[#1AAD8A] sm:text-sm">
@@ -367,5 +376,44 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        function exportHistoricalData() {
+            // Obtener los valores actuales de los filtros desde Livewire
+            const search = @js($search);
+            const filters = @js($filters);
+            
+            // Construir la URL con los parámetros
+            const params = new URLSearchParams();
+            
+            if (search) {
+                params.append('search', search);
+            }
+            
+            if (filters.vendor) {
+                params.append('vendor', filters.vendor);
+            }
+            
+            if (filters.date_from) {
+                params.append('date_from', filters.date_from);
+            }
+            
+            if (filters.date_to) {
+                params.append('date_to', filters.date_to);
+            }
+            
+            if (filters.trading_company) {
+                params.append('trading_company', filters.trading_company);
+            }
+            
+            // Construir la URL completa
+            const url = '{{ route("historical-data.export") }}' + (params.toString() ? '?' + params.toString() : '');
+            
+            // Descargar el archivo
+            window.location.href = url;
+        }
+    </script>
+    @endpush
 </div>
 
