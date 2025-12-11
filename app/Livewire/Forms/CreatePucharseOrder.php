@@ -1588,6 +1588,45 @@ class CreatePucharseOrder extends Component
 
                 \DB::commit();
 
+                // Dispatch webhook event for created purchase order
+                if (function_exists('dispatch_webhook')) {
+                    try {
+                        \Log::info('About to dispatch webhook for PO creation from Livewire', [
+                            'po_id' => $purchaseOrder->id,
+                            'order_number' => $purchaseOrder->order_number,
+                        ]);
+
+                        $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                        $freshPo = $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+
+                        // Convertir a array y asegurar que sea JSON serializable
+                        $poData = $freshPo->toArray();
+                        $poData = json_decode(json_encode($poData), true);
+
+                        \Log::info('Calling dispatch_webhook from Livewire (create)', [
+                            'po_id' => $purchaseOrder->id,
+                            'has_data' => isset($poData['id']),
+                        ]);
+
+                        dispatch_webhook('purchase_order.created', [
+                            'purchase_order_id' => $purchaseOrder->id,
+                            'order_number' => $purchaseOrder->order_number,
+                            'data' => $poData,
+                        ]);
+
+                        \Log::info('dispatch_webhook completed from Livewire (create)', [
+                            'po_id' => $purchaseOrder->id,
+                        ]);
+                    } catch (\Throwable $e) {
+                        \Log::error('Error in webhook dispatch from Livewire (create)', [
+                            'po_id' => $purchaseOrder->id,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString(),
+                        ]);
+                        // No lanzar la excepción para no interrumpir el flujo principal
+                    }
+                }
+
                 // Check if actual hub is different from planned hub
                 if ($this->actual_hub_id && $this->planned_hub_id && $this->actual_hub_id !== $this->planned_hub_id) {
                     \Log::info('Verificando diferencia de hubs', [
@@ -1914,15 +1953,27 @@ class CreatePucharseOrder extends Component
 
                 $purchaseOrder = \App\Models\PurchaseOrder::findOrFail($id);
 
+                // Usar getDirty() para obtener solo campos que realmente cambiaron
+                // Asignar valores primero sin guardar para que Eloquent detecte cambios
+                $purchaseOrder->fill($poData);
+                $dirtyFields = $purchaseOrder->getDirty();
+
+                // Construir array de cambios solo con campos que realmente cambiaron
+                $changes = [];
+                foreach ($dirtyFields as $field => $newValue) {
+                    $changes[$field] = $newValue;
+                }
+
                 \Log::info('Actualizando PO', [
                     'id' => $id,
                     'forwader_date' => $this->forwader_date,
                     'emision_date_po' => $this->emision_date_po,
                     'date_booking_request' => $this->date_booking_request,
-                    'date_booking_authorized' => $this->date_booking_authorized
+                    'date_booking_authorized' => $this->date_booking_authorized,
+                    'changed_fields' => array_keys($changes),
                 ]);
 
-                $purchaseOrder->update($poData);
+                $purchaseOrder->save();
 
                 \Log::info('PO actualizada exitosamente', [
                     'id' => $purchaseOrder->id,
@@ -1941,6 +1992,54 @@ class CreatePucharseOrder extends Component
                 }
 
                 \DB::commit();
+
+                // Dispatch webhook event for updated purchase order
+                if (function_exists('dispatch_webhook')) {
+                    try {
+                        \Log::info('About to dispatch webhook for PO update from Livewire', [
+                            'po_id' => $purchaseOrder->id,
+                            'order_number' => $purchaseOrder->order_number,
+                        ]);
+
+                        $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                        $freshPo = $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+
+                        // Convertir a array y asegurar que sea JSON serializable
+                        $poDataForWebhook = $freshPo->toArray();
+                        $poDataForWebhook = json_decode(json_encode($poDataForWebhook), true);
+
+                        // Los cambios ya fueron calculados antes del save() usando getDirty()
+                        // $changes ya contiene solo los campos que realmente cambiaron
+
+                        \Log::info('Changes for webhook', [
+                            'changed_fields' => array_keys($changes),
+                            'changes_count' => count($changes),
+                        ]);
+
+                        \Log::info('Calling dispatch_webhook from Livewire', [
+                            'po_id' => $purchaseOrder->id,
+                            'has_data' => isset($poData['id']),
+                        ]);
+
+                        dispatch_webhook('purchase_order.updated', [
+                            'purchase_order_id' => $purchaseOrder->id,
+                            'order_number' => $purchaseOrder->order_number,
+                            'changes' => $changes,
+                            'data' => $poDataForWebhook,
+                        ]);
+
+                        \Log::info('dispatch_webhook completed from Livewire', [
+                            'po_id' => $purchaseOrder->id,
+                        ]);
+                    } catch (\Throwable $e) {
+                        \Log::error('Error in webhook dispatch from Livewire', [
+                            'po_id' => $purchaseOrder->id,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString(),
+                        ]);
+                        // No lanzar la excepción para no interrumpir el flujo principal
+                    }
+                }
 
                 // Check if actual hub is different from planned hub
                 if ($this->actual_hub_id && $this->planned_hub_id && $this->actual_hub_id !== $this->planned_hub_id) {
@@ -2156,6 +2255,71 @@ class CreatePucharseOrder extends Component
         $difference = $realDate->diffInDays($theoricalDate, false);
 
         return $difference;
+    }
+
+    /**
+     * Normalize value for comparison to avoid false positives.
+     * Handles different types and formats of values.
+     */
+    protected function normalizeValueForComparison($value)
+    {
+        // Handle null
+        if ($value === null) {
+            return null;
+        }
+
+        // Handle empty string and false as null
+        if ($value === '' || $value === false) {
+            return null;
+        }
+
+        // Handle Carbon dates
+        if ($value instanceof \Carbon\Carbon) {
+            return $value->format('Y-m-d');
+        }
+
+        // Handle DateTime objects
+        if ($value instanceof \DateTime) {
+            return $value->format('Y-m-d');
+        }
+
+        // Handle strings - trim and normalize
+        if (is_string($value)) {
+            $trimmed = trim($value);
+            // Empty string becomes null
+            if ($trimmed === '') {
+                return null;
+            }
+            // Try to parse as number if it looks like one
+            if (is_numeric($trimmed)) {
+                $floatValue = (float) $trimmed;
+                return round($floatValue, 2);
+            }
+            return $trimmed;
+        }
+
+        // Handle numeric values - normalize to float with 2 decimal places
+        if (is_numeric($value)) {
+            $floatValue = (float) $value;
+            return round($floatValue, 2);
+        }
+
+        // Handle booleans
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+
+        // Handle arrays - convert to JSON string for comparison
+        if (is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        // For objects, convert to string
+        if (is_object($value)) {
+            return (string) $value;
+        }
+
+        return $value;
     }
 
 }

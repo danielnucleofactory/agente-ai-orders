@@ -490,7 +490,7 @@ class KanbanBoard extends Component
                 break;
             }
         }
-        
+
         // NUEVO: Cargar datos de la PO en las propiedades del componente
         $po = PurchaseOrder::find($taskId);
         if ($po) {
@@ -499,14 +499,14 @@ class KanbanBoard extends Component
             $this->date_theorical_load = $po->date_theorical_load ? $po->date_theorical_load->format('Y-m-d') : null;
             $this->service_provider = $po->service_provider;
             $this->forwarder_name = $po->forwarder_name;
-            
+
             // Booking - convertir fechas al formato Y-m-d
             $this->date_booking_request = $po->date_booking_request ? $po->date_booking_request->format('Y-m-d') : null;
             $this->date_booking_authorized = $po->date_booking_authorized ? $po->date_booking_authorized->format('Y-m-d') : null;
             $this->date_etd_initial = $po->date_etd_initial ? $po->date_etd_initial->format('Y-m-d') : null;
             $this->date_etd_updated = $po->date_etd_updated ? $po->date_etd_updated->format('Y-m-d') : null;
             $this->mode = $po->mode;
-            
+
             // En Tránsito - convertir fechas al formato Y-m-d
             $this->date_atd = $po->date_atd ? $po->date_atd->format('Y-m-d') : null;
             $this->date_eta = $po->date_eta ? $po->date_eta->format('Y-m-d') : null;
@@ -521,14 +521,14 @@ class KanbanBoard extends Component
             $this->tracking_id = $po->tracking_id;
             $this->departure_port = $po->departure_port;
             $this->arrival_port = $po->arrival_port;
-            
+
             // Puerto - convertir fechas al formato Y-m-d
             $this->date_ata = $po->date_ata ? $po->date_ata->format('Y-m-d') : null;
-            
+
             // Almacén Fiscal - convertir fechas al formato Y-m-d
             $this->bonded_warehouse_enter = $po->bonded_warehouse_enter ? $po->bonded_warehouse_enter->format('Y-m-d') : null;
             $this->bonded_warehouse_exit = $po->bonded_warehouse_exit ? $po->bonded_warehouse_exit->format('Y-m-d') : null;
-            
+
             // Ingresada
             $this->receipt_note = $po->receipt_note;
         }
@@ -690,10 +690,10 @@ class KanbanBoard extends Component
 
     /**
      * Mapeo de campos por etapa del kanban.
-     * 
+     *
      * NOTA: Los índices (2, 3, 4, etc.) corresponden a los IDs de las columnas KanbanStatus
      * en la base de datos. Estos IDs pueden variar según la configuración del tablero.
-     * 
+     *
      * Mapeo esperado de etapas:
      * - 1: Nuevo
      * - 2: Producción
@@ -706,7 +706,7 @@ class KanbanBoard extends Component
      * - 9: Recibiendo CDI
      * - 10: Ingresada
      * - 11: Anulada
-     * 
+     *
      * @return array<int, array<string>> Array indexado por ID de etapa con lista de campos
      */
     private function fieldsByStage(): array
@@ -774,6 +774,42 @@ class KanbanBoard extends Component
             }
 
             DB::commit();
+
+            // Dispatch webhook event for updated purchase order
+            if ($po && function_exists('dispatch_webhook')) {
+                try {
+                    \Log::info('About to dispatch webhook for PO update from KanbanBoard', [
+                        'po_id' => $po->id,
+                        'order_number' => $po->order_number,
+                    ]);
+
+                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                    $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+
+                    // Convertir a array y asegurar que sea JSON serializable
+                    $poData = $freshPo->toArray();
+                    $poData = json_decode(json_encode($poData), true);
+
+                    dispatch_webhook('purchase_order.updated', [
+                        'purchase_order_id' => $po->id,
+                        'order_number' => $po->order_number,
+                        'changes' => $payload,
+                        'data' => $poData,
+                    ]);
+
+                    \Log::info('dispatch_webhook completed from KanbanBoard', [
+                        'po_id' => $po->id,
+                    ]);
+                } catch (\Throwable $e) {
+                    \Log::error('Error in webhook dispatch from KanbanBoard', [
+                        'po_id' => $po->id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                    // No lanzar la excepción para no interrumpir el flujo principal
+                }
+            }
+
             return ['ok' => true, 'updated' => $updated];
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -786,14 +822,14 @@ class KanbanBoard extends Component
 
     /**
      * Reglas de validación requeridas por etapa del kanban.
-     * 
+     *
      * IMPORTANTE: Los índices deben coincidir con los IDs de las columnas KanbanStatus
      * y con los campos definidos en fieldsByStage().
-     * 
+     *
      * Validaciones complejas:
      * - Etapa 5 (En Tránsito): Usa 'required_without_all' para container_number, bill_of_lading
      *   y tracking_id. Esto significa que al menos uno de estos tres campos debe estar presente.
-     * 
+     *
      * @return array<int, array<string, string>> Array indexado por ID de etapa con reglas de validación
      */
     private function requiredRulesByStage(): array
@@ -821,7 +857,7 @@ class KanbanBoard extends Component
                 'date_eta_updated' => 'required|date',
                 // Validación compleja: al menos uno de estos tres campos debe estar presente
                 'container_number' => 'nullable|required_without_all:tracking_id,bill_of_lading|string',
-                'bill_of_lading'   => 'nullable|required_without_all:tracking_id,container_number',   
+                'bill_of_lading'   => 'nullable|required_without_all:tracking_id,container_number',
                 'tracking_id'      => 'nullable|required_without_all:container_number,bill_of_lading|string',
                 'shipping_line'    => 'required|string',
                 'departure_port'   => 'required|string',
@@ -877,10 +913,10 @@ class KanbanBoard extends Component
 
     /**
      * Valida los campos requeridos para una etapa específica.
-     * 
+     *
      * Si la validación falla, Livewire automáticamente mostrará los errores
      * en la vista y no ejecutará el resto del método saveAndMove().
-     * 
+     *
      * @param int $stage ID de la etapa (columna KanbanStatus)
      * @return void
      * @throws \Illuminate\Validation\ValidationException Si la validación falla
