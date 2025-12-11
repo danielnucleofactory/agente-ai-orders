@@ -57,3 +57,4 @@ class SupportRequestNotification extends Notification
         ];
     }
 }
+
