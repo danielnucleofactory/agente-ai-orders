@@ -1709,19 +1709,34 @@ class CreatePucharseOrder extends Component
     }
 
     public function updatePurchaseOrder($id) {
-        // Validación para actualización
-        $this->validate([
-            'date_theorical_load' => [
-                'required',
-                'date',
-                function ($attribute, $value, $fail) {
-                    $emisionDate = $this->emision_date_po;
+        try {
+            \Log::info('=== INICIO updatePurchaseOrder ===', [
+                'id' => $id,
+                'order_number' => $this->order_number,
+                'date_theorical_load' => $this->date_theorical_load,
+                'date_variable_date' => $this->date_variable_date,
+                'date_carga_po' => $this->date_carga_po,
+                'emision_date_po' => $this->emision_date_po,
+                'forwader_date' => $this->forwader_date,
+                'date_booking_request' => $this->date_booking_request,
+                'date_booking_authorized' => $this->date_booking_authorized
+            ]);
 
-                    if ($emisionDate && $value < $emisionDate) {
-                        $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+            // Validación para actualización
+            $this->validate([
+                'date_theorical_load' => [
+                    'nullable', // Cambiar a nullable para evitar errores si no está sincronizado
+                    'date',
+                    function ($attribute, $value, $fail) {
+                        if ($value) {
+                            $emisionDate = $this->emision_date_po;
+
+                            if ($emisionDate && $value < $emisionDate) {
+                                $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                            }
+                        }
                     }
-                }
-            ],
+                ],
             'date_variable_date' => [
                 'nullable',
                 'date',
@@ -1898,7 +1913,21 @@ class CreatePucharseOrder extends Component
                 \DB::beginTransaction();
 
                 $purchaseOrder = \App\Models\PurchaseOrder::findOrFail($id);
+
+                \Log::info('Actualizando PO', [
+                    'id' => $id,
+                    'forwader_date' => $this->forwader_date,
+                    'emision_date_po' => $this->emision_date_po,
+                    'date_booking_request' => $this->date_booking_request,
+                    'date_booking_authorized' => $this->date_booking_authorized
+                ]);
+
                 $purchaseOrder->update($poData);
+
+                \Log::info('PO actualizada exitosamente', [
+                    'id' => $purchaseOrder->id,
+                    'forwader_date_guardado' => $purchaseOrder->forwader_date?->format('Y-m-d')
+                ]);
 
                 // Eliminar productos existentes
                 $purchaseOrder->products()->detach();
@@ -1938,11 +1967,36 @@ class CreatePucharseOrder extends Component
                 $this->dispatch('show-success', 'Orden de compra actualizada exitosamente con número: ' . $this->order_number);
                 $this->dispatch('open-modal', 'modal-purchase-order-created');
 
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                \DB::rollBack();
+                \Log::error('Error de validación en updatePurchaseOrder', [
+                    'errors' => $e->errors(),
+                    'order_number' => $this->order_number ?? 'N/A'
+                ]);
+                throw $e; // Re-lanzar para que Livewire muestre los errores
             } catch (\Exception $e) {
                 \DB::rollBack();
-                \Log::error('Error en updatePurchaseOrder: ' . $e->getMessage());
+                \Log::error('Error en updatePurchaseOrder: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                    'order_number' => $this->order_number ?? 'N/A',
+                    'id' => $id ?? 'N/A'
+                ]);
+
+                // Mostrar error al usuario
+                $this->dispatch('show-error', 'Error al actualizar la orden: ' . $e->getMessage());
                 session()->flash('error', 'Error al actualizar la orden: ' . $e->getMessage());
             }
+        } catch (\Exception $e) {
+            \Log::error('Error crítico en updatePurchaseOrder: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'order_number' => $this->order_number ?? 'N/A',
+                'id' => $id ?? 'N/A'
+            ]);
+
+            // Mostrar error al usuario
+            $this->dispatch('show-error', 'Error al actualizar la orden: ' . $e->getMessage());
+            session()->flash('error', 'Error al actualizar la orden: ' . $e->getMessage());
+        }
     }
 
     public function closeModal() {

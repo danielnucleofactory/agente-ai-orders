@@ -82,8 +82,14 @@
             @endif
 
             @if($id)
-                <x-primary-button wire:click="updatePurchaseOrder({{ $id }})" class="w-[209px]">
-                    Actualizar Orden
+                <x-primary-button
+                    id="btn-update-po"
+                    onclick="syncDateFieldsBeforeSave({{ $id }})"
+                    wire:loading.attr="disabled"
+                    wire:target="updatePurchaseOrder"
+                    class="w-[209px]">
+                    <span wire:loading.remove wire:target="updatePurchaseOrder">Actualizar Orden</span>
+                    <span wire:loading wire:target="updatePurchaseOrder">Guardando...</span>
                 </x-primary-button>
             @else
                 <x-primary-button wire:click="createPurchaseOrder" class="w-[209px]">
@@ -1545,4 +1551,134 @@
 
         console.log('Script de cálculo inicializado');
     });
+
+    // Función para sincronizar campos con wire:ignore antes de guardar
+    function syncDateFieldsBeforeSave(poId) {
+        console.log('Sincronizando campos con wire:ignore antes de guardar...');
+
+        // Buscar todos los inputs de fecha dentro de divs con wire:ignore
+        // Incluir inputs que puedan haber sido convertidos a "text" por Flatpickr
+        const wireIgnoreInputs = document.querySelectorAll('[wire\\:ignore] input[type="date"], [wire\\:ignore] input.flatpickr-initialized, [wire\\:ignore] input[name*="date"], [wire\\:ignore] input[name*="Date"]');
+
+        console.log('Inputs encontrados con wire:ignore:', wireIgnoreInputs.length);
+
+        // Usar @this de Livewire si está disponible (más confiable)
+        let formComponent = window.poFormComponent || null;
+
+        // Si no está disponible, buscar el componente manualmente
+        if (!formComponent) {
+            const updateButton = document.getElementById('btn-update-po');
+            let currentElement = updateButton;
+
+            // Buscar el componente Livewire más cercano al botón, excluyendo el sidebar
+            while (currentElement && !formComponent) {
+                // Verificar que no estemos en el sidebar
+                if (currentElement.closest('sidebar') || currentElement.closest('.main-sidebar')) {
+                    currentElement = currentElement.parentElement;
+                    continue;
+                }
+
+                const wireId = currentElement.getAttribute('wire:id') ||
+                              currentElement.closest('[wire\\:id]')?.getAttribute('wire:id');
+                if (wireId && window.Livewire) {
+                    const component = Livewire.find(wireId);
+                    if (component) {
+                        formComponent = component;
+                        break;
+                    }
+                }
+                currentElement = currentElement.parentElement;
+            }
+
+            // Si no se encontró, buscar todos los componentes y encontrar el correcto
+            if (!formComponent) {
+                const allWireIds = document.querySelectorAll('[wire\\:id]');
+                for (let el of allWireIds) {
+                    // Verificar que NO sea el sidebar
+                    if (!el.closest('sidebar') && !el.closest('.main-sidebar')) {
+                        const wireId = el.getAttribute('wire:id');
+                        if (wireId && window.Livewire) {
+                            const component = Livewire.find(wireId);
+                            if (component) {
+                                formComponent = component;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!formComponent) {
+            console.error('No se encontró el componente Livewire del formulario');
+            return;
+        }
+
+        console.log('Componente Livewire del formulario encontrado:', formComponent);
+
+        // Sincronizar valores de campos con wire:ignore usando component.set()
+        // Esto asegura que los valores se establezcan directamente en el componente
+        wireIgnoreInputs.forEach(function(input) {
+            const wireModel = input.getAttribute('wire:model') ||
+                             input.getAttribute('wire:model.live') ||
+                             input.getAttribute('wire:model.defer') ||
+                             input.getAttribute('wire:model.lazy');
+
+            if (wireModel) {
+                // Obtener el valor del input (puede ser del input original o de Flatpickr)
+                let value = null;
+
+                if (input._flatpickr && input._flatpickr.selectedDates.length > 0) {
+                    // Si tiene Flatpickr, usar el valor de Flatpickr
+                    value = input._flatpickr.formatDate(input._flatpickr.selectedDates[0], 'Y-m-d');
+                } else {
+                    // Si no tiene Flatpickr, usar el valor del input directamente
+                    value = input.value || input.getAttribute('data-date-value') || '';
+                }
+
+                // Usar component.set() para establecer el valor directamente
+                try {
+                    if (typeof formComponent.set === 'function') {
+                        formComponent.set(wireModel, value || null);
+                        console.log('Sincronizado', wireModel, '=', value || '(vacío)');
+                    } else {
+                        // Si set no está disponible, usar eventos como respaldo
+                        input.value = value;
+                        input.setAttribute('data-date-value', value);
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                        console.log('Sincronizado (eventos)', wireModel, '=', value || '(vacío)');
+                    }
+                } catch (e) {
+                    console.warn('Error al sincronizar', wireModel, ':', e);
+                    // Intentar con eventos como respaldo
+                    input.value = value;
+                    input.setAttribute('data-date-value', value);
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+        });
+
+        // Esperar un momento para que Livewire procese los cambios y luego ejecutar updatePurchaseOrder
+        setTimeout(function() {
+            console.log('Ejecutando updatePurchaseOrder con ID:', poId);
+            try {
+                if (typeof formComponent.call === 'function') {
+                    console.log('Llamando formComponent.call("updatePurchaseOrder", ' + poId + ')');
+                    formComponent.call('updatePurchaseOrder', poId).then(function(result) {
+                        console.log('updatePurchaseOrder completado:', result);
+                    }).catch(function(error) {
+                        console.error('Error en updatePurchaseOrder:', error);
+                    });
+                } else {
+                    console.error('formComponent.call no está disponible');
+                    console.log('formComponent:', formComponent);
+                }
+            } catch (e) {
+                console.error('Error al ejecutar updatePurchaseOrder:', e);
+                console.error('Stack trace:', e.stack);
+            }
+        }, 500);
+    }
 </script>
