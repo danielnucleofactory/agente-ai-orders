@@ -680,7 +680,7 @@
             <div class="space-y-6">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-lg font-semibold">Historia de Comentarios</h3>
-                    <button wire:click="openCommentModal" class="flex items-center gap-2 text-sm text-gray-600 hover:text-[#0F614D]">
+                    <button wire:click="openCommentModal" x-on:click="$dispatch('open-modal', 'modal-comment-document')" class="flex items-center gap-2 text-sm text-gray-600 hover:text-[#0F614D]">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#1AAD8A" stroke-width="1.5">
                             <path d="M14.25 10.5V14.25M14.25 14.25V18M14.25 14.25H18M14.25 14.25H10.5M6 11.25H3.75C2.50736 11.25 1.5 10.2426 1.5 9C1.5 7.75736 2.50736 6.75 3.75 6.75H6M12 6.75H14.25C15.4926 6.75 16.5 7.75736 16.5 9C16.5 9.62132 16.2542 10.1835 15.8504 10.6M12 4.5V13.5M6 4.5V13.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -774,6 +774,83 @@
             </div>
         </div>
     </div>
+
+    <x-modal name="modal-comment-document" maxWidth="lg">
+        <h3 class="mb-2 text-lg font-bold text-center text-light-blue">
+            Agregar comentario
+        </h3>
+
+        <div class="mb-8">
+            <x-form-textarea
+                label=""
+                name="comment"
+                wire:model.live="comment"
+                placeholder="Comentarios"
+            />
+        </div>
+
+        <div class="mb-12 space-y-2">
+            <div class="space-y-4">
+                <div class="flex flex-col gap-4 items-start">
+                    <input
+                        type="file"
+                        wire:model.live="attachment"
+                        class="hidden"
+                        x-ref="fileInput"
+                        id="file-upload-comment"
+                        x-bind:disabled="!$wire.comment || $wire.comment.trim() === ''"
+                    >
+                    <x-secondary-button
+                        onclick="document.getElementById('file-upload-comment').click()"
+                        class="group flex w-full items-center justify-center gap-[0.625rem]"
+                        x-bind:disabled="!$wire.comment || $wire.comment.trim() === ''"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="21" height="22" viewBox="0 0 21 22"
+                            fill="none">
+                            <path
+                                d="M19.1525 9.89897L10.1369 18.9146C8.08662 20.9648 4.7625 20.9648 2.71225 18.9146C0.661997 16.8643 0.661998 13.5402 2.71225 11.49L11.7279 2.47435C13.0947 1.10751 15.3108 1.10751 16.6776 2.47434C18.0444 3.84118 18.0444 6.05726 16.6776 7.42409L8.01555 16.0862C7.33213 16.7696 6.22409 16.7696 5.54068 16.0862C4.85726 15.4027 4.85726 14.2947 5.54068 13.6113L13.1421 6.00988"
+                                stroke="#1AAD8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
+                        </svg>
+
+                        <span>Adjuntar documentación...</span>
+                    </x-secondary-button>
+
+                    @if($attachment)
+                        <div class="text-sm text-gray-600">
+                            Archivo seleccionado: {{ is_object($attachment) ? $attachment->getClientOriginalName() : $attachment['name'] ?? 'Archivo' }}
+                        </div>
+                    @endif
+
+                    <div class="flex flex-col text-sm text-[#A5A3A3]">
+                        <span>Tipo de formato .xls .xlsx .pdf</span>
+                        <span>Tamaño máximo 5MB</span>
+                    </div>
+                </div>
+
+                @error('attachment')
+                    <span class="text-sm text-red-600">{{ $message }}</span>
+                @enderror
+            </div>
+        </div>
+
+        <div class="flex gap-[1.875rem]">
+            <x-secondary-button
+                x-on:click="$dispatch('close-modal', 'modal-comment-document')"
+                class="w-full"
+            >
+                Cancelar
+            </x-secondary-button>
+
+            <x-primary-button
+                wire:click="setComments"
+                x-on:click="$dispatch('close-modal', 'modal-comment-document')"
+                class="w-full"
+            >
+                Guardar
+            </x-primary-button>
+        </div>
+    </x-modal>
 
     @livewire('partials.activity-detail-modal')
 </div>

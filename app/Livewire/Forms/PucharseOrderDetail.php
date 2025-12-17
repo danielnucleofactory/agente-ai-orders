@@ -827,6 +827,12 @@ class PucharseOrderDetail extends Component
         }
     }
 
+    public function openCommentModal()
+    {
+        $this->comment = '';
+        $this->attachment = null;
+    }
+
     /**
      * Método de diagnóstico para verificar los comentarios de la orden de compra
      */
