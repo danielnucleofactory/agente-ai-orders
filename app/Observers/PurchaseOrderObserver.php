@@ -32,7 +32,7 @@ class PurchaseOrderObserver
         'date_booking_authorized',
         'date_theorical_load',
         'date_variable_date',
-        'date_carga_po',
+        'carga_lista_validada',
         'date_received',
         'date_eta_updated',
         'date_etd_updated',

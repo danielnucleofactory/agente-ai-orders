@@ -582,7 +582,7 @@ class CreatePucharseOrder extends Component
     public $date_booking_authorized;
     public $date_theorical_load;
     public $date_variable_date;
-    public $date_carga_po;
+    public $carga_lista_validada = false;
     public $date_received;
     public $date_etd_initial;
     public $inspection_date;
@@ -797,7 +797,7 @@ class CreatePucharseOrder extends Component
                 $this->date_booking_authorized = optional($this->purchaseOrder->date_booking_authorized)?->format('Y-m-d');
                 $this->date_theorical_load = optional($this->purchaseOrder->date_theorical_load)?->format('Y-m-d');
                 $this->date_variable_date = optional($this->purchaseOrder->date_variable_date)?->format('Y-m-d');
-                $this->date_carga_po = optional($this->purchaseOrder->date_carga_po)?->format('Y-m-d');
+                $this->carga_lista_validada = $this->purchaseOrder->carga_lista_validada ?? false;
                 $this->date_received = optional($this->purchaseOrder->date_received)?->format('Y-m-d');
                 $this->date_etd_initial               = optional($this->purchaseOrder->date_etd_initial)?->format('Y-m-d');
                 $this->inspection_date                = optional($this->purchaseOrder->inspection_date)?->format('Y-m-d');
@@ -1389,17 +1389,7 @@ class CreatePucharseOrder extends Component
                         }
                     }
                 ],
-                'date_carga_po' => [
-                    'nullable',
-                    'date',
-                    function ($attribute, $value, $fail) {
-                        if ($value && $this->date_theorical_load) {
-                            if ($value < $this->date_theorical_load) {
-                                $fail('La fecha de carga lista real no puede ser anterior a la fecha de carga lista teórica (' . formatDate($this->date_theorical_load) . ')');
-                            }
-                        }
-                    }
-                ],
+                'carga_lista_validada' => 'nullable|boolean',
                 'reason'                 => 'nullable|string',
             ], [
                 'order_number.required' => 'El número de orden es requerido',
@@ -1495,7 +1485,7 @@ class CreatePucharseOrder extends Component
                     'date_booking_authorized' => $this->date_booking_authorized,
                     'date_theorical_load' => $this->date_theorical_load,
                     'date_variable_date' => $this->date_variable_date,
-                    'date_carga_po' => $this->date_carga_po,
+                    'carga_lista_validada' => $this->carga_lista_validada ?? false,
                     'date_received' => $this->date_received,
 
                     'logistics_incoterm' => $this->logistics_incoterm,
@@ -1754,7 +1744,7 @@ class CreatePucharseOrder extends Component
                 'order_number' => $this->order_number,
                 'date_theorical_load' => $this->date_theorical_load,
                 'date_variable_date' => $this->date_variable_date,
-                'date_carga_po' => $this->date_carga_po,
+                'carga_lista_validada' => $this->carga_lista_validada,
                 'emision_date_po' => $this->emision_date_po,
                 'forwader_date' => $this->forwader_date,
                 'date_booking_request' => $this->date_booking_request,
@@ -1789,17 +1779,7 @@ class CreatePucharseOrder extends Component
                     }
                 }
             ],
-            'date_carga_po' => [
-                'nullable',
-                'date',
-                function ($attribute, $value, $fail) {
-                    if ($value && $this->date_theorical_load) {
-                        if ($value < $this->date_theorical_load) {
-                            $fail('La fecha de carga lista real no puede ser anterior a la fecha de carga lista teórica (' . formatDate($this->date_theorical_load) . ')');
-                        }
-                    }
-                }
-            ],
+            'carga_lista_validada' => 'nullable|boolean',
         ], [
             'date_theorical_load.required' => 'La fecha de Carga Lista Teorica es requerida',
         ]);
@@ -1884,7 +1864,7 @@ class CreatePucharseOrder extends Component
                 'date_booking_authorized' => $this->date_booking_authorized,
                 'date_theorical_load' => $this->date_theorical_load,
                 'date_variable_date' => $this->date_variable_date,
-                'date_carga_po' => $this->date_carga_po,
+                'carga_lista_validada' => $this->carga_lista_validada ?? false,
                 'date_received' => $this->date_received,
 
                 'logistics_incoterm' => $this->logistics_incoterm,
@@ -2245,16 +2225,8 @@ class CreatePucharseOrder extends Component
 
     public function calculateLoadDateDifference()
     {
-        if (!$this->date_theorical_load || !$this->date_carga_po) {
-            return '-';
-        }
-
-        $theoricalDate = \Carbon\Carbon::parse($this->date_theorical_load);
-        $realDate = \Carbon\Carbon::parse($this->date_carga_po);
-
-        $difference = $realDate->diffInDays($theoricalDate, false);
-
-        return $difference;
+        // Esta función ya no es necesaria ya que se eliminó date_carga_po
+        return '-';
     }
 
     /**

@@ -289,7 +289,7 @@ class PurchaseOrderController extends Controller
                 // 12) ===== Fechas OLO y Fechas del Formulario =====
                 foreach ([
                              'date_booking_request','date_booking_authorized','date_theorical_load','date_variable_date',
-                             'date_carga_po','date_received',
+                             'carga_lista_validada','date_received',
                              'date_etd_initial','date_etd_updated','date_eta_updated','date_eta_initial',
                              'date_etd', 'date_atd', 'date_eta', 'date_ata',
                              'date_estimated_hub_arrival', 'date_actual_hub_arrival',
@@ -337,7 +337,7 @@ class PurchaseOrderController extends Controller
                                  'etd_dates_difference', 'eta_dates_difference'];
                 // Campos de fecha que deben preservarse incluso si vienen del JSON (pueden ser null si no vienen)
                 $dateFields = ['date_booking_request', 'date_booking_authorized', 'date_theorical_load', 'date_variable_date',
-                              'date_carga_po', 'date_received', 'date_etd_initial', 'date_etd_updated', 'date_eta_updated',
+                              'date_received', 'date_etd_initial', 'date_etd_updated', 'date_eta_updated',
                               'date_eta_initial', 'date_etd', 'date_atd', 'date_eta', 'date_ata',
                               'date_estimated_hub_arrival', 'date_actual_hub_arrival', 'inspection_date', 'vgm_cut_date',
                               'balance_payment_date', 'local_charges_payment_date', 'bonded_warehouse_enter',
@@ -667,7 +667,7 @@ class PurchaseOrderController extends Controller
         // Fechas OLO - Procesar todas las fechas del JSON
         $dateFieldsToProcess = [
             'date_booking_request','date_booking_authorized','date_theorical_load','date_variable_date',
-            'date_carga_po','date_received',
+            'date_received',
             'date_etd_initial','date_etd_updated','date_eta_updated','date_eta_initial',
             'date_etd', 'date_atd', 'date_eta', 'date_ata',
             'date_estimated_hub_arrival', 'date_actual_hub_arrival',
@@ -763,7 +763,7 @@ class PurchaseOrderController extends Controller
 
         // Lista de todos los campos de fecha
         $dateFields = ['date_booking_request', 'date_booking_authorized', 'date_theorical_load', 'date_variable_date',
-                      'date_carga_po', 'date_received', 'date_etd_initial', 'date_etd_updated', 'date_eta_updated',
+                      'date_received', 'date_etd_initial', 'date_etd_updated', 'date_eta_updated',
                       'date_eta_initial', 'date_etd', 'date_atd', 'date_eta', 'date_ata',
                       'date_estimated_hub_arrival', 'date_actual_hub_arrival', 'inspection_date', 'vgm_cut_date',
                       'balance_payment_date', 'local_charges_payment_date', 'bonded_warehouse_enter',
@@ -1139,7 +1139,7 @@ class PurchaseOrderController extends Controller
             'vgm_cut_date'            => 'vgm_cut_date',
             'date_theorical_load'     => 'date_theorical_load',
             'date_variable_date'      => 'date_variable_date',
-            'date_carga_po'           => 'date_carga_po',
+            'carga_lista_validada'    => 'carga_lista_validada',
             'release_date'            => 'release_date',
             'date_consolidation'      => 'date_consolidation',
             'date_etd_initial'        => 'date_etd_initial',
@@ -1265,7 +1265,7 @@ class PurchaseOrderController extends Controller
                 case 'vgm_cut_date':
                 case 'date_theorical_load':
                 case 'date_variable_date':
-                case 'date_carga_po':
+                case 'carga_lista_validada':
                 case 'release_date':
                 case 'date_consolidation':
                 case 'date_etd_initial':

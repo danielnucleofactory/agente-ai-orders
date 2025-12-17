@@ -115,7 +115,7 @@ class PurchaseOrder extends Model implements HasMedia
         'date_booking_authorized',
         'date_theorical_load',
         'date_variable_date',
-        'date_carga_po',
+        'carga_lista_validada',
         'date_received',
         'logistics_incoterm',
         'reason',
@@ -218,7 +218,7 @@ class PurchaseOrder extends Model implements HasMedia
         'date_booking_authorized' => 'datetime',
         'date_theorical_load' => 'datetime',
         'date_variable_date' => 'datetime',
-        'date_carga_po' => 'datetime',
+        'carga_lista_validada' => 'boolean',
         'date_received' => 'datetime',
 
         'delay_days' => 'integer',
@@ -294,6 +294,14 @@ class PurchaseOrder extends Model implements HasMedia
     public function shipTo(): BelongsTo
     {
         return $this->belongsTo(ShipTo::class);
+    }
+
+    /**
+     * Get the bill-to that owns the purchase order.
+     */
+    public function billTo(): BelongsTo
+    {
+        return $this->belongsTo(BillTo::class);
     }
 
     /**

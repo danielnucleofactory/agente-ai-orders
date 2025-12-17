@@ -75,6 +75,7 @@ class Kanban extends Component
         $query = KanbanBoard::query()
             ->where('company_id', $companyId)
             ->where('is_active', true)
+            ->where('type', '!=', 'shipping_documentation') // Ocultar kanban de embarques
             ->withCount('statuses as stages_count');
 
         // Aplicar búsqueda
@@ -112,7 +113,7 @@ class Kanban extends Component
     {
         $types = [
             'po_stages' => 'Etapas PO',
-            'shipping_documentation' => 'Documentación de embarque',
+            // 'shipping_documentation' => 'Documentación de embarque', // Ocultado
         ];
 
         return $types[$type] ?? $type;

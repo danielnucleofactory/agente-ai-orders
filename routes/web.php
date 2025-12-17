@@ -79,16 +79,16 @@ Route::middleware(['auth'])->group(function () {
     })->middleware('permission:has_edit_forecast')->name('products.forecast.edit');
 });
 
-// Rutas para documentación de envío
+// Rutas para documentación de envío - OCULTADO
 Route::middleware(['auth'])->group(function () {
     // Vista principal de documentación de envío
-    Route::view('shipping-documentation', 'shipping-documentation.index')
-        ->middleware('permission:has_view_shipping_docs')
-        ->name('shipping-documentation.index');
+    // Route::view('shipping-documentation', 'shipping-documentation.index')
+    //     ->middleware('permission:has_view_shipping_docs')
+    //     ->name('shipping-documentation.index');
 
-    Route::view('shipping-documentation/create', 'shipping-documentation.create')
-        ->middleware('permission:has_create_shipping_docs')
-        ->name('shipping-documentation.create');
+    // Route::view('shipping-documentation/create', 'shipping-documentation.create')
+    //     ->middleware('permission:has_create_shipping_docs')
+    //     ->name('shipping-documentation.create');
 
     // Rutas para proveedores
     Route::view('vendors', 'vendors.index')
@@ -111,8 +111,8 @@ Route::middleware(['auth'])->group(function () {
     Route::view('ship-to/{id}/edit', 'ship-to.edit')
         ->name('ship-to.edit');
 
-    Route::view('shipping-documentation/requests', 'shipping-documentation.requests')
-        ->name('shipping-documentation.requests');
+    // Route::view('shipping-documentation/requests', 'shipping-documentation.requests')
+    //     ->name('shipping-documentation.requests');
 
     // Rutas para órdenes de compra (si no existen ya)
     Route::view('purchase-orders', 'purchase-orders.index')

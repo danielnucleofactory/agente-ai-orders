@@ -318,8 +318,8 @@
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_variable_date) }}</p>
                 </div>
                 <div>
-                    <p class="mb-1 text-gray-500">Fecha Carga Lista Real</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_carga_po) }}</p>
+                    <p class="mb-1 text-gray-500">Carga Lista Validada</p>
+                    <p class="font-semibold">{{ $purchaseOrder->carga_lista_validada ? 'Sí' : 'No' }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha de consolidado</p>
@@ -562,7 +562,7 @@
             {{-- Proveedores y contratación --}}
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Proveedores y contratación</h4>
             <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
-                <div>
+                <div class="hidden">
                     <p class="mb-1 text-gray-500">Agente de Carga</p>
                     <p class="font-semibold">{{ $purchaseOrder->forwarder_name ?? '-' }}</p>
                 </div>

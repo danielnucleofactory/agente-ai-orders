@@ -203,16 +203,14 @@ class DashboardService
             }
 
             // Aplicar filtros adicionales
+            // Nota: Los filtros po_retraso_cl y po_adelanto_cl ya no están disponibles
+            // ya que se eliminó el campo date_carga_po y se reemplazó por carga_lista_validada (checkbox)
             if (!empty($filters['po_retraso_cl'])) {
-                $query->whereNotNull('date_carga_po')
-                      ->whereNotNull('date_theorical_load')
-                      ->whereRaw('DATEDIFF(date_carga_po, date_theorical_load) >= 7');
+                // Este filtro ya no es aplicable sin date_carga_po
             }
 
             if (!empty($filters['po_adelanto_cl'])) {
-                $query->whereNotNull('date_carga_po')
-                      ->whereNotNull('date_theorical_load')
-                      ->whereRaw('DATEDIFF(date_carga_po, date_theorical_load) <= -7');
+                // Este filtro ya no es aplicable sin date_carga_po
             }
 
             if (!empty($filters['indicador_capacidad'])) {

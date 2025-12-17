@@ -581,13 +581,14 @@
                         </x-form-input>
                     </div>
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Fecha Carga Lista Real</x-slot:label>
-                            <x-slot:input type="date" name="date_carga_po" wire:model="date_carga_po" class="pr-10 {{ $errors->has('date_carga_po') ? 'border-red-500' : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('date_carga_po') }}</x-slot:error>
-                        </x-form-input>
+                    <div class="flex items-center gap-3">
+                        <input id="carga_lista_validada" type="checkbox" wire:model="carga_lista_validada"
+                            class="w-4 h-4 text-[#28C7A1] bg-gray-100 border-gray-300 rounded focus:ring-[#28C7A1] focus:ring-2">
+                        <label for="carga_lista_validada" class="block text-sm text-gray-700">Carga Lista Validada</label>
                     </div>
+                    @error('carga_lista_validada')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
 
                     <x-form-input class="hidden">
                         <x-slot:label>Fecha pickup planificada</x-slot:label>
@@ -1032,7 +1033,7 @@
                             <h4 class="text-sm font-semibold text-[#1AAD8A]">Proveedores y contratación</h4>
                         </div>
 
-                        <x-form-input>
+                        <x-form-input class="hidden">
                             <x-slot:label>Agente de Carga</x-slot:label>
                             <x-slot:input name="forwarder_name" placeholder="Ingrese agente de carga" wire:model="forwarder_name"></x-slot:input>
                         </x-form-input>

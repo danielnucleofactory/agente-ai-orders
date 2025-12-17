@@ -36,9 +36,9 @@ class Breadcrumb extends Component
         'ship-to.index' => 'Direcciones de envío',
         'ship-to.create' => 'Nueva dirección',
         'ship-to.edit' => 'Editar dirección',
-        'shipping-documentation.index' => 'Embarques',
-        'shipping-documentation.create' => 'Nuevo embarque',
-        'shipping-documentation.requests' => 'Solicitudes',
+        // 'shipping-documentation.index' => 'Embarques', // Ocultado
+        // 'shipping-documentation.create' => 'Nuevo embarque', // Ocultado
+        // 'shipping-documentation.requests' => 'Solicitudes', // Ocultado
         'hub.index' => 'Hubs',
         'hub.create' => 'Nuevo hub',
         'hub.edit' => 'Editar hub',
@@ -125,7 +125,7 @@ class Breadcrumb extends Component
         'products' => 'Productos',
         'vendors' => 'Proveedores',
         'ship-to' => 'Direcciones de envío',
-        'shipping-documentation' => 'Documentación de envío',
+        // 'shipping-documentation' => 'Documentación de envío', // Ocultado
         'hub' => 'Hubs',
         'settings' => 'Configuración',
         'bill-to' => 'Facturación',
@@ -189,31 +189,33 @@ class Breadcrumb extends Component
             }
             // Si no hay ruta con nombre, intentamos crear desde la URL
             else {
-                // Caso especial para shipping-documentation
-                if (str_contains($this->currentPath, 'shipping-documentation')) {
-                    $this->segments = [
-                        [
-                            'name' => 'Embarques',
-                            'url' => 'shipping-documentation'
-                        ]
-                    ];
+                // Caso especial para shipping-documentation - OCULTADO
+                // if (str_contains($this->currentPath, 'shipping-documentation')) {
+                //     $this->segments = [
+                //         [
+                //             'name' => 'Embarques',
+                //             'url' => 'shipping-documentation'
+                //         ]
+                //     ];
 
-                    // Si hay segmentos adicionales, añadirlos
-                    $parts = explode('/', $this->currentPath);
-                    if (count($parts) > 1 && $parts[0] === 'shipping-documentation' && !empty($parts[1])) {
-                        $action = ucfirst(str_replace(['-', '_'], ' ', $parts[1]));
-                        $actionName = isset($this->translations["shipping-documentation.$parts[1]"])
-                            ? $this->translations["shipping-documentation.$parts[1]"]
-                            : $action;
+                //     // Si hay segmentos adicionales, añadirlos
+                //     $parts = explode('/', $this->currentPath);
+                //     if (count($parts) > 1 && $parts[0] === 'shipping-documentation' && !empty($parts[1])) {
+                //         $action = ucfirst(str_replace(['-', '_'], ' ', $parts[1]));
+                //         $actionName = isset($this->translations["shipping-documentation.$parts[1]"])
+                //             ? $this->translations["shipping-documentation.$parts[1]"]
+                //             : $action;
 
-                        $this->segments[] = [
-                            'name' => $actionName,
-                            'url' => $this->currentPath
-                        ];
-                    }
-                } else {
-                    $this->buildFromPath();
-                }
+                //         $this->segments[] = [
+                //             'name' => $actionName,
+                //             'url' => $this->currentPath
+                //         ];
+                //     }
+                //     return;
+                // }
+                
+                // Construir desde el path (ya que shipping-documentation está oculto)
+                $this->buildFromPath();
             }
 
             // Traducir cada segmento
@@ -242,27 +244,27 @@ class Breadcrumb extends Component
         $routeParts = explode('.', $routeName);
         $segments = [];
 
-        // Special case for shipping-documentation routes
-        if (strpos($routeName, 'shipping-documentation') === 0) {
-            $url = route('shipping-documentation.index', [], false);
-            $segments[] = [
-                'name' => 'Documentación de envío',
-                'url' => $url
-            ];
+        // Special case for shipping-documentation routes - OCULTADO
+        // if (strpos($routeName, 'shipping-documentation') === 0) {
+        //     $url = route('shipping-documentation.index', [], false);
+        //     $segments[] = [
+        //         'name' => 'Documentación de envío',
+        //         'url' => $url
+        //     ];
 
-            // If it's not just the index, add the additional segment
-            if ($routeName !== 'shipping-documentation.index') {
-                $lastPart = end($routeParts);
-                $lastSegmentName = $this->translations[$routeName] ?? ucfirst(str_replace(['-', '_', '.'], ' ', $lastPart));
-                $segments[] = [
-                    'name' => $lastSegmentName,
-                    'url' => request()->path()
-                ];
-            }
+        //     // If it's not just the index, add the additional segment
+        //     if ($routeName !== 'shipping-documentation.index') {
+        //         $lastPart = end($routeParts);
+        //         $lastSegmentName = $this->translations[$routeName] ?? ucfirst(str_replace(['-', '_', '.'], ' ', $lastPart));
+        //         $segments[] = [
+        //             'name' => $lastSegmentName,
+        //             'url' => request()->path()
+        //         ];
+        //     }
 
-            $this->segments = $segments;
-            return;
-        }
+        //     $this->segments = $segments;
+        //     return;
+        // }
 
         foreach ($routeParts as $index => $part) {
             // Skip the last part if it's 'index'
@@ -326,12 +328,12 @@ class Breadcrumb extends Component
                 $segment = $pathParts[$i];
                 $urlPath .= ($i > 0 ? '/' : '') . $segment;
 
-                // Special case for shipping-documentation
-                if ($segment === 'shipping-documentation') {
-                    $name = 'Documentación de envío';
-                }
+                // Special case for shipping-documentation - OCULTADO
+                // if ($segment === 'shipping-documentation') {
+                //     $name = 'Documentación de envío';
+                // }
                 // For first segment (section)
-                else if ($i === 0) {
+                if ($i === 0) {
                     if (isset($this->pathGroups[$segment])) {
                         $name = $this->pathGroups[$segment];
                     } else {

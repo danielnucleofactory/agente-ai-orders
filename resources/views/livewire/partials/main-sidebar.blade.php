@@ -105,14 +105,14 @@
                         </li>
                         @endcan
 
-                        @can('has_view_consolidated_orders')
-                        <li>
+                        {{-- @can('has_view_consolidated_orders')
+                        <li class="hidden">
                             <x-sidebar-dropdown-item href="{{ route('shipping-documentation.index') }}"
                                 :active="request()->routeIs('shipping-documentation.index')">
                                 Seguimiento de Embarques
                             </x-sidebar-dropdown-item>
                         </li>
-                        @endcan
+                        @endcan --}}
 
                         @can('has_view_forecast_graph')
                         <li class="hidden">

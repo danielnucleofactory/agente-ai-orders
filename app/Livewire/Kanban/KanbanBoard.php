@@ -107,9 +107,10 @@ class KanbanBoard extends Component
 
         if ($currentRoute === 'purchase-orders.index') {
             $this->boardType = 'po_stages'; // Etapas PO
-        } elseif ($currentRoute === 'shipping-documentation.index') {
-            $this->boardType = 'shipping_documentation'; // Documentación de embarque
-        } else {
+        } // elseif ($currentRoute === 'shipping-documentation.index') {
+            // $this->boardType = 'shipping_documentation'; // Documentación de embarque - Ocultado
+        // } else {
+        else {
             // Si no es ninguna de las rutas específicas, usar el tipo por defecto
             $this->boardType = 'purchase_orders';
         }

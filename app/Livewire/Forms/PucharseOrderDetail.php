@@ -988,14 +988,8 @@ class PucharseOrderDetail extends Component
     {
         $po = $purchaseOrder ?? $this->purchaseOrder;
         
-        if (!$po->date_theorical_load || !$po->date_carga_po) {
-            return '-';
-        }
-
-        $theoricalDate = \Carbon\Carbon::parse($po->date_theorical_load);
-        $realDate = \Carbon\Carbon::parse($po->date_carga_po);
-
-        $difference = $realDate->diffInDays($theoricalDate, false);
+        // Esta función ya no es necesaria ya que se eliminó date_carga_po
+        return '-';
         
         return $difference;
     }

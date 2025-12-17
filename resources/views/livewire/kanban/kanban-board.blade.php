@@ -169,7 +169,7 @@
                             </x-slot:error>
                         </x-form-input>
                     </div>
-                    <div class="mb-8">
+                    <div class="mb-8 hidden">
                         <x-form-input>
                             <x-slot:label>Agente de Carga <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="text" name="forwarder_name" placeholder="Ingrese agente de carga" wire:model="forwarder_name" class="pr-10 {{ $errors->has('forwarder_name') ? 'border-red-500'  : '' }}">
