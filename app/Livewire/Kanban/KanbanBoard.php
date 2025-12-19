@@ -607,6 +607,37 @@ class KanbanBoard extends Component
             $this->comment = '';
             $this->attachment = null;
 
+            // Dispatch webhook event for updated purchase order (comment added)
+            if (function_exists('dispatch_webhook')) {
+                try {
+                    $po = PurchaseOrder::find($taskId);
+                    if ($po) {
+                        $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+
+                        // Convertir a array y asegurar que sea JSON serializable
+                        $poData = $freshPo->toArray();
+                        $poData = json_decode(json_encode($poData), true);
+
+                        dispatch_webhook('purchase_order.updated', [
+                            'purchase_order_id' => $po->id,
+                            'order_number' => $po->order_number,
+                            'changes' => ['comments' => 'new_comment_added'],
+                            'data' => $poData,
+                        ]);
+
+                        \Log::info('dispatch_webhook completed after comment creation from KanbanBoard', [
+                            'po_id' => $po->id,
+                        ]);
+                    }
+                } catch (\Throwable $e) {
+                    \Log::error('Error dispatching webhook after comment creation', [
+                        'po_id' => $taskId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
         } catch (\Exception $e) {
             \Log::error("Error setting comments: " . $e->getMessage());
         }
@@ -784,8 +815,8 @@ class KanbanBoard extends Component
                         'order_number' => $po->order_number,
                     ]);
 
-                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
-                    $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                    $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
 
                     // Convertir a array y asegurar que sea JSON serializable
                     $poData = $freshPo->toArray();
