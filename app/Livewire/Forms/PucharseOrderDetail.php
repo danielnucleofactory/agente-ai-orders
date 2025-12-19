@@ -623,6 +623,13 @@ class PucharseOrderDetail extends Component
 
     public function setComments()
     {
+        \Log::info('setComments method called', [
+            'po_id' => $this->purchaseOrder->id ?? null,
+            'has_comment' => !empty(trim($this->comment ?? '')),
+            'has_attachment' => !empty($this->attachment),
+            'comment_attachment_approved' => $this->commentAttachmentApproved ?? false,
+        ]);
+
         // If we're attaching a file to an approved comment, we only need the file
         if ($this->commentAttachmentApproved) {
             $this->validate([
@@ -633,6 +640,9 @@ class PucharseOrderDetail extends Component
         }
         // In normal mode, we need at least a comment or an attachment
         elseif (empty(trim($this->comment)) && !$this->attachment) {
+            \Log::info('setComments: Early return - no comment and no attachment', [
+                'po_id' => $this->purchaseOrder->id ?? null,
+            ]);
             return;
         }
 
@@ -745,10 +755,11 @@ class PucharseOrderDetail extends Component
             $commentModel->operacion = 'Detalle PO';
             $commentModel->save();
 
-            \Log::info('Comment created', [
+            \Log::info('Comment created in setComments', [
                 'comment_id' => $commentModel->id,
                 'purchase_order_id' => $this->purchaseOrder->id,
-                'user_id' => auth()->id()
+                'user_id' => auth()->id(),
+                'comment_text' => substr($this->comment, 0, 50),
             ]);
 
             // Si hay un archivo adjunto, crear autorización
