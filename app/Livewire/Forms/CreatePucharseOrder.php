@@ -1586,8 +1586,8 @@ class CreatePucharseOrder extends Component
                             'order_number' => $purchaseOrder->order_number,
                         ]);
 
-                        $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
-                        $freshPo = $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                        $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $freshPo = $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
 
                         // Convertir a array y asegurar que sea JSON serializable
                         $poData = $freshPo->toArray();
@@ -1981,8 +1981,8 @@ class CreatePucharseOrder extends Component
                             'order_number' => $purchaseOrder->order_number,
                         ]);
 
-                        $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
-                        $freshPo = $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                        $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $freshPo = $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
 
                         // Convertir a array y asegurar que sea JSON serializable
                         $poDataForWebhook = $freshPo->toArray();

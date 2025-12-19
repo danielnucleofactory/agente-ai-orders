@@ -425,10 +425,14 @@ class PurchaseOrderController extends Controller
                         ]);
 
                         if (function_exists('dispatch_webhook')) {
+                            $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                            $poData = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user'])->toArray();
+                            $poData = json_decode(json_encode($poData), true);
+
                             dispatch_webhook('purchase_order.created', [
                                 'purchase_order_id' => $po->id,
                                 'order_number' => $po->order_number,
-                                'data' => $po->toArray(), // Incluye todos los campos (143 campos)
+                                'data' => $poData, // Incluye todos los campos (143 campos) + comentarios
                             ]);
                         } else {
                             \Log::warning('dispatch_webhook function does not exist', [
@@ -1021,8 +1025,8 @@ class PurchaseOrderController extends Controller
                 ]);
 
                 try {
-                    $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
-                    $freshPo = $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                    $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                    $freshPo = $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
 
                     // Convertir a array y asegurar que sea JSON serializable
                     $poData = $freshPo->toArray();
@@ -1534,16 +1538,20 @@ class PurchaseOrderController extends Controller
                     DB::commit();
 
                     // Dispatch webhook event for created purchase order
-                    $po = PurchaseOrder::with(['products', 'vendor', 'shipTo', 'kanbanStatus'])->find($createdPo->id);
+                    $po = PurchaseOrder::with(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user'])->find($createdPo->id);
                     if ($po && function_exists('dispatch_webhook')) {
                         \Log::info('Dispatching webhook for bulk created PO', [
                             'po_id' => $po->id,
                             'order_number' => $po->order_number,
                         ]);
+                        $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $poData = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user'])->toArray();
+                        $poData = json_decode(json_encode($poData), true);
+
                         dispatch_webhook('purchase_order.created', [
                             'purchase_order_id' => $po->id,
                             'order_number' => $po->order_number,
-                            'data' => $po->toArray(), // Incluye todos los campos (143 campos)
+                            'data' => $poData, // Incluye todos los campos (143 campos) + comentarios
                         ]);
                     }
 
@@ -1734,8 +1742,8 @@ class PurchaseOrderController extends Controller
 
                 // Dispatch webhook event for updated purchase order
                 if (function_exists('dispatch_webhook')) {
-                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
-                    $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                    $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
 
                     // Convertir a array y asegurar que sea JSON serializable
                     $poData = $freshPo->toArray();

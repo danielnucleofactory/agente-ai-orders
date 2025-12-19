@@ -500,6 +500,34 @@ class PucharseOrderDetail extends Component
 
             // Limpiar el campo
             $this->newComment = '';
+
+            // Dispatch webhook event for updated purchase order (comment added)
+            if (function_exists('dispatch_webhook')) {
+                try {
+                    $this->purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                    $freshPo = $this->purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+
+                    // Convertir a array y asegurar que sea JSON serializable
+                    $poData = $freshPo->toArray();
+                    $poData = json_decode(json_encode($poData), true);
+
+                    dispatch_webhook('purchase_order.updated', [
+                        'purchase_order_id' => $this->purchaseOrder->id,
+                        'order_number' => $this->purchaseOrder->order_number,
+                        'changes' => ['comments' => 'new_comment_added'],
+                        'data' => $poData,
+                    ]);
+
+                    \Log::info('dispatch_webhook completed after comment creation from PucharseOrderDetail', [
+                        'po_id' => $this->purchaseOrder->id,
+                    ]);
+                } catch (\Throwable $e) {
+                    \Log::error('Error dispatching webhook after comment creation', [
+                        'po_id' => $this->purchaseOrder->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
         } catch (\Exception $e) {
             session()->flash('error', 'Error al añadir comentario: ' . $e->getMessage());
         }
@@ -595,6 +623,13 @@ class PucharseOrderDetail extends Component
 
     public function setComments()
     {
+        \Log::info('setComments method called', [
+            'po_id' => $this->purchaseOrder->id ?? null,
+            'has_comment' => !empty(trim($this->comment ?? '')),
+            'has_attachment' => !empty($this->attachment),
+            'comment_attachment_approved' => $this->commentAttachmentApproved ?? false,
+        ]);
+
         // If we're attaching a file to an approved comment, we only need the file
         if ($this->commentAttachmentApproved) {
             $this->validate([
@@ -605,6 +640,9 @@ class PucharseOrderDetail extends Component
         }
         // In normal mode, we need at least a comment or an attachment
         elseif (empty(trim($this->comment)) && !$this->attachment) {
+            \Log::info('setComments: Early return - no comment and no attachment', [
+                'po_id' => $this->purchaseOrder->id ?? null,
+            ]);
             return;
         }
 
@@ -663,6 +701,34 @@ class PucharseOrderDetail extends Component
                             // Reload comments
                             $this->loadCommentsAndAttachments();
 
+                            // Dispatch webhook event for updated purchase order (file attached to comment)
+                            if (function_exists('dispatch_webhook')) {
+                                try {
+                                    $this->purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                                    $freshPo = $this->purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+
+                                    // Convertir a array y asegurar que sea JSON serializable
+                                    $poData = $freshPo->toArray();
+                                    $poData = json_decode(json_encode($poData), true);
+
+                                    dispatch_webhook('purchase_order.updated', [
+                                        'purchase_order_id' => $this->purchaseOrder->id,
+                                        'order_number' => $this->purchaseOrder->order_number,
+                                        'changes' => ['comments' => 'file_attached_to_comment'],
+                                        'data' => $poData,
+                                    ]);
+
+                                    \Log::info('dispatch_webhook completed after file attachment to comment', [
+                                        'po_id' => $this->purchaseOrder->id,
+                                    ]);
+                                } catch (\Throwable $e) {
+                                    \Log::error('Error dispatching webhook after file attachment to comment', [
+                                        'po_id' => $this->purchaseOrder->id,
+                                        'error' => $e->getMessage(),
+                                    ]);
+                                }
+                            }
+
                             return;
                         } catch (\Exception $mediaException) {
                             \Log::error('Error attaching file to comment', [
@@ -689,10 +755,11 @@ class PucharseOrderDetail extends Component
             $commentModel->operacion = 'Detalle PO';
             $commentModel->save();
 
-            \Log::info('Comment created', [
+            \Log::info('Comment created in setComments', [
                 'comment_id' => $commentModel->id,
                 'purchase_order_id' => $this->purchaseOrder->id,
-                'user_id' => auth()->id()
+                'user_id' => auth()->id(),
+                'comment_text' => substr($this->comment, 0, 50),
             ]);
 
             // Si hay un archivo adjunto, crear autorización
@@ -816,6 +883,51 @@ class PucharseOrderDetail extends Component
 
             // Reload over cost data in case the new comment contains over cost information
             $this->loadOverCostData();
+
+            // Dispatch webhook event for updated purchase order (comment added)
+            \Log::info('About to dispatch webhook after comment creation', [
+                'po_id' => $this->purchaseOrder->id,
+                'function_exists' => function_exists('dispatch_webhook'),
+                'webhook_enabled' => config('webhook.enabled', false),
+            ]);
+
+            if (function_exists('dispatch_webhook')) {
+                try {
+                    $this->purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                    $freshPo = $this->purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+
+                    // Convertir a array y asegurar que sea JSON serializable
+                    $poData = $freshPo->toArray();
+                    $poData = json_decode(json_encode($poData), true);
+
+                    \Log::info('Calling dispatch_webhook for purchase_order.updated after comment creation', [
+                        'po_id' => $this->purchaseOrder->id,
+                        'order_number' => $this->purchaseOrder->order_number,
+                        'comments_count' => count($poData['comments'] ?? []),
+                    ]);
+
+                    dispatch_webhook('purchase_order.updated', [
+                        'purchase_order_id' => $this->purchaseOrder->id,
+                        'order_number' => $this->purchaseOrder->order_number,
+                        'changes' => ['comments' => 'new_comment_added'],
+                        'data' => $poData,
+                    ]);
+
+                    \Log::info('dispatch_webhook completed after comment creation from setComments', [
+                        'po_id' => $this->purchaseOrder->id,
+                    ]);
+                } catch (\Throwable $e) {
+                    \Log::error('Error dispatching webhook after comment creation in setComments', [
+                        'po_id' => $this->purchaseOrder->id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                }
+            } else {
+                \Log::warning('dispatch_webhook function does not exist', [
+                    'po_id' => $this->purchaseOrder->id,
+                ]);
+            }
 
         } catch (\Exception $e) {
             \Log::error("Error setting comments: " . $e->getMessage(), [
@@ -993,10 +1105,10 @@ class PucharseOrderDetail extends Component
     public function calculateLoadDateDifference($purchaseOrder = null)
     {
         $po = $purchaseOrder ?? $this->purchaseOrder;
-        
+
         // Esta función ya no es necesaria ya que se eliminó date_carga_po
         return '-';
-        
+
         return $difference;
     }
 }
