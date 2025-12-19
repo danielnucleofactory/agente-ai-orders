@@ -143,6 +143,16 @@ class KanbanBoard extends Component
         $this->organizeTasksByColumn();
     }
 
+    /**
+     * Carga las columnas (estados) del tablero Kanban.
+     * 
+     * IMPORTANTE: El orden de las columnas es crítico. La vista blade depende de índices
+     * de array ($columns[0], $columns[1], etc.) para mostrar los campos correctos en el modal.
+     * Si el orden de las columnas cambia o se eliminan columnas, el modal puede no funcionar
+     * correctamente.
+     * 
+     * @return void
+     */
     public function loadColumns()
     {
         if (!$this->board) {
@@ -150,8 +160,17 @@ class KanbanBoard extends Component
             return;
         }
 
-        // Cargar las columnas (estados) del tablero
+        // Cargar las columnas (estados) del tablero ordenadas por posición
         $statuses = $this->board->statuses()->orderBy('position')->get();
+
+        if ($statuses->isEmpty()) {
+            \Log::warning('KanbanBoard: No se encontraron columnas para el tablero', [
+                'board_id' => $this->board->id,
+                'board_type' => $this->boardType
+            ]);
+            $this->columns = [];
+            return;
+        }
 
         $this->columns = $statuses->map(function ($status) {
             return [
@@ -162,6 +181,18 @@ class KanbanBoard extends Component
                 'position' => $status->position,
             ];
         })->toArray();
+
+        // Validación: Registrar si hay menos columnas de las esperadas (11 etapas)
+        // Esto ayuda a detectar problemas de configuración
+        $expectedMinColumns = 11;
+        if (count($this->columns) < $expectedMinColumns) {
+            \Log::info('KanbanBoard: Menos columnas de las esperadas', [
+                'board_id' => $this->board->id,
+                'columns_count' => count($this->columns),
+                'expected_min' => $expectedMinColumns,
+                'column_names' => collect($this->columns)->pluck('name')->toArray()
+            ]);
+        }
     }
 
     public function loadTasks()
@@ -931,11 +962,11 @@ class KanbanBoard extends Component
         }
 
         $messages = [
-            'required' => 'El campo es requerido.',
+            'required' => 'El campo :attribute es requerido.',
             'required_without_all' => 'Debe proporcionar al menos uno: Número de Booking, MBL o Número de Contenedor.',
-            'date'     => 'El campo debe ser una fecha válida.',
-            'string'   => 'El campo debe ser texto.',
-            'numeric'  => 'El campo debe ser numérico.',
+            'date'     => 'El campo :attribute debe ser una fecha válida.',
+            'string'   => 'El campo :attribute debe ser texto.',
+            'numeric'  => 'El campo :attribute debe ser numérico.',
         ];
 
         $this->validate($rules, $messages, $this->fieldAttributeLabels());
