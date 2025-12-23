@@ -6,6 +6,7 @@ use App\Models\KanbanBoard as KanbanBoardModel;
 use App\Models\KanbanStatus;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderComment;
+use App\Services\MaestrosApiService;
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -91,6 +92,9 @@ class KanbanBoard extends Component
 
     // Filtros activos
     public $activeFilters = [];
+
+    // Array para dropdown de proveedores de servicio
+    public $serviceProviderArray = [];
 
     // Agregar los listeners para los eventos
     protected $listeners = [
@@ -532,6 +536,13 @@ class KanbanBoard extends Component
             $this->service_provider = $po->service_provider;
             $this->forwarder_name = $po->forwarder_name;
 
+            // Cargar proveedores de servicio si estamos en la etapa de producción
+            // IMPORTANTE: Cargar service_provider ANTES de llamar a loadServiceProviders
+            // para que el método pueda agregar el valor guardado al array si la API no devuelve datos
+            if ($newColumnId == 2 && $po->trading_company) {
+                $this->loadServiceProviders($po->trading_company, $po->service_provider);
+            }
+
             // Booking - convertir fechas al formato Y-m-d
             $this->date_booking_request = $po->date_booking_request ? $po->date_booking_request->format('Y-m-d') : null;
             $this->date_booking_authorized = $po->date_booking_authorized ? $po->date_booking_authorized->format('Y-m-d') : null;
@@ -901,7 +912,8 @@ class KanbanBoard extends Component
             2 => [
                 'date_variable_date' => 'required|date',
                 'service_provider'   => 'required|string',
-                'forwarder_name'     => 'required|string',
+                // forwarder_name está oculto en la vista, por lo que no debe ser requerido
+                // 'forwarder_name'     => 'required|string',
                 // Si más adelante decides exigir la teórica:
                 // 'date_theorical_load' => 'required|date',
             ],
@@ -1001,6 +1013,109 @@ class KanbanBoard extends Component
         ];
 
         $this->validate($rules, $messages, $this->fieldAttributeLabels());
+    }
+
+    /**
+     * Get MaestrosApiService instance
+     */
+    protected function getMaestrosApiService(): MaestrosApiService
+    {
+        return app(MaestrosApiService::class);
+    }
+
+    /**
+     * Cargar proveedores de servicio desde la API
+     * 
+     * @param string $tradingCompany
+     * @param string|null $currentServiceProvider Valor actual guardado en la PO (opcional)
+     * @return void
+     */
+    protected function loadServiceProviders(string $tradingCompany, ?string $currentServiceProvider = null): void
+    {
+        $tradingCompanyValue = trim($tradingCompany ?? '');
+        if (empty($tradingCompanyValue)) {
+            $this->serviceProviderArray = [];
+            return;
+        }
+
+        try {
+            $apiService = $this->getMaestrosApiService();
+
+            $apiParams = [
+                'company' => $tradingCompanyValue,
+                'trading_company' => $tradingCompanyValue,
+                'active' => 'true',
+                'per_page' => 1000,
+            ];
+
+            $serviceProvidersResponse = $apiService->getServiceProviders($apiParams);
+            $this->serviceProviderArray = $this->processApiResponse($serviceProvidersResponse, 'name', 'name');
+
+            // Si la API no devolvió datos, intentar sin el filtro 'active'
+            if (empty($this->serviceProviderArray)) {
+                $apiParamsWithoutActive = [
+                    'company' => $tradingCompanyValue,
+                    'trading_company' => $tradingCompanyValue,
+                    'per_page' => 1000,
+                ];
+
+                $serviceProvidersResponseRetry = $apiService->getServiceProviders($apiParamsWithoutActive);
+                $this->serviceProviderArray = $this->processApiResponse($serviceProvidersResponseRetry, 'name', 'name');
+            }
+
+            // Si aún no hay datos, cargar TODOS los proveedores de servicio sin filtrar por company
+            // Esto es un fallback para asegurar que siempre haya opciones disponibles
+            if (empty($this->serviceProviderArray)) {
+                $apiParamsAll = [
+                    'active' => 'true',
+                    'per_page' => 1000,
+                ];
+
+                $serviceProvidersResponseAll = $apiService->getServiceProviders($apiParamsAll);
+                $this->serviceProviderArray = $this->processApiResponse($serviceProvidersResponseAll, 'name', 'name');
+            }
+
+            // Si hay un valor guardado (ya sea pasado como parámetro o en $this->service_provider), asegurar que esté en el array
+            $serviceProviderToAdd = $currentServiceProvider ?? $this->service_provider;
+            if ($serviceProviderToAdd && !isset($this->serviceProviderArray[$serviceProviderToAdd])) {
+                $this->serviceProviderArray[$serviceProviderToAdd] = $serviceProviderToAdd;
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error loading service providers in KanbanBoard', [
+                'error' => $e->getMessage(),
+                'trading_company' => $tradingCompanyValue,
+            ]);
+            $this->serviceProviderArray = [];
+        }
+    }
+
+    /**
+     * Process API response and convert to array format for dropdowns
+     * 
+     * @param array|null $response
+     * @param string $keyField Field to use as array key
+     * @param string $valueField Field to use as array value
+     * @return array
+     */
+    protected function processApiResponse($response, $keyField = 'name', $valueField = 'name')
+    {
+        if (!$response || !isset($response['data'])) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($response['data'] as $item) {
+            $key = $item[$keyField] ?? $item['name'] ?? '';
+            $value = $item[$valueField] ?? $item['name'] ?? '';
+            if ($key && $value) {
+                $result[$key] = $value;
+            }
+        }
+
+        // Ordenar alfabéticamente por valor
+        asort($result);
+
+        return $result;
     }
 
 }
