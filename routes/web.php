@@ -36,9 +36,12 @@ Route::get('/', function () {
 
 // Dashboard routes
 Route::middleware(['auth', 'verified', 'permission:has_view_dashboard'])->group(function () {
-    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // Dashboard principal ahora es el KPI dashboard
+    Route::view('dashboard', 'dashboard-kpi')->name('dashboard');
+    // Mantener rutas del dashboard antiguo por compatibilidad (si se necesitan)
     Route::get('dashboard/data', [DashboardController::class, 'getData'])->name('dashboard.data');
     Route::get('dashboard/export', [DashboardController::class, 'export'])->name('dashboard.export');
+    // Mantener ruta dashboard-kpi como alias
     Route::view('dashboard-kpi', 'dashboard-kpi')->name('dashboard.kpi');
     
     // Dashboard KPI API endpoints (para consumir desde JavaScript)
