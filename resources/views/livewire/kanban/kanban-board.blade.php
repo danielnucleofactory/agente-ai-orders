@@ -192,14 +192,16 @@
                         </x-form-input>
                     </div>
                     <div class="mb-8">
-                        <x-form-input>
-                            <x-slot:label>Proveedor de Servicio <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="text" wire:model.live="service_provider" placeholder="Ingrese proveedor de servicio" class="pr-10 {{ $errors->has('service_provider') ? 'border-red-500'  : '' }}">
-                            </x-slot:input>
-                            <x-slot:error>
-                                {{ $errors->first('service_provider') }}
-                            </x-slot:error>
-                        </x-form-input>
+                        <x-form-select
+                            label="Proveedor de Servicio"
+                            name="service_provider"
+                            wire:model.live="service_provider"
+                            :options="$serviceProviderArray"
+                            :error="false"
+                        />
+                        @error('service_provider')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
                     <div class="mb-8 hidden">
                         <x-form-input>
