@@ -622,3 +622,22 @@
     }
 }
 
+/* Estilos específicos para inputs de períodos de comparación - sobrescribir Flatpickr */
+.comparison-period-filters input.flatpickr-alt-input,
+.comparison-period-filters input[type="date"].flatpickr-alt-input {
+    width: 150px !important;
+    height: 40px !important;
+    padding: 8px 14px !important;
+    border: 2px solid #28C7A1 !important;
+    border-radius: 10px !important;
+    font-size: 16px !important;
+    font-family: 'Lato', sans-serif !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+}
+
+.comparison-period-filters input.flatpickr-input.flatpickr-initialized {
+    width: 150px !important;
+    height: 40px !important;
+}
+

@@ -1,102 +1,89 @@
 <x-app-layout>
     @push('styles')
         <link rel="stylesheet" href="{{ asset('css/dashboard-kpi.css') }}">
+        <style>
+            /* Estilos específicos para inputs de períodos de comparación - sobrescribir Flatpickr */
+            .comparison-period-filters input.flatpickr-alt-input,
+            .comparison-period-filters input[type="date"].flatpickr-alt-input,
+            .comparison-period-filters input.flatpickr-input.flatpickr-initialized {
+                width: 150px !important;
+                height: 40px !important;
+                padding: 8px 14px !important;
+                border: 2px solid #28C7A1 !important;
+                border-radius: 10px !important;
+                font-size: 16px !important;
+                font-family: 'Lato', sans-serif !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
+            }
+        </style>
     @endpush
 
     <div class="dashboard-kpi-container">
         <!-- Filtros Globales -->
         <div class="filters-section" id="filtersSection" style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; font-family: 'Lato', sans-serif; margin-bottom: 24px; background: transparent; border: none; padding: 0;">
-            <div class="filters-header">
-                <div class="filters-title">Filtros Globales</div>
-                <button class="toggle-filters-btn" id="toggleFiltersBtn" onclick="toggleFilters()">
-                    <span class="arrow">▼</span>
-                    <span class="btn-text">Ocultar Filtros</span>
-                </button>
-            </div>
             <div class="filter-group">
                 <label class="filter-label">Fecha inicio</label>
-                <input type="date" class="date-input" value="2025-01-01">
+                <input type="date" id="filter-date-from" class="date-input filter-input" value="">
             </div>
             <div class="filter-group">
                 <label class="filter-label">Fecha fin</label>
-                <input type="date" class="date-input" value="2025-12-31">
+                <input type="date" id="filter-date-to" class="date-input filter-input" value="">
             </div>
             <div class="filter-group">
                 <label class="filter-label">Cliente</label>
-                <select>
-                    <option>Todos</option>
-                    <option>Cliente A</option>
-                    <option>Cliente B</option>
-                    <option>Cliente C</option>
+                <select id="filter-trading-company" class="filter-input">
+                    <option value="">Todos</option>
                 </select>
             </div>
             <div class="filter-group">
                 <label class="filter-label">Etapa</label>
-                <select>
-                    <option>Todas</option>
-                    <option>Producción</option>
-                    <option>Booking</option>
-                    <option>Tránsito</option>
-                    <option>Arribo</option>
+                <select id="filter-stage" class="filter-input">
+                    <option value="">Todas</option>
                 </select>
             </div>
             <div class="filter-group">
                 <label class="filter-label">Proveedor de Mercancía</label>
-                <select>
-                    <option>Todos</option>
-                    <option>Proveedor 1</option>
-                    <option>Proveedor 2</option>
-                    <option>Proveedor 3</option>
+                <select id="filter-vendor-id" class="filter-input">
+                    <option value="">Todos</option>
                 </select>
             </div>
             <div class="filter-group">
                 <label class="filter-label">Proveedor de Servicio</label>
-                <select>
-                    <option>Todos</option>
-                    <option>Servicio 1</option>
-                    <option>Servicio 2</option>
+                <select id="filter-service-provider" class="filter-input">
+                    <option value="">Todos</option>
                 </select>
             </div>
             <div class="filter-group">
                 <label class="filter-label">Puerto de Embarque</label>
-                <select>
-                    <option>Todos</option>
-                    <option>Shanghai</option>
-                    <option>Ningbo</option>
-                    <option>Yantian</option>
+                <select id="filter-departure-port" class="filter-input">
+                    <option value="">Todos</option>
                 </select>
             </div>
             <div class="filter-group">
                 <label class="filter-label">Puerto de Arribo</label>
-                <select>
-                    <option>Todos</option>
-                    <option>Limón-Moín</option>
-                    <option>Caldera</option>
+                <select id="filter-arrival-port" class="filter-input">
+                    <option value="">Todos</option>
                 </select>
             </div>
             <div class="filter-group">
                 <label class="filter-label">Naviera</label>
-                <select>
-                    <option>Todas</option>
-                    <option>Maersk</option>
-                    <option>MSC</option>
-                    <option>CMA CGM</option>
+                <select id="filter-shipping-line" class="filter-input">
+                    <option value="">Todas</option>
                 </select>
             </div>
             <div class="filter-group">
                 <label class="filter-label">Ruta Logística</label>
-                <select>
-                    <option>Todas</option>
-                    <option>Asia-Centroamérica</option>
-                    <option>Europa-Centroamérica</option>
+                <select id="filter-route-label" class="filter-input">
+                    <option value="">Todas</option>
                 </select>
             </div>
             <div class="filter-group">
                 <label class="filter-label">Número de PO</label>
-                <input type="text" placeholder="Buscar PO..." class="date-input">
+                <input type="text" id="filter-order-number" placeholder="Buscar PO..." class="date-input filter-input">
             </div>
             <div class="action-buttons" style="display: flex; gap: 16px; align-items: flex-end; margin-left: auto;">
-                <button class="btn-primary" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: none; background: #1AAD8A; color: #F7F7F7; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; justify-content: center; cursor: pointer;">Aceptar</button>
+                <button class="btn-primary" id="btn-apply-filters" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: none; background: #1AAD8A; color: #F7F7F7; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; justify-content: center; cursor: pointer;">Aceptar</button>
                 <button class="btn-secondary" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: 2px solid #1AAD8A; background: #fff; color: #1AAD8A; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; gap: 8px; justify-content: center; cursor: pointer;">
                     <i class="fas fa-download"></i>
                     Descargar
@@ -132,22 +119,22 @@
                 <div class="kpi-cards">
                     <div class="kpi-card">
                         <div class="kpi-card-title">Total PO</div>
-                        <div class="kpi-card-value">1,248</div>
+                        <div class="kpi-card-value" id="kpi-total-pos">-</div>
                         <div class="kpi-card-subtitle">Órdenes activas</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-card-title">PO con Retraso</div>
-                        <div class="kpi-card-value">156</div>
-                        <div class="kpi-card-subtitle">12.5% del total</div>
+                        <div class="kpi-card-value" id="kpi-delay-count">-</div>
+                        <div class="kpi-card-subtitle" id="kpi-delay-percentage">-</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-card-title">PO con Adelanto</div>
-                        <div class="kpi-card-value">89</div>
-                        <div class="kpi-card-subtitle">7.1% del total</div>
+                        <div class="kpi-card-value" id="kpi-advance-count">-</div>
+                        <div class="kpi-card-subtitle" id="kpi-advance-percentage">-</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-card-title">PO con ATA</div>
-                        <div class="kpi-card-value">542</div>
+                        <div class="kpi-card-value" id="kpi-ata-count">-</div>
                         <div class="kpi-card-subtitle">Arribos confirmados</div>
                     </div>
                 </div>
@@ -356,6 +343,11 @@
                                 <td class="align-right number">194</td>
                                 <td class="align-right number">442</td>
                             </tr>
+                            <tr style="background-color: #f8faf9; font-weight: 700;">
+                                <td style="color: #374151;">Total</td>
+                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">1,248</td>
+                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">2,847</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -402,6 +394,12 @@
                                 <td><span class="badge badge-info">Mes Anterior</span></td>
                                 <td class="align-right number">1,112</td>
                                 <td class="align-right number">2,534</td>
+                                <td class="align-right">-</td>
+                            </tr>
+                            <tr style="background-color: #f8faf9; font-weight: 700;">
+                                <td style="color: #374151;">Total</td>
+                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">2,911</td>
+                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">6,641</td>
                                 <td class="align-right">-</td>
                             </tr>
                         </tbody>
@@ -458,6 +456,12 @@
                                 <td class="align-right number">94</td>
                                 <td class="align-right percentage">3.2%</td>
                             </tr>
+                            <tr style="background-color: #f8faf9; font-weight: 700;">
+                                <td style="color: #374151;">Total</td>
+                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">1,248</td>
+                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">2,847</td>
+                                <td class="align-right percentage" style="font-weight: 700; color: #0984e3;">100.0%</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -512,6 +516,12 @@
                                 <td class="align-right number">108</td>
                                 <td class="align-right percentage">3.8%</td>
                             </tr>
+                            <tr style="background-color: #f8faf9; font-weight: 700;">
+                                <td style="color: #374151;">Total</td>
+                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">1,248</td>
+                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">2,847</td>
+                                <td class="align-right percentage" style="font-weight: 700; color: #0984e3;">100.0%</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -525,235 +535,115 @@
                 <div class="kpi-cards">
                     <div class="kpi-card">
                         <div class="kpi-card-title">Variación ATD</div>
-                        <div class="kpi-card-value">+15.2%</div>
+                        <div class="kpi-card-value" id="kpi-comp-var-atd">-</div>
                         <div class="kpi-card-subtitle">vs período anterior</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-card-title">Variación ATA</div>
-                        <div class="kpi-card-value">+8.7%</div>
+                        <div class="kpi-card-value" id="kpi-comp-var-ata">-</div>
                         <div class="kpi-card-subtitle">vs período anterior</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-card-title">Variación Atrasos</div>
-                        <div class="kpi-card-value">-3.4%</div>
+                        <div class="kpi-card-value" id="kpi-comp-var-atrasos">-</div>
                         <div class="kpi-card-subtitle">Mejora en puntualidad</div>
                     </div>
                 </div>
 
-                <!-- Tabla 1: PO con ATD -->
-                <div class="table-section">
-                    <div class="table-header">
-                        <div>
-                            <div class="table-title">PO con ATD - Comparación entre Períodos</div>
-                            <div class="table-description">
-                                Órdenes con Actual Time of Departure - evaluación de ejecución de salidas
+                <!-- Filtros de Períodos de Comparación - Sobre la tabla -->
+                <div class="comparison-period-filters" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 24px;">
+                    <div style="display: flex; align-items: center; gap: 32px; flex-wrap: wrap;">
+                        <!-- Título a la izquierda -->
+                        <h4 style="font-size: 16px; font-weight: 600; color: #374151; margin: 0; font-family: 'Lato', sans-serif; white-space: nowrap;">Períodos de Comparación</h4>
+                        
+                        <!-- Períodos juntos -->
+                        <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+                            <!-- Período A -->
+                            <div style="display: flex; align-items: flex-end; gap: 8px;">
+                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                    <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Inicio</label>
+                                    <input type="date" id="comp-period-a-from" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 4px; position: relative;">
+                                    <div style="display: flex; align-items: center; width: 150px; position: relative;">
+                                        <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Fin</label>
+                                        <span style="font-size: 14px; font-weight: 700; color: #1AAD8A; white-space: nowrap; position: absolute; right: 0;">Período A</span>
+                                    </div>
+                                    <input type="date" id="comp-period-a-to" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                </div>
+                            </div>
+                            
+                            <!-- Período B -->
+                            <div style="display: flex; align-items: flex-end; gap: 8px;">
+                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                    <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Inicio</label>
+                                    <input type="date" id="comp-period-b-from" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 4px; position: relative;">
+                                    <div style="display: flex; align-items: center; width: 150px; position: relative;">
+                                        <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Fin</label>
+                                        <span style="font-size: 14px; font-weight: 700; color: #1AAD8A; white-space: nowrap; position: absolute; right: 0;">Período B</span>
+                                    </div>
+                                    <input type="date" id="comp-period-b-to" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Proveedor de Mercancía</th>
-                                <th class="align-right">PO Período A<br><small>(Nov 2025)</small></th>
-                                <th class="align-right">PO Período B<br><small>(Dic 2025)</small></th>
-                                <th class="align-right">% Variación</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Asia Manufacturing</td>
-                                <td class="align-right number">412</td>
-                                <td class="align-right number">481</td>
-                                <td class="align-right percentage">+16.7%</td>
-                            </tr>
-                            <tr>
-                                <td>Global Textiles</td>
-                                <td class="align-right number">348</td>
-                                <td class="align-right number">394</td>
-                                <td class="align-right percentage">+13.2%</td>
-                            </tr>
-                            <tr>
-                                <td>Electronics Corp</td>
-                                <td class="align-right number">225</td>
-                                <td class="align-right number">248</td>
-                                <td class="align-right percentage">+10.2%</td>
-                            </tr>
-                            <tr>
-                                <td>Premium Goods</td>
-                                <td class="align-right number">78</td>
-                                <td class="align-right number">85</td>
-                                <td class="align-right percentage">+9.0%</td>
-                            </tr>
-                            <tr>
-                                <td>Fast Logistics</td>
-                                <td class="align-right number">45</td>
-                                <td class="align-right number">40</td>
-                                <td class="align-right percentage negative">-11.1%</td>
-                            </tr>
-                        </tbody>
-                    </table>
                 </div>
 
-                <!-- Tabla 2: PO con ATA -->
-                <div class="table-section">
-                    <div class="table-header">
-                        <div>
-                            <div class="table-title">PO con ATA - Comparación entre Períodos</div>
-                            <div class="table-description">
-                                Órdenes con Actual Time of Arrival - comparación de arribos efectivos
+                <!-- Tabla Principal con Panel de Filtros -->
+                <div class="trend-table-section" style="position: relative; width: calc(100% + 5rem); max-width: calc(100% + 5rem); margin-left: -2.5rem; margin-right: -2.5rem; padding-left: 2.5rem; padding-right: 2.5rem; box-sizing: border-box; margin-top: 24px;">
+                    <div style="display: flex; gap: 16px; width: 100%; box-sizing: border-box;">
+                        <!-- Tabla Principal - 2/3 width -->
+                        <div class="table-card" style="display: flex; flex-direction: column; width: 66.67%; box-sizing: border-box; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <h3 class="chart-title" style="text-align: center; margin-bottom: 16px; font-size: 18px; font-weight: 600; color: #374151; font-family: 'Lato', sans-serif;" id="kpiCompTableTitle">Seleccione un indicador para ver la comparación</h3>
+                            <div class="table-container" style="overflow-x: auto; width: 100%; max-width: 100%; box-sizing: border-box;">
+                                <table class="data-table" id="kpiCompTable" style="width: 100%; border-collapse: collapse;">
+                                    <thead id="kpiCompTableHead">
+                                        <tr>
+                                            <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; color: #374151;">Seleccione un indicador</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="kpiCompTableBody">
+                                        <tr>
+                                            <td style="padding: 12px; text-align: center; color: #6b7280; border: 1px solid #e5e7eb;">Seleccione los períodos y un indicador del panel lateral</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                    </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Proveedor de Mercancía</th>
-                                <th class="align-right">PO Período A<br><small>(Nov 2025)</small></th>
-                                <th class="align-right">PO Período B<br><small>(Dic 2025)</small></th>
-                                <th class="align-right">% Variación</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Asia Manufacturing</td>
-                                <td class="align-right number">382</td>
-                                <td class="align-right number">421</td>
-                                <td class="align-right percentage">+10.2%</td>
-                            </tr>
-                            <tr>
-                                <td>Global Textiles</td>
-                                <td class="align-right number">315</td>
-                                <td class="align-right number">338</td>
-                                <td class="align-right percentage">+7.3%</td>
-                            </tr>
-                            <tr>
-                                <td>Electronics Corp</td>
-                                <td class="align-right number">198</td>
-                                <td class="align-right number">212</td>
-                                <td class="align-right percentage">+7.1%</td>
-                            </tr>
-                            <tr>
-                                <td>Premium Goods</td>
-                                <td class="align-right number">68</td>
-                                <td class="align-right number">73</td>
-                                <td class="align-right percentage">+7.4%</td>
-                            </tr>
-                            <tr>
-                                <td>Fast Logistics</td>
-                                <td class="align-right number">42</td>
-                                <td class="align-right number">38</td>
-                                <td class="align-right percentage negative">-9.5%</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
 
-                <!-- Tabla 3: PO con Atraso CL -->
-                <div class="table-section">
-                    <div class="table-header">
-                        <div>
-                            <div class="table-title">PO con Atraso CL - Comparación entre Períodos</div>
-                            <div class="table-description">
-                                Comparación de atrasos operativos en Carga Lista entre períodos
+                        <!-- Panel de Indicadores - 1/3 width -->
+                        <div class="filters-panel" id="comparativo-filters-panel" style="width: 33.33%; box-sizing: border-box;">
+                            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                                <h3 style="font-size: 18px; font-weight: 600; color: #374151; margin-bottom: 20px; font-family: 'Lato', sans-serif;">Indicadores</h3>
+                                
+                                <!-- Comparison Filters Buttons -->
+                                <div class="additional-filters-buttons" style="display: flex; flex-direction: column; gap: 12px;">
+                                    <button type="button" class="filter-button" id="btn-comp-retraso-cl" data-filter="comp_retraso_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
+                                        <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">PO Retraso CL</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Comparación de atrasos entre períodos</span>
+                                    </button>
+                                    <button type="button" class="filter-button" id="btn-comp-adelanto-cl" data-filter="comp_adelanto_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
+                                        <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">PO Adelanto CL</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Comparación de adelantos entre períodos</span>
+                                    </button>
+                                    <button type="button" class="filter-button" id="btn-comp-capacidad" data-filter="comp_capacidad" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
+                                        <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">Indicador Capacidad</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Volumen despachado por período</span>
+                                    </button>
+                                    <button type="button" class="filter-button" id="btn-comp-atd" data-filter="comp_atd" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
+                                        <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">PO con ATD</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Salidas ejecutadas por período</span>
+                                    </button>
+                                    <button type="button" class="filter-button" id="btn-comp-ata" data-filter="comp_ata" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
+                                        <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">PO con ATA</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Arribos confirmados por período</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Proveedor de Mercancía</th>
-                                <th class="align-right">PO Período A<br><small>(Nov 2025)</small></th>
-                                <th class="align-right">PO Período B<br><small>(Dic 2025)</small></th>
-                                <th class="align-right">% Variación</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Asia Manufacturing</td>
-                                <td class="align-right number">72</td>
-                                <td class="align-right number">64</td>
-                                <td class="align-right percentage positive">-11.1%</td>
-                            </tr>
-                            <tr>
-                                <td>Global Textiles</td>
-                                <td class="align-right number">54</td>
-                                <td class="align-right number">48</td>
-                                <td class="align-right percentage positive">-11.1%</td>
-                            </tr>
-                            <tr>
-                                <td>Electronics Corp</td>
-                                <td class="align-right number">48</td>
-                                <td class="align-right number">44</td>
-                                <td class="align-right percentage positive">-8.3%</td>
-                            </tr>
-                            <tr>
-                                <td>Premium Goods</td>
-                                <td class="align-right number">12</td>
-                                <td class="align-right number">15</td>
-                                <td class="align-right percentage negative">+25.0%</td>
-                            </tr>
-                            <tr>
-                                <td>Fast Logistics</td>
-                                <td class="align-right number">8</td>
-                                <td class="align-right number">6</td>
-                                <td class="align-right percentage positive">-25.0%</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Tabla 4: PO con Adelanto CL -->
-                <div class="table-section">
-                    <div class="table-header">
-                        <div>
-                            <div class="table-title">PO con Adelanto CL - Comparación entre Períodos</div>
-                            <div class="table-description">
-                                Comparación de adelantamientos en Carga Lista entre períodos
-                            </div>
-                        </div>
-                    </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Proveedor de Mercancía</th>
-                                <th class="align-right">PO Período A<br><small>(Nov 2025)</small></th>
-                                <th class="align-right">PO Período B<br><small>(Dic 2025)</small></th>
-                                <th class="align-right">% Variación</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Premium Goods</td>
-                                <td class="align-right number">32</td>
-                                <td class="align-right number">38</td>
-                                <td class="align-right percentage">+18.8%</td>
-                            </tr>
-                            <tr>
-                                <td>Fast Logistics</td>
-                                <td class="align-right number">28</td>
-                                <td class="align-right number">31</td>
-                                <td class="align-right percentage">+10.7%</td>
-                            </tr>
-                            <tr>
-                                <td>Quality First</td>
-                                <td class="align-right number">18</td>
-                                <td class="align-right number">20</td>
-                                <td class="align-right percentage">+11.1%</td>
-                            </tr>
-                            <tr>
-                                <td>Asia Manufacturing</td>
-                                <td class="align-right number">15</td>
-                                <td class="align-right number">12</td>
-                                <td class="align-right percentage negative">-20.0%</td>
-                            </tr>
-                            <tr>
-                                <td>Global Textiles</td>
-                                <td class="align-right number">11</td>
-                                <td class="align-right number">9</td>
-                                <td class="align-right percentage negative">-18.2%</td>
-                            </tr>
-                        </tbody>
-                    </table>
                 </div>
 
             </div>
@@ -866,22 +756,6 @@
     @push('scripts')
         <script src="{{ asset('js/dashboard-kpi.js') }}"></script>
         <script>
-            // Toggle Filters
-            function toggleFilters() {
-                const filtersSection = document.getElementById('filtersSection');
-                const toggleBtn = document.getElementById('toggleFiltersBtn');
-                const btnText = toggleBtn.querySelector('.btn-text');
-                
-                filtersSection.classList.toggle('collapsed');
-                toggleBtn.classList.toggle('collapsed');
-                
-                if (filtersSection.classList.contains('collapsed')) {
-                    btnText.textContent = 'Mostrar Filtros';
-                } else {
-                    btnText.textContent = 'Ocultar Filtros';
-                }
-            }
-
             // Tab switching
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.addEventListener('click', function() {
@@ -904,6 +778,14 @@
                         document.getElementById('tendencia-po').classList.add('active');
                     } else {
                         document.getElementById(viewId).classList.add('active');
+                        
+                        // Si se cambia a la vista comparativa, establecer fechas por defecto
+                        if (viewId === 'comparativo' && window.dashboardKPIManager) {
+                            // Esperar a que Flatpickr se inicialice
+                            setTimeout(() => {
+                                window.dashboardKPIManager.setDefaultComparisonPeriods();
+                            }, 300);
+                        }
                     }
                 });
             });

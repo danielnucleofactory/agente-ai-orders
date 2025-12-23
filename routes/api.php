@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\DashboardKPIController;
 
 // Rutas públicas (sin autenticación)
 Route::get('/status', function () {
@@ -99,4 +100,36 @@ Route::middleware('api.token')->group(function () {
             'user' => $user->fresh()
         ]);
     });
+});
+
+// ============================================
+// Dashboard KPI Routes (con autenticación web)
+// ============================================
+Route::middleware('auth:sanctum')->prefix('dashboard-kpi')->group(function () {
+    // Datos generales del dashboard
+    Route::get('/', [DashboardKPIController::class, 'index']);
+    
+    // Vista Tendencia - Cantidad de PO
+    Route::get('/pos-by-stage', [DashboardKPIController::class, 'posByStage']);
+    Route::get('/pos-delay-cl', [DashboardKPIController::class, 'posDelayCL']);
+    Route::get('/pos-advance-cl', [DashboardKPIController::class, 'posAdvanceCL']);
+    Route::get('/capacity', [DashboardKPIController::class, 'capacity']);
+    Route::get('/transshipment', [DashboardKPIController::class, 'transshipment']);
+    Route::get('/pos-with-ata', [DashboardKPIController::class, 'posWithATA']);
+    Route::get('/transit-time', [DashboardKPIController::class, 'transitTime']);
+    
+    // Vista Comparativo
+    Route::post('/compare-atd', [DashboardKPIController::class, 'compareATD']);
+    Route::post('/compare-ata', [DashboardKPIController::class, 'compareATA']);
+    Route::post('/compare-delay-cl', [DashboardKPIController::class, 'compareDelayCL']);
+    Route::post('/compare-advance-cl', [DashboardKPIController::class, 'compareAdvanceCL']);
+    
+    // Vista PO vs TEUs
+    Route::get('/po-vs-teus/stage', [DashboardKPIController::class, 'poVsTeusByStage']);
+    Route::get('/po-vs-teus/period', [DashboardKPIController::class, 'poVsTeusByPeriod']);
+    Route::get('/po-vs-teus/vendor', [DashboardKPIController::class, 'poVsTeusByVendor']);
+    Route::get('/po-vs-teus/shipping-line', [DashboardKPIController::class, 'poVsTeusByShippingLine']);
+    
+    // Vista Proyección
+    Route::get('/future-arrivals', [DashboardKPIController::class, 'futureArrivals']);
 });
