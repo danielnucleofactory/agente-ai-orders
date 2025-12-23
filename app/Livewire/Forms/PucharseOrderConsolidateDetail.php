@@ -249,6 +249,37 @@ class PucharseOrderConsolidateDetail extends Component {
     }
 
     /**
+     * Verificar si debe mostrarse la línea de tiempo
+     * Solo se muestra si:
+     * 1. Hay identificadores de tracking (tracking_id, mbl_number o container_number)
+     * 2. Al menos una PO asociada está en "En Tránsito" (etapa 5) o superior
+     */
+    public function shouldShowTimeline()
+    {
+        if (!$this->shippingDocument) {
+            return false;
+        }
+
+        // Verificar si hay identificadores de tracking
+        $hasTrackingIdentifiers = $this->shippingDocument->tracking_id 
+            || $this->shippingDocument->mbl_number 
+            || $this->shippingDocument->container_number;
+
+        if (!$hasTrackingIdentifiers) {
+            return false;
+        }
+
+        // Verificar si alguna PO asociada está en "En Tránsito" (id 5) o más adelante
+        $hasInTransitOrLater = $this->shippingDocument->purchaseOrders()
+            ->whereHas('kanbanStatus', function($query) {
+                $query->where('id', '>=', 5); // En Tránsito es id 5
+            })
+            ->exists();
+
+        return $hasInTransitOrLater;
+    }
+
+    /**
      * Load comments related to the shipping document
      */
     public function loadComments()

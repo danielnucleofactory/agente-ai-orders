@@ -100,8 +100,19 @@ class PucharseOrderDetail extends Component
         // Cargar los datos de sobre costo
         $this->loadOverCostData();
 
-        // If this purchase order has a tracking ID, load the tracking data
-        if ($this->purchaseOrder->tracking_id) {
+        // Cargar tracking si la PO está en "En Tránsito" (etapa 5) o superior
+        // y tiene tracking_id, mbl_number o container_number (directamente o en shipping document)
+        $kanbanStatusId = $this->purchaseOrder->kanban_status_id ?? 0;
+        $hasTrackingData = $this->purchaseOrder->tracking_id 
+            || $this->purchaseOrder->mbl_number 
+            || $this->purchaseOrder->container_number
+            || ($this->shippingDocument && (
+                $this->shippingDocument->tracking_id 
+                || $this->shippingDocument->mbl_number 
+                || $this->shippingDocument->container_number
+            ));
+
+        if ($kanbanStatusId >= 5 && $hasTrackingData) {
             $this->loadTrackingData();
         }
 
@@ -274,23 +285,31 @@ class PucharseOrderDetail extends Component
         $this->loadingTracking = true;
 
         try {
-            // Get the tracking ID from the purchase order directly
-            $trackingId = $this->purchaseOrder->tracking_id ?? null;
+            // Obtener tracking_id y mbl_number de la PO o del shipping document
+            $trackingId = $this->purchaseOrder->tracking_id 
+                ?? ($this->shippingDocument->tracking_id ?? null);
+            $mblNumber = $this->purchaseOrder->mbl_number 
+                ?? ($this->shippingDocument->mbl_number ?? null);
+            $containerNumber = $this->purchaseOrder->container_number
+                ?? ($this->shippingDocument->container_number ?? null);
 
-            Log::info('Loading tracking data for purchase order:', [
+            Log::info('Loading tracking data for purchase order (Porth):', [
                 'purchase_order_id' => $this->purchaseOrder->id ?? null,
-                'tracking_id' => $trackingId
+                'tracking_id' => $trackingId,
+                'mbl_number' => $mblNumber,
+                'container_number' => $containerNumber
             ]);
 
             $trackingService = new TrackingService();
-            $this->trackingData = $trackingService->getShip24Tracking($trackingId);
+            // Usar getTracking que soporta Porth con tracking_id, mbl_number y container_number
+            $this->trackingData = $trackingService->getTracking($trackingId, $mblNumber, $containerNumber);
 
-            Log::info('Tracking data loaded successfully', [
+            Log::info('Tracking data loaded successfully (Porth)', [
                 'has_timeline' => isset($this->trackingData['timeline']),
                 'milestone' => $this->trackingData['current_phase'] ?? 'none'
             ]);
         } catch (\Exception $e) {
-            Log::error('Error loading tracking data', [
+            Log::error('Error loading tracking data (Porth)', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -298,6 +317,36 @@ class PucharseOrderDetail extends Component
         }
 
         $this->loadingTracking = false;
+    }
+
+    /**
+     * Verificar si debe mostrarse la línea de tiempo de Porth
+     * Solo se muestra si:
+     * 1. La PO está en "En Tránsito" (etapa 5) o superior
+     * 2. Hay identificadores de tracking (tracking_id, mbl_number o container_number)
+     * 3. Se cargaron datos de tracking exitosamente
+     */
+    public function shouldShowTimeline()
+    {
+        $kanbanStatusId = $this->purchaseOrder->kanban_status_id ?? 0;
+        
+        // Solo mostrar si está en "En Tránsito" (etapa 5) o superior
+        if ($kanbanStatusId < 5) {
+            return false;
+        }
+
+        // Verificar si hay identificadores de tracking
+        $hasTrackingData = $this->purchaseOrder->tracking_id 
+            || $this->purchaseOrder->mbl_number 
+            || $this->purchaseOrder->container_number
+            || ($this->shippingDocument && (
+                $this->shippingDocument->tracking_id 
+                || $this->shippingDocument->mbl_number 
+                || $this->shippingDocument->container_number
+            ));
+
+        // Verificar que se hayan cargado datos de tracking con timeline
+        return $hasTrackingData && !empty($this->trackingData) && isset($this->trackingData['timeline']);
     }
 
     protected function loadCommentsAndAttachments()
