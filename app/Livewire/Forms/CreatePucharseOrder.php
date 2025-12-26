@@ -2094,6 +2094,9 @@ class CreatePucharseOrder extends Component
                 $this->dispatch('show-success', 'Orden de compra actualizada exitosamente con número: ' . $this->order_number);
                 $this->dispatch('open-modal', 'modal-purchase-order-created');
 
+                // RETORNAR UN VALOR EXPLÍCITO PARA INDICAR ÉXITO
+                return ['success' => true, 'message' => 'Orden actualizada exitosamente', 'id' => $purchaseOrder->id];
+
             } catch (\Illuminate\Validation\ValidationException $e) {
                 \DB::rollBack();
                 \Log::error('Error de validación en updatePurchaseOrder', [
@@ -2112,6 +2115,9 @@ class CreatePucharseOrder extends Component
                 // Mostrar error al usuario
                 $this->dispatch('show-error', 'Error al actualizar la orden: ' . $e->getMessage());
                 session()->flash('error', 'Error al actualizar la orden: ' . $e->getMessage());
+                
+                // RETORNAR UN VALOR PARA INDICAR ERROR
+                return ['success' => false, 'message' => $e->getMessage()];
             }
         } catch (\Exception $e) {
             \Log::error('Error crítico en updatePurchaseOrder: ' . $e->getMessage(), [
@@ -2123,6 +2129,9 @@ class CreatePucharseOrder extends Component
             // Mostrar error al usuario
             $this->dispatch('show-error', 'Error al actualizar la orden: ' . $e->getMessage());
             session()->flash('error', 'Error al actualizar la orden: ' . $e->getMessage());
+            
+            // RETORNAR UN VALOR PARA INDICAR ERROR
+            return ['success' => false, 'message' => $e->getMessage()];
         }
     }
 
@@ -2223,23 +2232,35 @@ class CreatePucharseOrder extends Component
     public function updatedDateEtaInitial()        { $this->computeDateDiffs(); }
     protected function computeDateDiffs(): void
     {
-        // Usamos Carbon para diferencias con signo
-        $etdInitial = $this->date_etd_initial ? \Carbon\Carbon::parse($this->date_etd_initial) : null;
-        $etdUpdated = $this->date_etd ? \Carbon\Carbon::parse($this->date_etd) : null;
+        try {
+            // Usamos Carbon para diferencias con signo
+            $etdInitial = $this->date_etd_initial ? \Carbon\Carbon::parse($this->date_etd_initial) : null;
+            $etdUpdated = $this->date_etd ? \Carbon\Carbon::parse($this->date_etd) : null;
 
-        $etaBase    = $this->date_eta ? \Carbon\Carbon::parse($this->date_eta) : null;
-        $etaUpdated = $this->date_eta_initial ? \Carbon\Carbon::parse($this->date_eta_initial) : null;
+            $etaBase    = $this->date_eta ? \Carbon\Carbon::parse($this->date_eta) : null;
+            $etaUpdated = $this->date_eta_initial ? \Carbon\Carbon::parse($this->date_eta_initial) : null;
 
-        $this->etd_dates_difference = ($etdInitial && $etdUpdated)
-            ? $etdInitial->diffInDays($etdUpdated, true) //
-            : null;
+            $this->etd_dates_difference = ($etdInitial && $etdUpdated)
+                ? $etdInitial->diffInDays($etdUpdated, true) //
+                : null;
 
-        $this->eta_dates_difference = ($etaBase && $etaUpdated)
-            ? $etaBase->diffInDays($etaUpdated, true)
-            : null;
+            $this->eta_dates_difference = ($etaBase && $etaUpdated)
+                ? $etaBase->diffInDays($etaUpdated, true)
+                : null;
 
-        // NUEVO: Calcular automáticamente arrival_status y delay_days
-        $this->calculateArrivalStatus();
+            // NUEVO: Calcular automáticamente arrival_status y delay_days
+            $this->calculateArrivalStatus();
+        } catch (\Exception $e) {
+            \Log::warning('Error en computeDateDiffs: ' . $e->getMessage(), [
+                'date_etd_initial' => $this->date_etd_initial,
+                'date_etd' => $this->date_etd,
+                'date_eta' => $this->date_eta,
+                'date_eta_initial' => $this->date_eta_initial,
+            ]);
+            // No lanzar excepción para no interrumpir el flujo
+            $this->etd_dates_difference = null;
+            $this->eta_dates_difference = null;
+        }
     }
 
     /**
