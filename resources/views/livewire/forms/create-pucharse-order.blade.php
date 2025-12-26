@@ -1661,25 +1661,57 @@
             }
         });
 
-        // Esperar un momento para que Livewire procese los cambios y luego ejecutar updatePurchaseOrder
-        setTimeout(function() {
-            console.log('Ejecutando updatePurchaseOrder con ID:', poId);
-            try {
-                if (typeof formComponent.call === 'function') {
-                    console.log('Llamando formComponent.call("updatePurchaseOrder", ' + poId + ')');
-                    formComponent.call('updatePurchaseOrder', poId).then(function(result) {
-                        console.log('updatePurchaseOrder completado:', result);
-                    }).catch(function(error) {
-                        console.error('Error en updatePurchaseOrder:', error);
-                    });
-                } else {
-                    console.error('formComponent.call no está disponible');
-                    console.log('formComponent:', formComponent);
+        // MEJORAR: Esperar a que Livewire procese los cambios antes de ejecutar updatePurchaseOrder
+        // Usar requestAnimationFrame para asegurar que el DOM se actualice
+        requestAnimationFrame(function() {
+            setTimeout(function() {
+                console.log('Ejecutando updatePurchaseOrder con ID:', poId);
+                try {
+                    if (typeof formComponent.call === 'function') {
+                        console.log('Llamando formComponent.call("updatePurchaseOrder", ' + poId + ')');
+                        formComponent.call('updatePurchaseOrder', poId).then(function(result) {
+                            console.log('updatePurchaseOrder completado:', result);
+                            
+                            // VERIFICAR EL RESULTADO
+                            if (result && result.success) {
+                                console.log('✅ PO actualizada exitosamente:', result.message);
+                            } else if (result && !result.success) {
+                                console.error('❌ Error al actualizar PO:', result.message);
+                            } else {
+                                // Si result es null, puede ser que la función no retornó nada
+                                // Verificar si hay errores en el componente
+                                console.warn('⚠️ updatePurchaseOrder retornó null. Verificando estado...');
+                                
+                                // Esperar un momento y verificar si hay errores de validación
+                                setTimeout(function() {
+                                    const errors = formComponent.get('errors') || {};
+                                    if (Object.keys(errors).length > 0) {
+                                        console.error('❌ Errores de validación encontrados:', errors);
+                                    } else {
+                                        console.log('⚠️ No se encontraron errores de validación. La actualización puede haber sido exitosa.');
+                                    }
+                                }, 500);
+                            }
+                        }).catch(function(error) {
+                            console.error('❌ Error en updatePurchaseOrder:', error);
+                            console.error('Stack trace:', error.stack);
+                            
+                            // Mostrar error al usuario
+                            if (window.Livewire) {
+                                Livewire.dispatch('show-error', { 
+                                    message: 'Error al actualizar la orden: ' + (error.message || 'Error desconocido')
+                                });
+                            }
+                        });
+                    } else {
+                        console.error('formComponent.call no está disponible');
+                        console.log('formComponent:', formComponent);
+                    }
+                } catch (e) {
+                    console.error('Error al ejecutar updatePurchaseOrder:', e);
+                    console.error('Stack trace:', e.stack);
                 }
-            } catch (e) {
-                console.error('Error al ejecutar updatePurchaseOrder:', e);
-                console.error('Stack trace:', e.stack);
-            }
-        }, 500);
+            }, 1000); // AUMENTAR TIMEOUT A 1000ms PARA PRODUCCIÓN
+        });
     }
 </script>
