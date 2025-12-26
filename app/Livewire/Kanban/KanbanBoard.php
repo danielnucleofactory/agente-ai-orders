@@ -96,6 +96,18 @@ class KanbanBoard extends Component
     // Array para dropdown de proveedores de servicio
     public $serviceProviderArray = [];
 
+    // Arrays para dropdowns de la etapa "En Tránsito"
+    public $shippingLineArray = [];
+    public $departurePortArray = [];
+    public $arrivalPortArray = [];
+    public $containerTypeArray = [];
+
+    // Arrays para dropdowns de la etapa "Booking"
+    public $transportTypeArray = [];
+
+    // Estado de carga del modal
+    public $isLoadingModalData = false;
+
     // Agregar los listeners para los eventos
     protected $listeners = [
         'refreshKanban' => 'loadData',
@@ -543,27 +555,63 @@ class KanbanBoard extends Component
                 $this->loadServiceProviders($po->trading_company, $po->service_provider);
             }
 
+            // Cargar transport types si estamos en la etapa "Booking"
+            if ($newColumnId == 3 && $po->trading_company) {
+                $this->mode = $po->mode;
+                $this->loadTransportTypes($po->trading_company, $po->mode);
+            }
+
+            // Cargar shipping lines, puertos y container types si estamos en la etapa "En Tránsito"
+            // IMPORTANTE: Cargar los valores ANTES de llamar a los métodos de carga
+            // para que los métodos puedan agregar los valores guardados al array si la API no devuelve datos
+            if ($newColumnId == 5 && $po->trading_company) {
+                $this->shipping_line = $po->shipping_line;
+                $this->departure_port = $po->departure_port;
+                $this->arrival_port = $po->arrival_port;
+                $this->container_type = $po->container_type;
+                
+                \Log::info('KanbanBoard: Loading data for En Tránsito stage', [
+                    'po_id' => $po->id,
+                    'shipping_line' => $this->shipping_line,
+                    'departure_port' => $this->departure_port,
+                    'arrival_port' => $this->arrival_port,
+                    'container_type' => $this->container_type,
+                    'trading_company' => $po->trading_company
+                ]);
+                
+                $this->loadShippingLines($po->trading_company, $po->shipping_line);
+                $this->loadPorts($po->trading_company, $po->departure_port, $po->arrival_port);
+                $this->loadContainerTypes($po->trading_company, $po->container_type);
+            }
+
             // Booking - convertir fechas al formato Y-m-d
             $this->date_booking_request = $po->date_booking_request ? $po->date_booking_request->format('Y-m-d') : null;
             $this->date_booking_authorized = $po->date_booking_authorized ? $po->date_booking_authorized->format('Y-m-d') : null;
             $this->date_etd_initial = $po->date_etd_initial ? $po->date_etd_initial->format('Y-m-d') : null;
             $this->date_etd_updated = $po->date_etd_updated ? $po->date_etd_updated->format('Y-m-d') : null;
-            $this->mode = $po->mode;
+            if ($newColumnId != 3) {
+                $this->mode = $po->mode;
+            }
 
             // En Tránsito - convertir fechas al formato Y-m-d
             $this->date_atd = $po->date_atd ? $po->date_atd->format('Y-m-d') : null;
             $this->date_eta = $po->date_eta ? $po->date_eta->format('Y-m-d') : null;
             $this->date_eta_updated = $po->date_eta_updated ? $po->date_eta_updated->format('Y-m-d') : null;
-            $this->container_type = $po->container_type;
+            if ($newColumnId != 5) {
+                $this->container_type = $po->container_type;
+            }
             $this->container_number = $po->container_number;
             $this->bill_of_lading = $po->bill_of_lading;
             $this->shipment_amount = $po->shipment_amount ?? null;
-            $this->shipping_line = $po->shipping_line;
+            // shipping_line, departure_port y arrival_port ya se cargaron arriba si estamos en etapa 5
+            if ($newColumnId != 5) {
+                $this->shipping_line = $po->shipping_line;
+                $this->departure_port = $po->departure_port;
+                $this->arrival_port = $po->arrival_port;
+            }
             $this->shipment_status = $po->shipment_status ?? null;
             $this->merchandise_invoice = $po->merchandise_invoice ?? null;
             $this->tracking_id = $po->tracking_id;
-            $this->departure_port = $po->departure_port;
-            $this->arrival_port = $po->arrival_port;
 
             // Puerto - convertir fechas al formato Y-m-d
             $this->date_ata = $po->date_ata ? $po->date_ata->format('Y-m-d') : null;
@@ -821,7 +869,8 @@ class KanbanBoard extends Component
         foreach ($fields as $name) {
             if (property_exists($this, $name)) {
                 $val = $this->$name;
-                if (!is_null($val) && (!(is_string($val)) || trim($val) !== '')) {
+                // Filtrar valores especiales que indican "no hay datos"
+                if (!is_null($val) && $val !== '__no_data__' && (!(is_string($val)) || trim($val) !== '')) {
                     $payload[$name] = $val;
                 }
             }
@@ -1032,9 +1081,28 @@ class KanbanBoard extends Component
      */
     protected function loadServiceProviders(string $tradingCompany, ?string $currentServiceProvider = null): void
     {
+        // PRIMERO: Asegurar que el valor guardado esté en el array desde el inicio
+        // Esto garantiza que esté disponible inmediatamente cuando Livewire renderiza el select
+        $serviceProviderToAdd = $currentServiceProvider ?? $this->service_provider;
+        
+        $this->serviceProviderArray = [];
+        
+        if ($serviceProviderToAdd && trim($serviceProviderToAdd) !== '') {
+            $this->serviceProviderArray[$serviceProviderToAdd] = $serviceProviderToAdd;
+            \Log::info('KanbanBoard: Added saved service provider to array', [
+                'service_provider' => $serviceProviderToAdd,
+                'array_count' => count($this->serviceProviderArray)
+            ]);
+        }
+        
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
-            $this->serviceProviderArray = [];
+            \Log::info('KanbanBoard: No trading company, returning with saved value only', [
+                'array_count' => count($this->serviceProviderArray)
+            ]);
+            if (empty($this->serviceProviderArray)) {
+                $this->serviceProviderArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente";
+            }
             return;
         }
 
@@ -1048,44 +1116,540 @@ class KanbanBoard extends Component
                 'per_page' => 1000,
             ];
 
-            $serviceProvidersResponse = $apiService->getServiceProviders($apiParams);
-            $this->serviceProviderArray = $this->processApiResponse($serviceProvidersResponse, 'name', 'name');
-
-            // Si la API no devolvió datos, intentar sin el filtro 'active'
-            if (empty($this->serviceProviderArray)) {
-                $apiParamsWithoutActive = [
-                    'company' => $tradingCompanyValue,
-                    'trading_company' => $tradingCompanyValue,
-                    'per_page' => 1000,
-                ];
-
-                $serviceProvidersResponseRetry = $apiService->getServiceProviders($apiParamsWithoutActive);
-                $this->serviceProviderArray = $this->processApiResponse($serviceProvidersResponseRetry, 'name', 'name');
+            $serviceProvidersResponse = $this->getServiceProvidersWithCustomTimeout($apiService, $apiParams, 8);
+            $serviceProvidersArray = $this->processApiResponse($serviceProvidersResponse, 'name', 'name');
+            
+            \Log::info('KanbanBoard: API response for service providers', [
+                'response_count' => count($serviceProvidersArray),
+                'current_array_count' => count($this->serviceProviderArray)
+            ]);
+            
+            // Combinar resultados de la API con el valor guardado (sin sobrescribir)
+            foreach ($serviceProvidersArray as $key => $value) {
+                if (!isset($this->serviceProviderArray[$key])) {
+                    $this->serviceProviderArray[$key] = $value;
+                }
             }
+            
+            \Log::info('KanbanBoard: Final service providers array', [
+                'final_count' => count($this->serviceProviderArray)
+            ]);
 
-            // Si aún no hay datos, cargar TODOS los proveedores de servicio sin filtrar por company
-            // Esto es un fallback para asegurar que siempre haya opciones disponibles
+            // Si después de todos los intentos el array está vacío, mostrar mensaje
             if (empty($this->serviceProviderArray)) {
-                $apiParamsAll = [
-                    'active' => 'true',
-                    'per_page' => 1000,
-                ];
-
-                $serviceProvidersResponseAll = $apiService->getServiceProviders($apiParamsAll);
-                $this->serviceProviderArray = $this->processApiResponse($serviceProvidersResponseAll, 'name', 'name');
-            }
-
-            // Si hay un valor guardado (ya sea pasado como parámetro o en $this->service_provider), asegurar que esté en el array
-            $serviceProviderToAdd = $currentServiceProvider ?? $this->service_provider;
-            if ($serviceProviderToAdd && !isset($this->serviceProviderArray[$serviceProviderToAdd])) {
-                $this->serviceProviderArray[$serviceProviderToAdd] = $serviceProviderToAdd;
+                $this->serviceProviderArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
             }
         } catch (\Exception $e) {
             \Log::error('Error loading service providers in KanbanBoard', [
                 'error' => $e->getMessage(),
                 'trading_company' => $tradingCompanyValue,
+                'array_count' => count($this->serviceProviderArray)
             ]);
-            $this->serviceProviderArray = [];
+            // Los valores guardados ya están en el array desde el inicio, así que no los perdemos
+            if (empty($this->serviceProviderArray)) {
+                $this->serviceProviderArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+            }
+        }
+    }
+
+    /**
+     * Cargar shipping lines desde la API
+     * 
+     * @param string $tradingCompany
+     * @param string|null $currentShippingLine Valor actual guardado en la PO (opcional)
+     * @return void
+     */
+    protected function loadShippingLines(string $tradingCompany, ?string $currentShippingLine = null): void
+    {
+        // PRIMERO: Asegurar que el valor guardado esté en el array desde el inicio
+        // Esto garantiza que esté disponible inmediatamente cuando Livewire renderiza el select
+        $shippingLineToAdd = $currentShippingLine ?? $this->shipping_line;
+        
+        $this->shippingLineArray = [];
+        
+        if ($shippingLineToAdd) {
+            $this->shippingLineArray[$shippingLineToAdd] = $shippingLineToAdd;
+            \Log::info('KanbanBoard: Added saved shipping line to array', [
+                'shipping_line' => $shippingLineToAdd,
+                'array_count' => count($this->shippingLineArray)
+            ]);
+        }
+        
+        $tradingCompanyValue = trim($tradingCompany ?? '');
+        if (empty($tradingCompanyValue)) {
+            \Log::info('KanbanBoard: No trading company, returning with saved value only', [
+                'array_count' => count($this->shippingLineArray)
+            ]);
+            // Si no hay trading company y no hay valor guardado, mostrar mensaje
+            if (empty($this->shippingLineArray)) {
+                $this->shippingLineArray['__no_data__'] = '⚠️ No hay datos disponibles';
+            }
+            return; // Ya agregamos el valor guardado arriba
+        }
+
+        try {
+            $apiService = $this->getMaestrosApiService();
+
+            $apiParams = [
+                'company' => $tradingCompanyValue,
+                'trading_company' => $tradingCompanyValue,
+                'active' => 'true',
+                'per_page' => 1000,
+            ];
+
+            // Intentar solo una vez con timeout más corto (8 segundos)
+            $shippingLinesResponse = $this->getShippingLinesWithCustomTimeout($apiService, $apiParams, 8);
+            $shippingLinesArray = $this->processApiResponse($shippingLinesResponse, 'name', 'name');
+            
+            \Log::info('KanbanBoard: API response for shipping lines', [
+                'response_count' => count($shippingLinesArray),
+                'current_array_count' => count($this->shippingLineArray)
+            ]);
+            
+            // Combinar los valores de la API con el valor guardado (sin duplicar)
+            foreach ($shippingLinesArray as $key => $value) {
+                if (!isset($this->shippingLineArray[$key])) {
+                    $this->shippingLineArray[$key] = $value;
+                }
+            }
+            
+            \Log::info('KanbanBoard: Final shipping lines array', [
+                'final_count' => count($this->shippingLineArray)
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error loading shipping lines in KanbanBoard', [
+                'error' => $e->getMessage(),
+                'trading_company' => $tradingCompanyValue,
+                'array_count' => count($this->shippingLineArray)
+            ]);
+            // El valor guardado ya está en el array desde el inicio, así que no lo perdemos
+        }
+        
+        // Si después de todos los intentos el array está vacío (y no hay valor guardado), agregar mensaje informativo
+        if (empty($this->shippingLineArray)) {
+            $this->shippingLineArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente "' . $tradingCompanyValue . '"';
+        }
+    }
+
+    /**
+     * Cargar puertos desde la API
+     * 
+     * @param string $tradingCompany
+     * @param string|null $currentDeparturePort Valor actual guardado en la PO para puerto de embarque (opcional)
+     * @param string|null $currentArrivalPort Valor actual guardado en la PO para puerto de arribo (opcional)
+     * @return void
+     */
+    protected function loadPorts(string $tradingCompany, ?string $currentDeparturePort = null, ?string $currentArrivalPort = null): void
+    {
+        // PRIMERO: Asegurar que los valores guardados estén en los arrays desde el inicio
+        // Esto garantiza que estén disponibles inmediatamente cuando Livewire renderiza el select
+        $departurePortToAdd = $currentDeparturePort ?? $this->departure_port;
+        $arrivalPortToAdd = $currentArrivalPort ?? $this->arrival_port;
+        
+        \Log::info('KanbanBoard: loadPorts called', [
+            'currentDeparturePort' => $currentDeparturePort,
+            'currentArrivalPort' => $currentArrivalPort,
+            'this->departure_port' => $this->departure_port,
+            'this->arrival_port' => $this->arrival_port,
+            'departurePortToAdd' => $departurePortToAdd,
+            'arrivalPortToAdd' => $arrivalPortToAdd
+        ]);
+        
+        $this->departurePortArray = [];
+        $this->arrivalPortArray = [];
+        
+        if ($departurePortToAdd && trim($departurePortToAdd) !== '') {
+            $this->departurePortArray[$departurePortToAdd] = $departurePortToAdd;
+            \Log::info('KanbanBoard: Added saved departure port to array', [
+                'departure_port' => $departurePortToAdd,
+                'array_count' => count($this->departurePortArray)
+            ]);
+        } else {
+            \Log::warning('KanbanBoard: No departure port to add', [
+                'departurePortToAdd' => $departurePortToAdd
+            ]);
+        }
+        
+        if ($arrivalPortToAdd && trim($arrivalPortToAdd) !== '') {
+            $this->arrivalPortArray[$arrivalPortToAdd] = $arrivalPortToAdd;
+            \Log::info('KanbanBoard: Added saved arrival port to array', [
+                'arrival_port' => $arrivalPortToAdd,
+                'array_count' => count($this->arrivalPortArray)
+            ]);
+        } else {
+            \Log::warning('KanbanBoard: No arrival port to add', [
+                'arrivalPortToAdd' => $arrivalPortToAdd
+            ]);
+        }
+        
+        $tradingCompanyValue = trim($tradingCompany ?? '');
+        if (empty($tradingCompanyValue)) {
+            \Log::info('KanbanBoard: No trading company, returning with saved values only', [
+                'departure_count' => count($this->departurePortArray),
+                'arrival_count' => count($this->arrivalPortArray)
+            ]);
+            // Si no hay trading company y no hay valores guardados, mostrar mensaje
+            if (empty($this->departurePortArray)) {
+                $this->departurePortArray['__no_data__'] = '⚠️ No hay datos disponibles';
+            }
+            if (empty($this->arrivalPortArray)) {
+                $this->arrivalPortArray['__no_data__'] = '⚠️ No hay datos disponibles';
+            }
+            return; // Ya agregamos los valores guardados arriba
+        }
+
+        try {
+            $apiService = $this->getMaestrosApiService();
+
+            $apiParams = [
+                'company' => $tradingCompanyValue,
+                'trading_company' => $tradingCompanyValue,
+                'active' => 'true',
+                'per_page' => 1000,
+            ];
+
+            // Intentar solo una vez con timeout más corto (8 segundos)
+            $portsResponse = $this->getPortsWithCustomTimeout($apiService, $apiParams, 8);
+            $portsArray = $this->processApiResponse($portsResponse, 'name', 'name');
+            
+            \Log::info('KanbanBoard: API response for ports', [
+                'response_count' => count($portsArray),
+                'current_departure_count' => count($this->departurePortArray),
+                'current_arrival_count' => count($this->arrivalPortArray)
+            ]);
+            
+            // Combinar los valores de la API con los valores guardados (sin duplicar)
+            foreach ($portsArray as $key => $value) {
+                if (!isset($this->departurePortArray[$key])) {
+                    $this->departurePortArray[$key] = $value;
+                }
+                if (!isset($this->arrivalPortArray[$key])) {
+                    $this->arrivalPortArray[$key] = $value;
+                }
+            }
+            
+            \Log::info('KanbanBoard: Final ports arrays', [
+                'final_departure_count' => count($this->departurePortArray),
+                'final_arrival_count' => count($this->arrivalPortArray)
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error loading ports in KanbanBoard', [
+                'error' => $e->getMessage(),
+                'trading_company' => $tradingCompanyValue,
+                'departure_count' => count($this->departurePortArray),
+                'arrival_count' => count($this->arrivalPortArray)
+            ]);
+            // Los valores guardados ya están en los arrays desde el inicio, así que no los perdemos
+        }
+        
+        // Si después de todos los intentos los arrays están vacíos (y no hay valores guardados), agregar mensaje informativo
+        if (empty($this->departurePortArray)) {
+            $this->departurePortArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente "' . $tradingCompanyValue . '"';
+        }
+        if (empty($this->arrivalPortArray)) {
+            $this->arrivalPortArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente "' . $tradingCompanyValue . '"';
+        }
+    }
+
+    /**
+     * Cargar tipos de contenedor desde la API
+     * 
+     * @param string $tradingCompany
+     * @param string|null $currentContainerType Valor actual guardado en la PO (opcional)
+     * @return void
+     */
+    protected function loadContainerTypes(string $tradingCompany, ?string $currentContainerType = null): void
+    {
+        $containerTypeToAdd = $currentContainerType ?? $this->container_type;
+        
+        $this->containerTypeArray = [];
+        
+        if ($containerTypeToAdd && trim($containerTypeToAdd) !== '') {
+            $this->containerTypeArray[$containerTypeToAdd] = $containerTypeToAdd;
+            \Log::info('KanbanBoard: Added saved container type to array', [
+                'container_type' => $containerTypeToAdd,
+                'array_count' => count($this->containerTypeArray)
+            ]);
+        }
+        
+        $tradingCompanyValue = trim($tradingCompany ?? '');
+        if (empty($tradingCompanyValue)) {
+            \Log::info('KanbanBoard: No trading company, returning with saved value only', [
+                'array_count' => count($this->containerTypeArray)
+            ]);
+            if (empty($this->containerTypeArray)) {
+                $this->containerTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompany}'";
+            }
+            return;
+        }
+
+        try {
+            $apiService = $this->getMaestrosApiService();
+
+            $apiParams = [
+                'company' => $tradingCompanyValue,
+                'trading_company' => $tradingCompanyValue,
+                'active' => 'true',
+                'per_page' => 1000,
+            ];
+
+            $containerTypesResponse = $this->getContainerTypesWithCustomTimeout($apiService, $apiParams, 8);
+            $containerTypesArray = $this->processApiResponse($containerTypesResponse, 'name', 'name');
+            
+            \Log::info('KanbanBoard: API response for container types', [
+                'response_count' => count($containerTypesArray),
+                'current_array_count' => count($this->containerTypeArray)
+            ]);
+            
+            foreach ($containerTypesArray as $key => $value) {
+                if (!isset($this->containerTypeArray[$key])) {
+                    $this->containerTypeArray[$key] = $value;
+                }
+            }
+            
+            \Log::info('KanbanBoard: Final container types array', [
+                'final_count' => count($this->containerTypeArray)
+            ]);
+
+            if (empty($this->containerTypeArray)) {
+                $this->containerTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Error loading container types in KanbanBoard', [
+                'error' => $e->getMessage(),
+                'trading_company' => $tradingCompanyValue,
+                'array_count' => count($this->containerTypeArray)
+            ]);
+            if (empty($this->containerTypeArray)) {
+                $this->containerTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+            }
+        }
+    }
+
+    /**
+     * Cargar tipos de transporte desde la API
+     * 
+     * @param string $tradingCompany
+     * @param string|null $currentMode Valor actual guardado en la PO (opcional)
+     * @return void
+     */
+    protected function loadTransportTypes(string $tradingCompany, ?string $currentMode = null): void
+    {
+        $modeToAdd = $currentMode ?? $this->mode;
+        
+        $this->transportTypeArray = [];
+        
+        if ($modeToAdd && trim($modeToAdd) !== '') {
+            $this->transportTypeArray[$modeToAdd] = $modeToAdd;
+            \Log::info('KanbanBoard: Added saved transport type to array', [
+                'mode' => $modeToAdd,
+                'array_count' => count($this->transportTypeArray)
+            ]);
+        }
+        
+        $tradingCompanyValue = trim($tradingCompany ?? '');
+        if (empty($tradingCompanyValue)) {
+            \Log::info('KanbanBoard: No trading company, returning with saved value only', [
+                'array_count' => count($this->transportTypeArray)
+            ]);
+            if (empty($this->transportTypeArray)) {
+                $this->transportTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompany}'";
+            }
+            return;
+        }
+
+        try {
+            $apiService = $this->getMaestrosApiService();
+
+            $apiParams = [
+                'company' => $tradingCompanyValue,
+                'trading_company' => $tradingCompanyValue,
+                'active' => 'true',
+                'per_page' => 1000,
+            ];
+
+            $transportTypesResponse = $this->getTransportTypesWithCustomTimeout($apiService, $apiParams, 8);
+            $transportTypesArray = $this->processApiResponse($transportTypesResponse, 'name', 'name');
+            
+            \Log::info('KanbanBoard: API response for transport types', [
+                'response_count' => count($transportTypesArray),
+                'current_array_count' => count($this->transportTypeArray)
+            ]);
+            
+            foreach ($transportTypesArray as $key => $value) {
+                if (!isset($this->transportTypeArray[$key])) {
+                    $this->transportTypeArray[$key] = $value;
+                }
+            }
+            
+            \Log::info('KanbanBoard: Final transport types array', [
+                'final_count' => count($this->transportTypeArray)
+            ]);
+
+            if (empty($this->transportTypeArray)) {
+                $this->transportTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Error loading transport types in KanbanBoard', [
+                'error' => $e->getMessage(),
+                'trading_company' => $tradingCompanyValue,
+                'array_count' => count($this->transportTypeArray)
+            ]);
+            if (empty($this->transportTypeArray)) {
+                $this->transportTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+            }
+        }
+    }
+
+    /**
+     * Obtener shipping lines con timeout personalizado
+     * 
+     * @param MaestrosApiService $apiService
+     * @param array $params
+     * @param int $timeout Segundos de timeout
+     * @return array|null
+     */
+    protected function getShippingLinesWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
+    {
+        try {
+            $baseUrl = config('services.maestros.base_url');
+            $url = rtrim($baseUrl, '/') . '/api/v1/shipping-lines';
+
+            $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::warning('Timeout or error loading shipping lines', [
+                'timeout' => $timeout,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Obtener puertos con timeout personalizado
+     * 
+     * @param MaestrosApiService $apiService
+     * @param array $params
+     * @param int $timeout Segundos de timeout
+     * @return array|null
+     */
+    protected function getPortsWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
+    {
+        try {
+            $baseUrl = config('services.maestros.base_url');
+            $url = rtrim($baseUrl, '/') . '/api/v1/ports';
+
+            $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::warning('Timeout or error loading ports', [
+                'timeout' => $timeout,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Obtener container types con timeout personalizado
+     * 
+     * @param MaestrosApiService $apiService
+     * @param array $params
+     * @param int $timeout Segundos de timeout
+     * @return array|null
+     */
+    protected function getContainerTypesWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
+    {
+        try {
+            $baseUrl = config('services.maestros.base_url');
+            $url = rtrim($baseUrl, '/') . '/api/v1/container-types';
+
+            $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::warning('Timeout or error loading container types', [
+                'timeout' => $timeout,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Obtener transport types con timeout personalizado
+     * 
+     * @param MaestrosApiService $apiService
+     * @param array $params
+     * @param int $timeout Segundos de timeout
+     * @return array|null
+     */
+    protected function getTransportTypesWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
+    {
+        try {
+            $baseUrl = config('services.maestros.base_url');
+            $url = rtrim($baseUrl, '/') . '/api/v1/transport-types';
+
+            $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::warning('Timeout or error loading transport types', [
+                'timeout' => $timeout,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Obtener service providers con timeout personalizado
+     * 
+     * @param MaestrosApiService $apiService
+     * @param array $params
+     * @param int $timeout Segundos de timeout
+     * @return array|null
+     */
+    protected function getServiceProvidersWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
+    {
+        try {
+            $baseUrl = config('services.maestros.base_url');
+            $url = rtrim($baseUrl, '/') . '/api/v1/service-providers';
+
+            $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::warning('Timeout or error loading service providers', [
+                'timeout' => $timeout,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
         }
     }
 

@@ -84,13 +84,15 @@
                                         // Guardamos la tarjeta actual para moverla si el usuario confirma
                                         window.kanbanCurrentTask = evt.item;
 
-                                        // Primero cargar los datos de la tarea, luego abrir el modal
+                                        // Abrir el modal inmediatamente con estado de carga
+                                        $dispatch('open-modal', 'modal-po-stage-change');
+                                        
+                                        // Cargar los datos de la tarea en segundo plano
                                         $wire.setCurrentTask(taskId, newColumn).then(function() {
                                             // Esperar un momento para que Livewire actualice el DOM
                                             setTimeout(function() {
                                                 // Poblar los inputs de fecha con los valores cargados de Livewire
                                                 populateDateFieldsFromLivewire($wire);
-                                                $dispatch('open-modal', 'modal-po-stage-change');
                                             }, 100);
                                         }).catch(function(error) {
                                             console.error('Error al cargar datos de la tarea:', error);
@@ -125,7 +127,19 @@
     </x-modal-success>
 
         <x-modal name="modal-po-stage-change" maxWidth="lg">
-            <div class="flex flex-col max-h-[75vh]">
+            <div class="flex flex-col max-h-[75vh] relative">
+                {{-- Overlay de carga usando wire:loading --}}
+                <div wire:loading wire:target="setCurrentTask" 
+                     class="absolute inset-0 z-50 flex items-center justify-center bg-white bg-opacity-90 rounded-lg">
+                    <div class="flex flex-col items-center">
+                        <svg class="w-8 h-8 text-[#1AAD8A] animate-spin mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p class="text-sm font-medium text-gray-700">Cargando datos del formulario...</p>
+                    </div>
+                </div>
+
                 {{-- Header fijo --}}
                 <div class="flex-shrink-0 mb-3">
                     <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
@@ -287,7 +301,7 @@
                                         label="Modo de transporte <span class='text-red-500'>*</span>"
                                         name="mode"
                                         wire:model.live="mode"
-                                        :options="['maritimo' => 'Marítimo', 'aereo' => 'Aéreo','terrestre' => 'Terrestre']"
+                                        :options="$transportTypeArray"
                                         :error="$errors->has('mode')" />
                                 </div>
 
@@ -358,15 +372,15 @@
                             </div>
 
                             <div>
-                                <x-form-input>
-                                    <x-slot:label>Tipo de Contenedor</x-slot:label>
-                                    <x-slot:input
-                                        name="container_type"
-                                        wire:model="container_type"
-                                        class="w-full"
-                                        placeholder="Tipo de contenedor">
-                                    </x-slot:input>
-                                </x-form-input>
+                                <x-form-select
+                                    label="Tipo de Contenedor"
+                                    name="container_type"
+                                    wire:model.live="container_type"
+                                    :options="$containerTypeArray"
+                                    :error="$errors->has('container_type')" />
+                                @error('container_type')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <div>
@@ -388,12 +402,15 @@
                             </div>
 
                             <div>
-                                <x-form-input>
-                                    <x-slot:label>Línea Naviera <span class="text-red-500">*</span></x-slot:label>
-                                    <x-slot:input name="shipping_line" wire:model="shipping_line" placeholder="Ingrese línea naviera"
-                                                  class="pr-10 {{ $errors->has('shipping_line') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    <x-slot:error>{{ $errors->first('shipping_line') }}</x-slot:error>
-                                </x-form-input>
+                                <x-form-select
+                                    label="Línea Naviera <span class='text-red-500'>*</span>"
+                                    name="shipping_line"
+                                    wire:model.live="shipping_line"
+                                    :options="$shippingLineArray"
+                                    :error="$errors->has('shipping_line')" />
+                                @error('shipping_line')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <div>
@@ -428,21 +445,27 @@
                             </div>
 
                             <div>
-                                <x-form-input>
-                                    <x-slot:label>Puerto de Embarque <span class="text-red-500">*</span></x-slot:label>
-                                    <x-slot:input name="departure_port" wire:model="departure_port" placeholder="Ingrese puerto de embarque"
-                                                  class="pr-10 {{ $errors->has('departure_port') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    <x-slot:error>{{ $errors->first('departure_port') }}</x-slot:error>
-                                </x-form-input>
+                                <x-form-select
+                                    label="Puerto de Embarque <span class='text-red-500'>*</span>"
+                                    name="departure_port"
+                                    wire:model.live="departure_port"
+                                    :options="$departurePortArray"
+                                    :error="$errors->has('departure_port')" />
+                                @error('departure_port')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <div>
-                                <x-form-input>
-                                    <x-slot:label>Puerto de Arribo <span class="text-red-500">*</span></x-slot:label>
-                                    <x-slot:input name="arrival_port" wire:model="arrival_port" placeholder="Ingrese puerto de arribo"
-                                                  class="pr-10 {{ $errors->has('arrival_port') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    <x-slot:error>{{ $errors->first('arrival_port') }}</x-slot:error>
-                                </x-form-input>
+                                <x-form-select
+                                    label="Puerto de Arribo <span class='text-red-500'>*</span>"
+                                    name="arrival_port"
+                                    wire:model.live="arrival_port"
+                                    :options="$arrivalPortArray"
+                                    :error="$errors->has('arrival_port')" />
+                                @error('arrival_port')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
                             </div>
                         </div>
                     </div>
@@ -685,15 +708,24 @@
             let wireIgnoreInputs = [];
             
             // Buscar todos los divs con wire:ignore que contengan inputs de fecha
+            // Incluir inputs que puedan haber sido convertidos a "text" por Flatpickr
             const allWireIgnoreDivs = document.querySelectorAll('[wire\\:ignore]');
             allWireIgnoreDivs.forEach(function(div) {
                 // Verificar que el div NO esté dentro de un contenedor oculto
                 const parentWithHidden = div.closest('.hidden');
                 if (!parentWithHidden) {
                     // Buscar inputs de fecha dentro de este div
-                    const dateInputs = div.querySelectorAll('input[type="date"]');
+                    // Incluir inputs type="date" y también inputs con clase flatpickr-initialized o que tengan wire:model con "date"
+                    const dateInputs = div.querySelectorAll('input[type="date"], input.flatpickr-initialized, input[name*="date"], input[name*="Date"]');
                     dateInputs.forEach(function(input) {
-                        wireIgnoreInputs.push(input);
+                        // Verificar que tenga wire:model relacionado con fechas
+                        const wireModel = input.getAttribute('wire:model') ||
+                                         input.getAttribute('wire:model.live') ||
+                                         input.getAttribute('wire:model.defer') ||
+                                         input.getAttribute('wire:model.lazy');
+                        if (wireModel && wireModel.toLowerCase().includes('date')) {
+                            wireIgnoreInputs.push(input);
+                        }
                     });
                 }
             });
@@ -709,8 +741,16 @@
                                  input.getAttribute('wire:model.lazy');
 
                 if (wireModel) {
-                    // Obtener el valor del input
-                    let value = input.value || null;
+                    // Obtener el valor del input (puede ser del input original o de Flatpickr)
+                    let value = null;
+
+                    if (input._flatpickr && input._flatpickr.selectedDates.length > 0) {
+                        // Si tiene Flatpickr, usar el valor de Flatpickr
+                        value = input._flatpickr.formatDate(input._flatpickr.selectedDates[0], 'Y-m-d');
+                    } else {
+                        // Si no tiene Flatpickr, usar el valor del input directamente
+                        value = input.value || input.getAttribute('data-date-value') || null;
+                    }
 
                     // Usar $wire.set() para establecer el valor directamente
                     try {

@@ -933,65 +933,97 @@ class CreatePucharseOrder extends Component
             return;
         }
 
-        $apiService = $this->getMaestrosApiService();
+        try {
+            $apiService = $this->getMaestrosApiService();
 
-        // Parámetros comunes para las llamadas a la API usando el valor de trading_company
-        $apiParams = [
-            'company' => $tradingCompanyValue,
-            'trading_company' => $tradingCompanyValue,
-            'active' => 'true',
-            'per_page' => 1000, // Obtener todos los registros activos
-        ];
+            // Parámetros comunes para las llamadas a la API usando el valor de trading_company
+            $apiParams = [
+                'company' => $tradingCompanyValue,
+                'trading_company' => $tradingCompanyValue,
+                'active' => 'true',
+                'per_page' => 1000, // Obtener todos los registros activos
+            ];
 
-        // Cargar Puertos (para origen y destino)
-        $portsResponse = $apiService->getPorts($apiParams);
-        $portsArray = $this->processApiResponse($portsResponse, 'name', 'name');
-        $this->departurePortArray = $portsArray;
-        $this->arrivalPortArray = $portsArray;
+            // Cargar Puertos (para origen y destino)
+            $portsResponse = $apiService->getPorts($apiParams);
+            $portsArray = $this->processApiResponse($portsResponse, 'name', 'name');
+            $this->departurePortArray = $portsArray;
+            $this->arrivalPortArray = $portsArray;
 
-        // Al editar, asegurar que los valores guardados estén en los arrays
-        if ($this->id) {
-            if ($this->departure_port && !isset($this->departurePortArray[$this->departure_port])) {
-                $this->departurePortArray[$this->departure_port] = $this->departure_port;
+            // Al editar, asegurar que los valores guardados estén en los arrays
+            if ($this->id) {
+                if ($this->departure_port && !isset($this->departurePortArray[$this->departure_port])) {
+                    $this->departurePortArray[$this->departure_port] = $this->departure_port;
+                }
+                if ($this->arrival_port && !isset($this->arrivalPortArray[$this->arrival_port])) {
+                    $this->arrivalPortArray[$this->arrival_port] = $this->arrival_port;
+                }
             }
-            if ($this->arrival_port && !isset($this->arrivalPortArray[$this->arrival_port])) {
-                $this->arrivalPortArray[$this->arrival_port] = $this->arrival_port;
+
+            // Cargar Shipping Lines
+            $shippingLinesResponse = $apiService->getShippingLines($apiParams);
+            $this->shippingLineArray = $this->processApiResponse($shippingLinesResponse, 'name', 'name');
+            if ($this->id && $this->shipping_line && !isset($this->shippingLineArray[$this->shipping_line])) {
+                $this->shippingLineArray[$this->shipping_line] = $this->shipping_line;
             }
+
+            // Cargar Container Types
+            $containerTypesResponse = $apiService->getContainerTypes($apiParams);
+            $this->containerTypeArray = $this->processApiResponse($containerTypesResponse, 'name', 'name');
+            if ($this->id && $this->container_type && !isset($this->containerTypeArray[$this->container_type])) {
+                $this->containerTypeArray[$this->container_type] = $this->container_type;
+            }
+
+            // Cargar Service Providers
+            $serviceProvidersResponse = $apiService->getServiceProviders($apiParams);
+            $this->serviceProviderArray = $this->processApiResponse($serviceProvidersResponse, 'name', 'name');
+            if ($this->id && $this->service_provider && !isset($this->serviceProviderArray[$this->service_provider])) {
+                $this->serviceProviderArray[$this->service_provider] = $this->service_provider;
+            }
+
+            // Cargar Transport Types
+            $transportTypesResponse = $apiService->getTransportTypes($apiParams);
+            $this->transportTypeArray = $this->processApiResponse($transportTypesResponse, 'name', 'name');
+            if ($this->id && $this->mode && !isset($this->transportTypeArray[$this->mode])) {
+                $this->transportTypeArray[$this->mode] = $this->mode;
+            }
+
+            // Cargar Rate Types
+            $rateTypesResponse = $apiService->getRateTypes($apiParams);
+            $this->rateTypeArray = $this->processApiResponse($rateTypesResponse, 'name', 'name');
+            if ($this->id && $this->tariff_type && !isset($this->rateTypeArray[$this->tariff_type])) {
+                $this->rateTypeArray[$this->tariff_type] = $this->tariff_type;
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Error loading maestros options in CreatePucharseOrder', [
+                'error' => $e->getMessage(),
+                'trading_company' => $tradingCompanyValue,
+            ]);
         }
 
-        // Cargar Shipping Lines
-        $shippingLinesResponse = $apiService->getShippingLines($apiParams);
-        $this->shippingLineArray = $this->processApiResponse($shippingLinesResponse, 'name', 'name');
-        if ($this->id && $this->shipping_line && !isset($this->shippingLineArray[$this->shipping_line])) {
-            $this->shippingLineArray[$this->shipping_line] = $this->shipping_line;
+        // Agregar mensajes de "no hay datos" si los arrays están vacíos
+        // Esto se hace fuera del try-catch para garantizar que siempre se ejecute
+        if (empty($this->departurePortArray)) {
+            $this->departurePortArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
         }
-
-        // Cargar Container Types
-        $containerTypesResponse = $apiService->getContainerTypes($apiParams);
-        $this->containerTypeArray = $this->processApiResponse($containerTypesResponse, 'name', 'name');
-        if ($this->id && $this->container_type && !isset($this->containerTypeArray[$this->container_type])) {
-            $this->containerTypeArray[$this->container_type] = $this->container_type;
+        if (empty($this->arrivalPortArray)) {
+            $this->arrivalPortArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
         }
-
-        // Cargar Service Providers
-        $serviceProvidersResponse = $apiService->getServiceProviders($apiParams);
-        $this->serviceProviderArray = $this->processApiResponse($serviceProvidersResponse, 'name', 'name');
-        if ($this->id && $this->service_provider && !isset($this->serviceProviderArray[$this->service_provider])) {
-            $this->serviceProviderArray[$this->service_provider] = $this->service_provider;
+        if (empty($this->shippingLineArray)) {
+            $this->shippingLineArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
         }
-
-        // Cargar Transport Types
-        $transportTypesResponse = $apiService->getTransportTypes($apiParams);
-        $this->transportTypeArray = $this->processApiResponse($transportTypesResponse, 'name', 'name');
-        if ($this->id && $this->mode && !isset($this->transportTypeArray[$this->mode])) {
-            $this->transportTypeArray[$this->mode] = $this->mode;
+        if (empty($this->containerTypeArray)) {
+            $this->containerTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
         }
-
-        // Cargar Rate Types
-        $rateTypesResponse = $apiService->getRateTypes($apiParams);
-        $this->rateTypeArray = $this->processApiResponse($rateTypesResponse, 'name', 'name');
-        if ($this->id && $this->tariff_type && !isset($this->rateTypeArray[$this->tariff_type])) {
-            $this->rateTypeArray[$this->tariff_type] = $this->tariff_type;
+        if (empty($this->serviceProviderArray)) {
+            $this->serviceProviderArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+        }
+        if (empty($this->transportTypeArray)) {
+            $this->transportTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+        }
+        if (empty($this->rateTypeArray)) {
+            $this->rateTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
         }
     }
 
@@ -1023,6 +1055,21 @@ class CreatePucharseOrder extends Component
         asort($result);
 
         return $result;
+    }
+
+    /**
+     * Filtrar valores especiales '__no_data__' para evitar guardarlos en la base de datos
+     * Convierte '__no_data__' o strings vacíos a null
+     *
+     * @param mixed $value
+     * @return mixed
+     */
+    protected function filterNoDataValue($value)
+    {
+        if ($value === '__no_data__' || $value === '') {
+            return null;
+        }
+        return $value;
     }
 
     public function generateUniqueOrderNumber()
@@ -1445,7 +1492,7 @@ class CreatePucharseOrder extends Component
                     'release_date' => $this->release_date,
                     'material_type' => json_encode($this->material_type),
                     'ensurence_type' => $this->ensurence_type,
-                    'mode' => $this->mode,
+                    'mode' => $this->filterNoDataValue($this->mode),
                     'tracking_id' => $this->tracking_id,
                     'pallet_quantity' => $this->pallet_quantity,
                     'pallet_quantity_real' => $this->pallet_quantity_real,
@@ -1473,9 +1520,9 @@ class CreatePucharseOrder extends Component
                     //=== Campos nuevos para OLO ===
                     'factory_proforma_number' => $this->factory_proforma_number,
                     'mbl_number' => $this->mbl_number,
-                    'container_type' => $this->container_type,
+                    'container_type' => $this->filterNoDataValue($this->container_type),
                     'container_number' => $this->container_number,
-                    'shipping_line' => $this->shipping_line,
+                    'shipping_line' => $this->filterNoDataValue($this->shipping_line),
 
                     'is_dropship'  => (bool) ($this->is_dropship ?? false),
                     'applies_tlc'  => (bool) ($this->applies_tlc ?? false),
@@ -1494,11 +1541,11 @@ class CreatePucharseOrder extends Component
                     'category' => $this->category,
                     'forwarder_name' => $this->forwarder_name,
                     'cargo_invoice_number' => $this->cargo_invoice_number,
-                    'tariff_type' => $this->tariff_type,
+                    'tariff_type' => $this->filterNoDataValue($this->tariff_type),
                     'route_label' => $this->route_label,
 
-                    'departure_port' => $this->departure_port,
-                    'arrival_port' => $this->arrival_port,
+                    'departure_port' => $this->filterNoDataValue($this->departure_port),
+                    'arrival_port' => $this->filterNoDataValue($this->arrival_port),
 
                     'arrival_status' => $this->arrival_status,
                     'delay_days' => $this->delay_days,
@@ -1525,7 +1572,7 @@ class CreatePucharseOrder extends Component
                     'retail_group'     => $this->retail_group,
                     'customer_type'    => $this->customer_type,
                     'trading_company'  => $this->trading_company,
-                    'service_provider' => $this->service_provider,
+                    'service_provider' => $this->filterNoDataValue($this->service_provider),
                     'customs_dua'      => $this->customs_dua,
                     'invoice'          => $this->invoice,
                     'factura_merca'    => $this->factura_merca,
@@ -1785,6 +1832,7 @@ class CreatePucharseOrder extends Component
         ]);
 
         $this->computeDateDiffs();
+            
             $poData = [
                 'order_number' => $this->order_number,
                 'status' => $this->id ? $this->status : 'draft',
@@ -1824,7 +1872,7 @@ class CreatePucharseOrder extends Component
                 'release_date' => $this->release_date,
                 // Otros campos
                 'ensurence_type' => $this->ensurence_type,
-                'mode' => $this->mode,
+                'mode' => $this->filterNoDataValue($this->mode),
                 'tracking_id' => $this->tracking_id,
                 'pallet_quantity' => $this->pallet_quantity,
                 'pallet_quantity_real' => $this->pallet_quantity_real,
@@ -1852,9 +1900,9 @@ class CreatePucharseOrder extends Component
                 //=== Campos nuevos para OLO ===
                 'factory_proforma_number' => $this->factory_proforma_number,
                 'mbl_number' => $this->mbl_number,
-                'container_type' => $this->container_type,
+                'container_type' => $this->filterNoDataValue($this->container_type),
                 'container_number' => $this->container_number,
-                'shipping_line' => $this->shipping_line,
+                'shipping_line' => $this->filterNoDataValue($this->shipping_line),
 
                 'is_dropship'  => (bool) ($this->is_dropship ?? false),
                 'applies_tlc'  => (bool) ($this->applies_tlc ?? false),
@@ -1873,11 +1921,11 @@ class CreatePucharseOrder extends Component
                 'category' => $this->category,
                 'forwarder_name' => $this->forwarder_name,
                 'cargo_invoice_number' => $this->cargo_invoice_number,
-                'tariff_type' => $this->tariff_type,
+                'tariff_type' => $this->filterNoDataValue($this->tariff_type),
                 'route_label' => $this->route_label,
 
-                'departure_port' => $this->departure_port,
-                'arrival_port' => $this->arrival_port,
+                'departure_port' => $this->filterNoDataValue($this->departure_port),
+                'arrival_port' => $this->filterNoDataValue($this->arrival_port),
 
                 'arrival_status' => $this->arrival_status,
                 'delay_days' => $this->delay_days,
@@ -1902,7 +1950,7 @@ class CreatePucharseOrder extends Component
                 'retail_group'                 => $this->retail_group,
                 'customer_type'                => $this->customer_type,
                 'trading_company'              => $this->trading_company,
-                'service_provider'             => $this->service_provider,
+                'service_provider'             => $this->filterNoDataValue($this->service_provider),
                 'customs_dua'                  => $this->customs_dua,
                 'invoice'                      => $this->invoice,
                 'factura_merca'                => $this->factura_merca,

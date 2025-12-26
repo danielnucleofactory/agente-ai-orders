@@ -21,7 +21,11 @@
         {{ $attributes }}>
         <option value="">{{ $optionPlaceholder }}</option>
         @foreach ($options as $key => $option)
-            <option value="{{ $key }}">{{ $option }}</option>
+            @if($key === '__no_data__')
+                <option value="" disabled style="color: #ef4444; font-style: italic;">{{ $option }}</option>
+            @else
+                <option value="{{ $key }}">{{ $option }}</option>
+            @endif
         @endforeach
     </select>
 

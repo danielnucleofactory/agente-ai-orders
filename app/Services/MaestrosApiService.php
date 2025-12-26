@@ -294,5 +294,111 @@ class MaestrosApiService
 
         return $this->get('/api/v1/rate-types', $defaultParams);
     }
+
+    /**
+     * Make a POST request to the maestros API
+     *
+     * @param string $endpoint
+     * @param array $data
+     * @return array|null
+     */
+    protected function post(string $endpoint, array $data = [])
+    {
+        try {
+            $url = rtrim($this->baseUrl, '/') . '/' . ltrim($endpoint, '/');
+
+            \Log::info('MaestrosApiService: Sending POST request', [
+                'endpoint' => $endpoint,
+                'data' => $data,
+            ]);
+
+            $response = Http::timeout(30)->post($url, $data);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            Log::error('MaestrosApiService: POST request failed', [
+                'endpoint' => $endpoint,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return null;
+        } catch (\Exception $e) {
+            Log::error('MaestrosApiService: Exception occurred in POST', [
+                'endpoint' => $endpoint,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Create a port
+     *
+     * @param array $data
+     * @return array|null
+     */
+    public function createPort(array $data)
+    {
+        return $this->post('/api/v1/ports', $data);
+    }
+
+    /**
+     * Create a shipping line
+     *
+     * @param array $data
+     * @return array|null
+     */
+    public function createShippingLine(array $data)
+    {
+        return $this->post('/api/v1/shipping-lines', $data);
+    }
+
+    /**
+     * Create a container type
+     *
+     * @param array $data
+     * @return array|null
+     */
+    public function createContainerType(array $data)
+    {
+        return $this->post('/api/v1/container-types', $data);
+    }
+
+    /**
+     * Create a service provider
+     *
+     * @param array $data
+     * @return array|null
+     */
+    public function createServiceProvider(array $data)
+    {
+        return $this->post('/api/v1/service-providers', $data);
+    }
+
+    /**
+     * Create a transport type
+     *
+     * @param array $data
+     * @return array|null
+     */
+    public function createTransportType(array $data)
+    {
+        return $this->post('/api/v1/transport-types', $data);
+    }
+
+    /**
+     * Create a rate type
+     *
+     * @param array $data
+     * @return array|null
+     */
+    public function createRateType(array $data)
+    {
+        return $this->post('/api/v1/rate-types', $data);
+    }
 }
 
