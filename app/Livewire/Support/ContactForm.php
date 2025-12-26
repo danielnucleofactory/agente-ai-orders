@@ -57,27 +57,38 @@ class ContactForm extends Component
             ]);
 
             $supportEmail = config('mail.support.address');
-            $userEmail = Auth::user()->email;
+            $formUserEmail = $this->email; // Correo ingresado en el formulario
+            $adminEmail = config('mail.admin.address');
 
             if (empty($supportEmail)) {
                 throw new \Exception('La dirección de correo de soporte no está configurada. Por favor, contacta al administrador.');
             }
 
-            if (empty($userEmail)) {
-                throw new \Exception('No se pudo obtener la dirección de correo del usuario.');
+            if (empty($formUserEmail)) {
+                throw new \Exception('El correo electrónico es obligatorio.');
             }
 
             // Enviar el correo
+            // TO: soporte
+            // CC: usuario del formulario y administrador
+            $mail = Mail::to($supportEmail);
+            
+            // Agregar CC al usuario del formulario
+            $mail->cc($formUserEmail);
+            
+            // Agregar CC al administrador si está configurado
+            if (!empty($adminEmail)) {
+                $mail->cc($adminEmail);
+            }
+
             Log::info('Enviando correo de soporte', [
                 'to' => $supportEmail,
-                'cc' => $userEmail,
+                'cc' => array_filter([$formUserEmail, $adminEmail]),
                 'support_request_id' => $supportRequest->id,
                 'mail_driver' => config('mail.default'),
             ]);
             
-            Mail::to($supportEmail)
-                ->cc($userEmail)
-                ->send(new SupportRequestMail($supportRequest, Auth::user()));
+            $mail->send(new SupportRequestMail($supportRequest, Auth::user()));
 
             Log::info('Correo de soporte enviado exitosamente', [
                 'support_request_id' => $supportRequest->id,

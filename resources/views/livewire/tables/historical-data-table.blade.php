@@ -1,42 +1,209 @@
 <div>
-    <div class="space-y-4">
-        <div class="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
-            <x-search-input 
-                class="w-full md:w-64" 
-                wire:model.debounce.300ms="search" 
-                placeholder="Buscar por orden, proveedor, contenedor..." 
-            />
+    @push('styles')
+        <style>
+            /* Estilos para filtros de historical-data - igualar al dashboard */
+            .historical-filters-section {
+                display: flex;
+                align-items: flex-end;
+                gap: 16px;
+                flex-wrap: wrap;
+                font-family: 'Lato', sans-serif;
+                margin-bottom: 24px;
+            }
+            
+            .historical-filters-section .filter-group {
+                width: 150px !important;
+                max-width: 150px !important;
+            }
+            
+            .historical-filters-section .filter-label {
+                color: #1AAD8A;
+                font-size: 14px;
+                display: block;
+                margin-bottom: 4px;
+            }
+            
+            /* Buscador 500x40 - Máxima especificidad */
+            .historical-filters-section .search-input-wrapper {
+                width: 500px !important;
+                min-width: 500px !important;
+                max-width: 500px !important;
+            }
+            
+            .historical-filters-section .search-input-wrapper > div,
+            .historical-filters-section .search-input-wrapper .relative {
+                width: 500px !important;
+                min-width: 500px !important;
+                max-width: 500px !important;
+                position: relative !important;
+            }
+            
+            .historical-filters-section .search-input-wrapper input,
+            .historical-filters-section .search-input-wrapper input[type="text"] {
+                width: 500px !important;
+                min-width: 500px !important;
+                max-width: 500px !important;
+                height: 40px !important;
+                min-height: 40px !important;
+                max-height: 40px !important;
+                box-sizing: border-box !important;
+                padding: 8px 14px 8px 44px !important;
+                position: relative !important;
+                z-index: 10 !important;
+                pointer-events: auto !important;
+                -webkit-appearance: none !important;
+                -moz-appearance: none !important;
+                appearance: none !important;
+            }
+            
+            /* Inputs de fecha - altura exacta de 40px (incluyendo border) */
+            .historical-filters-section .filter-group input[type="date"],
+            .historical-filters-section .filter-group input.flatpickr-alt-input,
+            .historical-filters-section input[type="date"],
+            .historical-filters-section input.flatpickr-alt-input {
+                width: 150px !important;
+                max-width: 150px !important;
+                min-width: 150px !important;
+                height: 40px !important;
+                min-height: 40px !important;
+                max-height: 40px !important;
+                padding: 0 14px !important;
+                border: 2px solid #28C7A1 !important;
+                border-radius: 10px !important;
+                font-size: 16px !important;
+                line-height: 36px !important;
+                color: #222 !important;
+                font-family: 'Lato', sans-serif !important;
+                box-sizing: border-box !important;
+                background: #fff !important;
+                margin: 0 !important;
+            }
+            
+            /* Selects - color #222 y altura 40px (incluyendo border) */
+            .historical-filters-section .filter-group select,
+            .historical-filters-section select {
+                width: 150px !important;
+                max-width: 150px !important;
+                min-width: 150px !important;
+                height: 40px !important;
+                min-height: 40px !important;
+                max-height: 40px !important;
+                padding: 0 14px !important;
+                border: 2px solid #28C7A1 !important;
+                border-radius: 10px !important;
+                font-size: 16px !important;
+                line-height: 36px !important;
+                color: #222 !important;
+                font-family: 'Lato', sans-serif !important;
+                box-sizing: border-box !important;
+                background: #fff !important;
+                -webkit-appearance: none !important;
+                -moz-appearance: none !important;
+                appearance: none !important;
+                margin: 0 !important;
+            }
+            
+            /* Asegurar que el select mantenga su estructura durante el morphing */
+            .historical-filters-section select option {
+                padding: 8px !important;
+                color: #222 !important;
+                background: #fff !important;
+            }
+            
+            .historical-filters-section select:focus,
+            .historical-filters-section input[type="date"]:focus,
+            .historical-filters-section input.flatpickr-alt-input:focus {
+                outline: none;
+                border-color: #1AAD8A !important;
+                box-shadow: 0 0 0 3px rgba(26, 173, 138, 0.1);
+            }
+            
+            .historical-filters-section select option {
+                padding: 8px;
+                color: #222 !important;
+            }
+        </style>
+    @endpush
 
-            <div class="flex flex-wrap gap-4">
-                <select wire:model.live="filters.vendor" class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1AAD8A]">
+    <div class="space-y-4">
+        <!-- Filtros y búsqueda en una sola fila -->
+        <div class="historical-filters-section">
+            <!-- Buscador -->
+            <div class="search-input-wrapper">
+                <label for="historical-search-input" class="sr-only">Buscar</label>
+                <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <input
+                        type="text"
+                        id="historical-search-input"
+                        wire:model.live.debounce.300ms="search"
+                        placeholder="Buscar por orden, proveedor, contenedor..."
+                        class="rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#28C7A1] block w-full"
+                        autocomplete="off"
+                    />
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filter-group">
+                <label class="filter-label">Fecha desde</label>
+                <input 
+                    type="date" 
+                    wire:model.live="filters.date_from" 
+                    placeholder="Fecha desde"
+                />
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label">Fecha hasta</label>
+                <input 
+                    type="date" 
+                    wire:model.live="filters.date_to" 
+                    placeholder="Fecha hasta"
+                />
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label">Proveedor</label>
+                <select wire:model.live="filters.vendor">
                     <option value="">Todos los proveedores</option>
                     @foreach($vendors as $vendorId => $vendorName)
                         <option value="{{ $vendorId }}">{{ $vendorName }}</option>
                     @endforeach
                 </select>
+            </div>
 
-                <input 
-                    type="date" 
-                    wire:model.live="filters.date_from" 
-                    class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1AAD8A]"
-                    placeholder="Fecha desde"
-                />
-
-                <input 
-                    type="date" 
-                    wire:model.live="filters.date_to" 
-                    class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1AAD8A]"
-                    placeholder="Fecha hasta"
-                />
-
-                <select wire:model.live="filters.trading_company" class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1AAD8A]">
+            <div class="filter-group">
+                <label class="filter-label">Empresa</label>
+                <select wire:model.live="filters.trading_company">
                     <option value="">Todas las empresas</option>
                     @foreach($tradingCompanies as $company)
                         <option value="{{ $company }}">{{ $company }}</option>
                     @endforeach
                 </select>
+            </div>
+        </div>
 
-                <select wire:model.live="perPage" class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1AAD8A]">
+        <!-- Controles superiores: Botón de descarga y Por página -->
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <button onclick="exportHistoricalData()" 
+                   class="inline-flex items-center px-4 py-2 bg-[#1AAD8A] text-white rounded-lg hover:bg-[#159a7a] transition-colors duration-200 font-medium text-sm">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Descargar Excel
+                </button>
+            </div>
+            <div>
+                <label for="perPage" class="sr-only">Por página</label>
+                <select wire:model.live="perPage" id="perPage" class="block w-full border-gray-300 rounded-md focus:border-[#1AAD8A] focus:ring-[#1AAD8A] sm:text-sm">
                     <option value="10">10 por página</option>
                     <option value="25">25 por página</option>
                     <option value="50">50 por página</option>
@@ -44,15 +211,6 @@
                 </select>
             </div>
         </div>
-
-        <!-- Debug info (temporal) -->
-        @if(config('app.debug'))
-            <div class="mb-4 p-2 bg-yellow-100 text-xs">
-                Total: {{ $historicalData->total() }}, 
-                En página: {{ $historicalData->count() }}, 
-                Página: {{ $historicalData->currentPage() }}
-            </div>
-        @endif
 
         <!-- Tabla -->
         <div class="overflow-x-auto bg-white rounded-lg shadow">
@@ -115,8 +273,8 @@
             </table>
         </div>
 
-        <!-- Paginación -->
-        <div class="flex items-center justify-between mt-4">
+        <!-- Paginación - Estilo igual a purchase-orders -->
+        <div class="flex items-center justify-between mt-6">
             <div class="flex justify-between flex-1 sm:hidden">
                 <button 
                     wire:click="previousPage" 
@@ -156,14 +314,52 @@
                             </svg>
                         </button>
 
-                        <!-- Números de página -->
-                        @for ($i = 1; $i <= $historicalData->lastPage(); $i++)
-                            <button 
-                                wire:click="gotoPage({{ $i }})" 
-                                class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium {{ $historicalData->currentPage() === $i ? 'z-10 bg-[#D4F5ED] border-[#1AAD8A] text-[#1AAD8A]' : 'text-gray-700 hover:bg-gray-50' }}">
-                                {{ $i }}
-                            </button>
-                        @endfor
+                        <!-- Números de página (mostrar solo si hay pocas páginas para evitar sobrecarga) -->
+                        @if($historicalData->lastPage() <= 10)
+                            @for ($i = 1; $i <= $historicalData->lastPage(); $i++)
+                                <button 
+                                    wire:click="gotoPage({{ $i }})" 
+                                    class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium {{ $historicalData->currentPage() === $i ? 'z-10 bg-[#D4F5ED] border-[#1AAD8A] text-[#1AAD8A]' : 'text-gray-700 hover:bg-gray-50' }}">
+                                    {{ $i }}
+                                </button>
+                            @endfor
+                        @else
+                            <!-- Paginación inteligente para muchas páginas -->
+                            @php
+                                $currentPage = $historicalData->currentPage();
+                                $lastPage = $historicalData->lastPage();
+                                $start = max(1, $currentPage - 2);
+                                $end = min($lastPage, $currentPage + 2);
+                            @endphp
+
+                            @if($start > 1)
+                                <button wire:click="gotoPage(1)" class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">
+                                    1
+                                </button>
+                                @if($start > 2)
+                                    <span class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300">
+                                        ...
+                                    </span>
+                                @endif
+                            @endif
+
+                            @for ($i = $start; $i <= $end; $i++)
+                                <button wire:click="gotoPage({{ $i }})" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium {{ $currentPage === $i ? 'z-10 bg-[#D4F5ED] border-[#1AAD8A] text-[#1AAD8A]' : 'text-gray-700 hover:bg-gray-50' }}">
+                                    {{ $i }}
+                                </button>
+                            @endfor
+
+                            @if($end < $lastPage)
+                                @if($end < $lastPage - 1)
+                                    <span class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300">
+                                        ...
+                                    </span>
+                                @endif
+                                <button wire:click="gotoPage({{ $lastPage }})" class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">
+                                    {{ $lastPage }}
+                                </button>
+                            @endif
+                        @endif
 
                         <!-- Botón Siguiente -->
                         <button 
@@ -180,5 +376,44 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        function exportHistoricalData() {
+            // Obtener los valores actuales de los filtros desde Livewire
+            const search = @js($search);
+            const filters = @js($filters);
+            
+            // Construir la URL con los parámetros
+            const params = new URLSearchParams();
+            
+            if (search) {
+                params.append('search', search);
+            }
+            
+            if (filters.vendor) {
+                params.append('vendor', filters.vendor);
+            }
+            
+            if (filters.date_from) {
+                params.append('date_from', filters.date_from);
+            }
+            
+            if (filters.date_to) {
+                params.append('date_to', filters.date_to);
+            }
+            
+            if (filters.trading_company) {
+                params.append('trading_company', filters.trading_company);
+            }
+            
+            // Construir la URL completa
+            const url = '{{ route("historical-data.export") }}' + (params.toString() ? '?' + params.toString() : '');
+            
+            // Descargar el archivo
+            window.location.href = url;
+        }
+    </script>
+    @endpush
 </div>
 

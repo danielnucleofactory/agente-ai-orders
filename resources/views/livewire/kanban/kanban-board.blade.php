@@ -84,10 +84,17 @@
                                         // Guardamos la tarjeta actual para moverla si el usuario confirma
                                         window.kanbanCurrentTask = evt.item;
 
-                                        // Abrimos el modal unificado
-                                        $dispatch('open-modal', 'modal-po-stage-change');
-
-                                        $wire.setCurrentTask(taskId, newColumn);
+                                        // Primero cargar los datos de la tarea, luego abrir el modal
+                                        $wire.setCurrentTask(taskId, newColumn).then(function() {
+                                            // Esperar un momento para que Livewire actualice el DOM
+                                            setTimeout(function() {
+                                                // Poblar los inputs de fecha con los valores cargados de Livewire
+                                                populateDateFieldsFromLivewire($wire);
+                                                $dispatch('open-modal', 'modal-po-stage-change');
+                                            }, 100);
+                                        }).catch(function(error) {
+                                            console.error('Error al cargar datos de la tarea:', error);
+                                        });
                                     }
                                 }
                             })">
@@ -118,23 +125,48 @@
     </x-modal-success>
 
         <x-modal name="modal-po-stage-change" maxWidth="lg">
-            <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
+            <div class="flex flex-col max-h-[75vh]">
+                {{-- Header fijo --}}
+                <div class="flex-shrink-0 mb-3">
+                    <h3 class="mb-2 text-lg font-bold text-center text-light-blue">¿Cambiar la Orden de compra de etapa?</h3>
 
-            @if ($currentTask)
-                <div class="mb-5 text-center">
-                    <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
+                    @if ($currentTask)
+                        <div class="mb-4 text-center">
+                            <p class="text-[#171717] underline underline-offset-4">PO: {{ $currentTask['po'] }}</p>
+                        </div>
+                    @endif
+
+                    <div class="mb-3">
+                        <x-form-select label="" name="etapa"
+                                       :options="collect($columns)->pluck('name','id')->toArray()"
+                                       optionPlaceholder="Seleccionar etapa"
+                                       :value="$newColumnId" wire:model.live="newColumnId"
+                                       x-on:change="moveTaskToColumn($event.target.value)" />
+                    </div>
+
+                    {{-- Mensaje de error global para campos obligatorios --}}
+                    @if ($errors->any())
+                        <div class="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <div class="flex items-start">
+                                <svg class="w-5 h-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-medium text-red-800">Faltan campos obligatorios:</p>
+                                    <ul class="mt-1 text-sm text-red-700 list-disc list-inside">
+                                        @foreach ($errors->all() as $error)
+                                            <li>{{ $error }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
-            @endif
 
-            <div class="mb-8">
-                <x-form-select label="" name="etapa"
-                               :options="collect($columns)->pluck('name','id')->toArray()"
-                               optionPlaceholder="Seleccionar etapa"
-                               :value="$newColumnId" wire:model.live="newColumnId"
-                               x-on:change="moveTaskToColumn($event.target.value)" />
-            </div>
-
-            <div class="mb-4">
+                {{-- Contenido scrolleable --}}
+                <div class="flex-1 overflow-y-auto pr-2 -mr-2 mb-3 pt-2">
+                    <div class="mb-4">
                 {{-- Etapa 1: Nuevo --}}
                 <div class="{{ (isset($columns[0]) && $newColumnId == $columns[0]['id']) ? '' : 'hidden' }}">
                     <div class="mb-8">
@@ -144,7 +176,7 @@
 
                 {{-- Etapa 2: Producción --}}
                 <div class="{{ (isset($columns[1]) && $newColumnId == $columns[1]['id']) ? '' : 'hidden' }}">
-                    <div class="mb-8">
+                    <div class="mb-8 pt-2" wire:ignore>
                         <x-form-input>
                             <x-slot:label>Carga Lista Variable <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500'  : '' }}">
@@ -153,23 +185,25 @@
                                 {{ $errors->first('date_variable_date') }}
                             </x-slot:error></x-form-input>
                     </div>
-                    <div class="mb-8">
+                    <div class="mb-8" wire:ignore>
                         <x-form-input>
                             <x-slot:label>Carga Lista Teórica</x-slot:label>
                             <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load"></x-slot:input>
                         </x-form-input>
                     </div>
                     <div class="mb-8">
-                        <x-form-input>
-                            <x-slot:label>Proveedor de Servicio <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="text" wire:model.live="service_provider" placeholder="Ingrese proveedor de servicio" class="pr-10 {{ $errors->has('service_provider') ? 'border-red-500'  : '' }}">
-                            </x-slot:input>
-                            <x-slot:error>
-                                {{ $errors->first('service_provider') }}
-                            </x-slot:error>
-                        </x-form-input>
+                        <x-form-select
+                            label="Proveedor de Servicio"
+                            name="service_provider"
+                            wire:model.live="service_provider"
+                            :options="$serviceProviderArray"
+                            :error="false"
+                        />
+                        @error('service_provider')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
-                    <div class="mb-8">
+                    <div class="mb-8 hidden">
                         <x-form-input>
                             <x-slot:label>Agente de Carga <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="text" name="forwarder_name" placeholder="Ingrese agente de carga" wire:model="forwarder_name" class="pr-10 {{ $errors->has('forwarder_name') ? 'border-red-500'  : '' }}">
@@ -186,12 +220,11 @@
 
                 {{-- Etapa 3: Booking --}}
                 <div class="{{ (isset($columns[2]) && $newColumnId == $columns[2]['id']) ? '' : 'hidden' }}">
-                    <div class="space-y-4 sm:space-y-6">
-                        <div class="max-h-[70vh] overflow-y-auto px-1 sm:px-0">
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                                <div>
-                                    <x-form-input>
-                                        <x-slot:label>Solicitud de Booking <span class="text-red-500">*</span></x-slot:label>
+                    <div class="space-y-4 sm:space-y-6 pt-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                            <div wire:ignore>
+                                <x-form-input>
+                                    <x-slot:label>Solicitud de Booking <span class="text-red-500">*</span></x-slot:label>
                                         <x-slot:input
                                             type="date"
                                             name="date_booking_request"
@@ -204,7 +237,7 @@
                                     </x-form-input>
                                 </div>
 
-                                <div>
+                                <div wire:ignore>
                                     <x-form-input>
                                         <x-slot:label>Autorización de Booking <span class="text-red-500">*</span></x-slot:label>
                                         <x-slot:input
@@ -219,12 +252,13 @@
                                     </x-form-input>
                                 </div>
 
-                                <div>
+                                <div wire:ignore>
                                     <x-form-input>
                                         <x-slot:label>ETD Inicial <span class="text-red-500">*</span></x-slot:label>
                                         <x-slot:input
                                             type="date"
-                                            wire:model.live="date_etd_initial"
+                                            name="date_etd_initial"
+                                            wire:model="date_etd_initial"
                                             class="w-full pr-10 {{ $errors->has('date_etd_initial') ? 'border-red-500'  : '' }}">
                                         </x-slot:input>
                                         <x-slot:error>
@@ -233,7 +267,7 @@
                                     </x-form-input>
                                 </div>
 
-                                <div>
+                                <div wire:ignore>
                                     <x-form-input>
                                         <x-slot:label>ETD Variable <span class="text-red-500">*</span></x-slot:label>
                                         <x-slot:input
@@ -266,7 +300,6 @@
                                         placeholder="Comentarios" />
                                 </div>
                             </div>
-                        </div>
                     </div>
                 </div>
 
@@ -279,9 +312,9 @@
 
                 {{-- Etapa 5: En Tránsito --}}
                 <div class="{{ (isset($columns[4]) && $newColumnId == $columns[4]['id']) ? '' : 'hidden' }}">
-                    <div class="mb-8">
+                    <div class="mb-8 pt-2">
                         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-6">
-                            <div>
+                            <div wire:ignore>
                                 <x-form-input>
                                     <x-slot:label>ETD Real (ATD) <span class="text-red-500">*</span></x-slot:label>
                                     <x-slot:input type="date" name="date_atd" wire:model="date_atd"
@@ -290,7 +323,7 @@
                                 </x-form-input>
                             </div>
 
-                            <div>
+                            <div wire:ignore>
                                 <x-form-input>
                                     <x-slot:label>ETA Inicial <span class="text-red-500">*</span></x-slot:label>
                                     <x-slot:input type="date" name="date_eta" wire:model="date_eta"
@@ -299,7 +332,7 @@
                                 </x-form-input>
                             </div>
 
-                            <div>
+                            <div wire:ignore>
                                 <x-form-input>
                                     <x-slot:label>ETA Variable <span class="text-red-500">*</span></x-slot:label>
                                     <x-slot:input type="date" name="date_eta_updated" wire:model="date_eta_updated"
@@ -318,7 +351,7 @@
                             <div>
                                 <x-form-input>
                                     <x-slot:label>Número de Contenedor</x-slot:label>
-                                    <x-slot:input name="container_number" wire:model="container_number" placeholder="Ingrese número de contenedor"
+                                    <x-slot:input name="container_number" wire:model="container_number" placeholder="Ingrese número de contenedor" autocomplete="off"
                                                   class="pr-10 {{ $errors->has('container_number') ? 'border-red-500' : '' }}"></x-slot:input>
                                     <x-slot:error>{{ $errors->first('container_number') }}</x-slot:error>
                                 </x-form-input>
@@ -348,7 +381,7 @@
                             <div>
                                 <x-form-input>
                                     <x-slot:label>Monto</x-slot:label>
-                                    <x-slot:input type="number" step="0.01" inputmode="decimal" name="shipment_amount" placeholder="0" wire:model="shipment_amount"
+                                    <x-slot:input type="number" step="0.01" inputmode="decimal" name="shipment_amount" placeholder="0" wire:model="shipment_amount" autocomplete="off"
                                                   class="pr-10 {{ $errors->has('shipment_amount') ? 'border-red-500' : '' }}"></x-slot:input>
                                     <x-slot:error>{{ $errors->first('shipment_amount') }}</x-slot:error>
                                 </x-form-input>
@@ -421,10 +454,10 @@
 
                 {{-- Etapa 6: Puerto --}}
                 <div class="{{ (isset($columns[5]) && $newColumnId == $columns[5]['id']) ? '' : 'hidden' }}">
-                    <div class="mb-8">
+                    <div class="mb-8 pt-2" wire:ignore>
                         <x-form-input>
                             <x-slot:label>ETA Real (ATA) <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="date" name="date_ata" wire:model="date_ata"
+                            <x-slot:input type="date" name="date_ata_stage6" wire:model="date_ata"
                                           class="pr-10 {{ $errors->has('date_ata') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('date_ata') }}</x-slot:error>
                         </x-form-input>
@@ -436,26 +469,26 @@
 
                 {{-- Etapa 7: Almacén Fiscal --}}
                 <div class="{{ (isset($columns[6]) && $newColumnId == $columns[6]['id']) ? '' : 'hidden' }}">
-                    <div class="mb-8">
+                    <div class="mb-8 pt-2" wire:ignore>
                         <x-form-input>
                             <x-slot:label>Ingreso Almacén Fiscal <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="date" name="bonded_warehouse_enter" wire:model.live="bonded_warehouse_enter"
+                            <x-slot:input type="date" name="bonded_warehouse_enter" wire:model="bonded_warehouse_enter"
                                           class="pr-10 {{ $errors->has('bonded_warehouse_enter') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('bonded_warehouse_enter') }}</x-slot:error>
                         </x-form-input>
                     </div>
-                    <div class="mb-8">
+                    <div class="mb-8" wire:ignore>
                         <x-form-input>
                             <x-slot:label>Salida Almacén Fiscal <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="date" name="bonded_warehouse_exit" wire:model.live="bonded_warehouse_exit"
+                            <x-slot:input type="date" name="bonded_warehouse_exit" wire:model="bonded_warehouse_exit"
                                           class="pr-10 {{ $errors->has('bonded_warehouse_exit') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('bonded_warehouse_exit') }}</x-slot:error>
                         </x-form-input>
                     </div>
-                    <div class="mb-8">
+                    <div class="mb-8" wire:ignore>
                         <x-form-input>
                             <x-slot:label>ETA Real (ATA) <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="date" name="date_ata" wire:model="date_ata"
+                            <x-slot:input type="date" name="date_ata_stage7" wire:model="date_ata"
                                           class="pr-10 {{ $errors->has('date_ata') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('date_ata') }}</x-slot:error>
                         </x-form-input>
@@ -498,25 +531,32 @@
                         <x-form-textarea label="" name="comment_stage_11" wireModel="comment" placeholder="Comentarios" />
                     </div>
                 </div>
-            </div>
-
-            <div class="mb-12 space-y-2">
-                <input type="file" wire:model="attachment" class="hidden" x-ref="fileInput" id="file-upload-po-stage-change">
-                <x-secondary-button onclick="document.getElementById('file-upload-po-stage-change').click()" class="group flex w-full items-center justify-center gap-[0.625rem]">
-                    @svg('heroicon-o-paper-clip', 'w-5 h-5')
-                    <span>Adjuntar documentación...</span>
-                </x-secondary-button>
-                @if($attachment)
-                    <div class="text-sm text-gray-600">Archivo seleccionado: {{ $attachment->getClientOriginalName() }}</div>
-                @endif
-                <div class="flex flex-col text-sm text-[#A5A3A3]">
-                    <span>Tipo de formato .xls .xlsx .pdf</span><span>Tamaño máximo 5MB</span>
+                    </div>
                 </div>
-            </div>
 
-            <div class="flex gap-[1.875rem]">
-                <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-po-stage-change')" class="w-full">Cancelar</x-secondary-button>
-                <x-primary-button wire:click="saveAndMove" class="w-full">Continuar</x-primary-button>
+                {{-- Footer fijo --}}
+                <div class="flex-shrink-0 space-y-3 pt-2 border-t border-gray-200">
+                    <div class="space-y-2">
+                        <input type="file" wire:model="attachment" class="hidden" x-ref="fileInput" id="file-upload-po-stage-change">
+                        <x-secondary-button onclick="document.getElementById('file-upload-po-stage-change').click()" class="group flex w-full items-center justify-center gap-[0.625rem]">
+                            @svg('heroicon-o-paper-clip', 'w-5 h-5')
+                            <span>Adjuntar documentación...</span>
+                        </x-secondary-button>
+                        @if($attachment)
+                            <div class="text-sm text-gray-600">Archivo seleccionado: {{ $attachment->getClientOriginalName() }}</div>
+                        @endif
+                        <div class="flex flex-col text-sm text-[#A5A3A3]">
+                            <span>Tipo de formato .xls .xlsx .pdf</span><span>Tamaño máximo 5MB</span>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-[1.875rem]">
+                        <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-po-stage-change')" class="w-full">Cancelar</x-secondary-button>
+                        <x-primary-button 
+                            x-on:click="syncKanbanDateFieldsAndSave($wire)"
+                            class="w-full">Continuar</x-primary-button>
+                    </div>
+                </div>
             </div>
         </x-modal>
 
@@ -556,4 +596,146 @@
             transform: translateY(-2px);
         }
     </style>
+
+    <script>
+        // Asegurar que el scroll comience desde arriba cuando se abre el modal
+        document.addEventListener('DOMContentLoaded', function() {
+            window.addEventListener('open-modal', function(event) {
+                if (event.detail === 'modal-po-stage-change') {
+                    setTimeout(function() {
+                        const scrollableContent = document.querySelector('[name="modal-po-stage-change"]')?.closest('div[x-data]')?.querySelector('.overflow-y-auto');
+                        if (scrollableContent) {
+                            scrollableContent.scrollTop = 0;
+                        }
+                    }, 100);
+                }
+            });
+        });
+
+        /**
+         * Pobla los inputs de fecha (que están en wire:ignore) con los valores
+         * cargados desde Livewire después de setCurrentTask.
+         * 
+         * Esto es necesario porque wire:ignore impide que Livewire actualice
+         * el DOM de estos inputs, así que debemos hacerlo manualmente.
+         * 
+         * @param {Object} $wire - El objeto $wire de Livewire pasado desde Alpine.js
+         */
+        function populateDateFieldsFromLivewire($wire) {
+            console.log('Poblando campos de fecha desde Livewire...');
+            
+            // Lista de todos los campos de fecha que pueden estar en el modal
+            const dateFields = [
+                'date_variable_date',
+                'date_theorical_load',
+                'date_booking_request',
+                'date_booking_authorized',
+                'date_etd_initial',
+                'date_etd_updated',
+                'date_atd',
+                'date_eta',
+                'date_eta_updated',
+                'date_ata',
+                'bonded_warehouse_enter',
+                'bonded_warehouse_exit'
+            ];
+            
+            let populatedCount = 0;
+            
+            dateFields.forEach(function(fieldName) {
+                // Obtener el valor desde Livewire
+                const value = $wire.get(fieldName);
+                
+                if (value) {
+                    // Buscar el input por wire:model o por name
+                    const input = document.querySelector(`input[wire\\:model="${fieldName}"]`) ||
+                                 document.querySelector(`input[name="${fieldName}"]`);
+                    
+                    if (input) {
+                        input.value = value;
+                        populatedCount++;
+                        console.log('✓ Poblado', fieldName, '=', value);
+                    }
+                }
+            });
+            
+            console.log(`Total de campos de fecha poblados: ${populatedCount}`);
+        }
+
+        /**
+         * Sincroniza los campos de fecha dentro de wire:ignore con Livewire
+         * antes de ejecutar saveAndMove()
+         * 
+         * @param {Object} $wire - El objeto $wire de Livewire pasado desde Alpine.js
+         */
+        function syncKanbanDateFieldsAndSave($wire) {
+            console.log('Sincronizando campos de fecha del modal Kanban...');
+
+            if (!$wire) {
+                console.error('No se recibió el componente $wire');
+                return;
+            }
+
+            // Buscar el modal del cambio de etapa
+            const modal = document.querySelector('[name="modal-po-stage-change"]')?.closest('div[x-data]') ||
+                         document.querySelector('div.mb-4');
+            
+            // Buscar TODOS los inputs de fecha con wire:ignore que estén VISIBLES
+            // (es decir, que no estén dentro de un div con clase 'hidden')
+            let wireIgnoreInputs = [];
+            
+            // Buscar todos los divs con wire:ignore que contengan inputs de fecha
+            const allWireIgnoreDivs = document.querySelectorAll('[wire\\:ignore]');
+            allWireIgnoreDivs.forEach(function(div) {
+                // Verificar que el div NO esté dentro de un contenedor oculto
+                const parentWithHidden = div.closest('.hidden');
+                if (!parentWithHidden) {
+                    // Buscar inputs de fecha dentro de este div
+                    const dateInputs = div.querySelectorAll('input[type="date"]');
+                    dateInputs.forEach(function(input) {
+                        wireIgnoreInputs.push(input);
+                    });
+                }
+            });
+            
+            console.log('Inputs de fecha visibles con wire:ignore:', wireIgnoreInputs.length);
+
+            // Sincronizar valores de campos con wire:ignore usando $wire.set()
+            let syncCount = 0;
+            wireIgnoreInputs.forEach(function(input) {
+                const wireModel = input.getAttribute('wire:model') ||
+                                 input.getAttribute('wire:model.live') ||
+                                 input.getAttribute('wire:model.defer') ||
+                                 input.getAttribute('wire:model.lazy');
+
+                if (wireModel) {
+                    // Obtener el valor del input
+                    let value = input.value || null;
+
+                    // Usar $wire.set() para establecer el valor directamente
+                    try {
+                        $wire.set(wireModel, value);
+                        syncCount++;
+                        console.log('✓ Sincronizado', wireModel, '=', value !== null ? value : '(vacío/null)');
+                    } catch (e) {
+                        console.warn('⚠ Error al sincronizar', wireModel, ':', e);
+                    }
+                } else {
+                    console.warn('⚠ Input sin wire:model:', input.name || input.id || 'sin nombre');
+                }
+            });
+            
+            console.log(`Total de campos sincronizados: ${syncCount} de ${wireIgnoreInputs.length}`);
+
+            // Esperar un momento para que Livewire procese los cambios y luego ejecutar saveAndMove
+            setTimeout(function() {
+                console.log('Ejecutando saveAndMove...');
+                try {
+                    $wire.saveAndMove();
+                } catch (e) {
+                    console.error('Error al ejecutar saveAndMove:', e);
+                }
+            }, 300);
+        }
+    </script>
 </div>

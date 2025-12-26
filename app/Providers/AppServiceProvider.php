@@ -11,8 +11,10 @@ use App\View\Components\Breadcrumb;
 use Carbon\Carbon;
 use App\Models\PurchaseOrder;
 use App\Models\ShippingDocument;
+use App\Models\Vendor;
 use App\Observers\PurchaseOrderObserver;
 use App\Observers\ShippingDocumentObserver;
+use App\Observers\VendorObserver;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
@@ -39,6 +41,7 @@ class AppServiceProvider extends ServiceProvider
         // Registrar observers para auditoría
         PurchaseOrder::observe(PurchaseOrderObserver::class);
         ShippingDocument::observe(ShippingDocumentObserver::class);
+        Vendor::observe(VendorObserver::class);
 
         // Registrar listeners para eventos de autenticación
         Event::listen(Login::class, LogUserLogin::class);

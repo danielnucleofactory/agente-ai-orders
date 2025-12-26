@@ -5,6 +5,7 @@ namespace App\Livewire\Ui;
 use Livewire\Component;
 use App\Models\Notification;
 use App\Models\PurchaseOrder;
+use App\Models\Vendor;
 
 class NotificationsDropdown extends Component {
     public $notifications = [];
@@ -112,6 +113,30 @@ class NotificationsDropdown extends Component {
             $messageWithPlaceholder = str_replace($orderNumber, $placeholder, $message);
             
             // Escapar el mensaje completo (el placeholder no se escapará porque no contiene caracteres especiales)
+            $escapedMessage = e($messageWithPlaceholder);
+            
+            // Reemplazar el placeholder con el enlace HTML
+            $formattedMessage = str_replace($placeholder, $link, $escapedMessage);
+            
+            return $formattedMessage;
+        }
+        
+        // Manejar enlaces a vendors (proveedores)
+        $vendorId = $data['vendor_id'] ?? null;
+        $vendorName = $data['vendor_name'] ?? null;
+        
+        if ($vendorId && $vendorName && $notification->type === 'vendor_created') {
+            $url = route('vendors.edit', $vendorId);
+            
+            // Crear el enlace HTML con el nombre del vendor escapado
+            $escapedVendorName = e($vendorName);
+            $link = '<a href="' . e($url) . '" class="text-blue-600 hover:text-blue-800 underline font-semibold">' . $escapedVendorName . '</a>';
+            
+            // Reemplazar el nombre del vendor en el mensaje con el enlace
+            $placeholder = '___VENDOR_LINK_PLACEHOLDER___';
+            $messageWithPlaceholder = str_replace($vendorName, $placeholder, $message);
+            
+            // Escapar el mensaje completo
             $escapedMessage = e($messageWithPlaceholder);
             
             // Reemplazar el placeholder con el enlace HTML

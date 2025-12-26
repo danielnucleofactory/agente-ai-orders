@@ -1,8 +1,29 @@
 <div>
-    <!-- Notification area for errors and success messages -->
-    <div x-data="{ showNotification: false, notificationMessage: '', notificationType: 'error' }"
+    <!-- Notification area for errors, success messages, and loading -->
+    <div x-data="{
+            showNotification: false,
+            notificationMessage: '',
+            notificationType: 'error'
+         }"
          @show-error.window="showNotification = true; notificationMessage = $event.detail; notificationType = 'error'; setTimeout(() => showNotification = false, 5000)"
          @show-success.window="showNotification = true; notificationMessage = $event.detail; notificationType = 'success'; setTimeout(() => showNotification = false, 5000)">
+
+        <!-- Loading Notification (usando wire:loading para detectar cuando Livewire está procesando) -->
+        <div wire:loading.delay wire:target="trading_company"
+             class="fixed top-4 right-4 z-50 p-4 max-w-sm text-blue-700 bg-blue-100 rounded-lg border border-blue-400 shadow-lg">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <!-- Spinner de carga -->
+                    <svg class="w-5 h-5 text-blue-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium">Buscando datos del cliente en la API...</p>
+                </div>
+            </div>
+        </div>
 
         <!-- Error/Success Notification -->
         <div x-show="showNotification"
@@ -61,8 +82,14 @@
             @endif
 
             @if($id)
-                <x-primary-button wire:click="updatePurchaseOrder({{ $id }})" class="w-[209px]">
-                    Actualizar Orden
+                <x-primary-button
+                    id="btn-update-po"
+                    onclick="syncDateFieldsBeforeSave({{ $id }})"
+                    wire:loading.attr="disabled"
+                    wire:target="updatePurchaseOrder"
+                    class="w-[209px]">
+                    <span wire:loading.remove wire:target="updatePurchaseOrder">Actualizar Orden</span>
+                    <span wire:loading wire:target="updatePurchaseOrder">Guardando...</span>
                 </x-primary-button>
             @else
                 <x-primary-button wire:click="createPurchaseOrder" class="w-[209px]">
@@ -79,7 +106,7 @@
                     <div class="space-y-6">
                         <h2 class="text-lg font-bold text-[#1AAD8A]">Datos generales</h2>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
 
                             {{-- Identificación de la OC --}}
                             <div class="md:col-span-3">
@@ -100,14 +127,16 @@
                                 </x-slot:error>
                             </x-form-input>
 
-                            <x-form-input>
-                                <x-slot name="label">Fecha emisión PO</x-slot>
-                                <x-slot:input
-                                    type="date"
-                                    name="emision_date_po"
-                                    wire:model="emision_date_po">
-                                </x-slot:input>
-                            </x-form-input>
+                            <div wire:ignore>
+                                <x-form-input>
+                                    <x-slot name="label">Fecha emisión PO</x-slot>
+                                    <x-slot:input
+                                        type="date"
+                                        name="emision_date_po"
+                                        wire:model="emision_date_po">
+                                    </x-slot:input>
+                                </x-form-input>
+                            </div>
 
                             {{-- Fecha de creación --}}
                             <x-form-input>
@@ -242,14 +271,13 @@
                         </div>
 
                         <div class="space-y-2">
-                            <x-form-input>
-                                <x-slot:label>Puerto de Embarque</x-slot:label>
-                                <x-slot:input name="departure_port" placeholder="Ingrese puerto de embarque" wire:model="departure_port" class="pr-10 {{ $errors->has('departure_port') ? 'border-red-500' : '' }}">
-                                </x-slot:input>
-                                <x-slot:error>
-                                    {{ $errors->first('departure_port') }}
-                                </x-slot:error>
-                            </x-form-input>
+                            <x-form-select
+                                label="Puerto de Embarque"
+                                name="departure_port"
+                                wire:model="departure_port"
+                                :options="$departurePortArray"
+                                :error="$errors->has('departure_port')"
+                            />
                             <div class="flex items-center">
                                 <input id="port_of_loading_validated" type="checkbox" wire:model="port_of_loading_validated"
                                        class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
@@ -257,37 +285,34 @@
                             </div>
                         </div>
 
-                        <x-form-input>
-                            <x-slot:label>Puerto de Arribo</x-slot:label>
-                            <x-slot:input name="arrival_port" placeholder="Ingrese puerto de arribo" wire:model="arrival_port" class="pr-10 {{ $errors->has('arrival_port') ? 'border-red-500' : '' }}">
-                            </x-slot:input>
-                            <x-slot:error>
-                                {{ $errors->first('arrival_port') }}
-                            </x-slot:error>
-                        </x-form-input>
+                        <x-form-select
+                            label="Puerto de Arribo"
+                            name="arrival_port"
+                            wire:model="arrival_port"
+                            :options="$arrivalPortArray"
+                            :error="$errors->has('arrival_port')"
+                        />
 
-                        <x-form-input>
-                            <x-slot:label>Línea Naviera</x-slot:label>
-                            <x-slot:input name="shipping_line" placeholder="Ingrese línea naviera" wire:model="shipping_line" class="pr-10 {{ $errors->has('shipping_line') ? 'border-red-500' : '' }}">
-                            </x-slot:input>
-                            <x-slot:error>
-                                {{ $errors->first('shipping_line') }}
-                            </x-slot:error>
-                        </x-form-input>
+                        <x-form-select
+                            label="Línea Naviera"
+                            name="shipping_line"
+                            wire:model="shipping_line"
+                            :options="$shippingLineArray"
+                            :error="$errors->has('shipping_line')"
+                        />
 
                         <!-- Naviera y equipo -->
                         <div class="col-span-3">
                             <h4 class="text-sm font-semibold text-[#1AAD8A]">Naviera y equipo</h4>
                         </div>
 
-                        <x-form-input>
-                            <x-slot:label>Tipo de Contenedor</x-slot:label>
-                            <x-slot:input name="container_type" placeholder="Ingrese tipo de contenedor" wire:model="container_type" class="pr-10 {{ $errors->has('container_type') ? 'border-red-500' : '' }}">
-                            </x-slot:input>
-                            <x-slot:error>
-                                {{ $errors->first('container_type') }}
-                            </x-slot:error>
-                        </x-form-input>
+                        <x-form-select
+                            label="Tipo de Contenedor"
+                            name="container_type"
+                            wire:model="container_type"
+                            :options="$containerTypeArray"
+                            :error="$errors->has('container_type')"
+                        />
 
                         <x-form-input>
                             <x-slot:label>Número de Contenedor</x-slot:label>
@@ -342,7 +367,7 @@
                 </div>
             </div>
 
-            <div class="space-y-6 w-full hidden">
+            <div class="hidden space-y-6 w-full">
                 <h3 class="text-lg font-bold text-[#1AAD8A]">Datos Ship to</h3>
 
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
@@ -351,7 +376,7 @@
                 </div>
             </div>
 
-            <div class="space-y-6 w-full hidden">
+            <div class="hidden space-y-6 w-full">
                 <h3 class="text-lg font-bold text-[#1AAD8A]">Datos de facturación</h3>
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
                     <x-form-select label="Seleccionar Bill to" class="hidden" name="bill_to_id" wireModel="bill_to_id"
@@ -359,7 +384,7 @@
                 </div>
             </div>
 
-            <div class="space-y-6 w-full hidden">
+            <div class="hidden space-y-6 w-full">
                 <h3 class="text-lg font-bold text-[#1AAD8A]">Dimensiones en centímetros</h3>
                 <div class="grid grid-cols-[1fr,1fr,1fr,1fr] gap-x-5 gap-y-6">
                     <x-form-input class="hidden">
@@ -495,58 +520,75 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Booking y coordinación</h4>
                     </div>
 
-                    <x-form-input>
-                        <x-slot:label>Solicitud de Booking</x-slot:label>
-                        <x-slot:input type="date" name="date_booking_request" wire:model="date_booking_request"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Solicitud de Booking</x-slot:label>
+                            <x-slot:input type="date" name="date_booking_request" wire:model="date_booking_request"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Autorización Booking</x-slot:label>
-                        <x-slot:input type="date" name="date_booking_authorized" wire:model="date_booking_authorized"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Autorización Booking</x-slot:label>
+                            <x-slot:input type="date" name="date_booking_authorized" wire:model="date_booking_authorized"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha de asignación de agente de carga</x-slot:label>
-                        <x-slot:input
-                            type="date"
-                            name="forwader_date"
-                            wire:model="forwader_date">
-                        </x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha de asignación de agente de carga</x-slot:label>
+                            <x-slot:input
+                                type="date"
+                                name="forwader_date"
+                                wire:model="forwader_date">
+                            </x-slot:input>
+                        </x-form-input>
+                    </div>
 
                     <!-- Origen: preparación y carga -->
                     <div class="col-span-3">
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Origen: preparación y carga</h4>
                     </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Inspección</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="inspection_date"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Inspección</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="inspection_date"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Corte VGM</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="vgm_cut_date"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Corte VGM</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="vgm_cut_date"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Carga Lista Teórica</x-slot:label>
-                        <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" class="pr-10 {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
-                        </x-slot:input>
-                        <x-slot:error>{{ $errors->first('date_theorical_load') }}</x-slot:error>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Carga Lista Teórica</x-slot:label>
+                            <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" class="pr-10 {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
+                            </x-slot:input>
+                            <x-slot:error>{{ $errors->first('date_theorical_load') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Carga Lista Variable</x-slot:label>
-                        <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500' : '' }}"></x-slot:input>
-                        <x-slot:error>{{ $errors->first('date_variable_date') }}</x-slot:error>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Carga Lista Variable</x-slot:label>
+                            <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('date_variable_date') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Carga Lista Real</x-slot:label>
-                        <x-slot:input type="date" name="date_carga_po" wire:model="date_carga_po" class="pr-10 {{ $errors->has('date_carga_po') ? 'border-red-500' : '' }}"></x-slot:input>
-                        <x-slot:error>{{ $errors->first('date_carga_po') }}</x-slot:error>
-                    </x-form-input>
+                    <div class="flex items-center gap-3">
+                        <input id="carga_lista_validada" type="checkbox" wire:model="carga_lista_validada"
+                            class="w-4 h-4 text-[#28C7A1] bg-gray-100 border-gray-300 rounded focus:ring-[#28C7A1] focus:ring-2">
+                        <label for="carga_lista_validada" class="block text-sm text-gray-700">Carga Lista Validada</label>
+                    </div>
+                    @error('carga_lista_validada')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
 
                     <x-form-input class="hidden">
                         <x-slot:label>Fecha pickup planificada</x-slot:label>
@@ -558,15 +600,19 @@
                         <x-slot:input type="date" name="date_actual_pickup" wire:model="date_actual_pickup"></x-slot:input>
                     </x-form-input>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha de consolidado</x-slot:label>
-                        <x-slot:input type="date" name="date_consolidation" wire:model="date_consolidation"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha de consolidado</x-slot:label>
+                            <x-slot:input type="date" name="date_consolidation" wire:model="date_consolidation"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha de release</x-slot:label>
-                        <x-slot:input type="date" name="release_date" wire:model="release_date"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha de release</x-slot:label>
+                            <x-slot:input type="date" name="release_date" wire:model="release_date"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
                     <x-form-input>
                         <x-slot:label>Diferencia de fecha de carga lista</x-slot:label>
@@ -593,7 +639,7 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Salida (origen)</h4>
                     </div>
 
-                    <div class="space-y-2">
+                    <div class="space-y-2" wire:ignore>
                         <x-form-input>
                             <x-slot:label>ETD Inicial</x-slot:label>
                             <x-slot:input type="date" wire:model.live="date_etd_initial"></x-slot:input>
@@ -605,15 +651,19 @@
                         </div>
                     </div>
 
-                    <x-form-input>
-                        <x-slot:label>ETD </x-slot:label>
-                        <x-slot:input type="date" name="date_etd" wire:model="date_etd"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>ETD </x-slot:label>
+                            <x-slot:input type="date" name="date_etd" wire:model="date_etd"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>ATD </x-slot:label>
-                        <x-slot:input type="date" name="date_atd" wire:model="date_atd"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>ATD </x-slot:label>
+                            <x-slot:input type="date" name="date_atd" wire:model="date_atd"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
                     <x-form-input class="hidden">
                         <x-slot:label>Fecha estimada de llegada al hub</x-slot:label>
@@ -631,20 +681,26 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Arribo a destino</h4>
                     </div>
 
-                    <x-form-input>
-                        <x-slot:label>ETA</x-slot:label>
-                        <x-slot:input type="date" name="date_eta" wire:model="date_eta"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>ETA</x-slot:label>
+                            <x-slot:input type="date" name="date_eta" wire:model="date_eta"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>ETA Inicial</x-slot:label>
-                        <x-slot:input type="date" name="date_eta_updated" wire:model="date_eta_updated"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>ETA Inicial</x-slot:label>
+                            <x-slot:input type="date" name="date_eta_initial" wire:model="date_eta_initial"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>ATA</x-slot:label>
-                        <x-slot:input type="date" name="date_ata" wire:model="date_ata"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>ATA</x-slot:label>
+                            <x-slot:input type="date" name="date_ata" wire:model="date_ata"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
                     <x-form-input class="hidden">
                         <x-slot:label>Fecha requerida en destino</x-slot:label>
@@ -664,49 +720,61 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Almacén fiscal y recepción</h4>
                     </div>
 
-                    <x-form-input>
-                        <x-slot:label>Ingreso Almacén Fiscal</x-slot:label>
-                        <x-slot:input type="date" name="bonded_warehouse_enter" wire:model.live="bonded_warehouse_enter" class="pr-10 {{ $errors->has('bonded_warehouse_enter') ? 'border-red-500' : '' }}">
-                        </x-slot:input>
-                        <x-slot:error>{{ $errors->first('bonded_warehouse_enter') }}</x-slot:error>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Ingreso Almacén Fiscal</x-slot:label>
+                            <x-slot:input type="date" name="bonded_warehouse_enter" wire:model.live="bonded_warehouse_enter" class="pr-10 {{ $errors->has('bonded_warehouse_enter') ? 'border-red-500' : '' }}">
+                            </x-slot:input>
+                            <x-slot:error>{{ $errors->first('bonded_warehouse_enter') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Salida Almacén Fiscal</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="bonded_warehouse_exit" name="bonded_warehouse_exit" class="pr-10 {{ $errors->has('bonded_warehouse_exit') ? 'border-red-500' : '' }}">
-                        </x-slot:input>
-                        <x-slot:error>{{ $errors->first('bonded_warehouse_exit') }}</x-slot:error>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Salida Almacén Fiscal</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="bonded_warehouse_exit" name="bonded_warehouse_exit" class="pr-10 {{ $errors->has('bonded_warehouse_exit') ? 'border-red-500' : '' }}">
+                            </x-slot:input>
+                            <x-slot:error>{{ $errors->first('bonded_warehouse_exit') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
                     <x-form-input class="hidden">
                         <x-slot:label>Fecha Recepción</x-slot:label>
                         <x-slot:input type="date" name="date_received" wire:model="date_received"></x-slot:input>
                     </x-form-input>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Nota de Recibo</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="receipt_note_date"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Nota de Recibo</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="receipt_note_date"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Disp. Bogeda Estimada</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="estimated_dc_availability_date"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Disp. Bogeda Estimada</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="estimated_dc_availability_date"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
                     <!-- Pagos y cargos -->
                     <div class="col-span-3">
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Pagos y cargos</h4>
                     </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Pago Balance</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="balance_payment_date"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Pago Balance</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="balance_payment_date"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Pago Cargos Locales</x-slot:label>
-                        <x-slot:input type="date" wire:model.live="local_charges_payment_date"></x-slot:input>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Pago Cargos Locales</x-slot:label>
+                            <x-slot:input type="date" wire:model.live="local_charges_payment_date"></x-slot:input>
+                        </x-form-input>
+                    </div>
 
                     <!-- Métricas y varios -->
                     <div class="col-span-3">
@@ -740,7 +808,7 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Configuración del envío</h4>
                     </div>
 
-                    <x-form-select label="Tipo de Transporte" name="mode" wire:model.live="mode" :options="['maritimo' => 'Marítimo', 'aereo' => 'Aéreo', 'terrestre' => 'Terrestre']" :error="$errors->has('mode') ? true : false" />
+                    <x-form-select label="Tipo de Transporte" name="mode" wire:model.live="mode" :options="$transportTypeArray" :error="$errors->has('mode') ? true : false" />
 
                     <x-form-select class="hidden" label="Seguro" name="ensurence_type" wire:model="ensurence_type" :options="['pending' => 'Pendiente', 'applied' => 'Aplicado']" />
 
@@ -755,11 +823,11 @@
                     </x-form-input>
 
                     <!-- Tipo de material -->
-                    <div class="col-span-3 hidden">
+                    <div class="hidden col-span-3">
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Tipo de material</h4>
 
                         <!-- junto y compacto -->
-                        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-2">
+                        <div class="flex flex-wrap gap-y-2 gap-x-6 items-center mt-2">
                             @foreach($materialTypeOptions as $value => $label)
                                 <div class="flex items-center">
                                     <input
@@ -784,8 +852,8 @@
                     <!-- Opciones / Flags -->
                     <div class="col-span-3">
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Opciones</h4>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 mt-2">
-                            <div class="flex items-center hidden">
+                        <div class="grid grid-cols-2 gap-y-2 gap-x-6 mt-2 md:grid-cols-3">
+                            <div class="flex hidden items-center">
                                 <input id="is_dropship" type="checkbox" wire:model="is_dropship"
                                        class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="is_dropship" class="block ml-2 text-sm text-gray-700">Dropship</label>
@@ -795,7 +863,7 @@
                                        class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="applies_tlc" class="block ml-2 text-sm text-gray-700">Aplica TLC</label>
                             </div>
-                            <div class="flex items-center hidden">
+                            <div class="flex hidden items-center">
                                 <input id="applies_af" type="checkbox" wire:model="applies_af"
                                        class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
                                 <label for="applies_af" class="block ml-2 text-sm text-gray-700">Aplica AF</label>
@@ -826,7 +894,7 @@
 
                         @error('is_dropship')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         @error('applies_tlc')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                        @error('applies_af')<p class="mt-1 text-sm text-red-600 hidden">{{ $message }}</p>@enderror
+                        @error('applies_af')<p class="hidden mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
 
 
@@ -965,34 +1033,53 @@
                             <h4 class="text-sm font-semibold text-[#1AAD8A]">Proveedores y contratación</h4>
                         </div>
 
-                        <x-form-input>
+                        <x-form-input class="hidden">
                             <x-slot:label>Agente de Carga</x-slot:label>
                             <x-slot:input name="forwarder_name" placeholder="Ingrese agente de carga" wire:model="forwarder_name"></x-slot:input>
                         </x-form-input>
 
-                        <x-form-input class="hidden">
-                            <x-slot:label>Proveedor de Servicio</x-slot:label>
-                            <x-slot:input type="text" placeholder="Ingrese proveedor de servicio" wire:model.live="service_provider"></x-slot:input>
-                        </x-form-input>
+                        <x-form-select
+                            label="Proveedor de Servicio"
+                            name="service_provider"
+                            wire:model.live="service_provider"
+                            :options="$serviceProviderArray"
+                            :error="false"
+                        />
 
-                        <x-form-input>
-                            <x-slot:label>Cliente</x-slot:label>
-                            <x-slot:input type="text" placeholder="Ingrese cliente" wire:model.live="trading_company"></x-slot:input>
-                        </x-form-input>
+                        <div class="relative">
+                            <x-form-input>
+                                <x-slot:label>
+                                    Cliente <span class="text-red-500">*</span>
+                                    <span wire:loading wire:target="trading_company" class="ml-2 text-xs text-blue-500 animate-pulse">(Buscando...)</span>
+                                </x-slot:label>
+                                <x-slot:input
+                                    name="trading_company"
+                                    placeholder="Ingrese nombre del cliente (ej: OLO1)"
+                                    wire:model.live.debounce.500ms="trading_company"
+                                    :readonly="$id ? true : false"
+                                    class="{{ $id ? 'bg-gray-100 cursor-not-allowed' : '' }}">
+                                </x-slot:input>
+                            </x-form-input>
+                            <div wire:loading wire:target="trading_company" class="flex absolute right-3 top-9 items-center">
+                                <svg class="w-4 h-4 text-blue-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                        </div>
 
                         <!-- Tarifas y ruta -->
                         <div class="col-span-3">
                             <h4 class="text-sm font-semibold text-[#1AAD8A]">Tarifas y ruta</h4>
                         </div>
 
-                        <x-form-input>
-                            <x-slot:label>Tipo Tarifa</x-slot:label>
-                            <x-slot:input name="tariff_type" placeholder="Ingrese tipo de tarifa" wire:model="tariff_type" class="pr-10 {{ $errors->has('tariff_type') ? 'border-red-500' : '' }}">
-                            </x-slot:input>
-                            <x-slot:error>
-                                {{ $errors->first('tariff_type') }}
-                            </x-slot:error>
-                        </x-form-input>
+                        <x-form-select
+                            label="Tipo Tarifa"
+                            name="tariff_type"
+                            wire:model="tariff_type"
+                            :options="$rateTypeArray"
+                            :error="$errors->has('tariff_type')"
+                        />
 
                         <x-form-select
                             label="Ruta Logística"
@@ -1027,15 +1114,19 @@
                             <x-slot:input type="text" placeholder="Ingrese factura" wire:model.live="invoice"></x-slot:input>
                         </x-form-input>
 
-                        <x-form-input>
-                            <x-slot:label>Fecha recepción de factura</x-slot:label>
-                            <x-slot:input type="date" name="date_invoice_received" wire:model="date_invoice_received"></x-slot:input>
-                        </x-form-input>
+                        <div wire:ignore>
+                            <x-form-input>
+                                <x-slot:label>Fecha recepción de factura</x-slot:label>
+                                <x-slot:input type="date" name="date_invoice_received" wire:model="date_invoice_received"></x-slot:input>
+                            </x-form-input>
+                        </div>
 
-                        <x-form-input>
-                            <x-slot:label>Fecha recepción doc. proveedor</x-slot:label>
-                            <x-slot:input type="date" name="date_vendor_document_received" wire:model="date_vendor_document_received"></x-slot:input>
-                        </x-form-input>
+                        <div wire:ignore>
+                            <x-form-input>
+                                <x-slot:label>Fecha recepción doc. proveedor</x-slot:label>
+                                <x-slot:input type="date" name="date_vendor_document_received" wire:model="date_vendor_document_received"></x-slot:input>
+                            </x-form-input>
+                        </div>
 
                         <x-form-input>
                             <x-slot:label>Factura Flete</x-slot:label>
@@ -1079,7 +1170,7 @@
             </div>
 
 
-            <div class="space-y-6 w-full mb-10">
+            <div class="mb-10 space-y-6 w-full">
                 <h3 class="text-lg font-bold text-[#1AAD8A]">Estado de llegada</h3>
                 <div class="grid grid-cols-[1fr,1fr] gap-x-5 gap-y-f6">
                     <x-form-input>
@@ -1095,7 +1186,7 @@
             </div>
         </div>
 
-        <div class="p-8 space-y-6 w-full bg-white rounded-2xl hidden">
+        <div class="hidden p-8 space-y-6 w-full bg-white rounded-2xl">
             <h3 class="w-fit border-b-2 border-[#127A62] pb-2 text-lg font-bold text-[#127A62]">Carga / Contenido</h3>
 
             <div class="flex flex-col space-y-4">
@@ -1461,4 +1552,134 @@
 
         console.log('Script de cálculo inicializado');
     });
+
+    // Función para sincronizar campos con wire:ignore antes de guardar
+    function syncDateFieldsBeforeSave(poId) {
+        console.log('Sincronizando campos con wire:ignore antes de guardar...');
+
+        // Buscar todos los inputs de fecha dentro de divs con wire:ignore
+        // Incluir inputs que puedan haber sido convertidos a "text" por Flatpickr
+        const wireIgnoreInputs = document.querySelectorAll('[wire\\:ignore] input[type="date"], [wire\\:ignore] input.flatpickr-initialized, [wire\\:ignore] input[name*="date"], [wire\\:ignore] input[name*="Date"]');
+
+        console.log('Inputs encontrados con wire:ignore:', wireIgnoreInputs.length);
+
+        // Usar @this de Livewire si está disponible (más confiable)
+        let formComponent = window.poFormComponent || null;
+
+        // Si no está disponible, buscar el componente manualmente
+        if (!formComponent) {
+            const updateButton = document.getElementById('btn-update-po');
+            let currentElement = updateButton;
+
+            // Buscar el componente Livewire más cercano al botón, excluyendo el sidebar
+            while (currentElement && !formComponent) {
+                // Verificar que no estemos en el sidebar
+                if (currentElement.closest('sidebar') || currentElement.closest('.main-sidebar')) {
+                    currentElement = currentElement.parentElement;
+                    continue;
+                }
+
+                const wireId = currentElement.getAttribute('wire:id') ||
+                              currentElement.closest('[wire\\:id]')?.getAttribute('wire:id');
+                if (wireId && window.Livewire) {
+                    const component = Livewire.find(wireId);
+                    if (component) {
+                        formComponent = component;
+                        break;
+                    }
+                }
+                currentElement = currentElement.parentElement;
+            }
+
+            // Si no se encontró, buscar todos los componentes y encontrar el correcto
+            if (!formComponent) {
+                const allWireIds = document.querySelectorAll('[wire\\:id]');
+                for (let el of allWireIds) {
+                    // Verificar que NO sea el sidebar
+                    if (!el.closest('sidebar') && !el.closest('.main-sidebar')) {
+                        const wireId = el.getAttribute('wire:id');
+                        if (wireId && window.Livewire) {
+                            const component = Livewire.find(wireId);
+                            if (component) {
+                                formComponent = component;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!formComponent) {
+            console.error('No se encontró el componente Livewire del formulario');
+            return;
+        }
+
+        console.log('Componente Livewire del formulario encontrado:', formComponent);
+
+        // Sincronizar valores de campos con wire:ignore usando component.set()
+        // Esto asegura que los valores se establezcan directamente en el componente
+        wireIgnoreInputs.forEach(function(input) {
+            const wireModel = input.getAttribute('wire:model') ||
+                             input.getAttribute('wire:model.live') ||
+                             input.getAttribute('wire:model.defer') ||
+                             input.getAttribute('wire:model.lazy');
+
+            if (wireModel) {
+                // Obtener el valor del input (puede ser del input original o de Flatpickr)
+                let value = null;
+
+                if (input._flatpickr && input._flatpickr.selectedDates.length > 0) {
+                    // Si tiene Flatpickr, usar el valor de Flatpickr
+                    value = input._flatpickr.formatDate(input._flatpickr.selectedDates[0], 'Y-m-d');
+                } else {
+                    // Si no tiene Flatpickr, usar el valor del input directamente
+                    value = input.value || input.getAttribute('data-date-value') || '';
+                }
+
+                // Usar component.set() para establecer el valor directamente
+                try {
+                    if (typeof formComponent.set === 'function') {
+                        formComponent.set(wireModel, value || null);
+                        console.log('Sincronizado', wireModel, '=', value || '(vacío)');
+                    } else {
+                        // Si set no está disponible, usar eventos como respaldo
+                        input.value = value;
+                        input.setAttribute('data-date-value', value);
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                        console.log('Sincronizado (eventos)', wireModel, '=', value || '(vacío)');
+                    }
+                } catch (e) {
+                    console.warn('Error al sincronizar', wireModel, ':', e);
+                    // Intentar con eventos como respaldo
+                    input.value = value;
+                    input.setAttribute('data-date-value', value);
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+        });
+
+        // Esperar un momento para que Livewire procese los cambios y luego ejecutar updatePurchaseOrder
+        setTimeout(function() {
+            console.log('Ejecutando updatePurchaseOrder con ID:', poId);
+            try {
+                if (typeof formComponent.call === 'function') {
+                    console.log('Llamando formComponent.call("updatePurchaseOrder", ' + poId + ')');
+                    formComponent.call('updatePurchaseOrder', poId).then(function(result) {
+                        console.log('updatePurchaseOrder completado:', result);
+                    }).catch(function(error) {
+                        console.error('Error en updatePurchaseOrder:', error);
+                    });
+                } else {
+                    console.error('formComponent.call no está disponible');
+                    console.log('formComponent:', formComponent);
+                }
+            } catch (e) {
+                console.error('Error al ejecutar updatePurchaseOrder:', e);
+                console.error('Stack trace:', e.stack);
+            }
+        }, 500);
+    }
 </script>

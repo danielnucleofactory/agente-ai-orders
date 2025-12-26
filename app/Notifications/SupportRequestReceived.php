@@ -36,7 +36,7 @@ class SupportRequestReceived extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Solicitud de Soporte Recibida - ' . config('app.name'))
+            ->subject('Solicitud de Soporte Recibida - Next')
             ->view('emails.support-request-received', [
                 'supportRequest' => $this->supportRequest,
                 'user' => $notifiable

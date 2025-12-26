@@ -77,6 +77,30 @@
                             </div>
                             <div class="px-4 py-2">
                                 <label class="flex items-center space-x-2">
+                                    <input type="checkbox" wire:model.live="visibleColumns.route_label" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-blue-500">
+                                    <span class="text-sm text-gray-700">Ruta logística</span>
+                                </label>
+                            </div>
+                            <div class="px-4 py-2">
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" wire:model.live="visibleColumns.mbl_number" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-blue-500">
+                                    <span class="text-sm text-gray-700">Master BL</span>
+                                </label>
+                            </div>
+                            <div class="px-4 py-2">
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" wire:model.live="visibleColumns.container_number" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-blue-500">
+                                    <span class="text-sm text-gray-700">Número de contenedor</span>
+                                </label>
+                            </div>
+                            <div class="px-4 py-2">
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" wire:model.live="visibleColumns.customer" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-blue-500">
+                                    <span class="text-sm text-gray-700">Cliente</span>
+                                </label>
+                            </div>
+                            <div class="px-4 py-2">
+                                <label class="flex items-center space-x-2">
                                     <input type="checkbox" wire:model.live="visibleColumns.actions" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-blue-500">
                                     <span class="text-sm text-gray-700">Acciones</span>
                                 </label>
@@ -204,6 +228,74 @@
                         </th>
                         @endif
 
+                        @if($visibleColumns['route_label'])
+                        <th scope="col" class="px-6 py-5 text-xs font-bold tracking-wider text-left text-black uppercase cursor-pointer">
+                            <div class="flex items-center space-x-1 cursor-pointer" wire:click="sortBy('route_label')">
+                                <span>Ruta logística</span>
+                                @if ($sortField === 'route_label')
+                                    <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        @if ($sortDirection === 'asc')
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                        @else
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        @endif
+                                    </svg>
+                                @endif
+                            </div>
+                        </th>
+                        @endif
+
+                        @if($visibleColumns['mbl_number'])
+                        <th scope="col" class="px-6 py-5 text-xs font-bold tracking-wider text-left text-black uppercase cursor-pointer">
+                            <div class="flex items-center space-x-1 cursor-pointer" wire:click="sortBy('mbl_number')">
+                                <span>Master BL</span>
+                                @if ($sortField === 'mbl_number')
+                                    <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        @if ($sortDirection === 'asc')
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                        @else
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        @endif
+                                    </svg>
+                                @endif
+                            </div>
+                        </th>
+                        @endif
+
+                        @if($visibleColumns['container_number'])
+                        <th scope="col" class="px-6 py-5 text-xs font-bold tracking-wider text-left text-black uppercase cursor-pointer">
+                            <div class="flex items-center space-x-1 cursor-pointer" wire:click="sortBy('container_number')">
+                                <span>Número de contenedor</span>
+                                @if ($sortField === 'container_number')
+                                    <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        @if ($sortDirection === 'asc')
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                        @else
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        @endif
+                                    </svg>
+                                @endif
+                            </div>
+                        </th>
+                        @endif
+
+                        @if($visibleColumns['customer'])
+                        <th scope="col" class="px-6 py-5 text-xs font-bold tracking-wider text-left text-black uppercase cursor-pointer">
+                            <div class="flex items-center space-x-1 cursor-pointer" wire:click="sortBy('bill_to_id')">
+                                <span>Cliente</span>
+                                @if ($sortField === 'bill_to_id')
+                                    <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        @if ($sortDirection === 'asc')
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                        @else
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        @endif
+                                    </svg>
+                                @endif
+                            </div>
+                        </th>
+                        @endif
+
                         @if($visibleColumns['actions'])
                                 <th scope="col" class="px-6 py-3 text-xs font-bold text-black uppercase tracking-wider text-center">
                                     ACCIONES
@@ -259,6 +351,31 @@
                                 {{ $order->updated_at ? formatDateTime($order->updated_at) : 'N/A' }}
                             </td>
                             @endif
+
+                            @if($visibleColumns['route_label'])
+                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                {{ $order->route_label ?? 'N/A' }}
+                            </td>
+                            @endif
+
+                            @if($visibleColumns['mbl_number'])
+                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                {{ $order->mbl_number ?? 'N/A' }}
+                            </td>
+                            @endif
+
+                            @if($visibleColumns['container_number'])
+                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                {{ $order->container_number ?? 'N/A' }}
+                            </td>
+                            @endif
+
+                            @if($visibleColumns['customer'])
+                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                {{ $order->billTo->name ?? 'N/A' }}
+                            </td>
+                            @endif
+
                                 @if($visibleColumns['actions'])
                                     <td class="px-6 py-4 text-sm font-medium whitespace-nowrap text-center">
                                         <div class="inline-flex items-center justify-center gap-4">

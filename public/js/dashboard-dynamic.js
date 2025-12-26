@@ -32,11 +32,41 @@ class DashboardManager {
             });
         }
 
-        // Apply filters button from panel
+        // Apply filters button from top
+        const applyFiltersBtnTop = document.getElementById('apply-filters-btn-top');
+        if (applyFiltersBtnTop) {
+            applyFiltersBtnTop.addEventListener('click', () => {
+                this.applyFilters();
+            });
+        }
+
+        // Apply filters button from panel (legacy support)
         const applyFiltersBtn = document.getElementById('apply-filters-btn');
         if (applyFiltersBtn) {
             applyFiltersBtn.addEventListener('click', () => {
                 this.applyFilters();
+            });
+        }
+
+        // Additional filter buttons
+        const poRetrasoBtn = document.getElementById('btn-po-retraso-cl');
+        if (poRetrasoBtn) {
+            poRetrasoBtn.addEventListener('click', () => {
+                this.toggleAdditionalFilter('po_retraso_cl', poRetrasoBtn);
+            });
+        }
+
+        const poAdelantoBtn = document.getElementById('btn-po-adelanto-cl');
+        if (poAdelantoBtn) {
+            poAdelantoBtn.addEventListener('click', () => {
+                this.toggleAdditionalFilter('po_adelanto_cl', poAdelantoBtn);
+            });
+        }
+
+        const indicadorCapacidadBtn = document.getElementById('btn-indicador-capacidad');
+        if (indicadorCapacidadBtn) {
+            indicadorCapacidadBtn.addEventListener('click', () => {
+                this.toggleAdditionalFilter('indicador_capacidad', indicadorCapacidadBtn);
             });
         }
 
@@ -50,6 +80,14 @@ class DashboardManager {
 
         // Modal close events
         this.setupModalEvents();
+    }
+
+    toggleAdditionalFilter(filterName, button) {
+        // Toggle active state
+        button.classList.toggle('active');
+        
+        // Apply filters immediately
+        this.applyFilters();
     }
 
     setupModalEvents() {
@@ -165,8 +203,45 @@ class DashboardManager {
     }
 
     collectPanelFilters(searchParams) {
-        // Recopilar filtros de Vendor del panel
-        const vendorSelect = document.querySelector('.filters-panel .multi-select[data-placeholder*="vendors"]');
+        // Recopilar fechas
+        const startDate = document.getElementById('startDate');
+        if (startDate && startDate.value) {
+            searchParams.append('date_from', startDate.value);
+        }
+
+        const endDate = document.getElementById('endDate');
+        if (endDate && endDate.value) {
+            searchParams.append('date_to', endDate.value);
+        }
+
+        // Recopilar filtro de Tipo de Cliente
+        const customerTypeSelect = document.getElementById('customer-type-filter');
+        if (customerTypeSelect) {
+            const selectedTypes = Array.from(customerTypeSelect.querySelectorAll('.multi-select-option.selected'))
+                .map(opt => opt.dataset.value)
+                .filter(Boolean);
+            if (selectedTypes.length > 0) {
+                selectedTypes.forEach(type => {
+                    searchParams.append('customer_type[]', type);
+                });
+            }
+        }
+
+        // Recopilar filtro de Estado de Llegada
+        const arrivalStatusSelect = document.getElementById('arrival-status-filter');
+        if (arrivalStatusSelect) {
+            const selectedStatuses = Array.from(arrivalStatusSelect.querySelectorAll('.multi-select-option.selected'))
+                .map(opt => opt.dataset.value)
+                .filter(Boolean);
+            if (selectedStatuses.length > 0) {
+                selectedStatuses.forEach(status => {
+                    searchParams.append('arrival_status[]', status);
+                });
+            }
+        }
+
+        // Recopilar filtros de Vendor (buscar en top primero, luego en panel si existe)
+        const vendorSelect = document.getElementById('vendor-filter-top') || document.querySelector('.filters-panel .multi-select[data-placeholder*="vendors"]');
         if (vendorSelect) {
             const selectedVendors = Array.from(vendorSelect.querySelectorAll('.multi-select-option.selected'))
                 .map(opt => opt.dataset.value)
@@ -178,45 +253,87 @@ class DashboardManager {
             }
         }
 
-        // Recopilar filtros de Hub del panel
-        const hubSelect = document.querySelector('.filters-panel .multi-select[data-placeholder*="hubs"]');
-        if (hubSelect) {
-            const selectedHubs = Array.from(hubSelect.querySelectorAll('.multi-select-option.selected'))
+        // Recopilar filtro de Puerto de Embarque
+        const departurePortSelect = document.getElementById('departure-port-filter');
+        if (departurePortSelect) {
+            const selectedPorts = Array.from(departurePortSelect.querySelectorAll('.multi-select-option.selected'))
                 .map(opt => opt.dataset.value)
                 .filter(Boolean);
-            if (selectedHubs.length > 0) {
-                selectedHubs.forEach(hubId => {
-                    searchParams.append('hub_id[]', hubId);
+            if (selectedPorts.length > 0) {
+                selectedPorts.forEach(port => {
+                    searchParams.append('departure_port[]', port);
                 });
             }
         }
 
-        // Recopilar filtros de Etapa del panel
-        const stageSelect = document.querySelector('.filters-panel .multi-select[data-placeholder*="etapas"]');
-        if (stageSelect) {
-            const selectedStages = Array.from(stageSelect.querySelectorAll('.multi-select-option.selected'))
+        // Recopilar filtro de Puerto de Arribo
+        const arrivalPortSelect = document.getElementById('arrival-port-filter');
+        if (arrivalPortSelect) {
+            const selectedPorts = Array.from(arrivalPortSelect.querySelectorAll('.multi-select-option.selected'))
                 .map(opt => opt.dataset.value)
                 .filter(Boolean);
-            if (selectedStages.length > 0) {
-                selectedStages.forEach(stage => {
-                    searchParams.append('stage[]', stage);
+            if (selectedPorts.length > 0) {
+                selectedPorts.forEach(port => {
+                    searchParams.append('arrival_port[]', port);
                 });
             }
         }
 
-        // Recopilar checkboxes de filtros adicionales
+        // Recopilar filtro de Naviera
+        const shippingLineSelect = document.getElementById('shipping-line-filter');
+        if (shippingLineSelect) {
+            const selectedLines = Array.from(shippingLineSelect.querySelectorAll('.multi-select-option.selected'))
+                .map(opt => opt.dataset.value)
+                .filter(Boolean);
+            if (selectedLines.length > 0) {
+                selectedLines.forEach(line => {
+                    searchParams.append('shipping_line[]', line);
+                });
+            }
+        }
+
+        // Recopilar filtro de Proveedor de Servicios
+        const serviceProviderSelect = document.getElementById('service-provider-filter');
+        if (serviceProviderSelect) {
+            const selectedProviders = Array.from(serviceProviderSelect.querySelectorAll('.multi-select-option.selected'))
+                .map(opt => opt.dataset.value)
+                .filter(Boolean);
+            if (selectedProviders.length > 0) {
+                selectedProviders.forEach(provider => {
+                    searchParams.append('service_provider[]', provider);
+                });
+            }
+        }
+
+        // Recopilar filtros adicionales de botones
+        const poRetrasoBtn = document.getElementById('btn-po-retraso-cl');
+        if (poRetrasoBtn && poRetrasoBtn.classList.contains('active')) {
+            searchParams.append('po_retraso_cl', '1');
+        }
+
+        const poAdelantoBtn = document.getElementById('btn-po-adelanto-cl');
+        if (poAdelantoBtn && poAdelantoBtn.classList.contains('active')) {
+            searchParams.append('po_adelanto_cl', '1');
+        }
+
+        const indicadorCapacidadBtn = document.getElementById('btn-indicador-capacidad');
+        if (indicadorCapacidadBtn && indicadorCapacidadBtn.classList.contains('active')) {
+            searchParams.append('indicador_capacidad', '1');
+        }
+
+        // Legacy support: también buscar checkboxes si existen
         const poRetrasoCl = document.getElementById('filter-po-retraso-cl');
-        if (poRetrasoCl && poRetrasoCl.checked) {
+        if (poRetrasoCl && poRetrasoCl.checked && !poRetrasoBtn) {
             searchParams.append('po_retraso_cl', '1');
         }
 
         const poAdelantoCl = document.getElementById('filter-po-adelanto-cl');
-        if (poAdelantoCl && poAdelantoCl.checked) {
+        if (poAdelantoCl && poAdelantoCl.checked && !poAdelantoBtn) {
             searchParams.append('po_adelanto_cl', '1');
         }
 
         const indicadorCapacidad = document.getElementById('filter-indicador-capacidad');
-        if (indicadorCapacidad && indicadorCapacidad.checked) {
+        if (indicadorCapacidad && indicadorCapacidad.checked && !indicadorCapacidadBtn) {
             searchParams.append('indicador_capacidad', '1');
         }
     }
@@ -287,31 +404,46 @@ class DashboardManager {
     }
 
     initializePanelFilters(filterOptions) {
-        // Initialize Vendor multi-select
-        const vendorSelect = document.querySelector('.filters-panel .multi-select[data-placeholder*="vendors"]');
+        // Initialize Customer Type multi-select
+        const customerTypeSelect = document.getElementById('customer-type-filter');
+        if (customerTypeSelect && filterOptions.customer_types) {
+            this.populateMultiSelect(customerTypeSelect, filterOptions.customer_types, 'id', 'name');
+        }
+
+        // Initialize Arrival Status multi-select
+        const arrivalStatusSelect = document.getElementById('arrival-status-filter');
+        if (arrivalStatusSelect && filterOptions.arrival_statuses) {
+            this.populateMultiSelect(arrivalStatusSelect, filterOptions.arrival_statuses, 'id', 'name');
+        }
+
+        // Initialize Vendor multi-select (buscar en top primero, luego en panel si existe)
+        const vendorSelect = document.getElementById('vendor-filter-top') || document.querySelector('.filters-panel .multi-select[data-placeholder*="vendors"]');
         if (vendorSelect && filterOptions.vendors) {
             this.populateMultiSelect(vendorSelect, filterOptions.vendors, 'id', 'name');
         }
 
-        // Initialize Hub multi-select
-        const hubSelect = document.querySelector('.filters-panel .multi-select[data-placeholder*="hubs"]');
-        if (hubSelect && filterOptions.hubs) {
-            this.populateMultiSelect(hubSelect, filterOptions.hubs, 'id', 'name');
+        // Initialize Departure Port multi-select
+        const departurePortSelect = document.getElementById('departure-port-filter');
+        if (departurePortSelect && filterOptions.departure_ports) {
+            this.populateMultiSelect(departurePortSelect, filterOptions.departure_ports, 'id', 'name');
         }
 
-        // Initialize Stage multi-select with the 7 stages
-        const stageSelect = document.querySelector('.filters-panel .multi-select[data-placeholder*="etapas"]');
-        if (stageSelect) {
-            const stages = [
-                { id: 'Producción', name: 'Producción' },
-                { id: 'Booking', name: 'Booking' },
-                { id: 'Transito', name: 'Transito' },
-                { id: 'Puerto', name: 'Puerto' },
-                { id: 'Recibiendo CDI', name: 'Recibiendo CDI' },
-                { id: 'Ingresada', name: 'Ingresada' },
-                { id: 'Anulada', name: 'Anulada' }
-            ];
-            this.populateMultiSelect(stageSelect, stages, 'id', 'name');
+        // Initialize Arrival Port multi-select
+        const arrivalPortSelect = document.getElementById('arrival-port-filter');
+        if (arrivalPortSelect && filterOptions.arrival_ports) {
+            this.populateMultiSelect(arrivalPortSelect, filterOptions.arrival_ports, 'id', 'name');
+        }
+
+        // Initialize Shipping Line multi-select
+        const shippingLineSelect = document.getElementById('shipping-line-filter');
+        if (shippingLineSelect && filterOptions.shipping_lines) {
+            this.populateMultiSelect(shippingLineSelect, filterOptions.shipping_lines, 'id', 'name');
+        }
+
+        // Initialize Service Provider multi-select
+        const serviceProviderSelect = document.getElementById('service-provider-filter');
+        if (serviceProviderSelect && filterOptions.service_providers) {
+            this.populateMultiSelect(serviceProviderSelect, filterOptions.service_providers, 'id', 'name');
         }
     }
 

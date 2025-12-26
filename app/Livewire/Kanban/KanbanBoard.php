@@ -6,6 +6,7 @@ use App\Models\KanbanBoard as KanbanBoardModel;
 use App\Models\KanbanStatus;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderComment;
+use App\Services\MaestrosApiService;
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -92,6 +93,9 @@ class KanbanBoard extends Component
     // Filtros activos
     public $activeFilters = [];
 
+    // Array para dropdown de proveedores de servicio
+    public $serviceProviderArray = [];
+
     // Agregar los listeners para los eventos
     protected $listeners = [
         'refreshKanban' => 'loadData',
@@ -107,9 +111,10 @@ class KanbanBoard extends Component
 
         if ($currentRoute === 'purchase-orders.index') {
             $this->boardType = 'po_stages'; // Etapas PO
-        } elseif ($currentRoute === 'shipping-documentation.index') {
-            $this->boardType = 'shipping_documentation'; // Documentación de embarque
-        } else {
+        } // elseif ($currentRoute === 'shipping-documentation.index') {
+            // $this->boardType = 'shipping_documentation'; // Documentación de embarque - Ocultado
+        // } else {
+        else {
             // Si no es ninguna de las rutas específicas, usar el tipo por defecto
             $this->boardType = 'purchase_orders';
         }
@@ -142,6 +147,16 @@ class KanbanBoard extends Component
         $this->organizeTasksByColumn();
     }
 
+    /**
+     * Carga las columnas (estados) del tablero Kanban.
+     * 
+     * IMPORTANTE: El orden de las columnas es crítico. La vista blade depende de índices
+     * de array ($columns[0], $columns[1], etc.) para mostrar los campos correctos en el modal.
+     * Si el orden de las columnas cambia o se eliminan columnas, el modal puede no funcionar
+     * correctamente.
+     * 
+     * @return void
+     */
     public function loadColumns()
     {
         if (!$this->board) {
@@ -149,8 +164,17 @@ class KanbanBoard extends Component
             return;
         }
 
-        // Cargar las columnas (estados) del tablero
+        // Cargar las columnas (estados) del tablero ordenadas por posición
         $statuses = $this->board->statuses()->orderBy('position')->get();
+
+        if ($statuses->isEmpty()) {
+            \Log::warning('KanbanBoard: No se encontraron columnas para el tablero', [
+                'board_id' => $this->board->id,
+                'board_type' => $this->boardType
+            ]);
+            $this->columns = [];
+            return;
+        }
 
         $this->columns = $statuses->map(function ($status) {
             return [
@@ -161,6 +185,18 @@ class KanbanBoard extends Component
                 'position' => $status->position,
             ];
         })->toArray();
+
+        // Validación: Registrar si hay menos columnas de las esperadas (11 etapas)
+        // Esto ayuda a detectar problemas de configuración
+        $expectedMinColumns = 11;
+        if (count($this->columns) < $expectedMinColumns) {
+            \Log::info('KanbanBoard: Menos columnas de las esperadas', [
+                'board_id' => $this->board->id,
+                'columns_count' => count($this->columns),
+                'expected_min' => $expectedMinColumns,
+                'column_names' => collect($this->columns)->pluck('name')->toArray()
+            ]);
+        }
     }
 
     public function loadTasks()
@@ -490,7 +526,7 @@ class KanbanBoard extends Component
                 break;
             }
         }
-        
+
         // NUEVO: Cargar datos de la PO en las propiedades del componente
         $po = PurchaseOrder::find($taskId);
         if ($po) {
@@ -499,14 +535,21 @@ class KanbanBoard extends Component
             $this->date_theorical_load = $po->date_theorical_load ? $po->date_theorical_load->format('Y-m-d') : null;
             $this->service_provider = $po->service_provider;
             $this->forwarder_name = $po->forwarder_name;
-            
+
+            // Cargar proveedores de servicio si estamos en la etapa de producción
+            // IMPORTANTE: Cargar service_provider ANTES de llamar a loadServiceProviders
+            // para que el método pueda agregar el valor guardado al array si la API no devuelve datos
+            if ($newColumnId == 2 && $po->trading_company) {
+                $this->loadServiceProviders($po->trading_company, $po->service_provider);
+            }
+
             // Booking - convertir fechas al formato Y-m-d
             $this->date_booking_request = $po->date_booking_request ? $po->date_booking_request->format('Y-m-d') : null;
             $this->date_booking_authorized = $po->date_booking_authorized ? $po->date_booking_authorized->format('Y-m-d') : null;
             $this->date_etd_initial = $po->date_etd_initial ? $po->date_etd_initial->format('Y-m-d') : null;
             $this->date_etd_updated = $po->date_etd_updated ? $po->date_etd_updated->format('Y-m-d') : null;
             $this->mode = $po->mode;
-            
+
             // En Tránsito - convertir fechas al formato Y-m-d
             $this->date_atd = $po->date_atd ? $po->date_atd->format('Y-m-d') : null;
             $this->date_eta = $po->date_eta ? $po->date_eta->format('Y-m-d') : null;
@@ -521,14 +564,14 @@ class KanbanBoard extends Component
             $this->tracking_id = $po->tracking_id;
             $this->departure_port = $po->departure_port;
             $this->arrival_port = $po->arrival_port;
-            
+
             // Puerto - convertir fechas al formato Y-m-d
             $this->date_ata = $po->date_ata ? $po->date_ata->format('Y-m-d') : null;
-            
+
             // Almacén Fiscal - convertir fechas al formato Y-m-d
             $this->bonded_warehouse_enter = $po->bonded_warehouse_enter ? $po->bonded_warehouse_enter->format('Y-m-d') : null;
             $this->bonded_warehouse_exit = $po->bonded_warehouse_exit ? $po->bonded_warehouse_exit->format('Y-m-d') : null;
-            
+
             // Ingresada
             $this->receipt_note = $po->receipt_note;
         }
@@ -605,6 +648,37 @@ class KanbanBoard extends Component
             // Limpiar los campos después de guardar
             $this->comment = '';
             $this->attachment = null;
+
+            // Dispatch webhook event for updated purchase order (comment added)
+            if (function_exists('dispatch_webhook')) {
+                try {
+                    $po = PurchaseOrder::find($taskId);
+                    if ($po) {
+                        $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+
+                        // Convertir a array y asegurar que sea JSON serializable
+                        $poData = $freshPo->toArray();
+                        $poData = json_decode(json_encode($poData), true);
+
+                        dispatch_webhook('purchase_order.updated', [
+                            'purchase_order_id' => $po->id,
+                            'order_number' => $po->order_number,
+                            'changes' => ['comments' => 'new_comment_added'],
+                            'data' => $poData,
+                        ]);
+
+                        \Log::info('dispatch_webhook completed after comment creation from KanbanBoard', [
+                            'po_id' => $po->id,
+                        ]);
+                    }
+                } catch (\Throwable $e) {
+                    \Log::error('Error dispatching webhook after comment creation', [
+                        'po_id' => $taskId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
         } catch (\Exception $e) {
             \Log::error("Error setting comments: " . $e->getMessage());
@@ -690,10 +764,10 @@ class KanbanBoard extends Component
 
     /**
      * Mapeo de campos por etapa del kanban.
-     * 
+     *
      * NOTA: Los índices (2, 3, 4, etc.) corresponden a los IDs de las columnas KanbanStatus
      * en la base de datos. Estos IDs pueden variar según la configuración del tablero.
-     * 
+     *
      * Mapeo esperado de etapas:
      * - 1: Nuevo
      * - 2: Producción
@@ -706,7 +780,7 @@ class KanbanBoard extends Component
      * - 9: Recibiendo CDI
      * - 10: Ingresada
      * - 11: Anulada
-     * 
+     *
      * @return array<int, array<string>> Array indexado por ID de etapa con lista de campos
      */
     private function fieldsByStage(): array
@@ -774,6 +848,42 @@ class KanbanBoard extends Component
             }
 
             DB::commit();
+
+            // Dispatch webhook event for updated purchase order
+            if ($po && function_exists('dispatch_webhook')) {
+                try {
+                    \Log::info('About to dispatch webhook for PO update from KanbanBoard', [
+                        'po_id' => $po->id,
+                        'order_number' => $po->order_number,
+                    ]);
+
+                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                    $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+
+                    // Convertir a array y asegurar que sea JSON serializable
+                    $poData = $freshPo->toArray();
+                    $poData = json_decode(json_encode($poData), true);
+
+                    dispatch_webhook('purchase_order.updated', [
+                        'purchase_order_id' => $po->id,
+                        'order_number' => $po->order_number,
+                        'changes' => $payload,
+                        'data' => $poData,
+                    ]);
+
+                    \Log::info('dispatch_webhook completed from KanbanBoard', [
+                        'po_id' => $po->id,
+                    ]);
+                } catch (\Throwable $e) {
+                    \Log::error('Error in webhook dispatch from KanbanBoard', [
+                        'po_id' => $po->id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                    // No lanzar la excepción para no interrumpir el flujo principal
+                }
+            }
+
             return ['ok' => true, 'updated' => $updated];
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -786,14 +896,14 @@ class KanbanBoard extends Component
 
     /**
      * Reglas de validación requeridas por etapa del kanban.
-     * 
+     *
      * IMPORTANTE: Los índices deben coincidir con los IDs de las columnas KanbanStatus
      * y con los campos definidos en fieldsByStage().
-     * 
+     *
      * Validaciones complejas:
      * - Etapa 5 (En Tránsito): Usa 'required_without_all' para container_number, bill_of_lading
      *   y tracking_id. Esto significa que al menos uno de estos tres campos debe estar presente.
-     * 
+     *
      * @return array<int, array<string, string>> Array indexado por ID de etapa con reglas de validación
      */
     private function requiredRulesByStage(): array
@@ -802,7 +912,8 @@ class KanbanBoard extends Component
             2 => [
                 'date_variable_date' => 'required|date',
                 'service_provider'   => 'required|string',
-                'forwarder_name'     => 'required|string',
+                // forwarder_name está oculto en la vista, por lo que no debe ser requerido
+                // 'forwarder_name'     => 'required|string',
                 // Si más adelante decides exigir la teórica:
                 // 'date_theorical_load' => 'required|date',
             ],
@@ -821,7 +932,7 @@ class KanbanBoard extends Component
                 'date_eta_updated' => 'required|date',
                 // Validación compleja: al menos uno de estos tres campos debe estar presente
                 'container_number' => 'nullable|required_without_all:tracking_id,bill_of_lading|string',
-                'bill_of_lading'   => 'nullable|required_without_all:tracking_id,container_number',   
+                'bill_of_lading'   => 'nullable|required_without_all:tracking_id,container_number',
                 'tracking_id'      => 'nullable|required_without_all:container_number,bill_of_lading|string',
                 'shipping_line'    => 'required|string',
                 'departure_port'   => 'required|string',
@@ -877,10 +988,10 @@ class KanbanBoard extends Component
 
     /**
      * Valida los campos requeridos para una etapa específica.
-     * 
+     *
      * Si la validación falla, Livewire automáticamente mostrará los errores
      * en la vista y no ejecutará el resto del método saveAndMove().
-     * 
+     *
      * @param int $stage ID de la etapa (columna KanbanStatus)
      * @return void
      * @throws \Illuminate\Validation\ValidationException Si la validación falla
@@ -894,14 +1005,117 @@ class KanbanBoard extends Component
         }
 
         $messages = [
-            'required' => 'El campo es requerido.',
+            'required' => 'El campo :attribute es requerido.',
             'required_without_all' => 'Debe proporcionar al menos uno: Número de Booking, MBL o Número de Contenedor.',
-            'date'     => 'El campo debe ser una fecha válida.',
-            'string'   => 'El campo debe ser texto.',
-            'numeric'  => 'El campo debe ser numérico.',
+            'date'     => 'El campo :attribute debe ser una fecha válida.',
+            'string'   => 'El campo :attribute debe ser texto.',
+            'numeric'  => 'El campo :attribute debe ser numérico.',
         ];
 
         $this->validate($rules, $messages, $this->fieldAttributeLabels());
+    }
+
+    /**
+     * Get MaestrosApiService instance
+     */
+    protected function getMaestrosApiService(): MaestrosApiService
+    {
+        return app(MaestrosApiService::class);
+    }
+
+    /**
+     * Cargar proveedores de servicio desde la API
+     * 
+     * @param string $tradingCompany
+     * @param string|null $currentServiceProvider Valor actual guardado en la PO (opcional)
+     * @return void
+     */
+    protected function loadServiceProviders(string $tradingCompany, ?string $currentServiceProvider = null): void
+    {
+        $tradingCompanyValue = trim($tradingCompany ?? '');
+        if (empty($tradingCompanyValue)) {
+            $this->serviceProviderArray = [];
+            return;
+        }
+
+        try {
+            $apiService = $this->getMaestrosApiService();
+
+            $apiParams = [
+                'company' => $tradingCompanyValue,
+                'trading_company' => $tradingCompanyValue,
+                'active' => 'true',
+                'per_page' => 1000,
+            ];
+
+            $serviceProvidersResponse = $apiService->getServiceProviders($apiParams);
+            $this->serviceProviderArray = $this->processApiResponse($serviceProvidersResponse, 'name', 'name');
+
+            // Si la API no devolvió datos, intentar sin el filtro 'active'
+            if (empty($this->serviceProviderArray)) {
+                $apiParamsWithoutActive = [
+                    'company' => $tradingCompanyValue,
+                    'trading_company' => $tradingCompanyValue,
+                    'per_page' => 1000,
+                ];
+
+                $serviceProvidersResponseRetry = $apiService->getServiceProviders($apiParamsWithoutActive);
+                $this->serviceProviderArray = $this->processApiResponse($serviceProvidersResponseRetry, 'name', 'name');
+            }
+
+            // Si aún no hay datos, cargar TODOS los proveedores de servicio sin filtrar por company
+            // Esto es un fallback para asegurar que siempre haya opciones disponibles
+            if (empty($this->serviceProviderArray)) {
+                $apiParamsAll = [
+                    'active' => 'true',
+                    'per_page' => 1000,
+                ];
+
+                $serviceProvidersResponseAll = $apiService->getServiceProviders($apiParamsAll);
+                $this->serviceProviderArray = $this->processApiResponse($serviceProvidersResponseAll, 'name', 'name');
+            }
+
+            // Si hay un valor guardado (ya sea pasado como parámetro o en $this->service_provider), asegurar que esté en el array
+            $serviceProviderToAdd = $currentServiceProvider ?? $this->service_provider;
+            if ($serviceProviderToAdd && !isset($this->serviceProviderArray[$serviceProviderToAdd])) {
+                $this->serviceProviderArray[$serviceProviderToAdd] = $serviceProviderToAdd;
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error loading service providers in KanbanBoard', [
+                'error' => $e->getMessage(),
+                'trading_company' => $tradingCompanyValue,
+            ]);
+            $this->serviceProviderArray = [];
+        }
+    }
+
+    /**
+     * Process API response and convert to array format for dropdowns
+     * 
+     * @param array|null $response
+     * @param string $keyField Field to use as array key
+     * @param string $valueField Field to use as array value
+     * @return array
+     */
+    protected function processApiResponse($response, $keyField = 'name', $valueField = 'name')
+    {
+        if (!$response || !isset($response['data'])) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($response['data'] as $item) {
+            $key = $item[$keyField] ?? $item['name'] ?? '';
+            $value = $item[$valueField] ?? $item['name'] ?? '';
+            if ($key && $value) {
+                $result[$key] = $value;
+            }
+        }
+
+        // Ordenar alfabéticamente por valor
+        asort($result);
+
+        return $result;
     }
 
 }

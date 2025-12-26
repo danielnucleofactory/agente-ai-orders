@@ -3,21 +3,19 @@
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-        <link rel="stylesheet" href="css/styles.css">
         <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
         <link rel="stylesheet" href="{{ asset('css/styles.css') }}">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <style>
+            /* Estilos generales para multi-select */
             .multi-select {
                 border: 2px solid #28C7A1 !important;
                 border-radius: 0.75rem !important;
                 padding: 0.25rem 0.75rem !important;
                 background: #fff;
-                min-height: 42px;
                 box-sizing: border-box;
             }
             .multi-select-trigger {
-                min-height: 38px;
                 font-size: 1rem;
                 color: #1AAD8A;
                 background: transparent;
@@ -92,6 +90,82 @@
                 font-size: 1rem;
                 font-weight: 500;
             }
+            
+            .filter-button {
+                position: relative;
+            }
+            
+            .filter-button.active {
+                background: #1AAD8A !important;
+                color: #fff !important;
+                border-color: #1AAD8A !important;
+            }
+            
+            .filter-button.active span {
+                color: rgba(255, 255, 255, 0.9) !important;
+            }
+            
+            .filter-button:hover {
+                background: #E6F9F4;
+                transform: translateY(-1px);
+            }
+            
+            .filter-button.active:hover {
+                background: #127A62 !important;
+            }
+            
+            /* Estilos para filtros de 150x40 - Máxima especificidad para sobrescribir styles.css */
+            .filters-section .filter-group {
+                width: 150px !important;
+                max-width: 150px !important;
+            }
+            
+            .filters-section .date-input,
+            .filters-section .date-input-wrapper {
+                width: 150px !important;
+                max-width: 150px !important;
+            }
+            
+            .filters-section input.flatpickr-alt-input {
+                width: 150px !important;
+                max-width: 150px !important;
+                height: 40px !important;
+                min-height: 40px !important;
+                max-height: 40px !important;
+                padding: 8px 14px !important;
+                border: 2px solid #28C7A1 !important;
+                border-radius: 10px !important;
+                font-size: 16px !important;
+                color: #222 !important;
+                font-family: 'Lato', sans-serif !important;
+                box-sizing: border-box !important;
+            }
+            
+            /* Sobrescribir estilos globales de styles.css con máxima especificidad */
+            .filters-section .filter-group .multi-select,
+            .filters-section .filter-group div.multi-select,
+            .filters-section .filter-group [data-multiselect].multi-select,
+            .filters-section .multi-select,
+            .filters-section div.multi-select,
+            .filters-section [data-multiselect].multi-select {
+                width: 150px !important;
+                max-width: 150px !important;
+                min-width: 150px !important;
+                height: 40px !important;
+                min-height: 40px !important;
+                max-height: 40px !important;
+                box-sizing: border-box !important;
+            }
+            
+            .filters-section .filter-group .multi-select-trigger,
+            .filters-section .multi-select-trigger,
+            .filters-section button.multi-select-trigger {
+                width: 100% !important;
+                height: 36px !important;
+                min-height: 36px !important;
+                max-height: 36px !important;
+                box-sizing: border-box !important;
+            }
         </style>
     @endpush
     <!-- Clear Filters Button -->
@@ -102,25 +176,121 @@
     </div>
 
     <!-- Filter Controls -->
-    <div class="filters-section" style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: nowrap; font-family: 'Lato', sans-serif;">
-      <div class="filter-group" data-filter="date-from" style="width: 180px;">
+    <div class="filters-section" style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; font-family: 'Lato', sans-serif; margin-bottom: 24px;">
+      <div class="filter-group" data-filter="date-from" style="width: 150px;">
         <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Fecha inicio</label>
-        <input type="date" id="startDate" class="date-input" style="height: 40px; width: 180px; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
+        <input type="date" id="startDate" class="date-input" style="height: 40px; width: 150px; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
       </div>
-      <div class="filter-group" data-filter="date-to" style="width: 180px;">
+      <div class="filter-group" data-filter="date-to" style="width: 150px;">
         <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Fecha fin</label>
-        <input type="date" id="endDate" class="date-input" style="height: 40px; width: 180px; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
+        <input type="date" id="endDate" class="date-input" style="height: 40px; width: 150px; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
       </div>
-      <div class="filter-group" data-filter="vendor" style="width: 180px;">
-        <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Vendor</label>
-        <div class="multi-select" data-multiselect data-placeholder="Seleccionar vendors" style="height: 40px; width: 180px; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
+      <div class="filter-group" data-filter="customer-type" style="width: 150px;">
+        <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Tipo de cliente</label>
+        <div class="multi-select" id="customer-type-filter" data-multiselect data-placeholder="Seleccionar tipo" style="height: 40px; width: 150px; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
           <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
-            <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar vendors</span>
+            <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar tipo</span>
             <i class="fas fa-chevron-down multi-select-icon"></i>
           </button>
           <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #28C7A1; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(26,173,138,0.08); max-height: 70vh; overflow-y: auto;">
             <div class="multi-select-search">
-              <input type="text" placeholder="Buscar vendors... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
+              <input type="text" placeholder="Buscar tipo... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
+            </div>
+            <div class="multi-select-options"></div>
+            <div class="multi-select-clear">Limpiar selección</div>
+          </div>
+        </div>
+      </div>
+      <div class="filter-group" data-filter="arrival-status" style="width: 150px;">
+        <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Estado</label>
+        <div class="multi-select" id="arrival-status-filter" data-multiselect data-placeholder="Seleccionar estado" style="height: 40px; width: 150px; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
+          <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
+            <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar estado</span>
+            <i class="fas fa-chevron-down multi-select-icon"></i>
+          </button>
+          <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #28C7A1; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(26,173,138,0.08); max-height: 70vh; overflow-y: auto;">
+            <div class="multi-select-search">
+              <input type="text" placeholder="Buscar estado... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
+            </div>
+            <div class="multi-select-options"></div>
+            <div class="multi-select-clear">Limpiar selección</div>
+          </div>
+        </div>
+      </div>
+      <div class="filter-group" data-filter="vendor" style="width: 150px;">
+        <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Proveedor</label>
+        <div class="multi-select" id="vendor-filter-top" data-multiselect data-placeholder="Seleccionar proveedores" style="height: 40px; width: 150px; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
+          <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
+            <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar proveedores</span>
+            <i class="fas fa-chevron-down multi-select-icon"></i>
+          </button>
+          <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #28C7A1; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(26,173,138,0.08); max-height: 70vh; overflow-y: auto;">
+            <div class="multi-select-search">
+              <input type="text" placeholder="Buscar proveedores... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
+            </div>
+            <div class="multi-select-options"></div>
+            <div class="multi-select-clear">Limpiar selección</div>
+          </div>
+        </div>
+      </div>
+      <div class="filter-group" data-filter="departure-port" style="width: 150px;">
+        <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Puerto de embarque</label>
+        <div class="multi-select" id="departure-port-filter" data-multiselect data-placeholder="Seleccionar puerto" style="height: 40px; width: 150px; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
+          <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
+            <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar puerto</span>
+            <i class="fas fa-chevron-down multi-select-icon"></i>
+          </button>
+          <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #28C7A1; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(26,173,138,0.08); max-height: 70vh; overflow-y: auto;">
+            <div class="multi-select-search">
+              <input type="text" placeholder="Buscar puerto... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
+            </div>
+            <div class="multi-select-options"></div>
+            <div class="multi-select-clear">Limpiar selección</div>
+          </div>
+        </div>
+      </div>
+      <div class="filter-group" data-filter="arrival-port" style="width: 150px;">
+        <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Puerto de Arribo</label>
+        <div class="multi-select" id="arrival-port-filter" data-multiselect data-placeholder="Seleccionar puerto" style="height: 40px; width: 150px; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
+          <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
+            <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar puerto</span>
+            <i class="fas fa-chevron-down multi-select-icon"></i>
+          </button>
+          <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #28C7A1; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(26,173,138,0.08); max-height: 70vh; overflow-y: auto;">
+            <div class="multi-select-search">
+              <input type="text" placeholder="Buscar puerto... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
+            </div>
+            <div class="multi-select-options"></div>
+            <div class="multi-select-clear">Limpiar selección</div>
+          </div>
+        </div>
+      </div>
+      <div class="filter-group" data-filter="shipping-line" style="width: 150px;">
+        <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Naviera</label>
+        <div class="multi-select" id="shipping-line-filter" data-multiselect data-placeholder="Seleccionar naviera" style="height: 40px; width: 150px; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
+          <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
+            <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar naviera</span>
+            <i class="fas fa-chevron-down multi-select-icon"></i>
+          </button>
+          <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #28C7A1; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(26,173,138,0.08); max-height: 70vh; overflow-y: auto;">
+            <div class="multi-select-search">
+              <input type="text" placeholder="Buscar naviera... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
+            </div>
+            <div class="multi-select-options"></div>
+            <div class="multi-select-clear">Limpiar selección</div>
+          </div>
+        </div>
+      </div>
+      <div class="filter-group" data-filter="service-provider" style="width: 150px;">
+        <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Proveedor de servicios</label>
+        <div class="multi-select" id="service-provider-filter" data-multiselect data-placeholder="Seleccionar proveedor" style="height: 40px; width: 150px; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
+          <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
+            <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar proveedor</span>
+            <i class="fas fa-chevron-down multi-select-icon"></i>
+          </button>
+          <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #28C7A1; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(26,173,138,0.08); max-height: 70vh; overflow-y: auto;">
+            <div class="multi-select-search">
+              <input type="text" placeholder="Buscar proveedor... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
             </div>
             <div class="multi-select-options"></div>
             <div class="multi-select-clear">Limpiar selección</div>
@@ -128,7 +298,7 @@
         </div>
       </div>
       <div class="action-buttons" style="display: flex; gap: 16px; align-items: flex-end; margin-left: auto;">
-        <button class="btn-primary" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: none; background: #1AAD8A; color: #F7F7F7; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; justify-content: center;">Aceptar</button>
+        <button class="btn-primary" id="apply-filters-btn-top" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: none; background: #1AAD8A; color: #F7F7F7; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; justify-content: center;">Aceptar</button>
         <button id="export-btn" class="btn-secondary" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: 2px solid #1AAD8A; background: #fff; color: #1AAD8A; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; gap: 8px; justify-content: center;">
           <i class="fas fa-download"></i>
           Descargar
@@ -136,65 +306,35 @@
       </div>
     </div>
 
-    <!-- Top Metrics Cards -->
-    <div class="metrics-grid" style="display: flex; gap: 16px; margin-top: 24px;">
-      <div class="metric-card">
-        <p class="metric-label">PO's Activas</p>
-        <span class="metric-value" id="totalPosValue"></span>
-      </div>
-      <div class="metric-card">
-        <p class="metric-label">% PO's on time</p>
-        <span class="metric-value" id="onTimePercentageValue"></span>
-      </div>
-      <div class="metric-card">
-        <p class="metric-label">% PO's atrasadas</p>
-        <span class="metric-value" id="delayedPercentageValue"></span>
-      </div>
-    </div>
-
     <!-- Trend Table Section with Filters Panel -->
-    <div class="trend-table-section" style="position: relative; margin-top: 24px; width: calc(100% + 5rem); max-width: calc(100% + 5rem); margin-left: -2.5rem; margin-right: -2.5rem; padding-left: 2.5rem; padding-right: 2.5rem; box-sizing: border-box;">
-      <!-- Header with metadata -->
-      <div class="trend-table-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 16px; background: #f9fafb; border-radius: 8px; width: 100%; box-sizing: border-box;">
-        <div class="header-left" style="display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
-          <span style="font-size: 14px; color: #374151;">Vista: Global</span>
-          <span style="font-size: 14px; color: #374151;">CC: Todas</span>
-          <span style="font-size: 14px; color: #374151;">Unidades: Cantidad de PO</span>
-        </div>
-        <div class="header-right" style="display: flex; flex-direction: column; gap: 4px; text-align: right; flex-shrink: 0;">
-          <span style="font-size: 14px; color: #374151;">Fecha: Actual</span>
-          <span style="font-size: 14px; color: #374151;">Ejercicio: Mes</span>
-          <span style="font-size: 14px; color: #374151;">Periodo: <span id="currentYear">{{ now()->year }}</span></span>
-        </div>
-      </div>
-
+    <div class="trend-table-section" style="position: relative; width: calc(100% + 5rem); max-width: calc(100% + 5rem); margin-left: -2.5rem; margin-right: -2.5rem; padding-left: 2.5rem; padding-right: 2.5rem; box-sizing: border-box;">
       <!-- Table and Filters Container -->
       <div style="display: flex; gap: 16px; width: 100%; box-sizing: border-box;">
         <!-- Trend Table - 2/3 width -->
-        <div class="table-card" style="display: flex; flex-direction: column; width: 66.67%; box-sizing: border-box;">
-          <h3 class="chart-title" style="text-align: center; margin-bottom: 16px;">Tendencia por Etapas del Kanban</h3>
-          <div class="table-container" style="overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px; width: 100%; max-width: 100%; box-sizing: border-box;">
+        <div class="table-card" style="display: flex; flex-direction: column; width: 66.67%; box-sizing: border-box; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <h3 class="chart-title" style="text-align: center; margin-bottom: 16px; font-size: 18px; font-weight: 600; color: #374151; font-family: 'Lato', sans-serif;">Tendencia por Etapas del Kanban</h3>
+          <div class="table-container" style="overflow-x: auto; width: 100%; max-width: 100%; box-sizing: border-box;">
             <table class="trend-table" id="trendTable" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-              <thead>
-                <tr style="background: #f9fafb;">
-                  <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: 15%;">Descripción</th>
-                  <th class="month-header" data-month="1" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">1-<span class="year">{{ now()->year }}</span></th>
-                  <th class="month-header" data-month="2" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">2-<span class="year">{{ now()->year }}</span></th>
-                  <th class="month-header" data-month="3" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">3-<span class="year">{{ now()->year }}</span></th>
-                  <th class="month-header" data-month="4" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">4-<span class="year">{{ now()->year }}</span></th>
-                  <th class="month-header" data-month="5" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">5-<span class="year">{{ now()->year }}</span></th>
-                  <th class="month-header" data-month="6" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">6-<span class="year">{{ now()->year }}</span></th>
-                  <th class="month-header" data-month="7" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">7-<span class="year">{{ now()->year }}</span></th>
-                  <th class="month-header" data-month="8" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">8-<span class="year">{{ now()->year }}</span></th>
-                  <th class="month-header" data-month="9" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">9-<span class="year">{{ now()->year }}</span></th>
-                  <th class="month-header" data-month="10" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">10-<span class="year">{{ now()->year }}</span></th>
-                  <th class="month-header" data-month="11" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">11-<span class="year">{{ now()->year }}</span></th>
-                  <th class="month-header" data-month="12" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">12-<span class="year">{{ now()->year }}</span></th>
-                </tr>
-              </thead>
-              <tbody id="trendTableBody">
-                <!-- Populated by JavaScript -->
-              </tbody>
+            <thead>
+              <tr style="background: #f9fafb;">
+                <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: 15%;">Descripción</th>
+                <th class="month-header" data-month="1" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">1-<span class="year">{{ now()->year }}</span></th>
+                <th class="month-header" data-month="2" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">2-<span class="year">{{ now()->year }}</span></th>
+                <th class="month-header" data-month="3" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">3-<span class="year">{{ now()->year }}</span></th>
+                <th class="month-header" data-month="4" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">4-<span class="year">{{ now()->year }}</span></th>
+                <th class="month-header" data-month="5" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">5-<span class="year">{{ now()->year }}</span></th>
+                <th class="month-header" data-month="6" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">6-<span class="year">{{ now()->year }}</span></th>
+                <th class="month-header" data-month="7" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">7-<span class="year">{{ now()->year }}</span></th>
+                <th class="month-header" data-month="8" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">8-<span class="year">{{ now()->year }}</span></th>
+                <th class="month-header" data-month="9" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">9-<span class="year">{{ now()->year }}</span></th>
+                <th class="month-header" data-month="10" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">10-<span class="year">{{ now()->year }}</span></th>
+                <th class="month-header" data-month="11" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">11-<span class="year">{{ now()->year }}</span></th>
+                <th class="month-header" data-month="12" style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; width: calc(85% / 12);">12-<span class="year">{{ now()->year }}</span></th>
+              </tr>
+            </thead>
+            <tbody id="trendTableBody">
+              <!-- Populated by JavaScript -->
+            </tbody>
             </table>
           </div>
         </div>
@@ -202,98 +342,23 @@
         <!-- Filters Panel - 1/3 width -->
         <div class="filters-panel" style="width: 33.33%; box-sizing: border-box;">
           <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <h3 style="font-size: 18px; font-weight: 600; color: #374151; margin-bottom: 20px; font-family: 'Lato', sans-serif;">Filtros</h3>
+            <h3 style="font-size: 18px; font-weight: 600; color: #374151; margin-bottom: 20px; font-family: 'Lato', sans-serif;">Filtros Adicionales</h3>
             
-            <!-- Vendor Filter -->
-            <div class="filter-group" style="margin-bottom: 20px;">
-              <label class="filter-label" style="color: #1AAD8A; font-size: 14px; font-weight: 500; margin-bottom: 8px; display: block; font-family: 'Lato', sans-serif;">Vendor</label>
-              <div class="multi-select" data-multiselect data-placeholder="Seleccionar vendors" style="height: 40px; width: 100%; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
-                <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
-                  <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar vendors</span>
-                  <i class="fas fa-chevron-down multi-select-icon"></i>
-                </button>
-                <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #28C7A1; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(26,173,138,0.08); max-height: 70vh; overflow-y: auto;">
-                  <div class="multi-select-search">
-                    <input type="text" placeholder="Buscar vendors... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
-                  </div>
-                  <div class="multi-select-options"></div>
-                  <div class="multi-select-clear">Limpiar selección</div>
-                </div>
-              </div>
+            <!-- Additional Filters Buttons -->
+            <div class="additional-filters-buttons" style="display: flex; flex-direction: column; gap: 12px;">
+              <button type="button" class="filter-button" id="btn-po-retraso-cl" data-filter="po_retraso_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
+                <span style="line-height: 1.2; font-size: 15px;">PO Retraso CL</span>
+                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Retraso > 7 días en carga lista</span>
+              </button>
+              <button type="button" class="filter-button" id="btn-po-adelanto-cl" data-filter="po_adelanto_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
+                <span style="line-height: 1.2; font-size: 15px;">PO Adelanto CL</span>
+                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Adelanto > 7 días en carga lista</span>
+              </button>
+              <button type="button" class="filter-button" id="btn-indicador-capacidad" data-filter="indicador_capacidad" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
+                <span style="line-height: 1.2; font-size: 15px;">Indicador Capacidad</span>
+                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">PO sin fecha ETD</span>
+              </button>
             </div>
-
-            <!-- Hub Filter -->
-            <div class="filter-group" style="margin-bottom: 20px;">
-              <label class="filter-label" style="color: #1AAD8A; font-size: 14px; font-weight: 500; margin-bottom: 8px; display: block; font-family: 'Lato', sans-serif;">Hub</label>
-              <div class="multi-select" data-multiselect data-placeholder="Seleccionar hubs" style="height: 40px; width: 100%; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
-                <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
-                  <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar hubs</span>
-                  <i class="fas fa-chevron-down multi-select-icon"></i>
-                </button>
-                <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #28C7A1; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(26,173,138,0.08); max-height: 70vh; overflow-y: auto;">
-                  <div class="multi-select-search">
-                    <input type="text" placeholder="Buscar hubs... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
-                  </div>
-                  <div class="multi-select-options"></div>
-                  <div class="multi-select-clear">Limpiar selección</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Stage Filter -->
-            <div class="filter-group" style="margin-bottom: 20px;">
-              <label class="filter-label" style="color: #1AAD8A; font-size: 14px; font-weight: 500; margin-bottom: 8px; display: block; font-family: 'Lato', sans-serif;">Etapa</label>
-              <div class="multi-select" data-multiselect data-placeholder="Seleccionar etapas" style="height: 40px; width: 100%; border: 2px solid #28C7A1; border-radius: 10px; padding: 0; background: #fff;">
-                <button type="button" class="multi-select-trigger" style="height: 36px; color: #222; font-size: 16px; font-family: 'Lato', sans-serif; padding: 8px 14px; background: transparent; border: none; width: 100%; text-align: left; display: flex; align-items: center;">
-                  <span class="multi-select-value" style="color: #AFAFAF;">Seleccionar etapas</span>
-                  <i class="fas fa-chevron-down multi-select-icon"></i>
-                </button>
-                <div class="multi-select-content" style="border-radius: 10px; border: 2px solid #28C7A1; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(26,173,138,0.08); max-height: 70vh; overflow-y: auto;">
-                  <div class="multi-select-search">
-                    <input type="text" placeholder="Buscar etapas... (ESC para limpiar)" class="multi-select-search-input" style="color: #222; font-size: 16px; font-family: 'Lato', sans-serif;">
-                  </div>
-                  <div class="multi-select-options"></div>
-                  <div class="multi-select-clear">Limpiar selección</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Additional Filters -->
-            <div class="additional-filters" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-              <h4 style="font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 16px; font-family: 'Lato', sans-serif;">Filtros Adicionales</h4>
-              
-              <!-- PO Retraso CL -->
-              <div style="margin-bottom: 16px;">
-                <label style="display: flex; align-items: center; cursor: pointer; font-family: 'Lato', sans-serif;">
-                  <input type="checkbox" id="filter-po-retraso-cl" name="po_retraso_cl" value="1" style="width: 18px; height: 18px; margin-right: 10px; cursor: pointer; accent-color: #1AAD8A;">
-                  <span style="font-size: 14px; color: #374151;">PO Retraso CL</span>
-                </label>
-                <p style="font-size: 12px; color: #6b7280; margin-top: 4px; margin-left: 28px;">Retraso > 7 días en carga lista</p>
-              </div>
-
-              <!-- PO Adelanto CL -->
-              <div style="margin-bottom: 16px;">
-                <label style="display: flex; align-items: center; cursor: pointer; font-family: 'Lato', sans-serif;">
-                  <input type="checkbox" id="filter-po-adelanto-cl" name="po_adelanto_cl" value="1" style="width: 18px; height: 18px; margin-right: 10px; cursor: pointer; accent-color: #1AAD8A;">
-                  <span style="font-size: 14px; color: #374151;">PO Adelanto CL</span>
-                </label>
-                <p style="font-size: 12px; color: #6b7280; margin-top: 4px; margin-left: 28px;">Adelanto > 7 días en carga lista</p>
-              </div>
-
-              <!-- Indicador Capacidad -->
-              <div style="margin-bottom: 16px;">
-                <label style="display: flex; align-items: center; cursor: pointer; font-family: 'Lato', sans-serif;">
-                  <input type="checkbox" id="filter-indicador-capacidad" name="indicador_capacidad" value="1" style="width: 18px; height: 18px; margin-right: 10px; cursor: pointer; accent-color: #1AAD8A;">
-                  <span style="font-size: 14px; color: #374151;">Indicador Capacidad</span>
-                </label>
-                <p style="font-size: 12px; color: #6b7280; margin-top: 4px; margin-left: 28px;">PO sin fecha ETD</p>
-              </div>
-            </div>
-
-            <!-- Apply Filters Button -->
-            <button id="apply-filters-btn" class="btn-primary" style="width: 100%; height: 40px; margin-top: 20px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: none; background: #1AAD8A; color: #F7F7F7; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-              Aplicar Filtros
-            </button>
           </div>
         </div>
       </div>

@@ -37,6 +37,13 @@ class HistoricalDataTable extends Component
         $this->resetPage();
     }
 
+    public function updatedSearch()
+    {
+        \Log::debug('HistoricalDataTable search updated', [
+            'search' => $this->search,
+        ]);
+    }
+
     public function updatingFilters()
     {
         $this->resetPage();

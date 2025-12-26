@@ -22,6 +22,7 @@ use App\Livewire\Settings\Sessions;
 use App\Livewire\Settings\ApiTokens;
 use App\Http\Controllers\AuthorizationController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DashboardKPIController;
 use App\Http\Controllers\ForecastController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
@@ -35,9 +36,44 @@ Route::get('/', function () {
 
 // Dashboard routes
 Route::middleware(['auth', 'verified', 'permission:has_view_dashboard'])->group(function () {
-    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // Dashboard principal ahora es el KPI dashboard
+    Route::view('dashboard', 'dashboard-kpi')->name('dashboard');
+    // Mantener rutas del dashboard antiguo por compatibilidad (si se necesitan)
     Route::get('dashboard/data', [DashboardController::class, 'getData'])->name('dashboard.data');
     Route::get('dashboard/export', [DashboardController::class, 'export'])->name('dashboard.export');
+    // Mantener ruta dashboard-kpi como alias
+    Route::view('dashboard-kpi', 'dashboard-kpi')->name('dashboard.kpi');
+    
+    // Dashboard KPI API endpoints (para consumir desde JavaScript)
+    Route::prefix('dashboard-kpi/api')->group(function () {
+        Route::get('/', [DashboardKPIController::class, 'index'])->name('dashboard.kpi.api');
+        Route::get('/filter-options', [DashboardKPIController::class, 'getFilterOptions'])->name('dashboard.kpi.filter-options');
+        Route::get('/kpi-summary', [DashboardKPIController::class, 'getKPISummary'])->name('dashboard.kpi.summary');
+        
+        // Vista Tendencia - Cantidad de PO
+        Route::get('/pos-by-stage', [DashboardKPIController::class, 'posByStage'])->name('dashboard.kpi.pos-by-stage');
+        Route::get('/pos-delay-cl', [DashboardKPIController::class, 'posDelayCL'])->name('dashboard.kpi.pos-delay-cl');
+        Route::get('/pos-advance-cl', [DashboardKPIController::class, 'posAdvanceCL'])->name('dashboard.kpi.pos-advance-cl');
+        Route::get('/capacity', [DashboardKPIController::class, 'capacity'])->name('dashboard.kpi.capacity');
+        Route::get('/transshipment', [DashboardKPIController::class, 'transshipment'])->name('dashboard.kpi.transshipment');
+        Route::get('/pos-with-ata', [DashboardKPIController::class, 'posWithATA'])->name('dashboard.kpi.pos-with-ata');
+        Route::get('/transit-time', [DashboardKPIController::class, 'transitTime'])->name('dashboard.kpi.transit-time');
+        
+        // Vista Comparativo
+        Route::post('/compare-atd', [DashboardKPIController::class, 'compareATD'])->name('dashboard.kpi.compare-atd');
+        Route::post('/compare-ata', [DashboardKPIController::class, 'compareATA'])->name('dashboard.kpi.compare-ata');
+        Route::post('/compare-delay-cl', [DashboardKPIController::class, 'compareDelayCL'])->name('dashboard.kpi.compare-delay-cl');
+        Route::post('/compare-advance-cl', [DashboardKPIController::class, 'compareAdvanceCL'])->name('dashboard.kpi.compare-advance-cl');
+        
+        // Vista PO vs TEUs
+        Route::get('/po-vs-teus/stage', [DashboardKPIController::class, 'poVsTeusByStage'])->name('dashboard.kpi.po-vs-teus-stage');
+        Route::get('/po-vs-teus/period', [DashboardKPIController::class, 'poVsTeusByPeriod'])->name('dashboard.kpi.po-vs-teus-period');
+        Route::get('/po-vs-teus/vendor', [DashboardKPIController::class, 'poVsTeusByVendor'])->name('dashboard.kpi.po-vs-teus-vendor');
+        Route::get('/po-vs-teus/shipping-line', [DashboardKPIController::class, 'poVsTeusByShippingLine'])->name('dashboard.kpi.po-vs-teus-shipping-line');
+        
+        // Vista Proyección
+        Route::get('/future-arrivals', [DashboardKPIController::class, 'futureArrivals'])->name('dashboard.kpi.future-arrivals');
+    });
 });
 
 Route::view('profile', 'profile')
@@ -79,16 +115,16 @@ Route::middleware(['auth'])->group(function () {
     })->middleware('permission:has_edit_forecast')->name('products.forecast.edit');
 });
 
-// Rutas para documentación de envío
+// Rutas para documentación de envío - OCULTADO
 Route::middleware(['auth'])->group(function () {
     // Vista principal de documentación de envío
-    Route::view('shipping-documentation', 'shipping-documentation.index')
-        ->middleware('permission:has_view_shipping_docs')
-        ->name('shipping-documentation.index');
+    // Route::view('shipping-documentation', 'shipping-documentation.index')
+    //     ->middleware('permission:has_view_shipping_docs')
+    //     ->name('shipping-documentation.index');
 
-    Route::view('shipping-documentation/create', 'shipping-documentation.create')
-        ->middleware('permission:has_create_shipping_docs')
-        ->name('shipping-documentation.create');
+    // Route::view('shipping-documentation/create', 'shipping-documentation.create')
+    //     ->middleware('permission:has_create_shipping_docs')
+    //     ->name('shipping-documentation.create');
 
     // Rutas para proveedores
     Route::view('vendors', 'vendors.index')
@@ -111,8 +147,8 @@ Route::middleware(['auth'])->group(function () {
     Route::view('ship-to/{id}/edit', 'ship-to.edit')
         ->name('ship-to.edit');
 
-    Route::view('shipping-documentation/requests', 'shipping-documentation.requests')
-        ->name('shipping-documentation.requests');
+    // Route::view('shipping-documentation/requests', 'shipping-documentation.requests')
+    //     ->name('shipping-documentation.requests');
 
     // Rutas para órdenes de compra (si no existen ya)
     Route::view('purchase-orders', 'purchase-orders.index')
@@ -250,15 +286,35 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth'])->group(function () {
-    Route::view('support', 'support.index')
-        ->name('support.index');
-    
     Route::get('support/contact', \App\Livewire\Support\ContactForm::class)
         ->name('support.contact');
 
     Route::view('historical-data', 'historical-data.index')
         ->middleware('permission:has_view_historical_data')
         ->name('historical-data.index');
+    
+    Route::get('historical-data/export', [\App\Http\Controllers\HistoricalDataController::class, 'export'])
+        ->middleware('permission:has_view_historical_data')
+        ->name('historical-data.export');
+
+    // Rutas para Maestros
+    Route::view('maestros/container-types', 'maestros.container-types.index')
+        ->name('maestros.container-types.index');
+
+    Route::view('maestros/ports', 'maestros.ports.index')
+        ->name('maestros.ports.index');
+
+    Route::view('maestros/transport-types', 'maestros.transport-types.index')
+        ->name('maestros.transport-types.index');
+
+    Route::view('maestros/shipping-lines', 'maestros.shipping-lines.index')
+        ->name('maestros.shipping-lines.index');
+
+    Route::view('maestros/service-providers', 'maestros.service-providers.index')
+        ->name('maestros.service-providers.index');
+
+    Route::view('maestros/rate-types', 'maestros.rate-types.index')
+        ->name('maestros.rate-types.index');
 });
 
 // Ruta de prueba para el módulo PO Confirmation
