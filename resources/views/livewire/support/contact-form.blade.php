@@ -1,4 +1,31 @@
 <div>
+    <!-- Notification area for errors and success messages -->
+    <div x-data="{ showNotification: false, notificationMessage: '', notificationType: 'error' }"
+         @show-error.window="showNotification = true; notificationMessage = $event.detail; notificationType = 'error'; setTimeout(() => showNotification = false, 5000)"
+         @show-success.window="showNotification = true; notificationMessage = $event.detail; notificationType = 'success'; setTimeout(() => showNotification = false, 5000)">
+
+        <!-- Error/Success Notification -->
+        <div x-show="showNotification"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 transform translate-y-2"
+             x-transition:enter-end="opacity-100 transform translate-y-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 transform translate-y-2"
+             class="fixed top-4 right-4 z-50 p-4 max-w-sm rounded-lg shadow-lg"
+             :class="notificationType === 'error' ? 'bg-red-100 border border-red-400 text-red-700' : 'bg-green-100 border border-green-400 text-green-700'"
+             style="display: none;">
+            <div class="flex items-center justify-between">
+                <p x-text="notificationMessage" class="font-medium"></p>
+                <button @click="showNotification = false" class="ml-4 text-gray-500 hover:text-gray-700">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <main class="relative flex justify-between w-full px-4 sm:px-0">
         <div class="w-full px-10 space-y-5">
             <div>
@@ -151,17 +178,15 @@
     </main>
 
     <!-- Modal de éxito -->
-    @if($showSuccessModal)
-        <x-modal-success>
-            <x-slot:title>
-                Solicitud enviada correctamente
-            </x-slot:title>
-            <x-slot:content>
-                Tu solicitud de soporte ha sido enviada correctamente. Te contactaremos pronto.
-            </x-slot:content>
-            <x-slot:button wire:click="closeModal">
-                Cerrar
-            </x-slot:button>
-        </x-modal-success>
-    @endif
+    <x-modal-success name="modal-support-request-sent">
+        <x-slot:title>
+            Solicitud enviada correctamente
+        </x-slot:title>
+        <x-slot:description>
+            Tu solicitud de soporte ha sido enviada correctamente. Te contactaremos pronto.
+        </x-slot:description>
+        <x-primary-button wire:click="closeModal" class="w-full">
+            Cerrar
+        </x-primary-button>
+    </x-modal-success>
 </div>

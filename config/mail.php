@@ -113,4 +113,18 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Support Email Address
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify the email address that should receive support
+    | requests from the contact form.
+    |
+    */
+
+    'support' => [
+        'address' => env('MAIL_SUPPORT_EMAIL', 'soporte@example.com'),
+    ],
+
 ];
