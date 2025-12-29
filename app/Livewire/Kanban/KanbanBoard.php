@@ -42,7 +42,7 @@ class KanbanBoard extends Component
     public $date_booking_request;
     public $date_booking_authorized;
     public $date_etd_initial;
-    public $date_etd_updated;
+    public $date_etd; // ETD Variable (antes date_etd_updated, que ya no existe en la DB)
     public $mode;
     public $comment_stage_03;
 
@@ -588,7 +588,7 @@ class KanbanBoard extends Component
             $this->date_booking_request = $po->date_booking_request ? $po->date_booking_request->format('Y-m-d') : null;
             $this->date_booking_authorized = $po->date_booking_authorized ? $po->date_booking_authorized->format('Y-m-d') : null;
             $this->date_etd_initial = $po->date_etd_initial ? $po->date_etd_initial->format('Y-m-d') : null;
-            $this->date_etd_updated = $po->date_etd_updated ? $po->date_etd_updated->format('Y-m-d') : null;
+            $this->date_etd = $po->date_etd ? $po->date_etd->format('Y-m-d') : null; // ETD Variable
             if ($newColumnId != 3) {
                 $this->mode = $po->mode;
             }
@@ -835,7 +835,7 @@ class KanbanBoard extends Component
     {
         return [
             2 => ['date_variable_date', 'date_theorical_load', 'service_provider', 'forwarder_name'], // Producción
-            3 => ['date_booking_request', 'date_booking_authorized', 'date_etd_initial', 'date_etd_updated', 'mode'], // Booking
+            3 => ['date_booking_request', 'date_booking_authorized', 'date_etd_initial', 'date_etd', 'mode'], // Booking
             4 => [], // Consolidador (sin campos específicos)
             5 => [
                 'date_atd', 'date_eta', 'date_eta_updated', 'container_type',
@@ -971,7 +971,7 @@ class KanbanBoard extends Component
                 'date_booking_request'    => 'required|date',
                 'date_booking_authorized' => 'required|date',
                 'date_etd_initial'        => 'required|date',
-                'date_etd_updated'        => 'required|date',
+                'date_etd'                => 'required|date', // ETD Variable
                 'mode'                    => 'required|string',
             ],
 
@@ -1016,7 +1016,7 @@ class KanbanBoard extends Component
             'date_booking_request'   => 'Solicitud de booking',
             'date_booking_authorized'=> 'Aut. Booking',
             'date_etd_initial'       => 'ETD Inicial',
-            'date_etd_updated'       => 'ETD Variable',
+            'date_etd'               => 'ETD Variable',
             'mode'                   => 'Modo de transporte',
             'date_atd'               => 'ETD Real',
             'date_eta'               => 'ETA inicial',

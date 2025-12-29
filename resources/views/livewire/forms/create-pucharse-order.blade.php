@@ -115,7 +115,7 @@
 
                             {{-- Número de Orden (PO) --}}
                             <x-form-input>
-                                <x-slot name="label">Número de Orden (PO)</x-slot>
+                                <x-slot name="label">Número de Orden (PO) <span class="text-red-500">*</span></x-slot>
                                 <x-slot:input
                                     name="order_number"
                                     placeholder="Ingrese número de orden"
@@ -167,7 +167,7 @@
 
                             {{-- Incoterm Precios --}}
                             <x-form-select
-                                label="Incoterm Precios"
+                                label="Incoterm Precios <span class='text-red-500'>*</span>"
                                 name="price_incoterm"
                                 :options="$tiposIncotermArray"
                                 wire:model="price_incoterm"
@@ -176,7 +176,7 @@
 
                             {{-- Incoterms (Compra) --}}
                             <x-form-select
-                                label="Incoterm de Compra"
+                                label="Incoterm de Compra <span class='text-red-500'>*</span>"
                                 name="incoterms"
                                 :options="$tiposIncotermArray"
                                 wire:model="incoterms"
@@ -199,7 +199,7 @@
 
                             {{-- Incoterm logístico --}}
                             <x-form-select
-                                label="Incoterm logístico"
+                                label="Incoterm logístico <span class='text-red-500'>*</span>"
                                 name="logistics_incoterm"
                                 :options="$tiposIncotermArray"
                                 wire:model="logistics_incoterm"
@@ -351,7 +351,7 @@
                 <h3 class="text-lg font-bold text-[#1AAD8A]">Datos Proveedor</h3>
 
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
-                    <x-form-select label="Seleccionar Nombre del Proveedor" name="vendor_id" wireModel="vendor_id"
+                    <x-form-select label="Seleccionar Nombre del Proveedor <span class='text-red-500'>*</span>" name="vendor_id" wireModel="vendor_id"
                         wire:change="onVendorSelected"
                         :options="$vendorArray" :error="$errors->has('vendor_id') ? true : false" />
 
@@ -564,14 +564,12 @@
                         </x-form-input>
                     </div>
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Fecha Carga Lista Teórica</x-slot:label>
-                            <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" class="pr-10 {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
-                            </x-slot:input>
-                            <x-slot:error>{{ $errors->first('date_theorical_load') }}</x-slot:error>
-                        </x-form-input>
-                    </div>
+                    <x-form-input>
+                        <x-slot:label>Fecha Carga Lista Teórica <span class="text-red-500">*</span></x-slot:label>
+                        <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" class="pr-10 {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
+                        </x-slot:input>
+                        <x-slot:error>{{ $errors->first('date_theorical_load') }}</x-slot:error>
+                    </x-form-input>
 
                     <div wire:ignore>
                         <x-form-input>
@@ -1057,8 +1055,11 @@
                                     placeholder="Ingrese nombre del cliente (ej: OLO1)"
                                     wire:model.live.debounce.500ms="trading_company"
                                     :readonly="$id ? true : false"
-                                    class="{{ $id ? 'bg-gray-100 cursor-not-allowed' : '' }}">
+                                    class="pr-10 {{ $errors->has('trading_company') ? 'border-red-500' : '' }} {{ $id ? 'bg-gray-100 cursor-not-allowed' : '' }}">
                                 </x-slot:input>
+                                <x-slot:error>
+                                    {{ $errors->first('trading_company') }}
+                                </x-slot:error>
                             </x-form-input>
                             <div wire:loading wire:target="trading_company" class="flex absolute right-3 top-9 items-center">
                                 <svg class="w-4 h-4 text-blue-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1082,7 +1083,7 @@
                         />
 
                         <x-form-select
-                            label="Ruta Logística"
+                            label="Ruta Logística <span class='text-red-500'>*</span>"
                             name="route_label"
                             :options="$routeLabelArray"
                             wire:model="route_label"

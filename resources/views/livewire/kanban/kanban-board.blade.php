@@ -286,12 +286,12 @@
                                         <x-slot:label>ETD Variable <span class="text-red-500">*</span></x-slot:label>
                                         <x-slot:input
                                             type="date"
-                                            name="date_etd_updated"
-                                            wire:model="date_etd_updated"
-                                            class="w-full pr-10 {{ $errors->has('date_etd_updated') ? 'border-red-500'  : '' }}">
+                                            name="date_etd"
+                                            wire:model="date_etd"
+                                            class="w-full pr-10 {{ $errors->has('date_etd') ? 'border-red-500'  : '' }}">
                                         </x-slot:input>
                                         <x-slot:error>
-                                            {{ $errors->first('date_etd_updated') }}
+                                            {{ $errors->first('date_etd') }}
                                         </x-slot:error>
                                     </x-form-input>
                                 </div>
@@ -654,7 +654,7 @@
                 'date_booking_request',
                 'date_booking_authorized',
                 'date_etd_initial',
-                'date_etd_updated',
+                'date_etd',
                 'date_atd',
                 'date_eta',
                 'date_eta_updated',
