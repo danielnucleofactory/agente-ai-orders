@@ -1417,6 +1417,7 @@ class CreatePucharseOrder extends Component
                     'required',
                     'unique:purchase_orders,order_number,NULL,id,company_id,' . $companyId
                 ],
+                'trading_company' => 'required|string',
                 'incoterms' => "required|string|in:$allowedIncoterms",
                 'logistics_incoterm' => "required|string|in:$allowedIncoterms",
                 'price_incoterm' => "required|string|in:$allowedIncoterms",
@@ -1441,6 +1442,7 @@ class CreatePucharseOrder extends Component
             ], [
                 'order_number.required' => 'El número de orden es requerido',
                 'order_number.unique' => 'Este número de orden ya existe. Por favor, use un número diferente.',
+                'trading_company.required' => 'El campo Cliente es requerido',
                 'incoterms.required' => 'El incoterm de compra es requerido',
                 'logistics_incoterms.required' => 'El incoterms de logística es requerido',
                 'price_incoterm.required' => 'El incoterm de precio es requerido',
@@ -1601,13 +1603,36 @@ class CreatePucharseOrder extends Component
                 ];
 
                 // Filtrar valores nulos o vacíos para evitar errores
+                // Mantener valores 0, 0.0, false, y strings vacíos que puedan ser necesarios
                 $poData = array_filter($poData, function($value) {
-                    return $value !== null && $value !== '' || $value === 0 || $value === 0.0;
+                    // Mantener valores numéricos (incluyendo 0), booleanos, y arrays
+                    if (is_numeric($value) || is_bool($value) || is_array($value)) {
+                        return true;
+                    }
+                    // Eliminar solo null y strings vacíos
+                    return $value !== null && $value !== '';
                 });
 
+                \Log::info('Intentando crear PO con datos', [
+                    'order_number' => $poData['order_number'] ?? 'N/A',
+                    'vendor_id' => $poData['vendor_id'] ?? 'N/A',
+                    'company_id' => $poData['company_id'] ?? 'N/A',
+                    'campos_count' => count($poData)
+                ]);
+
                 // Crear nueva orden
-                $purchaseOrder = \App\Models\PurchaseOrder::create($poData);
-                \Log::info('Orden creada con datos básicos', ['id' => $purchaseOrder->id]);
+                try {
+                    $purchaseOrder = \App\Models\PurchaseOrder::create($poData);
+                    \Log::info('Orden creada con datos básicos', ['id' => $purchaseOrder->id, 'order_number' => $purchaseOrder->order_number]);
+                } catch (\Exception $createException) {
+                    \Log::error('Error al crear PurchaseOrder', [
+                        'error' => $createException->getMessage(),
+                        'trace' => $createException->getTraceAsString(),
+                        'data_keys' => array_keys($poData),
+                        'order_number' => $poData['order_number'] ?? 'N/A'
+                    ]);
+                    throw $createException;
+                }
 
                 // Guardar el ID de la orden recién creada
                 $this->id = $purchaseOrder->id;
@@ -1622,7 +1647,6 @@ class CreatePucharseOrder extends Component
                         'unit_price' => $product['price_per_unit'] ?? 0
                     ]);
                 }
-
                 \DB::commit();
 
                 // Dispatch webhook event for created purchase order
@@ -1719,28 +1743,55 @@ class CreatePucharseOrder extends Component
                 $this->dispatch('show-success', 'Orden de compra creada exitosamente con número: ' . $this->order_number);
                 $this->dispatch('open-modal', 'modal-purchase-order-created');
 
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                \DB::rollBack();
+                \Log::warning('ValidationException capturada en try interno', [
+                    'errors' => $e->errors(),
+                    'message' => $e->getMessage()
+                ]);
+                // Re-lanzar la ValidationException para que Livewire la maneje automáticamente
+                throw $e;
             } catch (\Exception $e) {
                 \DB::rollBack();
-                \Log::error('Error en createPurchaseOrder: ' . $e->getMessage(), [
-                    'trace' => $e->getTraceAsString()
+                \Log::error('Error en createPurchaseOrder (try interno): ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                    'class' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
                 ]);
 
                 // Check if it's a duplicate key error
-                if (strpos($e->getMessage(), 'duplicate key value violates unique constraint') !== false) {
+                if (strpos($e->getMessage(), 'duplicate key value violates unique constraint') !== false || 
+                    strpos($e->getMessage(), 'SQLSTATE[23505]') !== false) {
                     $this->addError('order_number', 'Este número de orden ya existe. Por favor, use un número diferente.');
+                    $this->dispatch('show-error', 'Este número de orden ya existe. Por favor, use un número diferente.');
                 } else {
-                    session()->flash('error', 'Error al guardar la orden: ' . $e->getMessage());
+                    $errorMessage = 'Error al guardar la orden: ' . $e->getMessage();
+                    session()->flash('error', $errorMessage);
+                    $this->dispatch('show-error', $errorMessage);
                 }
-
-                // Dispatch error event to show notification
-                $this->dispatch('show-error', 'Error al crear la orden de compra. Por favor, revise los campos y vuelva a intentar.');
+                
+                // No re-lanzar aquí, ya se manejó el error
+                return;
             }
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Error de validación', [
+            \Log::warning('Error de validación capturado en catch externo', [
                 'errors' => $e->errors(),
                 'message' => $e->getMessage()
             ]);
+            // Re-lanzar para que Livewire muestre automáticamente los errores en los campos
             throw $e;
+        } catch (\Exception $e) {
+            \Log::error('Error inesperado en createPurchaseOrder (catch externo): ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            $errorMessage = 'Error inesperado al crear la orden: ' . $e->getMessage();
+            session()->flash('error', $errorMessage);
+            $this->dispatch('show-error', $errorMessage);
         }
     }
 
