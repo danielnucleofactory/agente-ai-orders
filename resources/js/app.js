@@ -401,7 +401,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // Re-inicializar después de que Livewire actualice el DOM
 document.addEventListener('livewire:navigated', function() {
     initializeDatePickers();
-});
 
 // Función auxiliar para obtener el placeholder según el formato del usuario
 function getDatePlaceholder() {
@@ -637,4 +636,5 @@ document.addEventListener('livewire:init', function() {
             syncDatePickers();
         }
     });
+});
 });

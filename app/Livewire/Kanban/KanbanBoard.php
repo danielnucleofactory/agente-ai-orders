@@ -52,7 +52,7 @@ class KanbanBoard extends Component
     // En Tránsito (id 5)
     public $date_atd;
     public $date_eta;
-    public $date_eta_updated;
+    public $date_eta_initial;
     public $container_type;
     public $container_number;
     public $bill_of_lading;
@@ -499,7 +499,11 @@ class KanbanBoard extends Component
             return;
         }
 
-        $this->validateStageRequirements($stage);
+        try {
+            $this->validateStageRequirements($stage);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        }
 
         // 1) Guardar comentario + adjunto si existen
         $hasComment = is_string($this->comment ?? '') && trim($this->comment) !== '';
@@ -508,7 +512,14 @@ class KanbanBoard extends Component
         }
 
         // 2) Guardar campos del formulario de la etapa
-        $this->saveDataByModal(); // ya maneja transacción y payload por etapa
+        $saveResult = $this->saveDataByModal(); // ya maneja transacción y payload por etapa
+
+        if (!$saveResult['ok']) {
+            session()->flash('message', $saveResult['message'] ?? 'No se pudo guardar los datos de la etapa.');
+            // NO mover la tarea si el guardado falló
+            $this->dispatch('refreshKanban');
+            return;
+        }
 
         // 3) Mover a la etapa nueva (y notificar)
         $this->moveTask($poId, $stage);
@@ -524,6 +535,66 @@ class KanbanBoard extends Component
 
         // 5) Cerrar el modal unificado
         $this->dispatch('close-modal', 'modal-po-stage-change');
+    }
+
+    /**
+     * Limpiar todos los datos del modal cuando se cancela
+     */
+    public function cancelModal(): void
+    {
+        // Limpiar todos los campos de todas las etapas
+        $allStages = [2, 3, 4, 5, 6, 7, 10];
+        foreach ($allStages as $stage) {
+            foreach (($this->fieldsByStage()[$stage] ?? []) as $field) {
+                if (property_exists($this, $field)) {
+                    $this->$field = null;
+                }
+            }
+        }
+
+        // Limpiar explícitamente los campos de fecha de "En Tránsito" para asegurar que se limpien
+        $this->date_atd = null;
+        $this->date_eta = null;
+        $this->date_eta_initial = null;
+
+        // Limpiar comentarios de todas las etapas
+        $this->comment_stage_01 = null;
+        $this->comment_stage_02 = null;
+        $this->comment_stage_03 = null;
+        $this->comment_stage_04 = null;
+        $this->comment_stage_05 = null;
+        $this->comment_stage_06 = null;
+        $this->comment_stage_07 = null;
+        $this->comment_stage_08 = null;
+        $this->comment_stage_09 = null;
+
+        // Limpiar comentario y adjunto
+        $this->comment = '';
+        $this->attachment = null;
+
+        // Limpiar referencias a la tarea actual
+        $this->currentTaskId = null;
+        $this->newColumnId = null;
+        $this->currentTask = null;
+
+        // Limpiar arrays de opciones
+        $this->departurePortArray = [];
+        $this->arrivalPortArray = [];
+        $this->shippingLineArray = [];
+        $this->containerTypeArray = [];
+        $this->serviceProviderArray = [];
+        $this->transportTypeArray = [];
+
+        // Resetear errores de validación
+        $this->resetErrorBag();
+        $this->resetValidation();
+
+        // Cerrar el modal y forzar actualización del componente
+        $this->dispatch('close-modal', 'modal-po-stage-change');
+        $this->dispatch('refreshKanban');
+        
+        // Forzar re-render del componente para limpiar el estado en el frontend
+        $this->dispatch('$refresh');
     }
 
     public function setCurrentTask($taskId, $newColumnId)
@@ -570,15 +641,6 @@ class KanbanBoard extends Component
                 $this->arrival_port = $po->arrival_port;
                 $this->container_type = $po->container_type;
                 
-                \Log::info('KanbanBoard: Loading data for En Tránsito stage', [
-                    'po_id' => $po->id,
-                    'shipping_line' => $this->shipping_line,
-                    'departure_port' => $this->departure_port,
-                    'arrival_port' => $this->arrival_port,
-                    'container_type' => $this->container_type,
-                    'trading_company' => $po->trading_company
-                ]);
-                
                 $this->loadShippingLines($po->trading_company, $po->shipping_line);
                 $this->loadPorts($po->trading_company, $po->departure_port, $po->arrival_port);
                 $this->loadContainerTypes($po->trading_company, $po->container_type);
@@ -596,7 +658,7 @@ class KanbanBoard extends Component
             // En Tránsito - convertir fechas al formato Y-m-d
             $this->date_atd = $po->date_atd ? $po->date_atd->format('Y-m-d') : null;
             $this->date_eta = $po->date_eta ? $po->date_eta->format('Y-m-d') : null;
-            $this->date_eta_updated = $po->date_eta_updated ? $po->date_eta_updated->format('Y-m-d') : null;
+            $this->date_eta_initial = $po->date_eta_initial ? $po->date_eta_initial->format('Y-m-d') : null;
             if ($newColumnId != 5) {
                 $this->container_type = $po->container_type;
             }
@@ -838,7 +900,7 @@ class KanbanBoard extends Component
             3 => ['date_booking_request', 'date_booking_authorized', 'date_etd_initial', 'date_etd', 'mode'], // Booking
             4 => [], // Consolidador (sin campos específicos)
             5 => [
-                'date_atd', 'date_eta', 'date_eta_updated', 'container_type',
+                'date_atd', 'date_eta', 'date_eta_initial', 'container_type',
                 'container_number', 'bill_of_lading',
                 'shipment_amount', 'shipping_line', 'shipment_status', 'merchandise_invoice',
                 'tracking_id', 'departure_port', 'arrival_port',
@@ -888,11 +950,13 @@ class KanbanBoard extends Component
                 ->update($payload);
 
             // si quieres, puedes verificar que exista la PO
-             if ($updated === 0) { throw new \RuntimeException('PO no encontrada'); }
+             if ($updated === 0) { 
+                 throw new \RuntimeException('PO no encontrada'); 
+             }
 
             // NUEVO: Actualizar automáticamente arrival_status y delay_days si se actualizó la ETA
             $po = PurchaseOrder::find($poId);
-            if ($po && (isset($payload['date_eta']) || isset($payload['date_eta_updated']))) {
+            if ($po && (isset($payload['date_eta']) || isset($payload['date_eta_initial']))) {
                 $po->updateArrivalStatus();
             }
 
@@ -960,7 +1024,7 @@ class KanbanBoard extends Component
         return [
             2 => [
                 'date_variable_date' => 'required|date',
-                'service_provider'   => 'required|string',
+                'service_provider'   => 'nullable|string',
                 // forwarder_name está oculto en la vista, por lo que no debe ser requerido
                 // 'forwarder_name'     => 'required|string',
                 // Si más adelante decides exigir la teórica:
@@ -978,7 +1042,7 @@ class KanbanBoard extends Component
             5 => [
                 'date_atd'         => 'required|date',
                 'date_eta'         => 'required|date',
-                'date_eta_updated' => 'required|date',
+                'date_eta_initial' => 'required|date',
                 // Validación compleja: al menos uno de estos tres campos debe estar presente
                 'container_number' => 'nullable|required_without_all:tracking_id,bill_of_lading|string',
                 'bill_of_lading'   => 'nullable|required_without_all:tracking_id,container_number',
@@ -1020,7 +1084,7 @@ class KanbanBoard extends Component
             'mode'                   => 'Modo de transporte',
             'date_atd'               => 'ETD Real',
             'date_eta'               => 'ETA inicial',
-            'date_eta_updated'       => 'ETA variable',
+            'date_eta_initial'       => 'ETA variable',
             'container_number'       => 'Contenedor',
             'container_type'         => 'Tipo de contenedor',
             'bill_of_lading'         => 'BL',
@@ -1089,17 +1153,10 @@ class KanbanBoard extends Component
         
         if ($serviceProviderToAdd && trim($serviceProviderToAdd) !== '') {
             $this->serviceProviderArray[$serviceProviderToAdd] = $serviceProviderToAdd;
-            \Log::info('KanbanBoard: Added saved service provider to array', [
-                'service_provider' => $serviceProviderToAdd,
-                'array_count' => count($this->serviceProviderArray)
-            ]);
         }
         
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
-            \Log::info('KanbanBoard: No trading company, returning with saved value only', [
-                'array_count' => count($this->serviceProviderArray)
-            ]);
             if (empty($this->serviceProviderArray)) {
                 $this->serviceProviderArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente";
             }
@@ -1119,21 +1176,12 @@ class KanbanBoard extends Component
             $serviceProvidersResponse = $this->getServiceProvidersWithCustomTimeout($apiService, $apiParams, 8);
             $serviceProvidersArray = $this->processApiResponse($serviceProvidersResponse, 'name', 'name');
             
-            \Log::info('KanbanBoard: API response for service providers', [
-                'response_count' => count($serviceProvidersArray),
-                'current_array_count' => count($this->serviceProviderArray)
-            ]);
-            
             // Combinar resultados de la API con el valor guardado (sin sobrescribir)
             foreach ($serviceProvidersArray as $key => $value) {
                 if (!isset($this->serviceProviderArray[$key])) {
                     $this->serviceProviderArray[$key] = $value;
                 }
             }
-            
-            \Log::info('KanbanBoard: Final service providers array', [
-                'final_count' => count($this->serviceProviderArray)
-            ]);
 
             // Si después de todos los intentos el array está vacío, mostrar mensaje
             if (empty($this->serviceProviderArray)) {
@@ -1169,17 +1217,10 @@ class KanbanBoard extends Component
         
         if ($shippingLineToAdd) {
             $this->shippingLineArray[$shippingLineToAdd] = $shippingLineToAdd;
-            \Log::info('KanbanBoard: Added saved shipping line to array', [
-                'shipping_line' => $shippingLineToAdd,
-                'array_count' => count($this->shippingLineArray)
-            ]);
         }
         
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
-            \Log::info('KanbanBoard: No trading company, returning with saved value only', [
-                'array_count' => count($this->shippingLineArray)
-            ]);
             // Si no hay trading company y no hay valor guardado, mostrar mensaje
             if (empty($this->shippingLineArray)) {
                 $this->shippingLineArray['__no_data__'] = '⚠️ No hay datos disponibles';
@@ -1201,27 +1242,13 @@ class KanbanBoard extends Component
             $shippingLinesResponse = $this->getShippingLinesWithCustomTimeout($apiService, $apiParams, 8);
             $shippingLinesArray = $this->processApiResponse($shippingLinesResponse, 'name', 'name');
             
-            \Log::info('KanbanBoard: API response for shipping lines', [
-                'response_count' => count($shippingLinesArray),
-                'current_array_count' => count($this->shippingLineArray)
-            ]);
-            
             // Combinar los valores de la API con el valor guardado (sin duplicar)
             foreach ($shippingLinesArray as $key => $value) {
                 if (!isset($this->shippingLineArray[$key])) {
                     $this->shippingLineArray[$key] = $value;
                 }
             }
-            
-            \Log::info('KanbanBoard: Final shipping lines array', [
-                'final_count' => count($this->shippingLineArray)
-            ]);
         } catch (\Exception $e) {
-            \Log::error('Error loading shipping lines in KanbanBoard', [
-                'error' => $e->getMessage(),
-                'trading_company' => $tradingCompanyValue,
-                'array_count' => count($this->shippingLineArray)
-            ]);
             // El valor guardado ya está en el array desde el inicio, así que no lo perdemos
         }
         
@@ -1246,48 +1273,19 @@ class KanbanBoard extends Component
         $departurePortToAdd = $currentDeparturePort ?? $this->departure_port;
         $arrivalPortToAdd = $currentArrivalPort ?? $this->arrival_port;
         
-        \Log::info('KanbanBoard: loadPorts called', [
-            'currentDeparturePort' => $currentDeparturePort,
-            'currentArrivalPort' => $currentArrivalPort,
-            'this->departure_port' => $this->departure_port,
-            'this->arrival_port' => $this->arrival_port,
-            'departurePortToAdd' => $departurePortToAdd,
-            'arrivalPortToAdd' => $arrivalPortToAdd
-        ]);
-        
         $this->departurePortArray = [];
         $this->arrivalPortArray = [];
         
         if ($departurePortToAdd && trim($departurePortToAdd) !== '') {
             $this->departurePortArray[$departurePortToAdd] = $departurePortToAdd;
-            \Log::info('KanbanBoard: Added saved departure port to array', [
-                'departure_port' => $departurePortToAdd,
-                'array_count' => count($this->departurePortArray)
-            ]);
-        } else {
-            \Log::warning('KanbanBoard: No departure port to add', [
-                'departurePortToAdd' => $departurePortToAdd
-            ]);
         }
         
         if ($arrivalPortToAdd && trim($arrivalPortToAdd) !== '') {
             $this->arrivalPortArray[$arrivalPortToAdd] = $arrivalPortToAdd;
-            \Log::info('KanbanBoard: Added saved arrival port to array', [
-                'arrival_port' => $arrivalPortToAdd,
-                'array_count' => count($this->arrivalPortArray)
-            ]);
-        } else {
-            \Log::warning('KanbanBoard: No arrival port to add', [
-                'arrivalPortToAdd' => $arrivalPortToAdd
-            ]);
         }
         
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
-            \Log::info('KanbanBoard: No trading company, returning with saved values only', [
-                'departure_count' => count($this->departurePortArray),
-                'arrival_count' => count($this->arrivalPortArray)
-            ]);
             // Si no hay trading company y no hay valores guardados, mostrar mensaje
             if (empty($this->departurePortArray)) {
                 $this->departurePortArray['__no_data__'] = '⚠️ No hay datos disponibles';
@@ -1312,12 +1310,6 @@ class KanbanBoard extends Component
             $portsResponse = $this->getPortsWithCustomTimeout($apiService, $apiParams, 8);
             $portsArray = $this->processApiResponse($portsResponse, 'name', 'name');
             
-            \Log::info('KanbanBoard: API response for ports', [
-                'response_count' => count($portsArray),
-                'current_departure_count' => count($this->departurePortArray),
-                'current_arrival_count' => count($this->arrivalPortArray)
-            ]);
-            
             // Combinar los valores de la API con los valores guardados (sin duplicar)
             foreach ($portsArray as $key => $value) {
                 if (!isset($this->departurePortArray[$key])) {
@@ -1327,18 +1319,7 @@ class KanbanBoard extends Component
                     $this->arrivalPortArray[$key] = $value;
                 }
             }
-            
-            \Log::info('KanbanBoard: Final ports arrays', [
-                'final_departure_count' => count($this->departurePortArray),
-                'final_arrival_count' => count($this->arrivalPortArray)
-            ]);
         } catch (\Exception $e) {
-            \Log::error('Error loading ports in KanbanBoard', [
-                'error' => $e->getMessage(),
-                'trading_company' => $tradingCompanyValue,
-                'departure_count' => count($this->departurePortArray),
-                'arrival_count' => count($this->arrivalPortArray)
-            ]);
             // Los valores guardados ya están en los arrays desde el inicio, así que no los perdemos
         }
         
@@ -1366,17 +1347,10 @@ class KanbanBoard extends Component
         
         if ($containerTypeToAdd && trim($containerTypeToAdd) !== '') {
             $this->containerTypeArray[$containerTypeToAdd] = $containerTypeToAdd;
-            \Log::info('KanbanBoard: Added saved container type to array', [
-                'container_type' => $containerTypeToAdd,
-                'array_count' => count($this->containerTypeArray)
-            ]);
         }
         
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
-            \Log::info('KanbanBoard: No trading company, returning with saved value only', [
-                'array_count' => count($this->containerTypeArray)
-            ]);
             if (empty($this->containerTypeArray)) {
                 $this->containerTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompany}'";
             }
@@ -1396,31 +1370,17 @@ class KanbanBoard extends Component
             $containerTypesResponse = $this->getContainerTypesWithCustomTimeout($apiService, $apiParams, 8);
             $containerTypesArray = $this->processApiResponse($containerTypesResponse, 'name', 'name');
             
-            \Log::info('KanbanBoard: API response for container types', [
-                'response_count' => count($containerTypesArray),
-                'current_array_count' => count($this->containerTypeArray)
-            ]);
-            
             foreach ($containerTypesArray as $key => $value) {
                 if (!isset($this->containerTypeArray[$key])) {
                     $this->containerTypeArray[$key] = $value;
                 }
             }
-            
-            \Log::info('KanbanBoard: Final container types array', [
-                'final_count' => count($this->containerTypeArray)
-            ]);
 
             if (empty($this->containerTypeArray)) {
                 $this->containerTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
             }
 
         } catch (\Exception $e) {
-            \Log::error('Error loading container types in KanbanBoard', [
-                'error' => $e->getMessage(),
-                'trading_company' => $tradingCompanyValue,
-                'array_count' => count($this->containerTypeArray)
-            ]);
             if (empty($this->containerTypeArray)) {
                 $this->containerTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
             }
@@ -1442,17 +1402,10 @@ class KanbanBoard extends Component
         
         if ($modeToAdd && trim($modeToAdd) !== '') {
             $this->transportTypeArray[$modeToAdd] = $modeToAdd;
-            \Log::info('KanbanBoard: Added saved transport type to array', [
-                'mode' => $modeToAdd,
-                'array_count' => count($this->transportTypeArray)
-            ]);
         }
         
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
-            \Log::info('KanbanBoard: No trading company, returning with saved value only', [
-                'array_count' => count($this->transportTypeArray)
-            ]);
             if (empty($this->transportTypeArray)) {
                 $this->transportTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompany}'";
             }
@@ -1472,31 +1425,17 @@ class KanbanBoard extends Component
             $transportTypesResponse = $this->getTransportTypesWithCustomTimeout($apiService, $apiParams, 8);
             $transportTypesArray = $this->processApiResponse($transportTypesResponse, 'name', 'name');
             
-            \Log::info('KanbanBoard: API response for transport types', [
-                'response_count' => count($transportTypesArray),
-                'current_array_count' => count($this->transportTypeArray)
-            ]);
-            
             foreach ($transportTypesArray as $key => $value) {
                 if (!isset($this->transportTypeArray[$key])) {
                     $this->transportTypeArray[$key] = $value;
                 }
             }
-            
-            \Log::info('KanbanBoard: Final transport types array', [
-                'final_count' => count($this->transportTypeArray)
-            ]);
 
             if (empty($this->transportTypeArray)) {
                 $this->transportTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
             }
 
         } catch (\Exception $e) {
-            \Log::error('Error loading transport types in KanbanBoard', [
-                'error' => $e->getMessage(),
-                'trading_company' => $tradingCompanyValue,
-                'array_count' => count($this->transportTypeArray)
-            ]);
             if (empty($this->transportTypeArray)) {
                 $this->transportTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
             }

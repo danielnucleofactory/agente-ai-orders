@@ -349,9 +349,9 @@
                             <div wire:ignore>
                                 <x-form-input>
                                     <x-slot:label>ETA Variable <span class="text-red-500">*</span></x-slot:label>
-                                    <x-slot:input type="date" name="date_eta_updated" wire:model="date_eta_updated"
-                                                  class="pr-10 {{ $errors->has('date_eta_updated') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    <x-slot:error>{{ $errors->first('date_eta_updated') }}</x-slot:error>
+                                    <x-slot:input type="date" name="date_eta_initial" wire:model="date_eta_initial"
+                                                  class="pr-10 {{ $errors->has('date_eta_initial') ? 'border-red-500' : '' }}"></x-slot:input>
+                                    <x-slot:error>{{ $errors->first('date_eta_initial') }}</x-slot:error>
                                 </x-form-input>
                             </div>
                         </div>
@@ -574,7 +574,7 @@
                     </div>
 
                     <div class="flex gap-[1.875rem]">
-                        <x-secondary-button x-on:click="$dispatch('close-modal', 'modal-po-stage-change')" class="w-full">Cancelar</x-secondary-button>
+                        <x-secondary-button wire:click="cancelModal" class="w-full">Cancelar</x-secondary-button>
                         <x-primary-button 
                             x-on:click="syncKanbanDateFieldsAndSave($wire)"
                             class="w-full">Continuar</x-primary-button>
@@ -633,6 +633,65 @@
                     }, 100);
                 }
             });
+
+            // Limpiar campos del modal cuando se cierra
+            window.addEventListener('close-modal', function(event) {
+                if (event.detail === 'modal-po-stage-change') {
+                    // Limpiar todos los inputs del modal, incluyendo los que están en wire:ignore
+                    const modal = document.querySelector('[name="modal-po-stage-change"]');
+                    if (modal) {
+                        const inputs = modal.querySelectorAll('input, select, textarea');
+                        inputs.forEach(function(input) {
+                            // Limpiar campos de fecha dentro de wire:ignore
+                            if (input.closest('[wire\\:ignore]')) {
+                                // Si tiene Flatpickr, limpiarlo
+                                if (input._flatpickr) {
+                                    try {
+                                        input._flatpickr.clear();
+                                    } catch (e) {
+                                        console.warn('Error clearing Flatpickr:', e);
+                                    }
+                                }
+                                // Limpiar el valor del input
+                                input.value = '';
+                                input.removeAttribute('data-date-value');
+                            } else {
+                                // Limpiar otros campos normalmente
+                                if (input.type === 'checkbox' || input.type === 'radio') {
+                                    input.checked = false;
+                                } else {
+                                    input.value = '';
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+
+            // Limpiar campos ANTES de abrir el modal (para asegurar que estén limpios)
+            window.addEventListener('open-modal', function(event) {
+                if (event.detail === 'modal-po-stage-change') {
+                    // Pequeño delay para asegurar que el modal esté en el DOM
+                    setTimeout(function() {
+                        const modal = document.querySelector('[name="modal-po-stage-change"]');
+                        if (modal) {
+                            // Limpiar todos los campos de fecha dentro de wire:ignore
+                            const dateInputs = modal.querySelectorAll('[wire\\:ignore] input[type="date"], [wire\\:ignore] input.flatpickr-initialized');
+                            dateInputs.forEach(function(input) {
+                                if (input._flatpickr) {
+                                    try {
+                                        input._flatpickr.clear();
+                                    } catch (e) {
+                                        console.warn('Error clearing Flatpickr on open:', e);
+                                    }
+                                }
+                                input.value = '';
+                                input.removeAttribute('data-date-value');
+                            });
+                        }
+                    }, 50);
+                }
+            });
         });
 
         /**
@@ -657,7 +716,7 @@
                 'date_etd',
                 'date_atd',
                 'date_eta',
-                'date_eta_updated',
+                'date_eta_initial',
                 'date_ata',
                 'bonded_warehouse_enter',
                 'bonded_warehouse_exit'
@@ -666,18 +725,41 @@
             let populatedCount = 0;
             
             dateFields.forEach(function(fieldName) {
-                // Obtener el valor desde Livewire
-                const value = $wire.get(fieldName);
+                // Buscar el input por wire:model o por name
+                const input = document.querySelector(`input[wire\\:model="${fieldName}"]`) ||
+                             document.querySelector(`input[name="${fieldName}"]`);
                 
-                if (value) {
-                    // Buscar el input por wire:model o por name
-                    const input = document.querySelector(`input[wire\\:model="${fieldName}"]`) ||
-                                 document.querySelector(`input[name="${fieldName}"]`);
+                if (input) {
+                    // PRIMERO: Limpiar el campo (incluyendo Flatpickr si existe)
+                    if (input._flatpickr) {
+                        try {
+                            input._flatpickr.clear();
+                        } catch (e) {
+                            console.warn('Error clearing Flatpickr:', e);
+                        }
+                    }
+                    input.value = '';
+                    input.removeAttribute('data-date-value');
                     
-                    if (input) {
+                    // LUEGO: Obtener el valor desde Livewire y poblar si existe
+                    const value = $wire.get(fieldName);
+                    
+                    if (value) {
                         input.value = value;
+                        input.setAttribute('data-date-value', value);
+                        
+                        // Si tiene Flatpickr, establecer la fecha
+                        if (input._flatpickr && typeof input._flatpickr.setDate === 'function') {
+                            try {
+                                input._flatpickr.setDate(value, false);
+                            } catch (e) {
+                                console.warn('Error setting Flatpickr date:', e);
+                            }
+                        }
                         populatedCount++;
                         console.log('✓ Poblado', fieldName, '=', value);
+                    } else {
+                        console.log('○ Campo vacío', fieldName);
                     }
                 }
             });

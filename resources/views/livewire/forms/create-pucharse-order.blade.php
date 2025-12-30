@@ -87,15 +87,52 @@
                     onclick="syncDateFieldsBeforeSave({{ $id }})"
                     wire:loading.attr="disabled"
                     wire:target="updatePurchaseOrder"
-                    class="w-[209px]">
-                    <span wire:loading.remove wire:target="updatePurchaseOrder">Actualizar Orden</span>
-                    <span wire:loading wire:target="updatePurchaseOrder">Guardando...</span>
+                    class="w-[209px] relative">
+                    <span wire:loading.remove wire:target="updatePurchaseOrder" class="flex items-center justify-center">
+                        Actualizar Orden
+                    </span>
+                    <span wire:loading wire:target="updatePurchaseOrder" class="flex items-center justify-center gap-2">
+                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Guardando...
+                    </span>
                 </x-primary-button>
             @else
-                <x-primary-button wire:click="createPurchaseOrder" class="w-[209px]">
-                    Crear nueva Orden
+                <x-primary-button 
+                    wire:click="createPurchaseOrder" 
+                    wire:loading.attr="disabled"
+                    wire:target="createPurchaseOrder"
+                    class="w-[209px] relative">
+                    <span wire:loading.remove wire:target="createPurchaseOrder" class="flex items-center justify-center">
+                        Crear nueva Orden
+                    </span>
+                    <span wire:loading wire:target="createPurchaseOrder" class="flex items-center justify-center gap-2">
+                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Creando...
+                    </span>
                 </x-primary-button>
             @endif
+        </div>
+    </div>
+
+    {{-- Overlay de carga para crear/actualizar PO --}}
+    <div wire:loading wire:target="createPurchaseOrder,updatePurchaseOrder" 
+         class="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-90 backdrop-blur-sm">
+        <div class="flex flex-col items-center p-8 bg-white rounded-2xl shadow-xl border-2 border-[#D4F5ED]">
+            <svg class="w-12 h-12 text-[#127A62] animate-spin mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-lg font-semibold text-[#127A62]">
+                <span wire:target="createPurchaseOrder">Creando orden de compra...</span>
+                <span wire:target="updatePurchaseOrder">Guardando cambios...</span>
+            </p>
+            <p class="mt-2 text-sm text-gray-600">Por favor, espere un momento</p>
         </div>
     </div>
 
@@ -564,12 +601,14 @@
                         </x-form-input>
                     </div>
 
-                    <x-form-input>
-                        <x-slot:label>Fecha Carga Lista Teórica <span class="text-red-500">*</span></x-slot:label>
-                        <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" class="pr-10 {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
-                        </x-slot:input>
-                        <x-slot:error>{{ $errors->first('date_theorical_load') }}</x-slot:error>
-                    </x-form-input>
+                    <div wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Fecha Carga Lista Teórica <span class="text-red-500">*</span></x-slot:label>
+                            <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" class="pr-10 {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
+                            </x-slot:input>
+                            <x-slot:error>{{ $errors->first('date_theorical_load') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
 
                     <div wire:ignore>
                         <x-form-input>
