@@ -604,8 +604,13 @@
                     <div wire:ignore>
                         <x-form-input>
                             <x-slot:label>Fecha Carga Lista Teórica <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" class="pr-10 {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
-                            </x-slot:input>
+                            @if($id)
+                                <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" readonly class="pr-10 bg-gray-100 cursor-not-allowed {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
+                                </x-slot:input>
+                            @else
+                                <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" class="pr-10 {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
+                                </x-slot:input>
+                            @endif
                             <x-slot:error>{{ $errors->first('date_theorical_load') }}</x-slot:error>
                         </x-form-input>
                     </div>
@@ -690,7 +695,7 @@
 
                     <div wire:ignore>
                         <x-form-input>
-                            <x-slot:label>ETD </x-slot:label>
+                            <x-slot:label>ETD Variable</x-slot:label>
                             <x-slot:input type="date" name="date_etd" wire:model="date_etd"></x-slot:input>
                         </x-form-input>
                     </div>
@@ -720,15 +725,15 @@
 
                     <div wire:ignore>
                         <x-form-input>
-                            <x-slot:label>ETA</x-slot:label>
-                            <x-slot:input type="date" name="date_eta" wire:model="date_eta"></x-slot:input>
+                            <x-slot:label>ETA Inicial</x-slot:label>
+                            <x-slot:input type="date" name="date_eta_initial" wire:model="date_eta_initial"></x-slot:input>
                         </x-form-input>
                     </div>
 
                     <div wire:ignore>
                         <x-form-input>
-                            <x-slot:label>ETA Inicial</x-slot:label>
-                            <x-slot:input type="date" name="date_eta_initial" wire:model="date_eta_initial"></x-slot:input>
+                            <x-slot:label>ETA Variable</x-slot:label>
+                            <x-slot:input type="date" name="date_eta_updated" wire:model="date_eta_updated"></x-slot:input>
                         </x-form-input>
                     </div>
 

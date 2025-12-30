@@ -624,6 +624,7 @@ class CreatePucharseOrder extends Component
 
 // Versiones actualizadas ETA/ETD
     public $date_eta_initial;
+    public $date_eta_updated;
 
     // Costos
     public $po_amount = 0.0;        // Monto PO "declarado" (si lo usas)
@@ -849,6 +850,7 @@ class CreatePucharseOrder extends Component
                 $this->eta_dates_difference = $this->purchaseOrder->eta_dates_difference;
 
                 $this->date_eta_initial = optional($this->purchaseOrder->date_eta_initial)?->format('Y-m-d');
+                $this->date_eta_updated = optional($this->purchaseOrder->date_eta_updated)?->format('Y-m-d');
 
                 //Campos extras que faltaban
                 $this->cbm               = $this->purchaseOrder->cbm;
@@ -1553,6 +1555,7 @@ class CreatePucharseOrder extends Component
                     'delay_days' => $this->delay_days,
 
                     'date_eta_initial' => $this->date_eta_initial,
+                    'date_eta_updated' => $this->date_eta_updated,
 
                     'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
                     'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
@@ -2307,6 +2310,7 @@ class CreatePucharseOrder extends Component
                 'date_etd' => $this->date_etd,
                 'date_eta' => $this->date_eta,
                 'date_eta_initial' => $this->date_eta_initial,
+                'date_eta_updated' => $this->date_eta_updated,
             ]);
             // No lanzar excepción para no interrumpir el flujo
             $this->etd_dates_difference = null;

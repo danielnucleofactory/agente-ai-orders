@@ -6,6 +6,7 @@
     'selectClasses' => 'rounded-xl border-2 border-[#28C7A1] py-[0.625rem] px-3 text-lg text-[#2E2E2E] leading-[1.375rem]',
     'wireModel' => '',
     'error' => false,
+    'showError' => true,
 ])
 
 <div class="relative flex flex-col">
@@ -29,7 +30,7 @@
         @endforeach
     </select>
 
-    @if ($error)
+    @if ($error && $showError)
         <p class="absolute left-0 w-full text-xs text-right text-red-500 -bottom-[18px] pr-3">{{ $errors->first($name) }}</p>
     @endif
 </div>

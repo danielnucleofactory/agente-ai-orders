@@ -69,6 +69,26 @@ function initializeDatePickers() {
 
     // Procesar todos los inputs de fecha encontrados
     dateInputs.forEach(function(input) {
+        // NO inicializar Flatpickr si el campo es readonly o disabled
+        if (input.hasAttribute('readonly') || input.hasAttribute('disabled') || input.readOnly || input.disabled) {
+            // Si tiene una instancia de Flatpickr, destruirla
+            if (input._flatpickr) {
+                try {
+                    input._flatpickr.destroy();
+                } catch (e) {
+                    // Ignorar errores al destruir
+                }
+                input._flatpickr = null;
+            }
+            // Remover la clase de inicializado si existe
+            input.classList.remove('flatpickr-initialized');
+            // Asegurar que el tipo sea text para mantener el valor visible
+            if (input.type === 'date') {
+                input.type = 'text';
+            }
+            return; // No inicializar Flatpickr para campos readonly/disabled
+        }
+
         // Si ya tiene una instancia de Flatpickr válida, solo sincronizar
         if (input._flatpickr && typeof input._flatpickr.destroy === 'function') {
             input.classList.add('flatpickr-initialized');
@@ -196,6 +216,95 @@ function initializeDatePickers() {
         // Guardar referencia a la instancia de Flatpickr en el input
         input._flatpickr = fp;
 
+        // Función para sincronizar el borde rojo basándose en errores
+        const syncErrorBorder = function() {
+            if (fp && fp.altInput) {
+                let hasError = false;
+                const wireModel = input.getAttribute('wire:model') ||
+                                  input.getAttribute('wire:model.live') ||
+                                  input.getAttribute('wire:model.defer') ||
+                                  input.getAttribute('wire:model.lazy');
+                
+                // Método 1: Verificar el atributo class del input original (aunque esté en wire:ignore, el servidor lo genera)
+                const classAttr = input.getAttribute('class') || '';
+                if (classAttr.includes('border-red-500')) {
+                    hasError = true;
+                }
+                
+                // Método 2: Verificar errores de Livewire directamente
+                if (!hasError && wireModel && window.Livewire) {
+                    try {
+                        const wireId = input.closest('[wire\\:id]')?.getAttribute('wire:id');
+                        if (wireId) {
+                            const component = window.Livewire.find(wireId);
+                            if (component) {
+                                // Intentar múltiples formas de acceder a los errores
+                                let errors = null;
+                                
+                                // Forma 1: component.get('errors')
+                                if (component.get && typeof component.get === 'function') {
+                                    try {
+                                        errors = component.get('errors');
+                                        if (errors && errors.has && typeof errors.has === 'function') {
+                                            hasError = errors.has(wireModel);
+                                        }
+                                    } catch (e) {
+                                        // Continuar con siguiente método
+                                    }
+                                }
+                                
+                                // Forma 2: component.__instance.errors
+                                if (!hasError && component.__instance) {
+                                    try {
+                                        errors = component.__instance.errors;
+                                        if (errors) {
+                                            if (errors.has && typeof errors.has === 'function') {
+                                                hasError = errors.has(wireModel);
+                                            } else if (errors[wireModel]) {
+                                                hasError = true;
+                                            }
+                                        }
+                                    } catch (e) {
+                                        // Continuar con siguiente método
+                                    }
+                                }
+                                
+                                // Forma 3: component.$get('errors')
+                                if (!hasError && component.$get && typeof component.$get === 'function') {
+                                    try {
+                                        errors = component.$get('errors');
+                                        if (errors && errors.has && typeof errors.has === 'function') {
+                                            hasError = errors.has(wireModel);
+                                        }
+                                    } catch (e) {
+                                        // Ignorar
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        // Ignorar errores al acceder a Livewire
+                    }
+                }
+                
+                // Método 3: Verificar si hay un input con el mismo name que tenga border-red-500
+                if (!hasError) {
+                    const inputName = input.getAttribute('name');
+                    if (inputName) {
+                        const errorInput = document.querySelector(`input[name="${inputName}"].border-red-500, input[name="${inputName}"][class*="border-red"]`);
+                        hasError = errorInput !== null;
+                    }
+                }
+                
+                // Aplicar o remover la clase
+                if (hasError) {
+                    fp.altInput.classList.add('border-red-500');
+                } else {
+                    fp.altInput.classList.remove('border-red-500');
+                }
+            }
+        };
+
         // Aplicar estilos al input alternativo después de que Flatpickr lo crea
         if (fp.altInput) {
             // Asegurar que tenga la clase correcta
@@ -206,6 +315,10 @@ function initializeDatePickers() {
             if (!originalValue) {
                 fp.altInput.value = '';
             }
+            // Sincronizar borde rojo inicialmente - usar setTimeout para dar tiempo a que Livewire actualice
+            setTimeout(function() {
+                syncErrorBorder();
+            }, 50);
         }
 
         // Si había un valor original, establecerlo
@@ -271,6 +384,40 @@ function initializeDatePickers() {
             attributeFilter: ['value', 'data-date-value']
         });
 
+        // Observer para sincronizar clases de error (border-red-500) del input original al altInput
+        const classObserver = new MutationObserver(function() {
+            // Usar setTimeout para dar tiempo a que Livewire termine de actualizar
+            setTimeout(function() {
+                syncErrorBorder();
+            }, 10);
+        });
+
+        classObserver.observe(input, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+        
+        // También observar cambios en el contenedor wire:ignore por si Livewire actualiza ahí
+        const wireIgnoreContainer = input.closest('[wire\\:ignore]');
+        if (wireIgnoreContainer) {
+            const containerObserver = new MutationObserver(function() {
+                setTimeout(function() {
+                    syncErrorBorder();
+                }, 10);
+            });
+            containerObserver.observe(wireIgnoreContainer, {
+                attributes: true,
+                attributeFilter: ['class'],
+                childList: true,
+                subtree: true
+            });
+        }
+
+        // Guardar referencia a la función de sincronización para uso posterior
+        if (fp) {
+            fp._syncErrorBorder = syncErrorBorder;
+        }
+
         // Función para sincronizar el valor
         const syncValue = function() {
             // Priorizar el valor guardado en data-date-value
@@ -332,8 +479,12 @@ const dateInputObserver = new MutationObserver(function(mutations) {
                     }
                     // Cambiar inmediatamente a text para evitar el flash
                     target.type = 'text';
-                    // Si no está inicializado, inicializarlo
-                    if (!target.classList.contains('flatpickr-initialized')) {
+                    // Si no está inicializado y NO es readonly/disabled, inicializarlo
+                    if (!target.classList.contains('flatpickr-initialized') && 
+                        !target.hasAttribute('readonly') && 
+                        !target.hasAttribute('disabled') && 
+                        !target.readOnly && 
+                        !target.disabled) {
                         setTimeout(() => initializeDatePickers(), 0);
                     }
                 }
@@ -356,7 +507,11 @@ const dateInputObserver = new MutationObserver(function(mutations) {
                                 input.setAttribute('data-date-value', savedValue);
                             }
                             input.type = 'text';
-                            if (!input.classList.contains('flatpickr-initialized')) {
+                            if (!input.classList.contains('flatpickr-initialized') && 
+                                !input.hasAttribute('readonly') && 
+                                !input.hasAttribute('disabled') && 
+                                !input.readOnly && 
+                                !input.disabled) {
                                 setTimeout(() => initializeDatePickers(), 0);
                             }
                         }
@@ -401,6 +556,39 @@ document.addEventListener('DOMContentLoaded', function() {
 // Re-inicializar después de que Livewire actualice el DOM
 document.addEventListener('livewire:navigated', function() {
     initializeDatePickers();
+    
+    // Sincronizar bordes rojos después de navegación
+    setTimeout(function() {
+        document.querySelectorAll('input.flatpickr-initialized').forEach(function(input) {
+            if (input._flatpickr && input._flatpickr._syncErrorBorder) {
+                input._flatpickr._syncErrorBorder();
+            }
+        });
+    }, 100);
+});
+
+// Escuchar eventos de validación de Livewire
+document.addEventListener('livewire:init', function() {
+    // Función auxiliar para sincronizar todos los bordes rojos
+    const syncAllErrorBorders = function() {
+        document.querySelectorAll('input.flatpickr-initialized').forEach(function(input) {
+            if (input._flatpickr && input._flatpickr._syncErrorBorder) {
+                input._flatpickr._syncErrorBorder();
+            }
+        });
+    };
+    
+    // Hook cuando hay errores de validación
+    Livewire.hook('message.failed', ({ component, message, respond }) => {
+        // Cuando hay errores de validación, sincronizar bordes rojos
+        setTimeout(syncAllErrorBorders, 100);
+    });
+    
+    // Hook después de procesar mensajes (incluye cuando hay errores)
+    Livewire.hook('message.processed', ({ component, message, respond }) => {
+        // Después de procesar mensajes, sincronizar bordes rojos
+        setTimeout(syncAllErrorBorders, 100);
+    });
 
 // Función auxiliar para obtener el placeholder según el formato del usuario
 function getDatePlaceholder() {
@@ -501,6 +689,22 @@ document.addEventListener('livewire:init', function() {
                     const savedValue = input.getAttribute('data-date-value');
                     const currentValue = savedValue || input.value;
 
+                    // Sincronizar clases de error (border-red-500) del input original al altInput
+                    if (input._flatpickr.altInput) {
+                        // Usar la función de sincronización si existe, o verificar directamente
+                        if (input._flatpickr._syncErrorBorder) {
+                            input._flatpickr._syncErrorBorder();
+                        } else {
+                            // Verificar si el input original tiene border-red-500
+                            const hasError = input.classList.contains('border-red-500');
+                            if (hasError) {
+                                input._flatpickr.altInput.classList.add('border-red-500');
+                            } else {
+                                input._flatpickr.altInput.classList.remove('border-red-500');
+                            }
+                        }
+                    }
+
                     // Si hay un valor guardado, restaurarlo en el input y en Flatpickr
                     if (savedValue) {
                         input.value = savedValue;
@@ -529,6 +733,15 @@ document.addEventListener('livewire:init', function() {
                     }
                 }
             });
+
+            // PASO 5: Sincronizar bordes rojos de errores después de actualizaciones de Livewire
+            setTimeout(function() {
+                document.querySelectorAll('input.flatpickr-initialized').forEach(function(input) {
+                    if (input._flatpickr && input._flatpickr._syncErrorBorder) {
+                        input._flatpickr._syncErrorBorder();
+                    }
+                });
+            }, 300);
         }, 250);
     });
 

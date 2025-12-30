@@ -158,25 +158,6 @@
                                        :value="$newColumnId" wire:model.live="newColumnId"
                                        x-on:change="moveTaskToColumn($event.target.value)" />
                     </div>
-
-                    {{-- Mensaje de error global para campos obligatorios --}}
-                    @if ($errors->any())
-                        <div class="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                            <div class="flex items-start">
-                                <svg class="w-5 h-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                </svg>
-                                <div>
-                                    <p class="text-sm font-medium text-red-800">Faltan campos obligatorios:</p>
-                                    <ul class="mt-1 text-sm text-red-700 list-disc list-inside">
-                                        @foreach ($errors->all() as $error)
-                                            <li>{{ $error }}</li>
-                                        @endforeach
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
                 </div>
 
                 {{-- Contenido scrolleable --}}
@@ -196,14 +177,13 @@
                             <x-slot:label>Carga Lista Variable <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500'  : '' }}">
                             </x-slot:input>
-                            <x-slot:error>
-                                {{ $errors->first('date_variable_date') }}
-                            </x-slot:error></x-form-input>
+                            {{-- Error oculto --}}
+                        </x-form-input>
                     </div>
                     <div class="mb-8" wire:ignore>
                         <x-form-input>
                             <x-slot:label>Carga Lista Teórica</x-slot:label>
-                            <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load"></x-slot:input>
+                            <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" readonly class="pr-10 bg-gray-100 cursor-not-allowed"></x-slot:input>
                         </x-form-input>
                     </div>
                     <div class="mb-8">
@@ -214,18 +194,14 @@
                             :options="$serviceProviderArray"
                             :error="false"
                         />
-                        @error('service_provider')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        {{-- Error oculto --}}
                     </div>
                     <div class="mb-8 hidden">
                         <x-form-input>
                             <x-slot:label>Agente de Carga <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="text" name="forwarder_name" placeholder="Ingrese agente de carga" wire:model="forwarder_name" class="pr-10 {{ $errors->has('forwarder_name') ? 'border-red-500'  : '' }}">
                             </x-slot:input>
-                            <x-slot:error>
-                                {{ $errors->first('forwarder_name') }}
-                            </x-slot:error>
+                            {{-- Error oculto --}}
                         </x-form-input>
                     </div>
                     <div class="mb-8">
@@ -246,9 +222,7 @@
                                             wire:model="date_booking_request"
                                             class="w-full pr-10 {{ $errors->has('date_booking_request') ? 'border-red-500'  : '' }}">
                                         </x-slot:input>
-                                        <x-slot:error>
-                                            {{ $errors->first('date_booking_request') }}
-                                        </x-slot:error>
+                                        {{-- Error oculto --}}
                                     </x-form-input>
                                 </div>
 
@@ -261,9 +235,7 @@
                                             wire:model="date_booking_authorized"
                                             class="w-full pr-10 {{ $errors->has('date_booking_authorized') ? 'border-red-500'  : '' }}">
                                         </x-slot:input>
-                                        <x-slot:error>
-                                            {{ $errors->first('date_booking_authorized') }}
-                                        </x-slot:error>
+                                        {{-- Error oculto --}}
                                     </x-form-input>
                                 </div>
 
@@ -276,9 +248,7 @@
                                             wire:model="date_etd_initial"
                                             class="w-full pr-10 {{ $errors->has('date_etd_initial') ? 'border-red-500'  : '' }}">
                                         </x-slot:input>
-                                        <x-slot:error>
-                                            {{ $errors->first('date_etd_initial') }}
-                                        </x-slot:error>
+                                        {{-- Error oculto --}}
                                     </x-form-input>
                                 </div>
 
@@ -291,9 +261,7 @@
                                             wire:model="date_etd"
                                             class="w-full pr-10 {{ $errors->has('date_etd') ? 'border-red-500'  : '' }}">
                                         </x-slot:input>
-                                        <x-slot:error>
-                                            {{ $errors->first('date_etd') }}
-                                        </x-slot:error>
+                                        {{-- Error oculto --}}
                                     </x-form-input>
                                 </div>
 
@@ -334,7 +302,7 @@
                                     <x-slot:label>ETD Real (ATD) <span class="text-red-500">*</span></x-slot:label>
                                     <x-slot:input type="date" name="date_atd" wire:model="date_atd"
                                                   class="pr-10 {{ $errors->has('date_atd') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    <x-slot:error>{{ $errors->first('date_atd') }}</x-slot:error>
+                                    {{-- Error oculto --}}
                                 </x-form-input>
                             </div>
 
@@ -343,7 +311,7 @@
                                     <x-slot:label>ETA Inicial <span class="text-red-500">*</span></x-slot:label>
                                     <x-slot:input type="date" name="date_eta" wire:model="date_eta"
                                                   class="pr-10 {{ $errors->has('date_eta') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    <x-slot:error>{{ $errors->first('date_eta') }}</x-slot:error>
+                                    {{-- Error oculto --}}
                                 </x-form-input>
                             </div>
 
@@ -352,23 +320,29 @@
                                     <x-slot:label>ETA Variable <span class="text-red-500">*</span></x-slot:label>
                                     <x-slot:input type="date" name="date_eta_initial" wire:model="date_eta_initial"
                                                   class="pr-10 {{ $errors->has('date_eta_initial') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    <x-slot:error>{{ $errors->first('date_eta_initial') }}</x-slot:error>
+                                    {{-- Error oculto --}}
                                 </x-form-input>
                             </div>
                         </div>
                     </div>
 
                     <div class="mb-8">
-                        <div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm">
-                            <p><strong>Nota:</strong> Debe proporcionar al menos uno de los siguientes: Número de Booking, MBL o Número de Contenedor.</p>
-                        </div>
+                        @if($errors->any())
+                            <div class="mb-3 p-3 bg-red-50 border-l-4 border-red-400 text-red-700 text-sm">
+                                <p><strong>Nota:</strong> Los campos marcados en rojo son obligatorios y deben ser completados.</p>
+                            </div>
+                        @else
+                            <div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm">
+                                <p><strong>Nota:</strong> Debe proporcionar al menos uno de los siguientes: Número de Booking, MBL o Número de Contenedor.</p>
+                            </div>
+                        @endif
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-6">
                             <div>
                                 <x-form-input>
                                     <x-slot:label>Número de Contenedor</x-slot:label>
                                     <x-slot:input name="container_number" wire:model="container_number" placeholder="Ingrese número de contenedor" autocomplete="off"
                                                   class="pr-10 {{ $errors->has('container_number') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    <x-slot:error>{{ $errors->first('container_number') }}</x-slot:error>
+                                    {{-- Error oculto, se muestra en la barra superior --}}
                                 </x-form-input>
                             </div>
 
@@ -379,9 +353,7 @@
                                     wire:model.live="container_type"
                                     :options="$containerTypeArray"
                                     :error="$errors->has('container_type')" />
-                                @error('container_type')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
+                                {{-- Error oculto --}}
                             </div>
 
                             <div>
@@ -389,7 +361,7 @@
                                     <x-slot:label>MBL</x-slot:label>
                                     <x-slot:input name="bill_of_lading" wire:model="bill_of_lading" placeholder="Ingrese MBL"
                                                   class="pr-10 {{ $errors->has('bill_of_lading') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    <x-slot:error>{{ $errors->first('bill_of_lading') }}</x-slot:error>
+                                    {{-- Error oculto, se muestra en la barra superior --}}
                                 </x-form-input>
                             </div>
 
@@ -398,7 +370,7 @@
                                     <x-slot:label>Monto</x-slot:label>
                                     <x-slot:input type="number" step="0.01" inputmode="decimal" name="shipment_amount" placeholder="0" wire:model="shipment_amount" autocomplete="off"
                                                   class="pr-10 {{ $errors->has('shipment_amount') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    <x-slot:error>{{ $errors->first('shipment_amount') }}</x-slot:error>
+                                    {{-- Error oculto --}}
                                 </x-form-input>
                             </div>
 
@@ -408,10 +380,8 @@
                                     name="shipping_line"
                                     wire:model.live="shipping_line"
                                     :options="$shippingLineArray"
-                                    :error="$errors->has('shipping_line')" />
-                                @error('shipping_line')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
+                                    :error="$errors->has('shipping_line')"
+                                    :showError="false" />
                             </div>
 
                             <div>
@@ -419,7 +389,7 @@
                                     <x-slot:label>Estado</x-slot:label>
                                     <x-slot:input name="shipment_status" wire:model="shipment_status" placeholder="Ingrese estado"
                                                   class="pr-10 {{ $errors->has('shipment_status') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    <x-slot:error>{{ $errors->first('shipment_status') }}</x-slot:error>
+                                    {{-- Error oculto --}}
                                 </x-form-input>
                             </div>
 
@@ -428,7 +398,7 @@
                                     <x-slot:label>Factura de Mercancía</x-slot:label>
                                     <x-slot:input name="merchandise_invoice" wire:model="merchandise_invoice" placeholder="Ingrese factura de mercancia"
                                                   class="pr-10 {{ $errors->has('merchandise_invoice') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    <x-slot:error>{{ $errors->first('merchandise_invoice') }}</x-slot:error>
+                                    {{-- Error oculto --}}
                                 </x-form-input>
                             </div>
                         </div>
@@ -441,7 +411,7 @@
                                     <x-slot:label>Número de Booking</x-slot:label>
                                     <x-slot:input name="tracking_id" wire:model="tracking_id" placeholder="Ingrese número de booking"
                                                   class="pr-10 {{ $errors->has('tracking_id') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    <x-slot:error>{{ $errors->first('tracking_id') }}</x-slot:error>
+                                    {{-- Error oculto, se muestra en la barra superior --}}
                                 </x-form-input>
                             </div>
 
@@ -451,10 +421,8 @@
                                     name="departure_port"
                                     wire:model.live="departure_port"
                                     :options="$departurePortArray"
-                                    :error="$errors->has('departure_port')" />
-                                @error('departure_port')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
+                                    :error="$errors->has('departure_port')"
+                                    :showError="false" />
                             </div>
 
                             <div>
@@ -463,10 +431,8 @@
                                     name="arrival_port"
                                     wire:model.live="arrival_port"
                                     :options="$arrivalPortArray"
-                                    :error="$errors->has('arrival_port')" />
-                                @error('arrival_port')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
+                                    :error="$errors->has('arrival_port')"
+                                    :showError="false" />
                             </div>
                         </div>
                     </div>
@@ -483,7 +449,7 @@
                             <x-slot:label>ETA Real (ATA) <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" name="date_ata_stage6" wire:model="date_ata"
                                           class="pr-10 {{ $errors->has('date_ata') ? 'border-red-500' : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('date_ata') }}</x-slot:error>
+                            {{-- Error oculto --}}
                         </x-form-input>
                     </div>
                     <div class="mb-8">
@@ -498,7 +464,7 @@
                             <x-slot:label>Ingreso Almacén Fiscal <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" name="bonded_warehouse_enter" wire:model="bonded_warehouse_enter"
                                           class="pr-10 {{ $errors->has('bonded_warehouse_enter') ? 'border-red-500' : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('bonded_warehouse_enter') }}</x-slot:error>
+                            {{-- Error oculto --}}
                         </x-form-input>
                     </div>
                     <div class="mb-8" wire:ignore>
@@ -506,7 +472,7 @@
                             <x-slot:label>Salida Almacén Fiscal <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" name="bonded_warehouse_exit" wire:model="bonded_warehouse_exit"
                                           class="pr-10 {{ $errors->has('bonded_warehouse_exit') ? 'border-red-500' : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('bonded_warehouse_exit') }}</x-slot:error>
+                            {{-- Error oculto --}}
                         </x-form-input>
                     </div>
                     <div class="mb-8" wire:ignore>
@@ -514,7 +480,7 @@
                             <x-slot:label>ETA Real (ATA) <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" name="date_ata_stage7" wire:model="date_ata"
                                           class="pr-10 {{ $errors->has('date_ata') ? 'border-red-500' : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('date_ata') }}</x-slot:error>
+                            {{-- Error oculto --}}
                         </x-form-input>
                     </div>
                     <div class="mb-8">
