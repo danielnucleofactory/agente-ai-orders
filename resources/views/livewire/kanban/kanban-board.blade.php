@@ -89,11 +89,12 @@
                                         
                                         // Cargar los datos de la tarea en segundo plano
                                         $wire.setCurrentTask(taskId, newColumn).then(function() {
-                                            // Esperar un momento para que Livewire actualice el DOM
+                                            // Esperar un momento para que Livewire actualice el DOM y el modal esté completamente renderizado
+                                            // Aumentar el timeout para dar tiempo a que el listener de open-modal termine de limpiar
                                             setTimeout(function() {
                                                 // Poblar los inputs de fecha con los valores cargados de Livewire
                                                 populateDateFieldsFromLivewire($wire);
-                                            }, 100);
+                                            }, 150);
                                         }).catch(function(error) {
                                             console.error('Error al cargar datos de la tarea:', error);
                                         });
@@ -669,27 +670,46 @@
             });
 
             // Limpiar campos ANTES de abrir el modal (para asegurar que estén limpios)
+            // IMPORTANTE: Limpiar inmediatamente, no con setTimeout, para evitar condición de carrera
             window.addEventListener('open-modal', function(event) {
                 if (event.detail === 'modal-po-stage-change') {
-                    // Pequeño delay para asegurar que el modal esté en el DOM
-                    setTimeout(function() {
-                        const modal = document.querySelector('[name="modal-po-stage-change"]');
-                        if (modal) {
-                            // Limpiar todos los campos de fecha dentro de wire:ignore
-                            const dateInputs = modal.querySelectorAll('[wire\\:ignore] input[type="date"], [wire\\:ignore] input.flatpickr-initialized');
-                            dateInputs.forEach(function(input) {
-                                if (input._flatpickr) {
-                                    try {
-                                        input._flatpickr.clear();
-                                    } catch (e) {
-                                        console.warn('Error clearing Flatpickr on open:', e);
-                                    }
+                    // Limpiar inmediatamente cuando se abre el modal, antes de que setCurrentTask se ejecute
+                    // Esto evita que populateDateFieldsFromLivewire intente poblar campos que luego se limpian
+                    const modal = document.querySelector('[name="modal-po-stage-change"]');
+                    if (modal) {
+                        // Limpiar todos los campos de fecha dentro de wire:ignore
+                        const dateInputs = modal.querySelectorAll('[wire\\:ignore] input[type="date"], [wire\\:ignore] input.flatpickr-initialized');
+                        dateInputs.forEach(function(input) {
+                            if (input._flatpickr) {
+                                try {
+                                    input._flatpickr.clear();
+                                } catch (e) {
+                                    console.warn('Error clearing Flatpickr on open:', e);
                                 }
-                                input.value = '';
-                                input.removeAttribute('data-date-value');
-                            });
-                        }
-                    }, 50);
+                            }
+                            input.value = '';
+                            input.removeAttribute('data-date-value');
+                        });
+                    } else {
+                        // Si el modal no está en el DOM aún, esperar un momento muy corto
+                        setTimeout(function() {
+                            const modal = document.querySelector('[name="modal-po-stage-change"]');
+                            if (modal) {
+                                const dateInputs = modal.querySelectorAll('[wire\\:ignore] input[type="date"], [wire\\:ignore] input.flatpickr-initialized');
+                                dateInputs.forEach(function(input) {
+                                    if (input._flatpickr) {
+                                        try {
+                                            input._flatpickr.clear();
+                                        } catch (e) {
+                                            console.warn('Error clearing Flatpickr on open:', e);
+                                        }
+                                    }
+                                    input.value = '';
+                                    input.removeAttribute('data-date-value');
+                                });
+                            }
+                        }, 10);
+                    }
                 }
             });
         });
@@ -705,6 +725,18 @@
          */
         function populateDateFieldsFromLivewire($wire) {
             console.log('Poblando campos de fecha desde Livewire...');
+            
+            // Buscar el modal primero para asegurar que estamos buscando dentro del contexto correcto
+            const modal = document.querySelector('[name="modal-po-stage-change"]')?.closest('div[x-data]') ||
+                         document.querySelector('.modal-po-stage-change-content');
+            
+            if (!modal) {
+                console.warn('Modal no encontrado, reintentando en 200ms...');
+                setTimeout(function() {
+                    populateDateFieldsFromLivewire($wire);
+                }, 200);
+                return;
+            }
             
             // Lista de todos los campos de fecha que pueden estar en el modal
             const dateFields = [
@@ -725,23 +757,13 @@
             let populatedCount = 0;
             
             dateFields.forEach(function(fieldName) {
-                // Buscar el input por wire:model o por name
-                const input = document.querySelector(`input[wire\\:model="${fieldName}"]`) ||
-                             document.querySelector(`input[name="${fieldName}"]`);
+                // Buscar el input dentro del modal por wire:model o por name
+                const input = modal.querySelector(`input[wire\\:model="${fieldName}"]`) ||
+                             modal.querySelector(`input[name="${fieldName}"]`);
                 
                 if (input) {
-                    // PRIMERO: Limpiar el campo (incluyendo Flatpickr si existe)
-                    if (input._flatpickr) {
-                        try {
-                            input._flatpickr.clear();
-                        } catch (e) {
-                            console.warn('Error clearing Flatpickr:', e);
-                        }
-                    }
-                    input.value = '';
-                    input.removeAttribute('data-date-value');
-                    
-                    // LUEGO: Obtener el valor desde Livewire y poblar si existe
+                    // NO limpiar el campo aquí - ya fue limpiado por el listener de open-modal
+                    // Solo obtener el valor desde Livewire y poblar si existe
                     const value = $wire.get(fieldName);
                     
                     if (value) {
@@ -755,6 +777,17 @@
                             } catch (e) {
                                 console.warn('Error setting Flatpickr date:', e);
                             }
+                        } else if (fieldName === 'date_theorical_load') {
+                            // Si no tiene Flatpickr, esperar un poco y reintentar
+                            setTimeout(function() {
+                                if (input._flatpickr && typeof input._flatpickr.setDate === 'function') {
+                                    input._flatpickr.setDate(value, false);
+                                } else {
+                                    // Si aún no tiene Flatpickr, establecer el valor directamente
+                                    input.value = value;
+                                    input.setAttribute('data-date-value', value);
+                                }
+                            }, 150);
                         }
                         populatedCount++;
                         console.log('✓ Poblado', fieldName, '=', value);

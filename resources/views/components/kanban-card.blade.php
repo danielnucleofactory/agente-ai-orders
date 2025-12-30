@@ -67,38 +67,37 @@
 @endphp
 
 
-<li class="kanban-card relative flex justify-between min-h-[180px] w-full gap-5 rounded-[0.625rem] border-2 border-[#D4F5ED] bg-white px-4 py-2 text-xs"
+<li class="kanban-card relative flex flex-col min-h-[180px] w-full rounded-[0.625rem] border-2 border-[#D4F5ED] bg-white px-4 py-2 text-xs"
     x-data x-init="$el.addEventListener('click', () => {
         window.selectedTaskId = '{{ $trackingId }}';
         console.log('Card clicked, set ID:', window.selectedTaskId);
         document.dispatchEvent(new CustomEvent('card-selected', { detail: { id: '{{ $trackingId }}' } }));
     });" data-task-id="{{ $trackingId }}">
 
-    <div class="flex grow flex-col space-y-[0.875rem]">
-        <div class="flex gap-4">
-            <div class="space-y-1 text-sm">
-                <p>
-                    @if (!$isTrashed)
-                        <a class="text-[#127A62] underline underline-offset-4"
-                           href="/purchase-orders/{{ $trackingId }}/detail">
-                            PO: {{ $po }}
-                        </a>
-                    @else
-                        <span class="text-gray-400 cursor-not-allowed select-none"
-                              title="PO anulada: detalle bloqueado">
-                            PO: {{ $po }}
-                        </span>
-                    @endif
-                </p>
-
-                <p>ID Tracking: {{ $trackingIdCode ?? 'N/A' }}</p>
-            </div>
+    {{-- Primer tercio (33%): Número de PO e ID Tracking --}}
+    <div class="flex-shrink-0 h-1/3 flex items-center justify-between border-b border-[#D4F5ED] pb-2 mb-2">
+        <div class="space-y-1 text-sm w-full">
+            <p>
+                @if (!$isTrashed)
+                    <a class="text-[#127A62] underline underline-offset-4 font-semibold"
+                       href="/purchase-orders/{{ $trackingId }}/detail">
+                        PO: {{ $po }}
+                    </a>
+                @else
+                    <span class="text-gray-400 cursor-not-allowed select-none font-semibold"
+                          title="PO anulada: detalle bloqueado">
+                        PO: {{ $po }}
+                    </span>
+                @endif
+            </p>
+            <p class="text-xs text-gray-600">ID Tracking: {{ $trackingIdCode ?? 'N/A' }}</p>
         </div>
     </div>
 
-    <div class="flex flex-col justify-between">
-        <div class="flex gap-2 mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 18 20" fill="none">
+    {{-- Dos tercios restantes (67%): Campos adicionales --}}
+    <div class="flex-1 flex flex-col justify-between min-h-0">
+        <div class="flex gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 18 20" fill="none" class="flex-shrink-0">
                 <path
                     d="M5.625 10.25C5.32663 10.25 5.04048 10.3685 4.8295 10.5795C4.61853 10.7905 4.5 11.0766 4.5 11.375C4.5 11.6734 4.61853 11.9595 4.8295 12.1705C5.04048 12.3815 5.32663 12.5 5.625 12.5C5.92337 12.5 6.20952 12.3815 6.4205 12.1705C6.63147 11.9595 6.75 11.6734 6.75 11.375C6.75 11.0766 6.63147 10.7905 6.4205 10.5795C6.20952 10.3685 5.92337 10.25 5.625 10.25ZM7.875 11.375C7.875 11.0766 7.99353 10.7905 8.2045 10.5795C8.41548 10.3685 8.70163 10.25 9 10.25H12.375C12.6734 10.25 12.9595 10.3685 13.1705 10.5795C13.3815 10.7905 13.5 11.0766 13.5 11.375C13.5 11.6734 13.3815 11.9595 13.1705 12.1705C12.9595 12.3815 12.6734 12.5 12.375 12.5H9C8.70163 12.5 8.41548 12.3815 8.2045 12.1705C7.99353 11.9595 7.875 11.6734 7.875 11.375ZM5.625 13.25C5.32663 13.25 5.04048 13.3685 4.8295 13.5795C4.61853 13.7905 4.5 14.0766 4.5 14.375C4.5 14.6734 4.61853 14.9595 4.8295 15.1705C5.04048 15.3815 5.32663 15.5 5.625 15.5H9C9.29837 15.5 9.58452 15.3815 9.79549 15.1705C10.0065 14.9595 10.125 14.6734 10.125 14.375C10.125 14.0766 10.0065 13.7905 9.79549 13.5795C9.58452 13.3685 9.29837 13.25 9 13.25H5.625Z"
                     fill="black" />
@@ -107,7 +106,7 @@
                     fill="black" />
             </svg>
 
-            <div class="space-y-1">
+            <div class="space-y-1 flex-1">
                 <p class="whitespace-nowrap">ETD: <span>{{ $etd ?? 'N/A' }}</span></p>
                 <p class="whitespace-nowrap">ETA Estimado: <span>{{ $etaEstimado ?? 'N/A' }}</span></p>
                 <p class="whitespace-nowrap">Puerto destino: <span>{{ $puertoDestino }}</span></p>
