@@ -37,11 +37,11 @@
 
     $eta            = $fmt($purchaseOrder?->date_eta);
     $ata            = $fmt($purchaseOrder?->date_ata);
-    $etd            = $fmt($purchaseOrder?->date_etd);
+    $atd            = $fmt($purchaseOrder?->date_atd);
     $etaEstimado    = $fmt($purchaseOrder?->date_eta_initial ?? $purchaseOrder?->date_eta);
     $puertoDestino  = $purchaseOrder?->arrival_port ?? 'N/A';
     $proveedorServicio = $purchaseOrder?->service_provider ?? 'N/A';
-    $cliente        = $purchaseOrder?->vendor?->name ?? 'N/A';
+    $cliente        = $purchaseOrder?->trading_company ?? 'N/A';
 
     // Obtener mbl_number y container_number directamente de la PO
     // No cargar shippingDocuments para evitar consultas N+1 en el kanban
@@ -90,7 +90,19 @@
                     </span>
                 @endif
             </p>
-            <p class="text-xs text-gray-600">ID Tracking: {{ $trackingIdCode ?? 'N/A' }}</p>
+            @if($mblNumber || $containerNumber || ($trackingIdCode && $trackingIdCode !== 'N/A'))
+                <div class="text-xs text-gray-600 space-y-0.5">
+                    @if($mblNumber)
+                        <p>MBL: {{ $mblNumber }}</p>
+                    @endif
+                    @if($containerNumber)
+                        <p>Contenedor: {{ $containerNumber }}</p>
+                    @endif
+                    @if($trackingIdCode && $trackingIdCode !== 'N/A')
+                        <p>Booking: {{ $trackingIdCode }}</p>
+                    @endif
+                </div>
+            @endif
         </div>
     </div>
 
@@ -107,7 +119,7 @@
             </svg>
 
             <div class="space-y-1 flex-1">
-                <p class="whitespace-nowrap">ETD: <span>{{ $etd ?? 'N/A' }}</span></p>
+                <p class="whitespace-nowrap">ATD: <span>{{ $atd ?? 'N/A' }}</span></p>
                 <p class="whitespace-nowrap">ETA Estimado: <span>{{ $etaEstimado ?? 'N/A' }}</span></p>
                 <p class="whitespace-nowrap">Puerto destino: <span>{{ $puertoDestino }}</span></p>
                 <p class="whitespace-nowrap">Proveedor de Servicio: <span>{{ $proveedorServicio }}</span></p>
