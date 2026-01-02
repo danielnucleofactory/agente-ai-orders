@@ -498,6 +498,14 @@
                 {{-- Etapa 9: Recibiendo CDI --}}
                 <div class="{{ (isset($columns[8]) && $newColumnId == $columns[8]['id']) ? '' : 'hidden' }}">
                     <div class="mb-8">
+                        <x-form-input>
+                            <x-slot:label>Fecha Disp. Bodega Estimada <span class="text-red-500">*</span></x-slot:label>
+                            <x-slot:input type="date" name="estimated_dc_availability_date" wire:model="estimated_dc_availability_date"
+                                          class="pr-10 {{ $errors->has('estimated_dc_availability_date') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('estimated_dc_availability_date') }}</x-slot:error>
+                        </x-form-input>
+                    </div>
+                    <div class="mb-8">
                         <x-form-textarea label="" name="comment_stage_09" wireModel="comment" placeholder="Comentarios" />
                     </div>
                 </div>

@@ -77,6 +77,9 @@ class KanbanBoard extends Component
 
 
     public $comment_stage_08;
+    
+    // Recibiendo CDI (id 9)
+    public $estimated_dc_availability_date;
     public $comment_stage_09;
 
 
@@ -682,6 +685,9 @@ class KanbanBoard extends Component
             $this->bonded_warehouse_enter = $po->bonded_warehouse_enter ? $po->bonded_warehouse_enter->format('Y-m-d') : null;
             $this->bonded_warehouse_exit = $po->bonded_warehouse_exit ? $po->bonded_warehouse_exit->format('Y-m-d') : null;
 
+            // Recibiendo CDI - convertir fechas al formato Y-m-d
+            $this->estimated_dc_availability_date = $po->estimated_dc_availability_date ? $po->estimated_dc_availability_date->format('Y-m-d') : null;
+
             // Ingresada
             $this->receipt_note = $po->receipt_note;
         }
@@ -907,6 +913,7 @@ class KanbanBoard extends Component
             ], // En transito
             6 => ['date_ata'], // Puerto
             7 => ['bonded_warehouse_enter', 'bonded_warehouse_exit', 'date_ata'], // Alm. Fiscal
+            9 => ['estimated_dc_availability_date'], // Recibiendo CDI
             10 => ['receipt_note'], // Ingresada
         ];
     }
@@ -1067,6 +1074,10 @@ class KanbanBoard extends Component
                 // Si quisieras hacerlo requerido:
                 // 'receipt_note' => 'required|string',
             ],
+
+            9 => [
+                'estimated_dc_availability_date' => 'required|date',
+            ],
         ];
     }
 
@@ -1095,6 +1106,7 @@ class KanbanBoard extends Component
             'date_ata'               => 'ETA Real',
             'bonded_warehouse_enter' => 'Ingreso a AF',
             'bonded_warehouse_exit'  => 'Salida AF',
+            'estimated_dc_availability_date' => 'Fecha Disp. Bodega Estimada',
             'receipt_note'      => 'Nota de Recibo',
         ];
     }
