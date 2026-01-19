@@ -25,6 +25,7 @@ class KanbanStatus extends Model
         'color',
         'is_default',
         'is_final',
+        'is_hidden',
     ];
 
     /**
@@ -36,6 +37,7 @@ class KanbanStatus extends Model
         'position' => 'integer',
         'is_default' => 'boolean',
         'is_final' => 'boolean',
+        'is_hidden' => 'boolean',
     ];
 
     /**

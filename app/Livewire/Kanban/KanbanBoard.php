@@ -55,6 +55,7 @@ class KanbanBoard extends Component
     public $date_eta_initial;
     public $container_type;
     public $container_number;
+    public $mbl_number;
     public $bill_of_lading;
     public $shipment_amount;
     public $shipping_line;
@@ -180,7 +181,11 @@ class KanbanBoard extends Component
         }
 
         // Cargar las columnas (estados) del tablero ordenadas por posición
-        $statuses = $this->board->statuses()->orderBy('position')->get();
+        // Excluir estados ocultos
+        $statuses = $this->board->statuses()
+            ->where('is_hidden', false)
+            ->orderBy('position')
+            ->get();
 
         if ($statuses->isEmpty()) {
             \Log::warning('KanbanBoard: No se encontraron columnas para el tablero', [
@@ -502,6 +507,14 @@ class KanbanBoard extends Component
             return;
         }
 
+        // Validar que la etapa destino no esté oculta
+        $targetStatus = \App\Models\KanbanStatus::find($stage);
+        if ($targetStatus && $targetStatus->is_hidden) {
+            session()->flash('message', 'No se puede mover a una etapa oculta.');
+            $this->dispatch('refreshKanban');
+            return;
+        }
+
         try {
             $this->validateStageRequirements($stage);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -622,10 +635,10 @@ class KanbanBoard extends Component
             $this->service_provider = $po->service_provider;
             $this->forwarder_name = $po->forwarder_name;
 
-            // Cargar proveedores de servicio si estamos en la etapa de producción
+            // Cargar proveedores de servicio si estamos en la etapa de producción o booking
             // IMPORTANTE: Cargar service_provider ANTES de llamar a loadServiceProviders
             // para que el método pueda agregar el valor guardado al array si la API no devuelve datos
-            if ($newColumnId == 2 && $po->trading_company) {
+            if (($newColumnId == 2 || $newColumnId == 3) && $po->trading_company) {
                 $this->loadServiceProviders($po->trading_company, $po->service_provider);
             }
 
@@ -657,6 +670,12 @@ class KanbanBoard extends Component
             if ($newColumnId != 3) {
                 $this->mode = $po->mode;
             }
+            // Cargar campos de tracking para Booking
+            if ($newColumnId == 3) {
+                $this->container_number = $po->container_number;
+                $this->mbl_number = $po->mbl_number;
+                $this->tracking_id = $po->tracking_id;
+            }
 
             // En Tránsito - convertir fechas al formato Y-m-d
             $this->date_atd = $po->date_atd ? $po->date_atd->format('Y-m-d') : null;
@@ -666,7 +685,7 @@ class KanbanBoard extends Component
                 $this->container_type = $po->container_type;
             }
             $this->container_number = $po->container_number;
-            $this->bill_of_lading = $po->bill_of_lading;
+            $this->mbl_number = $po->mbl_number;
             $this->shipment_amount = $po->shipment_amount ?? null;
             // shipping_line, departure_port y arrival_port ya se cargaron arriba si estamos en etapa 5
             if ($newColumnId != 5) {
@@ -903,11 +922,12 @@ class KanbanBoard extends Component
     {
         return [
             2 => ['date_variable_date', 'date_theorical_load', 'service_provider', 'forwarder_name'], // Producción
-            3 => ['date_booking_request', 'date_booking_authorized', 'date_etd_initial', 'date_etd', 'mode'], // Booking
+            3 => ['date_variable_date', 'date_theorical_load', 'service_provider',
+                  'container_number', 'mbl_number', 'tracking_id'], // Booking (mismos campos que Producción + tracking)
             4 => [], // Consolidador (sin campos específicos)
             5 => [
                 'date_atd', 'date_eta', 'date_eta_initial', 'container_type',
-                'container_number', 'bill_of_lading',
+                'container_number', 'mbl_number',
                 'shipment_amount', 'shipping_line', 'shipment_status', 'merchandise_invoice',
                 'tracking_id', 'departure_port', 'arrival_port',
             ], // En transito
@@ -1021,8 +1041,10 @@ class KanbanBoard extends Component
      * y con los campos definidos en fieldsByStage().
      *
      * Validaciones complejas:
-     * - Etapa 5 (En Tránsito): Usa 'required_without_all' para container_number, bill_of_lading
-     *   y tracking_id. Esto significa que al menos uno de estos tres campos debe estar presente.
+     * - Etapa 3 (Booking): Usa 'required_without_all' para container_number, mbl_number
+     *   y tracking_id. Al menos uno de estos tres campos debe estar presente para habilitar tracking.
+     * - Etapa 5 (En Tránsito): Los campos de tracking ya NO se validan aquí porque se capturaron
+     *   en el paso a Booking.
      *
      * @return array<int, array<string, string>> Array indexado por ID de etapa con reglas de validación
      */
@@ -1033,27 +1055,23 @@ class KanbanBoard extends Component
                 'date_variable_date' => 'required|date',
                 'service_provider'   => 'nullable|string',
                 // forwarder_name está oculto en la vista, por lo que no debe ser requerido
-                // 'forwarder_name'     => 'required|string',
-                // Si más adelante decides exigir la teórica:
-                // 'date_theorical_load' => 'required|date',
+                // Los campos de tracking se capturan en el paso a Booking (etapa 3)
             ],
 
             3 => [
-                'date_booking_request'    => 'required|date',
-                'date_booking_authorized' => 'required|date',
-                'date_etd_initial'        => 'required|date',
-                'date_etd'                => 'required|date', // ETD Variable
-                'mode'                    => 'required|string',
+                'date_variable_date' => 'required|date',
+                'service_provider'   => 'nullable|string',
+                // Validación: al menos uno de estos tres campos debe estar presente para habilitar tracking
+                'container_number' => 'nullable|required_without_all:tracking_id,mbl_number|string',
+                'mbl_number'       => 'nullable|required_without_all:tracking_id,container_number|string',
+                'tracking_id'      => 'nullable|required_without_all:container_number,mbl_number|string',
             ],
 
             5 => [
                 'date_atd'         => 'required|date',
                 'date_eta'         => 'required|date',
                 'date_eta_initial' => 'required|date',
-                // Validación compleja: al menos uno de estos tres campos debe estar presente
-                'container_number' => 'nullable|required_without_all:tracking_id,bill_of_lading|string',
-                'bill_of_lading'   => 'nullable|required_without_all:tracking_id,container_number',
-                'tracking_id'      => 'nullable|required_without_all:container_number,bill_of_lading|string',
+                // Los campos de tracking ya se capturaron en el paso a Booking
                 'shipping_line'    => 'required|string',
                 'departure_port'   => 'required|string',
                 'arrival_port'     => 'required|string',
@@ -1098,6 +1116,7 @@ class KanbanBoard extends Component
             'date_eta_initial'       => 'ETA variable',
             'container_number'       => 'Contenedor',
             'container_type'         => 'Tipo de contenedor',
+            'mbl_number'             => 'MBL',
             'bill_of_lading'         => 'BL',
             'shipping_line'          => 'Naviera',
             'tracking_id'            => 'Tracking',

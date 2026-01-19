@@ -54,7 +54,10 @@ class KanbanBoard extends Model
      */
     public function defaultStatus()
     {
-        return $this->statuses()->where('is_default', true)->first();
+        return $this->statuses()
+            ->where('is_hidden', false)
+            ->where('is_default', true)
+            ->first();
     }
 
     /**
