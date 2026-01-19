@@ -191,7 +191,10 @@ class PurchaseOrderController extends Controller
                     ->first();
 
                 if ($kanbanBoard) {
-                    $status = $kanbanBoard->statuses()->where('name', 'Recepción')->first()
+                    $status = $kanbanBoard->statuses()
+                        ->where('is_hidden', false)
+                        ->where('name', 'Recepción')
+                        ->first()
                         ?: $kanbanBoard->defaultStatus();
                     $kanbanStatusId = $status?->id;
                 }
@@ -564,7 +567,10 @@ class PurchaseOrderController extends Controller
             ->first();
 
         if ($kanbanBoard) {
-            $status = $kanbanBoard->statuses()->where('name', 'Recepción')->first()
+            $status = $kanbanBoard->statuses()
+                ->where('is_hidden', false)
+                ->where('name', 'Recepción')
+                ->first()
                 ?: $kanbanBoard->defaultStatus();
             $kanbanStatusId = $status?->id;
         }

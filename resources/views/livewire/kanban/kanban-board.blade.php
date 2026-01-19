@@ -163,15 +163,15 @@
                 {{-- Contenido scrolleable --}}
                 <div class="flex-1 overflow-y-auto pr-2 -mr-2 mb-3 pt-2">
                     <div class="mb-4">
-                {{-- Etapa 1: Nuevo --}}
-                <div class="{{ (isset($columns[0]) && $newColumnId == $columns[0]['id']) ? '' : 'hidden' }}">
+                {{-- Etapa 1: Nuevo (ID 1) --}}
+                <div class="{{ $newColumnId == 1 ? '' : 'hidden' }}">
                     <div class="mb-8">
                         <x-form-textarea label="" name="comment_stage_01" wireModel="comment" placeholder="Comentarios" />
                     </div>
                 </div>
 
-                {{-- Etapa 2: Producción --}}
-                <div class="{{ (isset($columns[1]) && $newColumnId == $columns[1]['id']) ? '' : 'hidden' }}">
+                {{-- Etapa 2: Producción (ID 2) --}}
+                <div class="{{ $newColumnId == 2 ? '' : 'hidden' }}">
                     <div class="mb-8 pt-2" wire:ignore>
                         <x-form-input>
                             <x-slot:label>Carga Lista Variable <span class="text-red-500">*</span></x-slot:label>
@@ -209,92 +209,78 @@
                     </div>
                 </div>
 
-                {{-- Etapa 3: Booking --}}
-                <div class="{{ (isset($columns[2]) && $newColumnId == $columns[2]['id']) ? '' : 'hidden' }}">
-                    <div class="space-y-4 sm:space-y-6 pt-2">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                            <div wire:ignore>
+                {{-- Etapa 3: Booking (ID 3) --}}
+                {{-- Mismos campos que Producción + campos de tracking --}}
+                <div class="{{ $newColumnId == 3 ? '' : 'hidden' }}">
+                    <div class="mb-8 pt-2" wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Carga Lista Variable <span class="text-red-500">*</span></x-slot:label>
+                            <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500'  : '' }}">
+                            </x-slot:input>
+                        </x-form-input>
+                    </div>
+                    <div class="mb-8" wire:ignore>
+                        <x-form-input>
+                            <x-slot:label>Carga Lista Teórica</x-slot:label>
+                            <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" readonly class="pr-10 bg-gray-100 cursor-not-allowed"></x-slot:input>
+                        </x-form-input>
+                    </div>
+                    <div class="mb-8">
+                        <x-form-select
+                            label="Proveedor de Servicio"
+                            name="service_provider"
+                            wire:model.live="service_provider"
+                            :options="$serviceProviderArray"
+                            :error="false"
+                        />
+                    </div>
+
+                    {{-- Campos de tracking para habilitar seguimiento --}}
+                    <div class="mb-4">
+                        <div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm">
+                            <p><strong>Nota:</strong> Debe proporcionar al menos uno de los siguientes: Número de Booking, MBL o Número de Contenedor.</p>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
+                            <div>
                                 <x-form-input>
-                                    <x-slot:label>Solicitud de Booking <span class="text-red-500">*</span></x-slot:label>
-                                        <x-slot:input
-                                            type="date"
-                                            name="date_booking_request"
-                                            wire:model="date_booking_request"
-                                            class="w-full pr-10 {{ $errors->has('date_booking_request') ? 'border-red-500'  : '' }}">
-                                        </x-slot:input>
-                                        {{-- Error oculto --}}
-                                    </x-form-input>
-                                </div>
-
-                                <div wire:ignore>
-                                    <x-form-input>
-                                        <x-slot:label>Autorización de Booking <span class="text-red-500">*</span></x-slot:label>
-                                        <x-slot:input
-                                            type="date"
-                                            name="date_booking_authorized"
-                                            wire:model="date_booking_authorized"
-                                            class="w-full pr-10 {{ $errors->has('date_booking_authorized') ? 'border-red-500'  : '' }}">
-                                        </x-slot:input>
-                                        {{-- Error oculto --}}
-                                    </x-form-input>
-                                </div>
-
-                                <div wire:ignore>
-                                    <x-form-input>
-                                        <x-slot:label>ETD Inicial <span class="text-red-500">*</span></x-slot:label>
-                                        <x-slot:input
-                                            type="date"
-                                            name="date_etd_initial"
-                                            wire:model="date_etd_initial"
-                                            class="w-full pr-10 {{ $errors->has('date_etd_initial') ? 'border-red-500'  : '' }}">
-                                        </x-slot:input>
-                                        {{-- Error oculto --}}
-                                    </x-form-input>
-                                </div>
-
-                                <div wire:ignore>
-                                    <x-form-input>
-                                        <x-slot:label>ETD Variable <span class="text-red-500">*</span></x-slot:label>
-                                        <x-slot:input
-                                            type="date"
-                                            name="date_etd"
-                                            wire:model="date_etd"
-                                            class="w-full pr-10 {{ $errors->has('date_etd') ? 'border-red-500'  : '' }}">
-                                        </x-slot:input>
-                                        {{-- Error oculto --}}
-                                    </x-form-input>
-                                </div>
-
-                                <div>
-                                    <x-form-select
-                                        label="Modo de transporte <span class='text-red-500'>*</span>"
-                                        name="mode"
-                                        wire:model.live="mode"
-                                        :options="$transportTypeArray"
-                                        :error="$errors->has('mode')" />
-                                </div>
-
-                                <div class="sm:col-span-2">
-                                    <x-form-textarea
-                                        label=""
-                                        name="comment_stage_03"
-                                        wireModel="comment"
-                                        class="w-full"
-                                        placeholder="Comentarios" />
-                                </div>
+                                    <x-slot:label>Número de Contenedor</x-slot:label>
+                                    <x-slot:input name="container_number" wire:model="container_number" placeholder="Ingrese número de contenedor" autocomplete="off"
+                                                  class="pr-10 {{ $errors->has('container_number') ? 'border-red-500' : '' }}"></x-slot:input>
+                                </x-form-input>
                             </div>
+
+                            <div>
+                                <x-form-input>
+                                    <x-slot:label>MBL</x-slot:label>
+                                    <x-slot:input name="mbl_number" wire:model="mbl_number" placeholder="Ingrese MBL"
+                                                  class="pr-10 {{ $errors->has('mbl_number') ? 'border-red-500' : '' }}"></x-slot:input>
+                                </x-form-input>
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <x-form-input>
+                                    <x-slot:label>Número de Booking</x-slot:label>
+                                    <x-slot:input name="tracking_id" wire:model="tracking_id" placeholder="Ingrese número de booking"
+                                                  class="pr-10 {{ $errors->has('tracking_id') ? 'border-red-500' : '' }}"></x-slot:input>
+                                </x-form-input>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-8">
+                        <x-form-textarea label="" name="comment_stage_03" wireModel="comment" placeholder="Comentarios" />
                     </div>
                 </div>
 
-                {{-- Etapa 4: Consolidador --}}
-                <div class="{{ (isset($columns[3]) && $newColumnId == $columns[3]['id']) ? '' : 'hidden' }}">
+                {{-- Etapa 4: Consolidador (ID 4) --}}
+                <div class="{{ $newColumnId == 4 ? '' : 'hidden' }}">
                     <div class="mb-8">
                         <x-form-textarea label="" name="comment_stage_04" wireModel="comment" placeholder="Comentarios" />
                     </div>
                 </div>
 
-                {{-- Etapa 5: En Tránsito --}}
-                <div class="{{ (isset($columns[4]) && $newColumnId == $columns[4]['id']) ? '' : 'hidden' }}">
+                {{-- Etapa 5: En Tránsito (ID 5) --}}
+                <div class="{{ $newColumnId == 5 ? '' : 'hidden' }}">
                     <div class="mb-8 pt-2">
                         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-6">
                             <div wire:ignore>
@@ -327,22 +313,13 @@
                     </div>
 
                     <div class="mb-8">
-                        @if($errors->any())
-                            <div class="mb-3 p-3 bg-red-50 border-l-4 border-red-400 text-red-700 text-sm">
-                                <p><strong>Nota:</strong> Los campos marcados en rojo son obligatorios y deben ser completados.</p>
-                            </div>
-                        @else
-                            <div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm">
-                                <p><strong>Nota:</strong> Debe proporcionar al menos uno de los siguientes: Número de Booking, MBL o Número de Contenedor.</p>
-                            </div>
-                        @endif
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-6">
-                            <div>
+                            {{-- Campos de tracking ocultos - ya se capturaron en el paso a Booking --}}
+                            <div class="hidden">
                                 <x-form-input>
                                     <x-slot:label>Número de Contenedor</x-slot:label>
                                     <x-slot:input name="container_number" wire:model="container_number" placeholder="Ingrese número de contenedor" autocomplete="off"
                                                   class="pr-10 {{ $errors->has('container_number') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    {{-- Error oculto, se muestra en la barra superior --}}
                                 </x-form-input>
                             </div>
 
@@ -356,12 +333,11 @@
                                 {{-- Error oculto --}}
                             </div>
 
-                            <div>
+                            <div class="hidden">
                                 <x-form-input>
                                     <x-slot:label>MBL</x-slot:label>
-                                    <x-slot:input name="bill_of_lading" wire:model="bill_of_lading" placeholder="Ingrese MBL"
-                                                  class="pr-10 {{ $errors->has('bill_of_lading') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    {{-- Error oculto, se muestra en la barra superior --}}
+                                    <x-slot:input name="mbl_number" wire:model="mbl_number" placeholder="Ingrese MBL"
+                                                  class="pr-10 {{ $errors->has('mbl_number') ? 'border-red-500' : '' }}"></x-slot:input>
                                 </x-form-input>
                             </div>
 
@@ -406,12 +382,12 @@
 
                     <div class="mb-8">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-6">
-                            <div class="md:col-span-2">
+                            {{-- Número de Booking oculto - ya se capturó en el paso a Booking --}}
+                            <div class="md:col-span-2 hidden">
                                 <x-form-input>
                                     <x-slot:label>Número de Booking</x-slot:label>
                                     <x-slot:input name="tracking_id" wire:model="tracking_id" placeholder="Ingrese número de booking"
                                                   class="pr-10 {{ $errors->has('tracking_id') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    {{-- Error oculto, se muestra en la barra superior --}}
                                 </x-form-input>
                             </div>
 
@@ -442,8 +418,8 @@
                     </div>
                 </div>
 
-                {{-- Etapa 6: Puerto --}}
-                <div class="{{ (isset($columns[5]) && $newColumnId == $columns[5]['id']) ? '' : 'hidden' }}">
+                {{-- Etapa 6: Puerto (ID 6) --}}
+                <div class="{{ $newColumnId == 6 ? '' : 'hidden' }}">
                     <div class="mb-8 pt-2" wire:ignore>
                         <x-form-input>
                             <x-slot:label>ETA Real (ATA) <span class="text-red-500">*</span></x-slot:label>
@@ -457,8 +433,8 @@
                     </div>
                 </div>
 
-                {{-- Etapa 7: Almacén Fiscal --}}
-                <div class="{{ (isset($columns[6]) && $newColumnId == $columns[6]['id']) ? '' : 'hidden' }}">
+                {{-- Etapa 7: Almacén Fiscal (ID 7) --}}
+                <div class="{{ $newColumnId == 7 ? '' : 'hidden' }}">
                     <div class="mb-8 pt-2" wire:ignore>
                         <x-form-input>
                             <x-slot:label>Ingreso Almacén Fiscal <span class="text-red-500">*</span></x-slot:label>
@@ -488,15 +464,15 @@
                     </div>
                 </div>
 
-                {{-- Etapa 8: En otra ZF --}}
-                <div class="{{ (isset($columns[7]) && $newColumnId == $columns[7]['id']) ? '' : 'hidden' }}">
+                {{-- Etapa 8: En otra ZF (ID 8) --}}
+                <div class="{{ $newColumnId == 8 ? '' : 'hidden' }}">
                     <div class="mb-8">
                         <x-form-textarea label="" name="comment_stage_08" wireModel="comment" placeholder="Comentarios" />
                     </div>
                 </div>
 
-                {{-- Etapa 9: Recibiendo CDI --}}
-                <div class="{{ (isset($columns[8]) && $newColumnId == $columns[8]['id']) ? '' : 'hidden' }}">
+                {{-- Etapa 9: Recibiendo CDI (ID 9) --}}
+                <div class="{{ $newColumnId == 9 ? '' : 'hidden' }}">
                     <div class="mb-8">
                         <x-form-input>
                             <x-slot:label>Fecha Disp. Bodega Estimada <span class="text-red-500">*</span></x-slot:label>
@@ -510,8 +486,8 @@
                     </div>
                 </div>
 
-                {{-- Etapa 10: Ingresada --}}
-                <div class="{{ (isset($columns[9]) && $newColumnId == $columns[9]['id']) ? '' : 'hidden' }}">
+                {{-- Etapa 10: Ingresada (ID 10) --}}
+                <div class="{{ $newColumnId == 10 ? '' : 'hidden' }}">
                     <div class="mb-8">
                         <x-form-input>
                             <x-slot:label>Nota de Recibo</x-slot:label>
@@ -523,8 +499,8 @@
                     </div>
                 </div>
 
-                {{-- Etapa 11: Anulada --}}
-                <div class="{{ (isset($columns[10]) && $newColumnId == $columns[10]['id']) ? '' : 'hidden' }}">
+                {{-- Etapa 11: Anulada (ID 11) --}}
+                <div class="{{ $newColumnId == 11 ? '' : 'hidden' }}">
                     <div class="mb-8">
                         <x-form-textarea label="" name="comment_stage_11" wireModel="comment" placeholder="Comentarios" />
                     </div>
