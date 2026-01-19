@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
@@ -59,6 +60,38 @@ class ShippingDocument extends Model implements HasMedia
         'bonded_warehouse_exit',
         // Ingresada
         'receipt_note',
+        
+        // Campos de Porth
+        'porth_id',
+        'porth_shipment_number',
+        'porth_carrier_code',
+        'porth_pol',
+        'porth_pod',
+        'porth_pol_name',
+        'porth_pod_name',
+        'porth_phase',
+        'porth_priority',
+        'porth_modality',
+        'freight_type',
+        'porth_vessel_voyage',
+        'porth_name',
+        'porth_organization_id',
+        'porth_origin',
+        'porth_final_destination',
+        'porth_first_eta',
+        'porth_first_etd',
+        'porth_free_time_at_destination',
+        'porth_manual_tracking',
+        'porth_tags',
+        'porth_ready',
+        'porth_to_origin_port',
+        'porth_at_origin_port',
+        'porth_in_transit',
+        'porth_at_destination_port',
+        'porth_to_final_destination',
+        'porth_delivered',
+        'last_porth_sync_at',
+        'porth_raw',
     ];
 
     protected $casts = [
@@ -80,6 +113,22 @@ class ShippingDocument extends Model implements HasMedia
         'bonded_warehouse_enter' => 'datetime',
         'bonded_warehouse_exit' => 'datetime',
         'Invoice_amount' => 'decimal:2',
+        
+        // Casts de Porth
+        'porth_vessel_voyage' => 'array',
+        'porth_raw' => 'array',
+        'porth_tags' => 'array',
+        'porth_manual_tracking' => 'boolean',
+        'porth_first_eta' => 'datetime',
+        'porth_first_etd' => 'datetime',
+        'porth_ready' => 'datetime',
+        'porth_to_origin_port' => 'datetime',
+        'porth_at_origin_port' => 'datetime',
+        'porth_in_transit' => 'datetime',
+        'porth_at_destination_port' => 'datetime',
+        'porth_to_final_destination' => 'datetime',
+        'porth_delivered' => 'datetime',
+        'last_porth_sync_at' => 'datetime',
     ];
 
     /**
@@ -131,6 +180,30 @@ class ShippingDocument extends Model implements HasMedia
     public function comments()
     {
         return $this->hasMany(Comment::class, 'shipping_document_id');
+    }
+
+    /**
+     * Relación con los cargos/contenedores de Porth
+     */
+    public function porthCargos(): HasMany
+    {
+        return $this->hasMany(PorthCargo::class);
+    }
+
+    /**
+     * Relación con las fases de Porth
+     */
+    public function porthPhases(): HasMany
+    {
+        return $this->hasMany(PorthPhase::class);
+    }
+
+    /**
+     * Relación con los itinerarios de Porth
+     */
+    public function porthItineraries(): HasMany
+    {
+        return $this->hasMany(PorthItinerary::class);
     }
 
     /**

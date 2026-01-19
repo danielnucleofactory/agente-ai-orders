@@ -41,8 +41,16 @@ return [
 
     'porth' => [
         'api_key' => env('PORTH_API_KEY'),
-        'base_url' => env('PORTH_BASE_URL', 'https://porth-api.fly.dev'),
-        'sync_enabled' => env('PORTH_SYNC_ENABLED', true),
+        'api_url' => env('PORTH_API_URL', 'https://api.porth.app'),
+        'base_url' => env('PORTH_BASE_URL', 'https://porth-api.fly.dev'), // Legacy
+        'auth_header' => env('PORTH_AUTH_HEADER', 'apikey'),
+        'enabled' => env('PORTH_SYNC_ENABLED', true),
+        'sync_enabled' => env('PORTH_SYNC_ENABLED', true), // Legacy
+        'max_retries' => env('PORTH_MAX_RETRIES', 5),
+        'timeout' => env('PORTH_TIMEOUT', 90),
+        'sync_dry_run' => env('PORTH_SYNC_DRY_RUN', false),
+        'sync_lookback_hours' => env('PORTH_SYNC_LOOKBACK_HOURS', 2),
+        'notification_user_ids' => env('PORTH_SYNC_NOTIFICATION_USER_IDS', ''),
     ],
 
     'whatsapp' => [

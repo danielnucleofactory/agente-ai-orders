@@ -1,0 +1,87 @@
+﻿Region;Paises;Destino;Dias de tiempo de transito
+Asia;CHINA;CR;65
+Asia;VIETNAM;SV;65
+Asia;KOREA;GT;53
+Asia;INDIA;VZLA;65
+Asia;PHILIPPINES;Colombia;28
+Asia;TAIWAN;Colombia;28
+Asia;UNITED ARAB EMIRATES;Colombia;28
+America;MÉXICO;CR;14
+America;MÉXICO;SV;12
+America;MÉXICO;GT;12
+America;MÉXICO;VZLA;30
+America;MÉXICO;Colombia;25
+America;PANAMA;CR;2
+America;PANAMA;SV;4
+America;PANAMA;GT;5
+America;PANAMA;VZLA;10
+America;PANAMA;Colombia;2
+America;GUATEMALA;Colombia;18
+America;GUATEMALA;CR;10
+America;GUATEMALA;SV;2
+America;GUATEMALA;GT;0
+America;GUATEMALA;VZLA;25
+America;COLOMBIA;Colombia;0
+America;COLOMBIA;CR;10
+America;COLOMBIA;SV;15
+America;COLOMBIA;GT;12
+America;COLOMBIA;VZLA;5
+America;BRAZIL;Colombia;25
+America;BRAZIL;CR;25
+America;BRAZIL;SV;25
+America;BRAZIL;GT;25
+America;BRAZIL;VZLA;20
+America;COSTA RICA;Colombia;12
+America;COSTA RICA;CR;0
+America;COSTA RICA;SV;12
+America;COSTA RICA;GT;12
+America;COSTA RICA;VZLA;15
+America;CANADA;Colombia;25
+America;CANADA;CR;18
+America;CANADA;SV;28
+America;CANADA;GT;25
+America;CANADA;VZLA;25
+America;UNITED STATES;Colombia;5
+America;UNITED STATES;CR;10
+America;UNITED STATES;SV;10
+America;UNITED STATES;GT;10
+America;UNITED STATES;VZLA;12
+America;CHILE;Colombia;20
+America;CHILE;CR;25
+America;CHILE;SV;28
+America;CHILE;GT;28
+America;CHILE;VZLA;35
+America;EL SALVADOR;Colombia;15
+America;EL SALVADOR;CR;12
+America;EL SALVADOR;SV;0
+America;EL SALVADOR;GT;8
+America;EL SALVADOR;VZLA;32
+America;VENEZUELA;Colombia;10
+America;VENEZUELA;CR;20
+America;VENEZUELA;SV;30
+America;VENEZUELA;GT;30
+America;VENEZUELA;VZLA;0
+America;PERU;Colombia;18
+America;PANAMÁ;CR;22
+America;ECUADOR;SV;25
+America;ECUADOR;GT;25
+America;ECUADOR;VZLA;27
+America;PANAMÁ;Colombia;7
+America;PANAMÁ;CR;7
+America;PANAMÁ;SV;12
+America;PANAMÁ;GT;12
+America;PANAMÁ;VZLA;7
+America;ECUADOR;Colombia;15
+America;ECUADOR;CR;30
+America;ECUADOR;SV;32
+America;ECUADOR;GT;32
+America;ECUADOR;VZLA;28
+Europa;ITALY;Colombia;28
+Europa;GERMANY;CR;28
+Europa;BELGIUM;SV;30
+Europa;ISRAEL;GT;30
+Europa;NEDERLAND;VZLA;35
+Europa;HUNGARY;VZLA;35
+Europa;SPAIN;VZLA;35
+Europa;PORTUGAL;VZLA;35
+Europa;CZECH REPUBLIC;VZLA;35

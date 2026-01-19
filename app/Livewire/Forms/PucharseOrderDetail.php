@@ -100,7 +100,7 @@ class PucharseOrderDetail extends Component
         // Cargar los datos de sobre costo
         $this->loadOverCostData();
 
-        // Cargar tracking si la PO está en "En Tránsito" (etapa 5) o superior
+        // Cargar tracking si la PO está en "Booking" (etapa 3) o superior
         // y tiene tracking_id, mbl_number o container_number (directamente o en shipping document)
         $kanbanStatusId = $this->purchaseOrder->kanban_status_id ?? 0;
         $hasTrackingData = $this->purchaseOrder->tracking_id 
@@ -112,7 +112,7 @@ class PucharseOrderDetail extends Component
                 || $this->shippingDocument->container_number
             ));
 
-        if ($kanbanStatusId >= 5 && $hasTrackingData) {
+        if ($kanbanStatusId >= 3 && $hasTrackingData) {
             $this->loadTrackingData();
         }
 
@@ -322,7 +322,7 @@ class PucharseOrderDetail extends Component
     /**
      * Verificar si debe mostrarse la línea de tiempo de Porth
      * Solo se muestra si:
-     * 1. La PO está en "En Tránsito" (etapa 5) o superior
+     * 1. La PO está en "Booking" (etapa 3) o superior
      * 2. Hay identificadores de tracking (tracking_id, mbl_number o container_number)
      * 3. Se cargaron datos de tracking exitosamente
      */
@@ -330,8 +330,8 @@ class PucharseOrderDetail extends Component
     {
         $kanbanStatusId = $this->purchaseOrder->kanban_status_id ?? 0;
         
-        // Solo mostrar si está en "En Tránsito" (etapa 5) o superior
-        if ($kanbanStatusId < 5) {
+        // Solo mostrar si está en "Booking" (etapa 3) o superior
+        if ($kanbanStatusId < 3) {
             return false;
         }
 
