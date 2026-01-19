@@ -375,10 +375,10 @@ class TrackingService
             'container_number' => $containerNumber
         ]);
 
-        // Si no hay tracking_id, mbl_number ni container_number, devolver datos de prueba
+        // Si no hay tracking_id, mbl_number ni container_number, no hay datos disponibles
         if (!$trackingId && !$mblNumber && !$containerNumber) {
-            \Log::info('No tracking ID, MBL or container number provided, returning mock data');
-            return $this->getMockTrackingData();
+            \Log::info('No tracking ID, MBL or container number provided, returning null');
+            return null;
         }
 
         $trackingData = null;
@@ -401,10 +401,14 @@ class TrackingService
             $trackingData = $this->getPorthTracking($trackingId);
         }
 
-        // Si todos los métodos fallan, devolver datos de prueba como fallback
+        // Si todos los métodos fallan, devolver null (no datos mock)
         if (!$trackingData) {
-            \Log::info('All API calls failed, returning mock data');
-            return $this->getMockTrackingData();
+            \Log::info('All API calls failed, no tracking data available in Porth', [
+                'tracking_id' => $trackingId,
+                'mbl_number' => $mblNumber,
+                'container_number' => $containerNumber
+            ]);
+            return null;
         }
 
         // Asegurarnos de que siempre exista la clave 'timeline'

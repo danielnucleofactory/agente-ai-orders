@@ -236,14 +236,40 @@ class PucharseOrderConsolidateDetail extends Component {
 
         $trackingId = $this->shippingDocument->tracking_id ?? null;
         $mblNumber = $this->shippingDocument->mbl_number ?? null;
+        $containerNumber = $this->shippingDocument->container_number ?? null;
+        
         Log::info('Loading tracking data for document:', [
             'shipping_document_id' => $this->shippingDocument->id ?? null,
             'tracking_id' => $trackingId,
-            'mbl_number' => $mblNumber
+            'mbl_number' => $mblNumber,
+            'container_number' => $containerNumber
         ]);
 
-        $trackingService = new TrackingService();
-        $this->trackingData = $trackingService->getTracking($trackingId, $mblNumber);
+        try {
+            $trackingService = new TrackingService();
+            $this->trackingData = $trackingService->getTracking($trackingId, $mblNumber, $containerNumber);
+
+            if ($this->trackingData) {
+                Log::info('Tracking data loaded successfully (Porth)', [
+                    'has_timeline' => isset($this->trackingData['timeline']),
+                    'milestone' => $this->trackingData['current_phase'] ?? 'none'
+                ]);
+            } else {
+                Log::info('No tracking data available in Porth for this shipping document', [
+                    'shipping_document_id' => $this->shippingDocument->id ?? null,
+                    'tracking_id' => $trackingId,
+                    'mbl_number' => $mblNumber,
+                    'container_number' => $containerNumber
+                ]);
+                $this->trackingData = null;
+            }
+        } catch (\Exception $e) {
+            Log::error('Error loading tracking data (Porth)', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->trackingData = null;
+        }
 
         $this->loadingTracking = false;
     }
@@ -276,7 +302,12 @@ class PucharseOrderConsolidateDetail extends Component {
             })
             ->exists();
 
-        return $hasBookingOrLater;
+        // Verificar que se hayan cargado datos de tracking con timeline válidos
+        return $hasBookingOrLater 
+            && $this->trackingData !== null 
+            && !empty($this->trackingData) 
+            && isset($this->trackingData['timeline'])
+            && !empty($this->trackingData['timeline']);
     }
 
     /**
