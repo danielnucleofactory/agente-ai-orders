@@ -15,17 +15,12 @@ use Illuminate\Support\Collection;
 
 class DashboardKPIService
 {
-    /**
-     * Mapeo de días de tránsito por región (para proyecciones)
-     * Vacío por ahora - pendiente lista de puertos por región
-     */
-    protected array $transitDaysByRegion = [
-        // 'Asia' => 65,
-        // 'Miami' => 15,
-        // 'Colombia' => 15,
-        // 'Brasil' => 25,
-        // 'Europa' => 30,
-    ];
+    protected TransitTimeService $transitTimeService;
+
+    public function __construct(TransitTimeService $transitTimeService)
+    {
+        $this->transitTimeService = $transitTimeService;
+    }
 
     /**
      * Calcula TEUs basado en el tipo de contenedor
@@ -1353,9 +1348,9 @@ class DashboardKPIService
                 }
             }
 
-            // Obtener POs
+            // Obtener POs con vendor y company para calcular tiempos de tránsito
             $query = PurchaseOrder::query()
-                ->with('kanbanStatus');
+                ->with(['kanbanStatus', 'vendor', 'company']);
             if ($companyId) {
                 $query->where('company_id', $companyId);
             }
@@ -1373,26 +1368,32 @@ class DashboardKPIService
                     continue;
                 }
 
+                // Obtener país de origen y destino para calcular tránsito
+                $originCountry = $po->vendor->country ?? null;
+                $destinationCountry = $po->company->country ?? null;
+                $transitDays = $this->transitTimeService->getTransitDays($originCountry, $destinationCountry) ?? 0;
+
                 // Determinar fecha según etapa
                 $targetDate = null;
                 switch ($category) {
                     case 'Producción':
-                        // Fecha CL Teórica + 15 días + días de tránsito por región
+                        // Fecha CL Teórica + 15 días + días de tránsito según matriz
                         if ($po->date_theorical_load) {
-                            $targetDate = Carbon::parse($po->date_theorical_load)->addDays(15);
-                            // Aquí se agregarían días de tránsito por región cuando esté disponible
+                            $targetDate = Carbon::parse($po->date_theorical_load)
+                                ->addDays(15)
+                                ->addDays($transitDays);
                         }
                         break;
                     case 'Booking':
-                        // Fecha autorización booking + días de tránsito
-                        if ($po->date_booking_authorized) {
-                            $targetDate = Carbon::parse($po->date_booking_authorized);
-                        } elseif ($po->date_etd) {
-                            $targetDate = Carbon::parse($po->date_etd);
+                        // Fecha ETD + días de tránsito según matriz
+                        if ($po->date_etd) {
+                            $targetDate = Carbon::parse($po->date_etd)->addDays($transitDays);
+                        } elseif ($po->date_booking_authorized) {
+                            $targetDate = Carbon::parse($po->date_booking_authorized)->addDays($transitDays);
                         }
                         break;
                     case 'Tránsito':
-                        // ETA
+                        // ETA (ya incluye el tiempo de tránsito)
                         if ($po->date_eta) {
                             $targetDate = Carbon::parse($po->date_eta);
                         }

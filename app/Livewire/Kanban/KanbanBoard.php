@@ -1069,8 +1069,8 @@ class KanbanBoard extends Component
 
             5 => [
                 'date_atd'         => 'required|date',
-                'date_eta'         => 'required|date',
                 'date_eta_initial' => 'required|date',
+                'date_eta'         => 'required|date',
                 // Los campos de tracking ya se capturaron en el paso a Booking
                 'shipping_line'    => 'required|string',
                 'departure_port'   => 'required|string',
@@ -1112,8 +1112,8 @@ class KanbanBoard extends Component
             'date_etd'               => 'ETD Variable',
             'mode'                   => 'Modo de transporte',
             'date_atd'               => 'ETD Real',
-            'date_eta'               => 'ETA inicial',
-            'date_eta_initial'       => 'ETA variable',
+            'date_eta_initial'       => 'ETA Inicial',
+            'date_eta'               => 'ETA Variable',
             'container_number'       => 'Contenedor',
             'container_type'         => 'Tipo de contenedor',
             'mbl_number'             => 'MBL',

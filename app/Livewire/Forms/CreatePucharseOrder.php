@@ -1840,6 +1840,9 @@ class CreatePucharseOrder extends Component
 
     public function updatePurchaseOrder($id) {
         try {
+            // #region agent log
+            file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_1','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:1843','message'=>'updatePurchaseOrder ENTRY','data'=>['po_id'=>$id,'date_eta_updated_value'=>$this->date_eta_updated,'date_eta_value'=>$this->date_eta,'date_ata_value'=>$this->date_ata,'date_eta_initial_value'=>$this->date_eta_initial],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
+            // #endregion
             \Log::info('=== INICIO updatePurchaseOrder ===', [
                 'id' => $id,
                 'order_number' => $this->order_number,
@@ -1849,7 +1852,11 @@ class CreatePucharseOrder extends Component
                 'emision_date_po' => $this->emision_date_po,
                 'forwader_date' => $this->forwader_date,
                 'date_booking_request' => $this->date_booking_request,
-                'date_booking_authorized' => $this->date_booking_authorized
+                'date_booking_authorized' => $this->date_booking_authorized,
+                'date_eta_updated' => $this->date_eta_updated,
+                'date_eta' => $this->date_eta,
+                'date_ata' => $this->date_ata,
+                'date_eta_initial' => $this->date_eta_initial
             ]);
 
             // Validación para actualización
@@ -1920,7 +1927,7 @@ class CreatePucharseOrder extends Component
                 'date_actual_hub_arrival' => $this->date_actual_hub_arrival,
                 'date_etd' => $this->date_etd,
                 'date_atd' => $this->date_atd,
-                'date_eta' => $this->date_eta,
+                // date_eta se maneja más abajo (se sobrescribe con date_eta_updated si existe)
                 'date_ata' => $this->date_ata,
                 'date_consolidation' => $this->date_consolidation,
                 'release_date' => $this->release_date,
@@ -1985,6 +1992,9 @@ class CreatePucharseOrder extends Component
                 'delay_days' => $this->delay_days,
 
                 'date_eta_initial' => $this->date_eta_initial,
+                // ETA Variable se guarda en date_eta, no en date_eta_updated
+                // Si date_eta_updated tiene valor, se usa para date_eta
+                'date_eta' => $this->date_eta_updated ?: $this->date_eta,
 
                 'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
                 'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
@@ -2035,10 +2045,19 @@ class CreatePucharseOrder extends Component
 
                 $purchaseOrder = \App\Models\PurchaseOrder::findOrFail($id);
 
+                // #region agent log
+                file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_2','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:2040','message'=>'ANTES fill - poData contiene','data'=>['date_eta_in_poData'=>isset($poData['date_eta']),'date_eta_value'=>$poData['date_eta']??'NOT_SET','date_ata_in_poData'=>isset($poData['date_ata']),'date_ata_value'=>$poData['date_ata']??'NOT_SET','date_eta_initial_in_poData'=>isset($poData['date_eta_initial']),'date_eta_initial_value'=>$poData['date_eta_initial']??'NOT_SET'],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
+                // #endregion
                 // Usar getDirty() para obtener solo campos que realmente cambiaron
                 // Asignar valores primero sin guardar para que Eloquent detecte cambios
                 $purchaseOrder->fill($poData);
+                // #region agent log
+                file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_3','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:2043','message'=>'DESPUES fill - valores en modelo','data'=>['date_eta_in_model'=>isset($purchaseOrder->date_eta),'date_eta_value'=>$purchaseOrder->date_eta?($purchaseOrder->date_eta instanceof \Carbon\Carbon?$purchaseOrder->date_eta->format('Y-m-d'):$purchaseOrder->date_eta):'NOT_SET','date_ata_in_model'=>isset($purchaseOrder->date_ata),'date_ata_value'=>$purchaseOrder->date_ata?($purchaseOrder->date_ata instanceof \Carbon\Carbon?$purchaseOrder->date_ata->format('Y-m-d'):$purchaseOrder->date_ata):'NOT_SET','date_eta_initial_in_model'=>isset($purchaseOrder->date_eta_initial),'date_eta_initial_value'=>$purchaseOrder->date_eta_initial?($purchaseOrder->date_eta_initial instanceof \Carbon\Carbon?$purchaseOrder->date_eta_initial->format('Y-m-d'):$purchaseOrder->date_eta_initial):'NOT_SET'],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
+                // #endregion
                 $dirtyFields = $purchaseOrder->getDirty();
+                // #region agent log
+                file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_4','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:2045','message'=>'getDirty campos modificados','data'=>['dirty_fields'=>array_keys($dirtyFields),'date_eta_is_dirty'=>isset($dirtyFields['date_eta']),'date_ata_is_dirty'=>isset($dirtyFields['date_ata']),'date_eta_initial_is_dirty'=>isset($dirtyFields['date_eta_initial'])],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
+                // #endregion
 
                 // Construir array de cambios solo con campos que realmente cambiaron
                 $changes = [];
@@ -2053,13 +2072,37 @@ class CreatePucharseOrder extends Component
                     'date_booking_request' => $this->date_booking_request,
                     'date_booking_authorized' => $this->date_booking_authorized,
                     'changed_fields' => array_keys($changes),
+                    'date_eta_updated' => $this->date_eta_updated,
+                    'date_eta' => $this->date_eta,
+                    'date_ata' => $this->date_ata,
+                    'date_eta_in_changes' => isset($changes['date_eta']),
+                    'date_ata_in_changes' => isset($changes['date_ata']),
                 ]);
 
-                $purchaseOrder->save();
+                // #region agent log
+                file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_5a','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:2077','message'=>'ANTES save - intentando guardar','data'=>['po_id'=>$purchaseOrder->id,'date_eta_before_save'=>$purchaseOrder->date_eta?($purchaseOrder->date_eta instanceof \Carbon\Carbon?$purchaseOrder->date_eta->format('Y-m-d'):$purchaseOrder->date_eta):'NULL','date_ata_before_save'=>$purchaseOrder->date_ata?($purchaseOrder->date_ata instanceof \Carbon\Carbon?$purchaseOrder->date_ata->format('Y-m-d'):$purchaseOrder->date_ata):'NULL','date_eta_type'=>gettype($purchaseOrder->date_eta),'date_ata_type'=>gettype($purchaseOrder->date_ata)],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
+                // #endregion
+                try {
+                    $purchaseOrder->save();
+                    // #region agent log
+                    file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_5b','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:2079','message'=>'DESPUES save - save() ejecutado','data'=>['po_id'=>$purchaseOrder->id,'save_success'=>true],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
+                    // #endregion
+                } catch (\Exception $saveException) {
+                    // #region agent log
+                    file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_5c','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:2081','message'=>'ERROR en save()','data'=>['po_id'=>$purchaseOrder->id,'error_message'=>$saveException->getMessage(),'error_class'=>get_class($saveException)],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
+                    // #endregion
+                    throw $saveException;
+                }
+                // #region agent log
+                file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_5','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:2058','message'=>'DESPUES save - valores guardados en BD','data'=>['po_id'=>$purchaseOrder->id,'date_eta_guardado'=>$purchaseOrder->fresh()->date_eta?$purchaseOrder->fresh()->date_eta->format('Y-m-d'):'NULL','date_ata_guardado'=>$purchaseOrder->fresh()->date_ata?$purchaseOrder->fresh()->date_ata->format('Y-m-d'):'NULL','date_eta_initial_guardado'=>$purchaseOrder->fresh()->date_eta_initial?$purchaseOrder->fresh()->date_eta_initial->format('Y-m-d'):'NULL'],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
+                // #endregion
 
                 \Log::info('PO actualizada exitosamente', [
                     'id' => $purchaseOrder->id,
-                    'forwader_date_guardado' => $purchaseOrder->forwader_date?->format('Y-m-d')
+                    'forwader_date_guardado' => $purchaseOrder->forwader_date?->format('Y-m-d'),
+                    'date_eta_guardado' => $purchaseOrder->fresh()->date_eta?->format('Y-m-d'),
+                    'date_ata_guardado' => $purchaseOrder->fresh()->date_ata?->format('Y-m-d'),
+                    'date_eta_initial_guardado' => $purchaseOrder->fresh()->date_eta_initial?->format('Y-m-d')
                 ]);
 
                 // Eliminar productos existentes
@@ -2320,10 +2363,48 @@ class CreatePucharseOrder extends Component
 
     /**
      * Calcula automáticamente el estado de llegada y días de retraso
+     * basándose en los tiempos de tránsito esperados por la matriz origen-destino.
      */
     protected function calculateArrivalStatus(): void
     {
-        // Usar la ETA más reciente disponible (updated > initial > original)
+        $transitService = app(\App\Services\TransitTimeService::class);
+        
+        // Obtener país de origen (del vendor) y destino (de company)
+        $originCountry = $this->vendor_pais;
+        $destinationCountry = null;
+        
+        if ($this->company_id) {
+            $company = \App\Models\Company::find($this->company_id);
+            $destinationCountry = $company?->country;
+        }
+        
+        // Obtener tiempo de tránsito esperado
+        $expectedTransitDays = $transitService->getTransitDays($originCountry, $destinationCountry);
+        
+        // Fecha de salida real (ATD)
+        $atd = $this->date_atd ?? null;
+        
+        // Si tenemos ATD y tiempos esperados, calcular basándose en la matriz
+        if ($atd && $expectedTransitDays !== null) {
+            $expectedArrival = \Carbon\Carbon::parse($atd)->addDays($expectedTransitDays);
+            
+            // Usar ATA si existe, si no usar la fecha actual
+            $compareDate = $this->date_ata ? \Carbon\Carbon::parse($this->date_ata) : now();
+            
+            if ($compareDate->startOfDay()->gt($expectedArrival->startOfDay())) {
+                // Atrasado respecto al tiempo esperado
+                $delayDays = $expectedArrival->diffInDays($compareDate);
+                $this->arrival_status = 'Atrasado';
+                $this->delay_days = (int) $delayDays;
+                return;
+            }
+            
+            $this->arrival_status = 'A tiempo';
+            $this->delay_days = 0;
+            return;
+        }
+        
+        // Fallback: usar ETA si no hay ATD o tiempos esperados
         $eta = $this->date_eta_initial ?? $this->date_eta ?? null;
 
         if (!$eta) {
@@ -2336,10 +2417,10 @@ class CreatePucharseOrder extends Component
         $etaDate = \Carbon\Carbon::parse($eta)->startOfDay();
 
         if ($today > $etaDate) {
-            // Atrasado
+            // Atrasado respecto a ETA
             $delayDays = $etaDate->diffInDays($today);
             $this->arrival_status = 'Atrasado';
-            $this->delay_days = $delayDays;
+            $this->delay_days = (int) $delayDays;
         } else {
             // A tiempo
             $this->arrival_status = 'A tiempo';

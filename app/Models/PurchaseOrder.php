@@ -169,7 +169,35 @@ class PurchaseOrder extends Model implements HasMedia
         'emision_date_po',
         'vendor_number',
         'consolidator_name',
-        'forwader_date'
+        'forwader_date',
+        
+        // Campos de Porth
+        'porth_pol',
+        'porth_pol_name',
+        'porth_pod',
+        'porth_pod_name',
+        'porth_origin',
+        'porth_final_destination',
+        'porth_carrier_code',
+        'porth_vessel_voyage',
+        'porth_shipment_number',
+        'porth_modality',
+        'freight_type',
+        'porth_first_eta',
+        'porth_first_etd',
+        'porth_ready',
+        'porth_to_origin_port',
+        'porth_at_origin_port',
+        'porth_in_transit',
+        'porth_at_destination_port',
+        'porth_to_final_destination',
+        'porth_delivered',
+        'porth_phase',
+        'porth_priority',
+        'porth_manual_tracking',
+        'porth_free_time_at_destination',
+        'porth_id',
+        'last_porth_sync_at',
     ];
 
     /**
@@ -224,6 +252,8 @@ class PurchaseOrder extends Model implements HasMedia
         'delay_days' => 'integer',
 
         'date_eta_initial' => 'datetime',
+        'date_eta_updated' => 'datetime',
+        'date_etd_updated' => 'datetime',
 
         'consolidator_name' => 'string',
         'port_of_loading_validated' => 'boolean',
@@ -262,6 +292,20 @@ class PurchaseOrder extends Model implements HasMedia
         'cbm' => 'decimal:2',
         'dif_load_date' => 'datetime',
         'emision_date_po' => 'date',
+        
+        // Casts de Porth
+        'porth_vessel_voyage' => 'array',
+        'porth_manual_tracking' => 'boolean',
+        'porth_first_eta' => 'datetime',
+        'porth_first_etd' => 'datetime',
+        'porth_ready' => 'datetime',
+        'porth_to_origin_port' => 'datetime',
+        'porth_at_origin_port' => 'datetime',
+        'porth_in_transit' => 'datetime',
+        'porth_at_destination_port' => 'datetime',
+        'porth_to_final_destination' => 'datetime',
+        'porth_delivered' => 'datetime',
+        'last_porth_sync_at' => 'datetime',
     ];
 
     protected array $softCascade = [
@@ -454,39 +498,85 @@ class PurchaseOrder extends Model implements HasMedia
     }
 
     /**
-     * Calcula automáticamente el estado de llegada y días de retraso basándose en la ETA
+     * Calcula automáticamente el estado de llegada y días de retraso
+     * basándose en los tiempos de tránsito esperados por la matriz origen-destino.
      *
-     * @return array ['arrival_status' => string, 'delay_days' => int]
+     * Lógica:
+     * - Si hay ATD (fecha de salida real), calcula la fecha esperada de llegada
+     *   usando la matriz de tiempos de tránsito.
+     * - Compara con ATA (llegada real) o ETA (estimada) o fecha actual.
+     * - Determina si está "A tiempo" o "Atrasado" según los días de diferencia.
+     *
+     * @return array ['arrival_status' => string|null, 'delay_days' => int|null, 'expected_transit_days' => int|null]
      */
     public function calculateArrivalStatus(): array
     {
-        // Usar la ETA más reciente disponible (updated > initial > original)
-        $eta = $this->date_eta_updated ?? $this->date_eta ?? null;
+        $transitService = app(\App\Services\TransitTimeService::class);
+        
+        // Obtener país de origen (del vendor) y destino (de company)
+        $originCountry = $this->vendor?->country;
+        $destinationCountry = $this->company?->country;
+        
+        // Obtener tiempo de tránsito esperado
+        $expectedTransitDays = $transitService->getTransitDays($originCountry, $destinationCountry);
+        
+        // Fecha de salida real (ATD)
+        $atd = $this->date_atd;
+        
+        // Si tenemos ATD y tiempos esperados, calcular basándose en la matriz
+        if ($atd && $expectedTransitDays !== null) {
+            $expectedArrival = \Illuminate\Support\Carbon::parse($atd)->addDays($expectedTransitDays);
+            
+            // Usar ATA si existe, si no usar la fecha actual
+            $compareDate = $this->date_ata ? \Illuminate\Support\Carbon::parse($this->date_ata) : now();
+            
+            if ($compareDate->startOfDay()->gt($expectedArrival->startOfDay())) {
+                // Atrasado respecto al tiempo esperado
+                $delayDays = $expectedArrival->diffInDays($compareDate);
+                return [
+                    'arrival_status' => 'Atrasado',
+                    'delay_days' => (int) $delayDays,
+                    'expected_transit_days' => $expectedTransitDays
+                ];
+            }
+            
+            return [
+                'arrival_status' => 'A tiempo',
+                'delay_days' => 0,
+                'expected_transit_days' => $expectedTransitDays
+            ];
+        }
+        
+        // Fallback: usar ETA Variable si no hay ATD o tiempos esperados
+        // date_eta_updated no existe en BD, usar date_eta (ETA Variable)
+        $eta = $this->date_eta ?? null;
 
         if (!$eta) {
             return [
                 'arrival_status' => null,
-                'delay_days' => null
+                'delay_days' => null,
+                'expected_transit_days' => $expectedTransitDays
             ];
         }
 
         $today = now()->startOfDay();
-        $etaDate = $eta->startOfDay();
+        $etaDate = \Illuminate\Support\Carbon::parse($eta)->startOfDay();
 
         if ($today > $etaDate) {
-            // Atrasado
+            // Atrasado respecto a ETA
             $delayDays = $etaDate->diffInDays($today);
             return [
                 'arrival_status' => 'Atrasado',
-                'delay_days' => $delayDays
-            ];
-        } else {
-            // A tiempo
-            return [
-                'arrival_status' => 'A tiempo',
-                'delay_days' => 0
+                'delay_days' => (int) $delayDays,
+                'expected_transit_days' => $expectedTransitDays
             ];
         }
+        
+        return [
+            'arrival_status' => 'A tiempo',
+            'delay_days' => 0,
+            'expected_transit_days' => $expectedTransitDays
+        ];
     }
 
     /**

@@ -295,8 +295,8 @@
                             <div wire:ignore>
                                 <x-form-input>
                                     <x-slot:label>ETA Inicial <span class="text-red-500">*</span></x-slot:label>
-                                    <x-slot:input type="date" name="date_eta" wire:model="date_eta"
-                                                  class="pr-10 {{ $errors->has('date_eta') ? 'border-red-500' : '' }}"></x-slot:input>
+                                    <x-slot:input type="date" name="date_eta_initial" wire:model="date_eta_initial"
+                                                  class="pr-10 {{ $errors->has('date_eta_initial') ? 'border-red-500' : '' }}"></x-slot:input>
                                     {{-- Error oculto --}}
                                 </x-form-input>
                             </div>
@@ -304,8 +304,8 @@
                             <div wire:ignore>
                                 <x-form-input>
                                     <x-slot:label>ETA Variable <span class="text-red-500">*</span></x-slot:label>
-                                    <x-slot:input type="date" name="date_eta_initial" wire:model="date_eta_initial"
-                                                  class="pr-10 {{ $errors->has('date_eta_initial') ? 'border-red-500' : '' }}"></x-slot:input>
+                                    <x-slot:input type="date" name="date_eta" wire:model="date_eta"
+                                                  class="pr-10 {{ $errors->has('date_eta') ? 'border-red-500' : '' }}"></x-slot:input>
                                     {{-- Error oculto --}}
                                 </x-form-input>
                             </div>
