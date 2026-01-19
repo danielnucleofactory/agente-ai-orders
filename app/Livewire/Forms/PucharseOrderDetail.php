@@ -304,16 +304,26 @@ class PucharseOrderDetail extends Component
             // Usar getTracking que soporta Porth con tracking_id, mbl_number y container_number
             $this->trackingData = $trackingService->getTracking($trackingId, $mblNumber, $containerNumber);
 
-            Log::info('Tracking data loaded successfully (Porth)', [
-                'has_timeline' => isset($this->trackingData['timeline']),
-                'milestone' => $this->trackingData['current_phase'] ?? 'none'
-            ]);
+            if ($this->trackingData) {
+                Log::info('Tracking data loaded successfully (Porth)', [
+                    'has_timeline' => isset($this->trackingData['timeline']),
+                    'milestone' => $this->trackingData['current_phase'] ?? 'none'
+                ]);
+            } else {
+                Log::info('No tracking data available in Porth for this PO', [
+                    'purchase_order_id' => $this->purchaseOrder->id ?? null,
+                    'tracking_id' => $trackingId,
+                    'mbl_number' => $mblNumber,
+                    'container_number' => $containerNumber
+                ]);
+                $this->trackingData = null; // Asegurar que sea null, no array vacío
+            }
         } catch (\Exception $e) {
             Log::error('Error loading tracking data (Porth)', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            $this->trackingData = [];
+            $this->trackingData = null; // Cambiar de [] a null para consistencia
         }
 
         $this->loadingTracking = false;
@@ -345,8 +355,13 @@ class PucharseOrderDetail extends Component
                 || $this->shippingDocument->container_number
             ));
 
-        // Verificar que se hayan cargado datos de tracking con timeline
-        return $hasTrackingData && !empty($this->trackingData) && isset($this->trackingData['timeline']);
+        // Verificar que se hayan cargado datos de tracking con timeline válidos
+        // trackingData debe existir, no ser null, y tener timeline con datos
+        return $hasTrackingData 
+            && $this->trackingData !== null 
+            && !empty($this->trackingData) 
+            && isset($this->trackingData['timeline'])
+            && !empty($this->trackingData['timeline']);
     }
 
     protected function loadCommentsAndAttachments()
