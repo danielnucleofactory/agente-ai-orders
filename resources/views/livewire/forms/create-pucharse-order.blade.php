@@ -87,15 +87,52 @@
                     onclick="syncDateFieldsBeforeSave({{ $id }})"
                     wire:loading.attr="disabled"
                     wire:target="updatePurchaseOrder"
-                    class="w-[209px]">
-                    <span wire:loading.remove wire:target="updatePurchaseOrder">Actualizar Orden</span>
-                    <span wire:loading wire:target="updatePurchaseOrder">Guardando...</span>
+                    class="w-[209px] relative">
+                    <span wire:loading.remove wire:target="updatePurchaseOrder" class="flex items-center justify-center">
+                        Actualizar Orden
+                    </span>
+                    <span wire:loading wire:target="updatePurchaseOrder" class="flex items-center justify-center gap-2">
+                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Guardando...
+                    </span>
                 </x-primary-button>
             @else
-                <x-primary-button wire:click="createPurchaseOrder" class="w-[209px]">
-                    Crear nueva Orden
+                <x-primary-button 
+                    wire:click="createPurchaseOrder" 
+                    wire:loading.attr="disabled"
+                    wire:target="createPurchaseOrder"
+                    class="w-[209px] relative">
+                    <span wire:loading.remove wire:target="createPurchaseOrder" class="flex items-center justify-center">
+                        Crear nueva Orden
+                    </span>
+                    <span wire:loading wire:target="createPurchaseOrder" class="flex items-center justify-center gap-2">
+                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Creando...
+                    </span>
                 </x-primary-button>
             @endif
+        </div>
+    </div>
+
+    {{-- Overlay de carga para crear/actualizar PO --}}
+    <div wire:loading wire:target="createPurchaseOrder,updatePurchaseOrder" 
+         class="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-90 backdrop-blur-sm">
+        <div class="flex flex-col items-center p-8 bg-white rounded-2xl shadow-xl border-2 border-[#D4F5ED]">
+            <svg class="w-12 h-12 text-[#127A62] animate-spin mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-lg font-semibold text-[#127A62]">
+                <span wire:target="createPurchaseOrder">Creando orden de compra...</span>
+                <span wire:target="updatePurchaseOrder">Guardando cambios...</span>
+            </p>
+            <p class="mt-2 text-sm text-gray-600">Por favor, espere un momento</p>
         </div>
     </div>
 
@@ -115,7 +152,7 @@
 
                             {{-- Número de Orden (PO) --}}
                             <x-form-input>
-                                <x-slot name="label">Número de Orden (PO)</x-slot>
+                                <x-slot name="label">Número de Orden (PO) <span class="text-red-500">*</span></x-slot>
                                 <x-slot:input
                                     name="order_number"
                                     placeholder="Ingrese número de orden"
@@ -167,7 +204,7 @@
 
                             {{-- Incoterm Precios --}}
                             <x-form-select
-                                label="Incoterm Precios"
+                                label="Incoterm Precios <span class='text-red-500'>*</span>"
                                 name="price_incoterm"
                                 :options="$tiposIncotermArray"
                                 wire:model="price_incoterm"
@@ -176,7 +213,7 @@
 
                             {{-- Incoterms (Compra) --}}
                             <x-form-select
-                                label="Incoterm de Compra"
+                                label="Incoterm de Compra <span class='text-red-500'>*</span>"
                                 name="incoterms"
                                 :options="$tiposIncotermArray"
                                 wire:model="incoterms"
@@ -199,7 +236,7 @@
 
                             {{-- Incoterm logístico --}}
                             <x-form-select
-                                label="Incoterm logístico"
+                                label="Incoterm logístico <span class='text-red-500'>*</span>"
                                 name="logistics_incoterm"
                                 :options="$tiposIncotermArray"
                                 wire:model="logistics_incoterm"
@@ -351,7 +388,7 @@
                 <h3 class="text-lg font-bold text-[#1AAD8A]">Datos Proveedor</h3>
 
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
-                    <x-form-select label="Seleccionar Nombre del Proveedor" name="vendor_id" wireModel="vendor_id"
+                    <x-form-select label="Seleccionar Nombre del Proveedor <span class='text-red-500'>*</span>" name="vendor_id" wireModel="vendor_id"
                         wire:change="onVendorSelected"
                         :options="$vendorArray" :error="$errors->has('vendor_id') ? true : false" />
 
@@ -566,9 +603,14 @@
 
                     <div wire:ignore>
                         <x-form-input>
-                            <x-slot:label>Fecha Carga Lista Teórica</x-slot:label>
-                            <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" class="pr-10 {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
-                            </x-slot:input>
+                            <x-slot:label>Fecha Carga Lista Teórica <span class="text-red-500">*</span></x-slot:label>
+                            @if($id)
+                                <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" readonly class="pr-10 bg-gray-100 cursor-not-allowed {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
+                                </x-slot:input>
+                            @else
+                                <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" class="pr-10 {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
+                                </x-slot:input>
+                            @endif
                             <x-slot:error>{{ $errors->first('date_theorical_load') }}</x-slot:error>
                         </x-form-input>
                     </div>
@@ -653,7 +695,7 @@
 
                     <div wire:ignore>
                         <x-form-input>
-                            <x-slot:label>ETD </x-slot:label>
+                            <x-slot:label>ETD Variable</x-slot:label>
                             <x-slot:input type="date" name="date_etd" wire:model="date_etd"></x-slot:input>
                         </x-form-input>
                     </div>
@@ -683,15 +725,15 @@
 
                     <div wire:ignore>
                         <x-form-input>
-                            <x-slot:label>ETA</x-slot:label>
-                            <x-slot:input type="date" name="date_eta" wire:model="date_eta"></x-slot:input>
+                            <x-slot:label>ETA Inicial</x-slot:label>
+                            <x-slot:input type="date" name="date_eta_initial" wire:model="date_eta_initial"></x-slot:input>
                         </x-form-input>
                     </div>
 
                     <div wire:ignore>
                         <x-form-input>
-                            <x-slot:label>ETA Inicial</x-slot:label>
-                            <x-slot:input type="date" name="date_eta_initial" wire:model="date_eta_initial"></x-slot:input>
+                            <x-slot:label>ETA Variable</x-slot:label>
+                            <x-slot:input type="date" name="date_eta_updated" wire:model="date_eta_updated"></x-slot:input>
                         </x-form-input>
                     </div>
 
@@ -1057,8 +1099,11 @@
                                     placeholder="Ingrese nombre del cliente (ej: OLO1)"
                                     wire:model.live.debounce.500ms="trading_company"
                                     :readonly="$id ? true : false"
-                                    class="{{ $id ? 'bg-gray-100 cursor-not-allowed' : '' }}">
+                                    class="pr-10 {{ $errors->has('trading_company') ? 'border-red-500' : '' }} {{ $id ? 'bg-gray-100 cursor-not-allowed' : '' }}">
                                 </x-slot:input>
+                                <x-slot:error>
+                                    {{ $errors->first('trading_company') }}
+                                </x-slot:error>
                             </x-form-input>
                             <div wire:loading wire:target="trading_company" class="flex absolute right-3 top-9 items-center">
                                 <svg class="w-4 h-4 text-blue-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1082,7 +1127,7 @@
                         />
 
                         <x-form-select
-                            label="Ruta Logística"
+                            label="Ruta Logística <span class='text-red-500'>*</span>"
                             name="route_label"
                             :options="$routeLabelArray"
                             wire:model="route_label"
@@ -1661,25 +1706,57 @@
             }
         });
 
-        // Esperar un momento para que Livewire procese los cambios y luego ejecutar updatePurchaseOrder
-        setTimeout(function() {
-            console.log('Ejecutando updatePurchaseOrder con ID:', poId);
-            try {
-                if (typeof formComponent.call === 'function') {
-                    console.log('Llamando formComponent.call("updatePurchaseOrder", ' + poId + ')');
-                    formComponent.call('updatePurchaseOrder', poId).then(function(result) {
-                        console.log('updatePurchaseOrder completado:', result);
-                    }).catch(function(error) {
-                        console.error('Error en updatePurchaseOrder:', error);
-                    });
-                } else {
-                    console.error('formComponent.call no está disponible');
-                    console.log('formComponent:', formComponent);
+        // MEJORAR: Esperar a que Livewire procese los cambios antes de ejecutar updatePurchaseOrder
+        // Usar requestAnimationFrame para asegurar que el DOM se actualice
+        requestAnimationFrame(function() {
+            setTimeout(function() {
+                console.log('Ejecutando updatePurchaseOrder con ID:', poId);
+                try {
+                    if (typeof formComponent.call === 'function') {
+                        console.log('Llamando formComponent.call("updatePurchaseOrder", ' + poId + ')');
+                        formComponent.call('updatePurchaseOrder', poId).then(function(result) {
+                            console.log('updatePurchaseOrder completado:', result);
+                            
+                            // VERIFICAR EL RESULTADO
+                            if (result && result.success) {
+                                console.log('✅ PO actualizada exitosamente:', result.message);
+                            } else if (result && !result.success) {
+                                console.error('❌ Error al actualizar PO:', result.message);
+                            } else {
+                                // Si result es null, puede ser que la función no retornó nada
+                                // Verificar si hay errores en el componente
+                                console.warn('⚠️ updatePurchaseOrder retornó null. Verificando estado...');
+                                
+                                // Esperar un momento y verificar si hay errores de validación
+                                setTimeout(function() {
+                                    const errors = formComponent.get('errors') || {};
+                                    if (Object.keys(errors).length > 0) {
+                                        console.error('❌ Errores de validación encontrados:', errors);
+                                    } else {
+                                        console.log('⚠️ No se encontraron errores de validación. La actualización puede haber sido exitosa.');
+                                    }
+                                }, 500);
+                            }
+                        }).catch(function(error) {
+                            console.error('❌ Error en updatePurchaseOrder:', error);
+                            console.error('Stack trace:', error.stack);
+                            
+                            // Mostrar error al usuario
+                            if (window.Livewire) {
+                                Livewire.dispatch('show-error', { 
+                                    message: 'Error al actualizar la orden: ' + (error.message || 'Error desconocido')
+                                });
+                            }
+                        });
+                    } else {
+                        console.error('formComponent.call no está disponible');
+                        console.log('formComponent:', formComponent);
+                    }
+                } catch (e) {
+                    console.error('Error al ejecutar updatePurchaseOrder:', e);
+                    console.error('Stack trace:', e.stack);
                 }
-            } catch (e) {
-                console.error('Error al ejecutar updatePurchaseOrder:', e);
-                console.error('Stack trace:', e.stack);
-            }
-        }, 500);
+            }, 1000); // AUMENTAR TIMEOUT A 1000ms PARA PRODUCCIÓN
+        });
     }
 </script>

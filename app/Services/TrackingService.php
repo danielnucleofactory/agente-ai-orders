@@ -103,6 +103,7 @@ class TrackingService
 
             $data = $response->json();
 
+
             if (!$data || !isset($data['phases'])) {
                 \Log::warning('Invalid or empty response from Porth API');
                 return null;
@@ -138,6 +139,7 @@ class TrackingService
             }
 
             $data = $response->json();
+
 
             if (!$data || !isset($data['phases'])) {
                 \Log::warning('Invalid or empty response from Porth API for MasterBl', [
