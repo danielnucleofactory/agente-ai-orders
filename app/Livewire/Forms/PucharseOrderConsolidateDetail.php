@@ -252,7 +252,7 @@ class PucharseOrderConsolidateDetail extends Component {
      * Verificar si debe mostrarse la línea de tiempo
      * Solo se muestra si:
      * 1. Hay identificadores de tracking (tracking_id, mbl_number o container_number)
-     * 2. Al menos una PO asociada está en "En Tránsito" (etapa 5) o superior
+     * 2. Al menos una PO asociada está en "Booking" (etapa 3) o superior
      */
     public function shouldShowTimeline()
     {
@@ -269,14 +269,14 @@ class PucharseOrderConsolidateDetail extends Component {
             return false;
         }
 
-        // Verificar si alguna PO asociada está en "En Tránsito" (id 5) o más adelante
-        $hasInTransitOrLater = $this->shippingDocument->purchaseOrders()
+        // Verificar si alguna PO asociada está en "Booking" (id 3) o más adelante
+        $hasBookingOrLater = $this->shippingDocument->purchaseOrders()
             ->whereHas('kanbanStatus', function($query) {
-                $query->where('id', '>=', 5); // En Tránsito es id 5
+                $query->where('id', '>=', 3); // Booking es id 3
             })
             ->exists();
 
-        return $hasInTransitOrLater;
+        return $hasBookingOrLater;
     }
 
     /**

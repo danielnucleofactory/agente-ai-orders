@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Helpers\PorthImportHelper;
-use App\Models\ShippingDocument;
+use App\Models\PurchaseOrder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -15,256 +15,174 @@ class PorthImportService
     }
 
     /**
-     * Importa un detalle de envío de Porth y lo guarda en las tablas locales.
-     * Actualiza TODOS los documentos que tienen el mismo porth_id.
+     * Importa un detalle de envío de Porth y lo guarda en las PurchaseOrders.
+     * Actualiza TODAS las POs que tienen el mismo porth_id.
+     * 
+     * @param array $data Datos del shipment de Porth
+     * @return PurchaseOrder|null Primera PO actualizada o null si no hay match
      */
-    public function importShipment(array $data): ?ShippingDocument
+    public function importShipment(array $data): ?PurchaseOrder
     {
         return DB::transaction(function () use ($data) {
-            $documents = $this->resolveShippingDocuments($data);
+            $purchaseOrders = $this->resolvePurchaseOrders($data);
 
-            if ($documents->isEmpty()) {
-                Log::warning('porth_import:no_shipping_document_match', [
+            if ($purchaseOrders->isEmpty()) {
+                Log::warning('porth_import:no_purchase_order_match', [
                     'porth_id' => $data['id'] ?? null,
                 ]);
                 return null;
             }
 
-            $firstDocument = null;
+            $firstPO = null;
             $updatedCount = 0;
 
-            foreach ($documents as $document) {
-                // Solo procesar documentos que tienen Purchase Orders asociadas
-                if (!$document->purchaseOrders()->exists()) {
-                    continue;
-                }
+            foreach ($purchaseOrders as $po) {
+                $this->updatePurchaseOrder($po, $data);
 
-                $this->updateShippingDocument($document, $data);
-                $this->syncPurchaseOrdersFromPayload($document, $data);
-                $this->syncPurchaseOrdersFromShippingDocument($document);
-                $this->syncCargos($document, $data['cargo'] ?? []);
-                $this->syncPhases($document, $data['phases'] ?? []);
-                $this->syncItineraries($document, $data['itinerary'] ?? [], $data['id'] ?? null);
-
-                if (!$firstDocument) {
-                    $firstDocument = $document->fresh();
+                if (!$firstPO) {
+                    $firstPO = $po->fresh();
                 }
                 $updatedCount++;
             }
 
-            return $firstDocument;
+            Log::info('porth_import:completed', [
+                'porth_id' => $data['id'] ?? null,
+                'updated_count' => $updatedCount,
+            ]);
+
+            return $firstPO;
         });
     }
 
-    protected function resolveShippingDocuments(array $data)
+    /**
+     * Busca PurchaseOrders por porth_id
+     */
+    protected function resolvePurchaseOrders(array $data)
     {
         $porthId = $data['id'] ?? null;
         if (!$porthId) {
             return collect();
         }
 
-        return ShippingDocument::where('porth_id', $porthId)->get();
+        return PurchaseOrder::where('porth_id', $porthId)->get();
     }
 
     /**
-     * Actualiza ShippingDocument con datos de Porth
-     * IMPORTANTE: Los campos de maestros solo se actualizan si están vacíos localmente
+     * Actualiza una PurchaseOrder con datos de Porth
+     * IMPORTANTE: Los campos existentes solo se actualizan si están vacíos localmente
      */
-    protected function updateShippingDocument(ShippingDocument $document, array $data): void
+    protected function updatePurchaseOrder(PurchaseOrder $po, array $data): void
     {
         $fieldsToUpdate = [];
         
         // BL fields - SOLO si están vacíos localmente
         $blFields = $this->helper->getBlFields($data);
         foreach ($blFields as $field => $value) {
-            if (empty($document->$field)) {
+            if (empty($po->$field)) {
                 $fieldsToUpdate[$field] = $value;
             }
         }
         
         // Container - SOLO si vacío
-        if (empty($document->container_number)) {
+        if (empty($po->container_number)) {
             $containerFields = $this->helper->getContainerFields($data);
             $fieldsToUpdate = array_merge($fieldsToUpdate, $containerFields);
         }
         
-        // Fechas - SOLO si vacías
-        $dateFields = $this->helper->getDateFields($data);
-        foreach ($dateFields as $field => $value) {
-            if (empty($document->$field)) {
-                $fieldsToUpdate[$field] = $value;
-            }
-        }
-        
-        // Campos de maestros - SOLO si están vacíos y se puede traducir
-        $maestrosFields = $this->helper->getMaestrosFields($data);
-        foreach ($maestrosFields as $field => $value) {
-            if (empty($document->$field) && $value !== null) {
-                $fieldsToUpdate[$field] = $value;
-            }
-        }
-        
-        // Campos de Porth - SIEMPRE se actualizan (son campos nuevos)
-        $fieldsToUpdate = array_merge($fieldsToUpdate, $this->helper->getPorthFields($data));
-
-        if (!empty($fieldsToUpdate)) {
-            $document->fill($fieldsToUpdate);
-            $document->save();
-        }
-    }
-
-    protected function syncPurchaseOrdersFromPayload(ShippingDocument $document, array $data): void
-    {
+        // Fechas principales desde payload
         $payloadValues = $this->helper->buildPurchaseOrderPayloadValues($data);
         $fieldsMap = $this->helper->getPurchaseOrderFieldsMap();
-
-        $presentKeys = array_intersect(array_keys($fieldsMap), array_keys($data));
-        $specialKeys = array_intersect(array_keys($fieldsMap), array_keys($payloadValues));
-        $allKeys = array_unique(array_merge($presentKeys, $specialKeys));
         
-        if (empty($allKeys)) {
-            return;
+        foreach ($fieldsMap as $payloadKey => $poField) {
+            $value = $payloadValues[$payloadKey] ?? null;
+            // Solo actualizar si el campo local está vacío
+            if (empty($po->$poField) && $value !== null) {
+                $fieldsToUpdate[$poField] = $value;
+            }
         }
-
-        $purchaseOrders = $document->purchaseOrders()->get();
-        foreach ($purchaseOrders as $po) {
-            $updates = [];
-            foreach ($allKeys as $key) {
-                $fieldName = $fieldsMap[$key];
-                $value = $payloadValues[$key] ?? null;
-                
-                // Solo actualizar si el campo local está vacío
-                if (empty($po->$fieldName) && $value !== null) {
-                    $updates[$fieldName] = $value;
-                }
+        
+        // Campos de maestros traducidos - SOLO si están vacíos
+        $maestrosFields = $this->helper->getMaestrosFields($data);
+        foreach ($maestrosFields as $field => $value) {
+            if (empty($po->$field) && $value !== null) {
+                $fieldsToUpdate[$field] = $value;
             }
+        }
+        
+        // Campos de Porth - SIEMPRE se actualizan (son campos de tracking)
+        $porthFields = $this->buildPorthFieldsForPO($data);
+        $fieldsToUpdate = array_merge($fieldsToUpdate, $porthFields);
 
-            if (!empty($updates)) {
-                $po->fill($updates)->save();
-            }
+        if (!empty($fieldsToUpdate)) {
+            $po->fill($fieldsToUpdate);
+            $po->save();
+
+            Log::info('porth_import:po_updated', [
+                'purchase_order_id' => $po->id,
+                'order_number' => $po->order_number,
+                'fields_updated' => array_keys($fieldsToUpdate),
+            ]);
         }
     }
 
-    protected function syncPurchaseOrdersFromShippingDocument(ShippingDocument $document): void
+    /**
+     * Construye campos Porth para PurchaseOrder
+     */
+    protected function buildPorthFieldsForPO(array $data): array
     {
-        $purchaseOrders = $document->purchaseOrders()->get();
-        
-        if ($purchaseOrders->isEmpty()) {
-            return;
-        }
-
-        $fieldMap = [
-            'porth_pol' => 'porth_pol',
-            'porth_pol_name' => 'porth_pol_name',
-            'porth_pod' => 'porth_pod',
-            'porth_pod_name' => 'porth_pod_name',
-            'porth_origin' => 'porth_origin',
-            'porth_final_destination' => 'porth_final_destination',
-            'porth_carrier_code' => 'porth_carrier_code',
-            'porth_vessel_voyage' => 'porth_vessel_voyage',
-            'porth_shipment_number' => 'porth_shipment_number',
-            'porth_modality' => 'porth_modality',
-            'freight_type' => 'freight_type',
-            'porth_first_eta' => 'porth_first_eta',
-            'porth_first_etd' => 'porth_first_etd',
-            'porth_ready' => 'porth_ready',
-            'porth_to_origin_port' => 'porth_to_origin_port',
-            'porth_at_origin_port' => 'porth_at_origin_port',
-            'porth_in_transit' => 'porth_in_transit',
-            'porth_at_destination_port' => 'porth_at_destination_port',
-            'porth_to_final_destination' => 'porth_to_final_destination',
-            'porth_delivered' => 'porth_delivered',
-            'porth_phase' => 'porth_phase',
-            'porth_priority' => 'porth_priority',
-            'porth_manual_tracking' => 'porth_manual_tracking',
-            'porth_free_time_at_destination' => 'porth_free_time_at_destination',
-            'porth_id' => 'porth_id',
-            'last_porth_sync_at' => 'last_porth_sync_at',
+        return [
+            'porth_id' => $data['id'] ?? null,
+            'porth_shipment_number' => $data['shipmentNumber'] ?? ($data['porthShipmentNumber'] ?? null),
+            'porth_carrier_code' => $data['carrierCode'] ?? null,
+            'porth_pol' => $this->normalize($data['pol'] ?? null),
+            'porth_pod' => $this->normalize($data['pod'] ?? null),
+            'porth_pol_name' => $data['polName'] ?? null,
+            'porth_pod_name' => $data['podName'] ?? null,
+            'porth_phase' => $data['phase'] ?? null,
+            'porth_priority' => $data['priority'] ?? null,
+            'porth_modality' => $data['modality'] ?? null,
+            'porth_vessel_voyage' => $data['vesselVoyage'] ?? null,
+            'porth_origin' => $data['origin'] ?? null,
+            'porth_final_destination' => $data['finalDestination'] ?? null,
+            'porth_first_eta' => $this->parseDateTime($data['firstEta'] ?? null),
+            'porth_first_etd' => $this->parseDateTime($data['firstEtd'] ?? null),
+            'porth_ready' => $this->parseDateTime($data['ready'] ?? null),
+            'porth_to_origin_port' => $this->parseDateTime($data['toOriginPort'] ?? null),
+            'porth_at_origin_port' => $this->parseDateTime($data['atOriginPort'] ?? null),
+            'porth_in_transit' => $this->parseDateTime($data['inTransit'] ?? null),
+            'porth_at_destination_port' => $this->parseDateTime($data['atDestinationPort'] ?? null),
+            'porth_to_final_destination' => $this->parseDateTime($data['toFinalDestination'] ?? null),
+            'porth_delivered' => $this->parseDateTime($data['delivered'] ?? null),
+            'porth_free_time_at_destination' => $data['freeTimeAtDestination'] ?? null,
+            'porth_manual_tracking' => isset($data['manualTracking']) ? (bool) $data['manualTracking'] : null,
+            'last_porth_sync_at' => now(),
+            'freight_type' => !empty($data['freightType']) ? strtolower(trim($data['freightType'])) : null,
         ];
-
-        foreach ($purchaseOrders as $po) {
-            $updates = [];
-            
-            foreach ($fieldMap as $shippingDocField => $poField) {
-                $value = $document->{$shippingDocField};
-                if ($value !== null) {
-                    $updates[$poField] = $value;
-                }
-            }
-
-            if (!empty($updates)) {
-                $po->fill($updates)->save();
-            }
-        }
     }
 
-    protected function syncCargos(ShippingDocument $document, array $cargos): void
+    /**
+     * Normaliza strings: trim + uppercase
+     */
+    private function normalize(?string $value): ?string
     {
-        $this->syncRelatedRecords(
-            $document,
-            $cargos,
-            'porthCargos',
-            'porth_cargo_id',
-            fn (array $cargo) => $this->helper->buildCargoPayload($cargo)
-        );
-    }
-
-    protected function syncPhases(ShippingDocument $document, array $phases): void
-    {
-        $this->syncRelatedRecords(
-            $document,
-            $phases,
-            'porthPhases',
-            'porth_phase_id',
-            fn (array $phase) => $this->helper->buildPhasePayload($phase)
-        );
-    }
-
-    protected function syncItineraries(ShippingDocument $document, array $itineraries, ?string $porthId): void
-    {
-        $this->syncRelatedRecords(
-            $document,
-            $itineraries,
-            'porthItineraries',
-            'porth_itinerary_id',
-            fn (array $item) => $this->helper->buildItineraryPayload($item, $porthId)
-        );
-    }
-
-    protected function syncRelatedRecords(
-        ShippingDocument $document,
-        array $items,
-        string $relation,
-        string $idKey,
-        callable $payloadBuilder
-    ): void {
-        $incomingIds = [];
-        $nullPayloads = [];
-
-        foreach ($items as $item) {
-            $payload = $payloadBuilder($item);
-            $porthId = $payload[$idKey] ?? null;
-
-            if ($porthId) {
-                $incomingIds[] = $porthId;
-                $document->{$relation}()->updateOrCreate(
-                    [$idKey => $porthId],
-                    $payload
-                );
-            } else {
-                $nullPayloads[] = $payload;
-            }
+        if (!$value) {
+            return null;
         }
+        return strtoupper(trim($value));
+    }
 
-        $query = $document->{$relation}()->whereNotNull($idKey);
-        if (!empty($incomingIds)) {
-            $query->whereNotIn($idKey, $incomingIds);
+    /**
+     * Parsea fecha a Carbon datetime
+     */
+    private function parseDateTime(?string $value)
+    {
+        if (empty($value)) {
+            return null;
         }
-        $query->delete();
-
-        $document->{$relation}()->whereNull($idKey)->delete();
-        foreach ($nullPayloads as $payload) {
-            $document->{$relation}()->create($payload);
+        try {
+            return \Carbon\Carbon::parse($value);
+        } catch (\Exception $e) {
+            return null;
         }
     }
 }
