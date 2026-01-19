@@ -330,13 +330,12 @@ class PucharseOrderDetail extends Component
     }
 
     /**
-     * Verificar si debe mostrarse la línea de tiempo de Porth
-     * Solo se muestra si:
+     * Verificar si debe mostrarse la sección de tracking
+     * Se muestra si:
      * 1. La PO está en "Booking" (etapa 3) o superior
      * 2. Hay identificadores de tracking (tracking_id, mbl_number o container_number)
-     * 3. Se cargaron datos de tracking exitosamente
      */
-    public function shouldShowTimeline()
+    public function shouldShowTrackingSection()
     {
         $kanbanStatusId = $this->purchaseOrder->kanban_status_id ?? 0;
         
@@ -346,7 +345,7 @@ class PucharseOrderDetail extends Component
         }
 
         // Verificar si hay identificadores de tracking
-        $hasTrackingData = $this->purchaseOrder->tracking_id 
+        $hasTrackingIdentifiers = $this->purchaseOrder->tracking_id 
             || $this->purchaseOrder->mbl_number 
             || $this->purchaseOrder->container_number
             || ($this->shippingDocument && (
@@ -355,10 +354,17 @@ class PucharseOrderDetail extends Component
                 || $this->shippingDocument->container_number
             ));
 
+        return $hasTrackingIdentifiers;
+    }
+
+    /**
+     * Verificar si debe mostrarse la línea de tiempo (timeline) con datos
+     * Solo se muestra si hay datos válidos de tracking cargados
+     */
+    public function shouldShowTimeline()
+    {
         // Verificar que se hayan cargado datos de tracking con timeline válidos
-        // trackingData debe existir, no ser null, y tener timeline con datos
-        return $hasTrackingData 
-            && $this->trackingData !== null 
+        return $this->trackingData !== null 
             && !empty($this->trackingData) 
             && isset($this->trackingData['timeline'])
             && !empty($this->trackingData['timeline']);

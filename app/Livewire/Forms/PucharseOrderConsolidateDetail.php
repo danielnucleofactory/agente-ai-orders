@@ -275,12 +275,12 @@ class PucharseOrderConsolidateDetail extends Component {
     }
 
     /**
-     * Verificar si debe mostrarse la línea de tiempo
-     * Solo se muestra si:
+     * Verificar si debe mostrarse la sección de tracking
+     * Se muestra si:
      * 1. Hay identificadores de tracking (tracking_id, mbl_number o container_number)
      * 2. Al menos una PO asociada está en "Booking" (etapa 3) o superior
      */
-    public function shouldShowTimeline()
+    public function shouldShowTrackingSection()
     {
         if (!$this->shippingDocument) {
             return false;
@@ -302,9 +302,17 @@ class PucharseOrderConsolidateDetail extends Component {
             })
             ->exists();
 
+        return $hasBookingOrLater;
+    }
+
+    /**
+     * Verificar si debe mostrarse la línea de tiempo (timeline) con datos
+     * Solo se muestra si hay datos válidos de tracking cargados
+     */
+    public function shouldShowTimeline()
+    {
         // Verificar que se hayan cargado datos de tracking con timeline válidos
-        return $hasBookingOrLater 
-            && $this->trackingData !== null 
+        return $this->trackingData !== null 
             && !empty($this->trackingData) 
             && isset($this->trackingData['timeline'])
             && !empty($this->trackingData['timeline']);

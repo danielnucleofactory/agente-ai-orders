@@ -168,7 +168,7 @@
         </div>
     </div>
 
-    @if($this->shouldShowTimeline())
+    @if($this->shouldShowTrackingSection())
     <div class="mb-8">
         <h3 class="mb-6 text-lg font-bold">Estado del Envío</h3>
 
@@ -176,7 +176,7 @@
             <div class="flex justify-center">
                 <div class="w-8 h-8 rounded-full border-b-2 animate-spin border-dark-blue"></div>
             </div>
-        @else
+        @elseif($this->shouldShowTimeline())
             <div class="relative">
                 <!-- Timeline track -->
                 <div class="absolute h-[2px] top-6 left-0 right-0 flex">
@@ -281,6 +281,11 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        @else
+            <div class="py-8 text-center text-gray-500">
+                <p>No hay datos de tracking disponibles en Porth</p>
+                <p class="text-sm mt-2">El contenedor, MBL o booking no tiene información en Porth</p>
             </div>
         @endif
     </div>
