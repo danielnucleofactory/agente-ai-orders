@@ -6,6 +6,7 @@ use App\Models\KanbanBoard as KanbanBoardModel;
 use App\Models\KanbanStatus;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderComment;
+use App\Services\MaestrosApiService;
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -41,7 +42,7 @@ class KanbanBoard extends Component
     public $date_booking_request;
     public $date_booking_authorized;
     public $date_etd_initial;
-    public $date_etd_updated;
+    public $date_etd; // ETD Variable (antes date_etd_updated, que ya no existe en la DB)
     public $mode;
     public $comment_stage_03;
 
@@ -51,9 +52,10 @@ class KanbanBoard extends Component
     // En Tránsito (id 5)
     public $date_atd;
     public $date_eta;
-    public $date_eta_updated;
+    public $date_eta_initial;
     public $container_type;
     public $container_number;
+    public $mbl_number;
     public $bill_of_lading;
     public $shipment_amount;
     public $shipping_line;
@@ -76,6 +78,9 @@ class KanbanBoard extends Component
 
 
     public $comment_stage_08;
+    
+    // Recibiendo CDI (id 9)
+    public $estimated_dc_availability_date;
     public $comment_stage_09;
 
 
@@ -92,6 +97,21 @@ class KanbanBoard extends Component
     // Filtros activos
     public $activeFilters = [];
 
+    // Array para dropdown de proveedores de servicio
+    public $serviceProviderArray = [];
+
+    // Arrays para dropdowns de la etapa "En Tránsito"
+    public $shippingLineArray = [];
+    public $departurePortArray = [];
+    public $arrivalPortArray = [];
+    public $containerTypeArray = [];
+
+    // Arrays para dropdowns de la etapa "Booking"
+    public $transportTypeArray = [];
+
+    // Estado de carga del modal
+    public $isLoadingModalData = false;
+
     // Agregar los listeners para los eventos
     protected $listeners = [
         'refreshKanban' => 'loadData',
@@ -107,9 +127,10 @@ class KanbanBoard extends Component
 
         if ($currentRoute === 'purchase-orders.index') {
             $this->boardType = 'po_stages'; // Etapas PO
-        } elseif ($currentRoute === 'shipping-documentation.index') {
-            $this->boardType = 'shipping_documentation'; // Documentación de embarque
-        } else {
+        } // elseif ($currentRoute === 'shipping-documentation.index') {
+            // $this->boardType = 'shipping_documentation'; // Documentación de embarque - Ocultado
+        // } else {
+        else {
             // Si no es ninguna de las rutas específicas, usar el tipo por defecto
             $this->boardType = 'purchase_orders';
         }
@@ -142,6 +163,16 @@ class KanbanBoard extends Component
         $this->organizeTasksByColumn();
     }
 
+    /**
+     * Carga las columnas (estados) del tablero Kanban.
+     * 
+     * IMPORTANTE: El orden de las columnas es crítico. La vista blade depende de índices
+     * de array ($columns[0], $columns[1], etc.) para mostrar los campos correctos en el modal.
+     * Si el orden de las columnas cambia o se eliminan columnas, el modal puede no funcionar
+     * correctamente.
+     * 
+     * @return void
+     */
     public function loadColumns()
     {
         if (!$this->board) {
@@ -149,8 +180,21 @@ class KanbanBoard extends Component
             return;
         }
 
-        // Cargar las columnas (estados) del tablero
-        $statuses = $this->board->statuses()->orderBy('position')->get();
+        // Cargar las columnas (estados) del tablero ordenadas por posición
+        // Excluir estados ocultos
+        $statuses = $this->board->statuses()
+            ->where('is_hidden', false)
+            ->orderBy('position')
+            ->get();
+
+        if ($statuses->isEmpty()) {
+            \Log::warning('KanbanBoard: No se encontraron columnas para el tablero', [
+                'board_id' => $this->board->id,
+                'board_type' => $this->boardType
+            ]);
+            $this->columns = [];
+            return;
+        }
 
         $this->columns = $statuses->map(function ($status) {
             return [
@@ -161,6 +205,18 @@ class KanbanBoard extends Component
                 'position' => $status->position,
             ];
         })->toArray();
+
+        // Validación: Registrar si hay menos columnas de las esperadas (11 etapas)
+        // Esto ayuda a detectar problemas de configuración
+        $expectedMinColumns = 11;
+        if (count($this->columns) < $expectedMinColumns) {
+            \Log::info('KanbanBoard: Menos columnas de las esperadas', [
+                'board_id' => $this->board->id,
+                'columns_count' => count($this->columns),
+                'expected_min' => $expectedMinColumns,
+                'column_names' => collect($this->columns)->pluck('name')->toArray()
+            ]);
+        }
     }
 
     public function loadTasks()
@@ -451,7 +507,19 @@ class KanbanBoard extends Component
             return;
         }
 
-        $this->validateStageRequirements($stage);
+        // Validar que la etapa destino no esté oculta
+        $targetStatus = \App\Models\KanbanStatus::find($stage);
+        if ($targetStatus && $targetStatus->is_hidden) {
+            session()->flash('message', 'No se puede mover a una etapa oculta.');
+            $this->dispatch('refreshKanban');
+            return;
+        }
+
+        try {
+            $this->validateStageRequirements($stage);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        }
 
         // 1) Guardar comentario + adjunto si existen
         $hasComment = is_string($this->comment ?? '') && trim($this->comment) !== '';
@@ -460,7 +528,14 @@ class KanbanBoard extends Component
         }
 
         // 2) Guardar campos del formulario de la etapa
-        $this->saveDataByModal(); // ya maneja transacción y payload por etapa
+        $saveResult = $this->saveDataByModal(); // ya maneja transacción y payload por etapa
+
+        if (!$saveResult['ok']) {
+            session()->flash('message', $saveResult['message'] ?? 'No se pudo guardar los datos de la etapa.');
+            // NO mover la tarea si el guardado falló
+            $this->dispatch('refreshKanban');
+            return;
+        }
 
         // 3) Mover a la etapa nueva (y notificar)
         $this->moveTask($poId, $stage);
@@ -478,6 +553,66 @@ class KanbanBoard extends Component
         $this->dispatch('close-modal', 'modal-po-stage-change');
     }
 
+    /**
+     * Limpiar todos los datos del modal cuando se cancela
+     */
+    public function cancelModal(): void
+    {
+        // Limpiar todos los campos de todas las etapas
+        $allStages = [2, 3, 4, 5, 6, 7, 10];
+        foreach ($allStages as $stage) {
+            foreach (($this->fieldsByStage()[$stage] ?? []) as $field) {
+                if (property_exists($this, $field)) {
+                    $this->$field = null;
+                }
+            }
+        }
+
+        // Limpiar explícitamente los campos de fecha de "En Tránsito" para asegurar que se limpien
+        $this->date_atd = null;
+        $this->date_eta = null;
+        $this->date_eta_initial = null;
+
+        // Limpiar comentarios de todas las etapas
+        $this->comment_stage_01 = null;
+        $this->comment_stage_02 = null;
+        $this->comment_stage_03 = null;
+        $this->comment_stage_04 = null;
+        $this->comment_stage_05 = null;
+        $this->comment_stage_06 = null;
+        $this->comment_stage_07 = null;
+        $this->comment_stage_08 = null;
+        $this->comment_stage_09 = null;
+
+        // Limpiar comentario y adjunto
+        $this->comment = '';
+        $this->attachment = null;
+
+        // Limpiar referencias a la tarea actual
+        $this->currentTaskId = null;
+        $this->newColumnId = null;
+        $this->currentTask = null;
+
+        // Limpiar arrays de opciones
+        $this->departurePortArray = [];
+        $this->arrivalPortArray = [];
+        $this->shippingLineArray = [];
+        $this->containerTypeArray = [];
+        $this->serviceProviderArray = [];
+        $this->transportTypeArray = [];
+
+        // Resetear errores de validación
+        $this->resetErrorBag();
+        $this->resetValidation();
+
+        // Cerrar el modal y forzar actualización del componente
+        $this->dispatch('close-modal', 'modal-po-stage-change');
+        $this->dispatch('refreshKanban');
+        
+        // Forzar re-render del componente para limpiar el estado en el frontend
+        $this->dispatch('$refresh');
+    }
+
     public function setCurrentTask($taskId, $newColumnId)
     {
         $this->currentTaskId = $taskId;
@@ -490,7 +625,7 @@ class KanbanBoard extends Component
                 break;
             }
         }
-        
+
         // NUEVO: Cargar datos de la PO en las propiedades del componente
         $po = PurchaseOrder::find($taskId);
         if ($po) {
@@ -499,36 +634,79 @@ class KanbanBoard extends Component
             $this->date_theorical_load = $po->date_theorical_load ? $po->date_theorical_load->format('Y-m-d') : null;
             $this->service_provider = $po->service_provider;
             $this->forwarder_name = $po->forwarder_name;
-            
+
+            // Cargar proveedores de servicio si estamos en la etapa de producción o booking
+            // IMPORTANTE: Cargar service_provider ANTES de llamar a loadServiceProviders
+            // para que el método pueda agregar el valor guardado al array si la API no devuelve datos
+            if (($newColumnId == 2 || $newColumnId == 3) && $po->trading_company) {
+                $this->loadServiceProviders($po->trading_company, $po->service_provider);
+            }
+
+            // Cargar transport types si estamos en la etapa "Booking"
+            if ($newColumnId == 3 && $po->trading_company) {
+                $this->mode = $po->mode;
+                $this->loadTransportTypes($po->trading_company, $po->mode);
+            }
+
+            // Cargar shipping lines, puertos y container types si estamos en la etapa "En Tránsito"
+            // IMPORTANTE: Cargar los valores ANTES de llamar a los métodos de carga
+            // para que los métodos puedan agregar los valores guardados al array si la API no devuelve datos
+            if ($newColumnId == 5 && $po->trading_company) {
+                $this->shipping_line = $po->shipping_line;
+                $this->departure_port = $po->departure_port;
+                $this->arrival_port = $po->arrival_port;
+                $this->container_type = $po->container_type;
+                
+                $this->loadShippingLines($po->trading_company, $po->shipping_line);
+                $this->loadPorts($po->trading_company, $po->departure_port, $po->arrival_port);
+                $this->loadContainerTypes($po->trading_company, $po->container_type);
+            }
+
             // Booking - convertir fechas al formato Y-m-d
             $this->date_booking_request = $po->date_booking_request ? $po->date_booking_request->format('Y-m-d') : null;
             $this->date_booking_authorized = $po->date_booking_authorized ? $po->date_booking_authorized->format('Y-m-d') : null;
             $this->date_etd_initial = $po->date_etd_initial ? $po->date_etd_initial->format('Y-m-d') : null;
-            $this->date_etd_updated = $po->date_etd_updated ? $po->date_etd_updated->format('Y-m-d') : null;
-            $this->mode = $po->mode;
-            
+            $this->date_etd = $po->date_etd ? $po->date_etd->format('Y-m-d') : null; // ETD Variable
+            if ($newColumnId != 3) {
+                $this->mode = $po->mode;
+            }
+            // Cargar campos de tracking para Booking
+            if ($newColumnId == 3) {
+                $this->container_number = $po->container_number;
+                $this->mbl_number = $po->mbl_number;
+                $this->tracking_id = $po->tracking_id;
+            }
+
             // En Tránsito - convertir fechas al formato Y-m-d
             $this->date_atd = $po->date_atd ? $po->date_atd->format('Y-m-d') : null;
             $this->date_eta = $po->date_eta ? $po->date_eta->format('Y-m-d') : null;
-            $this->date_eta_updated = $po->date_eta_updated ? $po->date_eta_updated->format('Y-m-d') : null;
-            $this->container_type = $po->container_type;
+            $this->date_eta_initial = $po->date_eta_initial ? $po->date_eta_initial->format('Y-m-d') : null;
+            if ($newColumnId != 5) {
+                $this->container_type = $po->container_type;
+            }
             $this->container_number = $po->container_number;
-            $this->bill_of_lading = $po->bill_of_lading;
+            $this->mbl_number = $po->mbl_number;
             $this->shipment_amount = $po->shipment_amount ?? null;
-            $this->shipping_line = $po->shipping_line;
+            // shipping_line, departure_port y arrival_port ya se cargaron arriba si estamos en etapa 5
+            if ($newColumnId != 5) {
+                $this->shipping_line = $po->shipping_line;
+                $this->departure_port = $po->departure_port;
+                $this->arrival_port = $po->arrival_port;
+            }
             $this->shipment_status = $po->shipment_status ?? null;
             $this->merchandise_invoice = $po->merchandise_invoice ?? null;
             $this->tracking_id = $po->tracking_id;
-            $this->departure_port = $po->departure_port;
-            $this->arrival_port = $po->arrival_port;
-            
+
             // Puerto - convertir fechas al formato Y-m-d
             $this->date_ata = $po->date_ata ? $po->date_ata->format('Y-m-d') : null;
-            
+
             // Almacén Fiscal - convertir fechas al formato Y-m-d
             $this->bonded_warehouse_enter = $po->bonded_warehouse_enter ? $po->bonded_warehouse_enter->format('Y-m-d') : null;
             $this->bonded_warehouse_exit = $po->bonded_warehouse_exit ? $po->bonded_warehouse_exit->format('Y-m-d') : null;
-            
+
+            // Recibiendo CDI - convertir fechas al formato Y-m-d
+            $this->estimated_dc_availability_date = $po->estimated_dc_availability_date ? $po->estimated_dc_availability_date->format('Y-m-d') : null;
+
             // Ingresada
             $this->receipt_note = $po->receipt_note;
         }
@@ -605,6 +783,37 @@ class KanbanBoard extends Component
             // Limpiar los campos después de guardar
             $this->comment = '';
             $this->attachment = null;
+
+            // Dispatch webhook event for updated purchase order (comment added)
+            if (function_exists('dispatch_webhook')) {
+                try {
+                    $po = PurchaseOrder::find($taskId);
+                    if ($po) {
+                        $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+
+                        // Convertir a array y asegurar que sea JSON serializable
+                        $poData = $freshPo->toArray();
+                        $poData = json_decode(json_encode($poData), true);
+
+                        dispatch_webhook('purchase_order.updated', [
+                            'purchase_order_id' => $po->id,
+                            'order_number' => $po->order_number,
+                            'changes' => ['comments' => 'new_comment_added'],
+                            'data' => $poData,
+                        ]);
+
+                        \Log::info('dispatch_webhook completed after comment creation from KanbanBoard', [
+                            'po_id' => $po->id,
+                        ]);
+                    }
+                } catch (\Throwable $e) {
+                    \Log::error('Error dispatching webhook after comment creation', [
+                        'po_id' => $taskId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
         } catch (\Exception $e) {
             \Log::error("Error setting comments: " . $e->getMessage());
@@ -690,10 +899,10 @@ class KanbanBoard extends Component
 
     /**
      * Mapeo de campos por etapa del kanban.
-     * 
+     *
      * NOTA: Los índices (2, 3, 4, etc.) corresponden a los IDs de las columnas KanbanStatus
      * en la base de datos. Estos IDs pueden variar según la configuración del tablero.
-     * 
+     *
      * Mapeo esperado de etapas:
      * - 1: Nuevo
      * - 2: Producción
@@ -706,23 +915,25 @@ class KanbanBoard extends Component
      * - 9: Recibiendo CDI
      * - 10: Ingresada
      * - 11: Anulada
-     * 
+     *
      * @return array<int, array<string>> Array indexado por ID de etapa con lista de campos
      */
     private function fieldsByStage(): array
     {
         return [
             2 => ['date_variable_date', 'date_theorical_load', 'service_provider', 'forwarder_name'], // Producción
-            3 => ['date_booking_request', 'date_booking_authorized', 'date_etd_initial', 'date_etd_updated', 'mode'], // Booking
+            3 => ['date_variable_date', 'date_theorical_load', 'service_provider',
+                  'container_number', 'mbl_number', 'tracking_id'], // Booking (mismos campos que Producción + tracking)
             4 => [], // Consolidador (sin campos específicos)
             5 => [
-                'date_atd', 'date_eta', 'date_eta_updated', 'container_type',
-                'container_number', 'bill_of_lading',
+                'date_atd', 'date_eta', 'date_eta_initial', 'container_type',
+                'container_number', 'mbl_number',
                 'shipment_amount', 'shipping_line', 'shipment_status', 'merchandise_invoice',
                 'tracking_id', 'departure_port', 'arrival_port',
             ], // En transito
             6 => ['date_ata'], // Puerto
             7 => ['bonded_warehouse_enter', 'bonded_warehouse_exit', 'date_ata'], // Alm. Fiscal
+            9 => ['estimated_dc_availability_date'], // Recibiendo CDI
             10 => ['receipt_note'], // Ingresada
         ];
     }
@@ -747,7 +958,8 @@ class KanbanBoard extends Component
         foreach ($fields as $name) {
             if (property_exists($this, $name)) {
                 $val = $this->$name;
-                if (!is_null($val) && (!(is_string($val)) || trim($val) !== '')) {
+                // Filtrar valores especiales que indican "no hay datos"
+                if (!is_null($val) && $val !== '__no_data__' && (!(is_string($val)) || trim($val) !== '')) {
                     $payload[$name] = $val;
                 }
             }
@@ -765,15 +977,53 @@ class KanbanBoard extends Component
                 ->update($payload);
 
             // si quieres, puedes verificar que exista la PO
-             if ($updated === 0) { throw new \RuntimeException('PO no encontrada'); }
+             if ($updated === 0) { 
+                 throw new \RuntimeException('PO no encontrada'); 
+             }
 
             // NUEVO: Actualizar automáticamente arrival_status y delay_days si se actualizó la ETA
             $po = PurchaseOrder::find($poId);
-            if ($po && (isset($payload['date_eta']) || isset($payload['date_eta_updated']))) {
+            if ($po && (isset($payload['date_eta']) || isset($payload['date_eta_initial']))) {
                 $po->updateArrivalStatus();
             }
 
             DB::commit();
+
+            // Dispatch webhook event for updated purchase order
+            if ($po && function_exists('dispatch_webhook')) {
+                try {
+                    \Log::info('About to dispatch webhook for PO update from KanbanBoard', [
+                        'po_id' => $po->id,
+                        'order_number' => $po->order_number,
+                    ]);
+
+                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                    $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+
+                    // Convertir a array y asegurar que sea JSON serializable
+                    $poData = $freshPo->toArray();
+                    $poData = json_decode(json_encode($poData), true);
+
+                    dispatch_webhook('purchase_order.updated', [
+                        'purchase_order_id' => $po->id,
+                        'order_number' => $po->order_number,
+                        'changes' => $payload,
+                        'data' => $poData,
+                    ]);
+
+                    \Log::info('dispatch_webhook completed from KanbanBoard', [
+                        'po_id' => $po->id,
+                    ]);
+                } catch (\Throwable $e) {
+                    \Log::error('Error in webhook dispatch from KanbanBoard', [
+                        'po_id' => $po->id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                    // No lanzar la excepción para no interrumpir el flujo principal
+                }
+            }
+
             return ['ok' => true, 'updated' => $updated];
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -786,14 +1036,16 @@ class KanbanBoard extends Component
 
     /**
      * Reglas de validación requeridas por etapa del kanban.
-     * 
+     *
      * IMPORTANTE: Los índices deben coincidir con los IDs de las columnas KanbanStatus
      * y con los campos definidos en fieldsByStage().
-     * 
+     *
      * Validaciones complejas:
-     * - Etapa 5 (En Tránsito): Usa 'required_without_all' para container_number, bill_of_lading
-     *   y tracking_id. Esto significa que al menos uno de estos tres campos debe estar presente.
-     * 
+     * - Etapa 3 (Booking): Usa 'required_without_all' para container_number, mbl_number
+     *   y tracking_id. Al menos uno de estos tres campos debe estar presente para habilitar tracking.
+     * - Etapa 5 (En Tránsito): Los campos de tracking ya NO se validan aquí porque se capturaron
+     *   en el paso a Booking.
+     *
      * @return array<int, array<string, string>> Array indexado por ID de etapa con reglas de validación
      */
     private function requiredRulesByStage(): array
@@ -801,28 +1053,25 @@ class KanbanBoard extends Component
         return [
             2 => [
                 'date_variable_date' => 'required|date',
-                'service_provider'   => 'required|string',
-                'forwarder_name'     => 'required|string',
-                // Si más adelante decides exigir la teórica:
-                // 'date_theorical_load' => 'required|date',
+                'service_provider'   => 'nullable|string',
+                // forwarder_name está oculto en la vista, por lo que no debe ser requerido
+                // Los campos de tracking se capturan en el paso a Booking (etapa 3)
             ],
 
             3 => [
-                'date_booking_request'    => 'required|date',
-                'date_booking_authorized' => 'required|date',
-                'date_etd_initial'        => 'required|date',
-                'date_etd_updated'        => 'required|date',
-                'mode'                    => 'required|string',
+                'date_variable_date' => 'required|date',
+                'service_provider'   => 'nullable|string',
+                // Validación: al menos uno de estos tres campos debe estar presente para habilitar tracking
+                'container_number' => 'nullable|required_without_all:tracking_id,mbl_number|string',
+                'mbl_number'       => 'nullable|required_without_all:tracking_id,container_number|string',
+                'tracking_id'      => 'nullable|required_without_all:container_number,mbl_number|string',
             ],
 
             5 => [
                 'date_atd'         => 'required|date',
                 'date_eta'         => 'required|date',
-                'date_eta_updated' => 'required|date',
-                // Validación compleja: al menos uno de estos tres campos debe estar presente
-                'container_number' => 'nullable|required_without_all:tracking_id,bill_of_lading|string',
-                'bill_of_lading'   => 'nullable|required_without_all:tracking_id,container_number',   
-                'tracking_id'      => 'nullable|required_without_all:container_number,bill_of_lading|string',
+                'date_eta_initial' => 'required|date',
+                // Los campos de tracking ya se capturaron en el paso a Booking
                 'shipping_line'    => 'required|string',
                 'departure_port'   => 'required|string',
                 'arrival_port'     => 'required|string',
@@ -843,6 +1092,10 @@ class KanbanBoard extends Component
                 // Si quisieras hacerlo requerido:
                 // 'receipt_note' => 'required|string',
             ],
+
+            9 => [
+                'estimated_dc_availability_date' => 'required|date',
+            ],
         ];
     }
 
@@ -856,13 +1109,14 @@ class KanbanBoard extends Component
             'date_booking_request'   => 'Solicitud de booking',
             'date_booking_authorized'=> 'Aut. Booking',
             'date_etd_initial'       => 'ETD Inicial',
-            'date_etd_updated'       => 'ETD Variable',
+            'date_etd'               => 'ETD Variable',
             'mode'                   => 'Modo de transporte',
             'date_atd'               => 'ETD Real',
             'date_eta'               => 'ETA inicial',
-            'date_eta_updated'       => 'ETA variable',
+            'date_eta_initial'       => 'ETA variable',
             'container_number'       => 'Contenedor',
             'container_type'         => 'Tipo de contenedor',
+            'mbl_number'             => 'MBL',
             'bill_of_lading'         => 'BL',
             'shipping_line'          => 'Naviera',
             'tracking_id'            => 'Tracking',
@@ -871,16 +1125,17 @@ class KanbanBoard extends Component
             'date_ata'               => 'ETA Real',
             'bonded_warehouse_enter' => 'Ingreso a AF',
             'bonded_warehouse_exit'  => 'Salida AF',
+            'estimated_dc_availability_date' => 'Fecha Disp. Bodega Estimada',
             'receipt_note'      => 'Nota de Recibo',
         ];
     }
 
     /**
      * Valida los campos requeridos para una etapa específica.
-     * 
+     *
      * Si la validación falla, Livewire automáticamente mostrará los errores
      * en la vista y no ejecutará el resto del método saveAndMove().
-     * 
+     *
      * @param int $stage ID de la etapa (columna KanbanStatus)
      * @return void
      * @throws \Illuminate\Validation\ValidationException Si la validación falla
@@ -894,14 +1149,507 @@ class KanbanBoard extends Component
         }
 
         $messages = [
-            'required' => 'El campo es requerido.',
+            'required' => 'El campo :attribute es requerido.',
             'required_without_all' => 'Debe proporcionar al menos uno: Número de Booking, MBL o Número de Contenedor.',
-            'date'     => 'El campo debe ser una fecha válida.',
-            'string'   => 'El campo debe ser texto.',
-            'numeric'  => 'El campo debe ser numérico.',
+            'date'     => 'El campo :attribute debe ser una fecha válida.',
+            'string'   => 'El campo :attribute debe ser texto.',
+            'numeric'  => 'El campo :attribute debe ser numérico.',
         ];
 
         $this->validate($rules, $messages, $this->fieldAttributeLabels());
+    }
+
+    /**
+     * Get MaestrosApiService instance
+     */
+    protected function getMaestrosApiService(): MaestrosApiService
+    {
+        return app(MaestrosApiService::class);
+    }
+
+    /**
+     * Cargar proveedores de servicio desde la API
+     * 
+     * @param string $tradingCompany
+     * @param string|null $currentServiceProvider Valor actual guardado en la PO (opcional)
+     * @return void
+     */
+    protected function loadServiceProviders(string $tradingCompany, ?string $currentServiceProvider = null): void
+    {
+        // PRIMERO: Asegurar que el valor guardado esté en el array desde el inicio
+        // Esto garantiza que esté disponible inmediatamente cuando Livewire renderiza el select
+        $serviceProviderToAdd = $currentServiceProvider ?? $this->service_provider;
+        
+        $this->serviceProviderArray = [];
+        
+        if ($serviceProviderToAdd && trim($serviceProviderToAdd) !== '') {
+            $this->serviceProviderArray[$serviceProviderToAdd] = $serviceProviderToAdd;
+        }
+        
+        $tradingCompanyValue = trim($tradingCompany ?? '');
+        if (empty($tradingCompanyValue)) {
+            if (empty($this->serviceProviderArray)) {
+                $this->serviceProviderArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente";
+            }
+            return;
+        }
+
+        try {
+            $apiService = $this->getMaestrosApiService();
+
+            $apiParams = [
+                'company' => $tradingCompanyValue,
+                'trading_company' => $tradingCompanyValue,
+                'active' => 'true',
+                'per_page' => 1000,
+            ];
+
+            $serviceProvidersResponse = $this->getServiceProvidersWithCustomTimeout($apiService, $apiParams, 8);
+            $serviceProvidersArray = $this->processApiResponse($serviceProvidersResponse, 'name', 'name');
+            
+            // Combinar resultados de la API con el valor guardado (sin sobrescribir)
+            foreach ($serviceProvidersArray as $key => $value) {
+                if (!isset($this->serviceProviderArray[$key])) {
+                    $this->serviceProviderArray[$key] = $value;
+                }
+            }
+
+            // Si después de todos los intentos el array está vacío, mostrar mensaje
+            if (empty($this->serviceProviderArray)) {
+                $this->serviceProviderArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error loading service providers in KanbanBoard', [
+                'error' => $e->getMessage(),
+                'trading_company' => $tradingCompanyValue,
+                'array_count' => count($this->serviceProviderArray)
+            ]);
+            // Los valores guardados ya están en el array desde el inicio, así que no los perdemos
+            if (empty($this->serviceProviderArray)) {
+                $this->serviceProviderArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+            }
+        }
+    }
+
+    /**
+     * Cargar shipping lines desde la API
+     * 
+     * @param string $tradingCompany
+     * @param string|null $currentShippingLine Valor actual guardado en la PO (opcional)
+     * @return void
+     */
+    protected function loadShippingLines(string $tradingCompany, ?string $currentShippingLine = null): void
+    {
+        // PRIMERO: Asegurar que el valor guardado esté en el array desde el inicio
+        // Esto garantiza que esté disponible inmediatamente cuando Livewire renderiza el select
+        $shippingLineToAdd = $currentShippingLine ?? $this->shipping_line;
+        
+        $this->shippingLineArray = [];
+        
+        if ($shippingLineToAdd) {
+            $this->shippingLineArray[$shippingLineToAdd] = $shippingLineToAdd;
+        }
+        
+        $tradingCompanyValue = trim($tradingCompany ?? '');
+        if (empty($tradingCompanyValue)) {
+            // Si no hay trading company y no hay valor guardado, mostrar mensaje
+            if (empty($this->shippingLineArray)) {
+                $this->shippingLineArray['__no_data__'] = '⚠️ No hay datos disponibles';
+            }
+            return; // Ya agregamos el valor guardado arriba
+        }
+
+        try {
+            $apiService = $this->getMaestrosApiService();
+
+            $apiParams = [
+                'company' => $tradingCompanyValue,
+                'trading_company' => $tradingCompanyValue,
+                'active' => 'true',
+                'per_page' => 1000,
+            ];
+
+            // Intentar solo una vez con timeout más corto (8 segundos)
+            $shippingLinesResponse = $this->getShippingLinesWithCustomTimeout($apiService, $apiParams, 8);
+            $shippingLinesArray = $this->processApiResponse($shippingLinesResponse, 'name', 'name');
+            
+            // Combinar los valores de la API con el valor guardado (sin duplicar)
+            foreach ($shippingLinesArray as $key => $value) {
+                if (!isset($this->shippingLineArray[$key])) {
+                    $this->shippingLineArray[$key] = $value;
+                }
+            }
+        } catch (\Exception $e) {
+            // El valor guardado ya está en el array desde el inicio, así que no lo perdemos
+        }
+        
+        // Si después de todos los intentos el array está vacío (y no hay valor guardado), agregar mensaje informativo
+        if (empty($this->shippingLineArray)) {
+            $this->shippingLineArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente "' . $tradingCompanyValue . '"';
+        }
+    }
+
+    /**
+     * Cargar puertos desde la API
+     * 
+     * @param string $tradingCompany
+     * @param string|null $currentDeparturePort Valor actual guardado en la PO para puerto de embarque (opcional)
+     * @param string|null $currentArrivalPort Valor actual guardado en la PO para puerto de arribo (opcional)
+     * @return void
+     */
+    protected function loadPorts(string $tradingCompany, ?string $currentDeparturePort = null, ?string $currentArrivalPort = null): void
+    {
+        // PRIMERO: Asegurar que los valores guardados estén en los arrays desde el inicio
+        // Esto garantiza que estén disponibles inmediatamente cuando Livewire renderiza el select
+        $departurePortToAdd = $currentDeparturePort ?? $this->departure_port;
+        $arrivalPortToAdd = $currentArrivalPort ?? $this->arrival_port;
+        
+        $this->departurePortArray = [];
+        $this->arrivalPortArray = [];
+        
+        if ($departurePortToAdd && trim($departurePortToAdd) !== '') {
+            $this->departurePortArray[$departurePortToAdd] = $departurePortToAdd;
+        }
+        
+        if ($arrivalPortToAdd && trim($arrivalPortToAdd) !== '') {
+            $this->arrivalPortArray[$arrivalPortToAdd] = $arrivalPortToAdd;
+        }
+        
+        $tradingCompanyValue = trim($tradingCompany ?? '');
+        if (empty($tradingCompanyValue)) {
+            // Si no hay trading company y no hay valores guardados, mostrar mensaje
+            if (empty($this->departurePortArray)) {
+                $this->departurePortArray['__no_data__'] = '⚠️ No hay datos disponibles';
+            }
+            if (empty($this->arrivalPortArray)) {
+                $this->arrivalPortArray['__no_data__'] = '⚠️ No hay datos disponibles';
+            }
+            return; // Ya agregamos los valores guardados arriba
+        }
+
+        try {
+            $apiService = $this->getMaestrosApiService();
+
+            $apiParams = [
+                'company' => $tradingCompanyValue,
+                'trading_company' => $tradingCompanyValue,
+                'active' => 'true',
+                'per_page' => 1000,
+            ];
+
+            // Intentar solo una vez con timeout más corto (8 segundos)
+            $portsResponse = $this->getPortsWithCustomTimeout($apiService, $apiParams, 8);
+            $portsArray = $this->processApiResponse($portsResponse, 'name', 'name');
+            
+            // Combinar los valores de la API con los valores guardados (sin duplicar)
+            foreach ($portsArray as $key => $value) {
+                if (!isset($this->departurePortArray[$key])) {
+                    $this->departurePortArray[$key] = $value;
+                }
+                if (!isset($this->arrivalPortArray[$key])) {
+                    $this->arrivalPortArray[$key] = $value;
+                }
+            }
+        } catch (\Exception $e) {
+            // Los valores guardados ya están en los arrays desde el inicio, así que no los perdemos
+        }
+        
+        // Si después de todos los intentos los arrays están vacíos (y no hay valores guardados), agregar mensaje informativo
+        if (empty($this->departurePortArray)) {
+            $this->departurePortArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente "' . $tradingCompanyValue . '"';
+        }
+        if (empty($this->arrivalPortArray)) {
+            $this->arrivalPortArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente "' . $tradingCompanyValue . '"';
+        }
+    }
+
+    /**
+     * Cargar tipos de contenedor desde la API
+     * 
+     * @param string $tradingCompany
+     * @param string|null $currentContainerType Valor actual guardado en la PO (opcional)
+     * @return void
+     */
+    protected function loadContainerTypes(string $tradingCompany, ?string $currentContainerType = null): void
+    {
+        $containerTypeToAdd = $currentContainerType ?? $this->container_type;
+        
+        $this->containerTypeArray = [];
+        
+        if ($containerTypeToAdd && trim($containerTypeToAdd) !== '') {
+            $this->containerTypeArray[$containerTypeToAdd] = $containerTypeToAdd;
+        }
+        
+        $tradingCompanyValue = trim($tradingCompany ?? '');
+        if (empty($tradingCompanyValue)) {
+            if (empty($this->containerTypeArray)) {
+                $this->containerTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompany}'";
+            }
+            return;
+        }
+
+        try {
+            $apiService = $this->getMaestrosApiService();
+
+            $apiParams = [
+                'company' => $tradingCompanyValue,
+                'trading_company' => $tradingCompanyValue,
+                'active' => 'true',
+                'per_page' => 1000,
+            ];
+
+            $containerTypesResponse = $this->getContainerTypesWithCustomTimeout($apiService, $apiParams, 8);
+            $containerTypesArray = $this->processApiResponse($containerTypesResponse, 'name', 'name');
+            
+            foreach ($containerTypesArray as $key => $value) {
+                if (!isset($this->containerTypeArray[$key])) {
+                    $this->containerTypeArray[$key] = $value;
+                }
+            }
+
+            if (empty($this->containerTypeArray)) {
+                $this->containerTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+            }
+
+        } catch (\Exception $e) {
+            if (empty($this->containerTypeArray)) {
+                $this->containerTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+            }
+        }
+    }
+
+    /**
+     * Cargar tipos de transporte desde la API
+     * 
+     * @param string $tradingCompany
+     * @param string|null $currentMode Valor actual guardado en la PO (opcional)
+     * @return void
+     */
+    protected function loadTransportTypes(string $tradingCompany, ?string $currentMode = null): void
+    {
+        $modeToAdd = $currentMode ?? $this->mode;
+        
+        $this->transportTypeArray = [];
+        
+        if ($modeToAdd && trim($modeToAdd) !== '') {
+            $this->transportTypeArray[$modeToAdd] = $modeToAdd;
+        }
+        
+        $tradingCompanyValue = trim($tradingCompany ?? '');
+        if (empty($tradingCompanyValue)) {
+            if (empty($this->transportTypeArray)) {
+                $this->transportTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompany}'";
+            }
+            return;
+        }
+
+        try {
+            $apiService = $this->getMaestrosApiService();
+
+            $apiParams = [
+                'company' => $tradingCompanyValue,
+                'trading_company' => $tradingCompanyValue,
+                'active' => 'true',
+                'per_page' => 1000,
+            ];
+
+            $transportTypesResponse = $this->getTransportTypesWithCustomTimeout($apiService, $apiParams, 8);
+            $transportTypesArray = $this->processApiResponse($transportTypesResponse, 'name', 'name');
+            
+            foreach ($transportTypesArray as $key => $value) {
+                if (!isset($this->transportTypeArray[$key])) {
+                    $this->transportTypeArray[$key] = $value;
+                }
+            }
+
+            if (empty($this->transportTypeArray)) {
+                $this->transportTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+            }
+
+        } catch (\Exception $e) {
+            if (empty($this->transportTypeArray)) {
+                $this->transportTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+            }
+        }
+    }
+
+    /**
+     * Obtener shipping lines con timeout personalizado
+     * 
+     * @param MaestrosApiService $apiService
+     * @param array $params
+     * @param int $timeout Segundos de timeout
+     * @return array|null
+     */
+    protected function getShippingLinesWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
+    {
+        try {
+            $baseUrl = config('services.maestros.base_url');
+            $url = rtrim($baseUrl, '/') . '/api/v1/shipping-lines';
+
+            $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::warning('Timeout or error loading shipping lines', [
+                'timeout' => $timeout,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Obtener puertos con timeout personalizado
+     * 
+     * @param MaestrosApiService $apiService
+     * @param array $params
+     * @param int $timeout Segundos de timeout
+     * @return array|null
+     */
+    protected function getPortsWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
+    {
+        try {
+            $baseUrl = config('services.maestros.base_url');
+            $url = rtrim($baseUrl, '/') . '/api/v1/ports';
+
+            $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::warning('Timeout or error loading ports', [
+                'timeout' => $timeout,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Obtener container types con timeout personalizado
+     * 
+     * @param MaestrosApiService $apiService
+     * @param array $params
+     * @param int $timeout Segundos de timeout
+     * @return array|null
+     */
+    protected function getContainerTypesWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
+    {
+        try {
+            $baseUrl = config('services.maestros.base_url');
+            $url = rtrim($baseUrl, '/') . '/api/v1/container-types';
+
+            $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::warning('Timeout or error loading container types', [
+                'timeout' => $timeout,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Obtener transport types con timeout personalizado
+     * 
+     * @param MaestrosApiService $apiService
+     * @param array $params
+     * @param int $timeout Segundos de timeout
+     * @return array|null
+     */
+    protected function getTransportTypesWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
+    {
+        try {
+            $baseUrl = config('services.maestros.base_url');
+            $url = rtrim($baseUrl, '/') . '/api/v1/transport-types';
+
+            $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::warning('Timeout or error loading transport types', [
+                'timeout' => $timeout,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Obtener service providers con timeout personalizado
+     * 
+     * @param MaestrosApiService $apiService
+     * @param array $params
+     * @param int $timeout Segundos de timeout
+     * @return array|null
+     */
+    protected function getServiceProvidersWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
+    {
+        try {
+            $baseUrl = config('services.maestros.base_url');
+            $url = rtrim($baseUrl, '/') . '/api/v1/service-providers';
+
+            $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::warning('Timeout or error loading service providers', [
+                'timeout' => $timeout,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Process API response and convert to array format for dropdowns
+     * 
+     * @param array|null $response
+     * @param string $keyField Field to use as array key
+     * @param string $valueField Field to use as array value
+     * @return array
+     */
+    protected function processApiResponse($response, $keyField = 'name', $valueField = 'name')
+    {
+        if (!$response || !isset($response['data'])) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($response['data'] as $item) {
+            $key = $item[$keyField] ?? $item['name'] ?? '';
+            $value = $item[$valueField] ?? $item['name'] ?? '';
+            if ($key && $value) {
+                $result[$key] = $value;
+            }
+        }
+
+        // Ordenar alfabéticamente por valor
+        asort($result);
+
+        return $result;
     }
 
 }

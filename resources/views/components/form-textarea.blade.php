@@ -7,5 +7,7 @@
     <textarea {{ $attributes }} id="{{ $name }}" name="{{ $name }}"
         class="w-full rounded-xl border-2 border-[#28C7A1] px-3 py-[0.625rem] text-lg text-[#2E2E2E] placeholder:text-[#AFAFAF]"
         placeholder="{{ $placeholder }}"
-        wire:model="{{ $wireModel }}"></textarea>
+        @if ($wireModel && !$attributes->has('wire:model') && !$attributes->has('wire:model.live') && !$attributes->has('wire:model.defer') && !$attributes->has('wire:model.lazy'))
+            wire:model.live="{{ $wireModel }}"
+        @endif></textarea>
 </div>

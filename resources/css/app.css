@@ -72,6 +72,12 @@ input.flatpickr-alt-input {
     @apply rounded-xl border-2 border-[#28C7A1] py-[0.625rem] px-3 text-lg text-[#2E2E2E] placeholder:text-[#AFAFAF] w-full leading-none cursor-pointer bg-white;
 }
 
+/* Prioridad para borde rojo en errores de validación */
+input.flatpickr-alt-input.border-red-500 {
+    border-color: #ef4444 !important;
+    border-width: 2px !important;
+}
+
 /* Ocultar el input original cuando altInput está activo */
 input.flatpickr-input.flatpickr-initialized {
     position: absolute !important;
@@ -451,5 +457,73 @@ th {
 
 .main-sidebar.sidebar-expanded .sidebar-logo-bottom-expanded {
     display: block;
+}
+
+/* Estilos x-cloak para evitar que el modal sea visible antes de que Alpine.js se inicialice */
+[x-cloak] {
+    display: none !important;
+}
+
+/* Estilos del modal de éxito */
+.contact-success-modal {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 36px;
+    gap: 24px;
+    min-width: 430px;
+    max-width: 500px;
+    min-height: 322px;
+    background: #FFFFFF;
+    box-shadow: 8px 8px 30px rgba(0, 0, 0, 0.28);
+    border-radius: 30px;
+}
+
+.modal-icon {
+    width: 104px;
+    height: 104px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #5DD595;
+    text-align: center;
+    margin: 0;
+}
+
+.modal-description {
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    color: #000000;
+    text-align: center;
+    margin: 0;
+}
+
+.modal-button {
+    padding: 12px 24px;
+    background-color: #1AAD8A;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    min-width: 120px;
+}
+
+.modal-button:hover {
+    background-color: #0F614D;
+}
+
+.modal-button:active {
+    background-color: #127A62;
 }
 

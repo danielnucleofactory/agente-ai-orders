@@ -190,7 +190,7 @@
                         </x-form-input>
 
                         {{-- 4) Agente de Carga --}}
-                        <x-form-input class="mb-4">
+                        <x-form-input class="mb-4 hidden">
                             <x-slot:label>Agente de Carga <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="text" wire:model="forwarder_name" placeholder="Ingrese agente de carga" class="pr-10 {{ $errors->has('forwarder_name') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('forwarder_name') }}</x-slot:error>

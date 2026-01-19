@@ -7,6 +7,7 @@ use App\Models\Vendor;
 use App\Models\ShipTo;
 use App\Models\Hub;
 use App\Models\BillTo;
+use App\Services\MaestrosApiService;
 use Livewire\Component;
 
 class CreatePucharseOrder extends Component
@@ -36,8 +37,16 @@ class CreatePucharseOrder extends Component
     public $paymentTermsArray = ["30" => "30 días", "60" => "60 días", "90" => "90 días"];
     public $vendorArray = [];
     public $shipToArray = [];
-    
-    // Arrays para dropdowns de datos maestros
+
+    // Arrays para dropdowns de datos maestros desde API
+    public $tradingCompanyArray = [];
+    public $departurePortArray = [];
+    public $arrivalPortArray = [];
+    public $serviceProviderArray = [];
+    public $transportTypeArray = [];
+    public $rateTypeArray = [];
+
+    // Arrays para dropdowns de datos maestros (legacy - se reemplazará con API)
     public $containerTypeArray = [
         'Contenedor 20ft' => 'Contenedor 20ft',
         'Contenedor 40 HC' => 'Contenedor 40 HC',
@@ -50,7 +59,7 @@ class CreatePucharseOrder extends Component
         'Plataforma 20ft' => 'Plataforma 20ft',
         'Plataforma 40ft' => 'Plataforma 40ft',
     ];
-    
+
     public $portsArray = [
         'ACAJUTLA, EL SALVADOR' => 'ACAJUTLA, EL SALVADOR',
         'ALAJUELA, COSTA RICA' => 'ALAJUELA, COSTA RICA',
@@ -316,7 +325,7 @@ class CreatePucharseOrder extends Component
         'ZHEJIANG, CHINA' => 'ZHEJIANG, CHINA',
         'ZHONGSHAN, CHINA' => 'ZHONGSHAN, CHINA',
     ];
-    
+
     public $shippingLineArray = [
         'CMA CGM' => 'CMA CGM',
         'COSCO' => 'COSCO',
@@ -337,7 +346,7 @@ class CreatePucharseOrder extends Component
         'ZIM' => 'ZIM',
         'ZIM LINES' => 'ZIM LINES',
     ];
-    
+
     public $routeLabelArray = [
         'Directo AR - Cencosud S.A.' => 'Directo AR - Cencosud S.A.',
         'Directo AR - Comercial Taffel SRL' => 'Directo AR - Comercial Taffel SRL',
@@ -539,6 +548,9 @@ class CreatePucharseOrder extends Component
     // Añade esta propiedad junto con las otras propiedades de dimensiones
     public $pallets;
 
+    // Estado de carga para la API de maestros
+    public $isLoadingMaestros = false;
+
     // Watchers
     protected $listeners = [
         'vendorSelected' => 'onVendorSelected',
@@ -570,7 +582,7 @@ class CreatePucharseOrder extends Component
     public $date_booking_authorized;
     public $date_theorical_load;
     public $date_variable_date;
-    public $date_carga_po;
+    public $carga_lista_validada = false;
     public $date_received;
     public $date_etd_initial;
     public $inspection_date;
@@ -612,6 +624,7 @@ class CreatePucharseOrder extends Component
 
 // Versiones actualizadas ETA/ETD
     public $date_eta_initial;
+    public $date_eta_updated;
 
     // Costos
     public $po_amount = 0.0;        // Monto PO "declarado" (si lo usas)
@@ -648,6 +661,7 @@ class CreatePucharseOrder extends Component
         // Initialize with empty array for new records
         $this->material_type = ['general'];
         $this->ensurence_type = 'pending';
+
 
         if ($this->id) {
             $this->purchaseOrder = \App\Models\PurchaseOrder::with('products')->find($this->id);
@@ -784,7 +798,7 @@ class CreatePucharseOrder extends Component
                 $this->date_booking_authorized = optional($this->purchaseOrder->date_booking_authorized)?->format('Y-m-d');
                 $this->date_theorical_load = optional($this->purchaseOrder->date_theorical_load)?->format('Y-m-d');
                 $this->date_variable_date = optional($this->purchaseOrder->date_variable_date)?->format('Y-m-d');
-                $this->date_carga_po = optional($this->purchaseOrder->date_carga_po)?->format('Y-m-d');
+                $this->carga_lista_validada = $this->purchaseOrder->carga_lista_validada ?? false;
                 $this->date_received = optional($this->purchaseOrder->date_received)?->format('Y-m-d');
                 $this->date_etd_initial               = optional($this->purchaseOrder->date_etd_initial)?->format('Y-m-d');
                 $this->inspection_date                = optional($this->purchaseOrder->inspection_date)?->format('Y-m-d');
@@ -803,6 +817,10 @@ class CreatePucharseOrder extends Component
                 $this->cargo_invoice_number = $this->purchaseOrder->cargo_invoice_number;
                 $this->tariff_type = $this->purchaseOrder->tariff_type;
                 $this->route_label = $this->purchaseOrder->route_label;
+                // Asegurar que el valor guardado esté en el array de opciones
+                if ($this->route_label && !isset($this->routeLabelArray[$this->route_label])) {
+                    $this->routeLabelArray[$this->route_label] = $this->route_label;
+                }
                 $this->retail_group     = $this->purchaseOrder->retail_group;
                 $this->customer_type    = $this->purchaseOrder->customer_type;
                 $this->trading_company  = $this->purchaseOrder->trading_company;
@@ -832,6 +850,7 @@ class CreatePucharseOrder extends Component
                 $this->eta_dates_difference = $this->purchaseOrder->eta_dates_difference;
 
                 $this->date_eta_initial = optional($this->purchaseOrder->date_eta_initial)?->format('Y-m-d');
+                $this->date_eta_updated = optional($this->purchaseOrder->date_eta_updated)?->format('Y-m-d');
 
                 //Campos extras que faltaban
                 $this->cbm               = $this->purchaseOrder->cbm;
@@ -844,6 +863,11 @@ class CreatePucharseOrder extends Component
 
                 //Recalcular las fechas
                 $this->computeDateDiffs();
+
+                // Cargar opciones de maestros usando el trading_company guardado
+                if ($this->trading_company) {
+                    $this->loadMaestrosOptions();
+                }
 
                 // Cargar productos
                 $this->orderProducts = [];
@@ -862,9 +886,20 @@ class CreatePucharseOrder extends Component
             // Inicializar el array de productos vacío
             $this->orderProducts = [];
 
+            // El campo trading_company se deja vacío para que el usuario lo llene
+            // Al escribir el nombre del cliente, se cargarán las opciones de maestros automáticamente
+
             // Generar un número de orden único
             //$this->generateUniqueOrderNumber();
         }
+    }
+
+    /**
+     * Get MaestrosApiService instance
+     */
+    protected function getMaestrosApiService(): MaestrosApiService
+    {
+        return app(MaestrosApiService::class);
     }
 
     protected function loadHubs()
@@ -877,6 +912,166 @@ class CreatePucharseOrder extends Component
     {
         $billTo = BillTo::orderBy('name')->get();
         $this->billToArray = $billTo->pluck('name', 'id')->toArray();
+    }
+
+    /**
+     * Load maestros options from API
+     * Al editar, asegura que los valores guardados en DB estén en los arrays
+     * Usa el valor del campo trading_company para filtrar los datos
+     */
+    protected function loadMaestrosOptions()
+    {
+        // Si no hay trading_company, no cargar opciones de la API
+        $tradingCompanyValue = trim($this->trading_company ?? '');
+        if (empty($tradingCompanyValue)) {
+            // Limpiar los arrays si no hay cliente
+            $this->departurePortArray = [];
+            $this->arrivalPortArray = [];
+            $this->shippingLineArray = [];
+            $this->containerTypeArray = [];
+            $this->serviceProviderArray = [];
+            $this->transportTypeArray = [];
+            $this->rateTypeArray = [];
+            return;
+        }
+
+        try {
+            $apiService = $this->getMaestrosApiService();
+
+            // Parámetros comunes para las llamadas a la API usando el valor de trading_company
+            $apiParams = [
+                'company' => $tradingCompanyValue,
+                'trading_company' => $tradingCompanyValue,
+                'active' => 'true',
+                'per_page' => 1000, // Obtener todos los registros activos
+            ];
+
+            // Cargar Puertos (para origen y destino)
+            $portsResponse = $apiService->getPorts($apiParams);
+            $portsArray = $this->processApiResponse($portsResponse, 'name', 'name');
+            $this->departurePortArray = $portsArray;
+            $this->arrivalPortArray = $portsArray;
+
+            // Al editar, asegurar que los valores guardados estén en los arrays
+            if ($this->id) {
+                if ($this->departure_port && !isset($this->departurePortArray[$this->departure_port])) {
+                    $this->departurePortArray[$this->departure_port] = $this->departure_port;
+                }
+                if ($this->arrival_port && !isset($this->arrivalPortArray[$this->arrival_port])) {
+                    $this->arrivalPortArray[$this->arrival_port] = $this->arrival_port;
+                }
+            }
+
+            // Cargar Shipping Lines
+            $shippingLinesResponse = $apiService->getShippingLines($apiParams);
+            $this->shippingLineArray = $this->processApiResponse($shippingLinesResponse, 'name', 'name');
+            if ($this->id && $this->shipping_line && !isset($this->shippingLineArray[$this->shipping_line])) {
+                $this->shippingLineArray[$this->shipping_line] = $this->shipping_line;
+            }
+
+            // Cargar Container Types
+            $containerTypesResponse = $apiService->getContainerTypes($apiParams);
+            $this->containerTypeArray = $this->processApiResponse($containerTypesResponse, 'name', 'name');
+            if ($this->id && $this->container_type && !isset($this->containerTypeArray[$this->container_type])) {
+                $this->containerTypeArray[$this->container_type] = $this->container_type;
+            }
+
+            // Cargar Service Providers
+            $serviceProvidersResponse = $apiService->getServiceProviders($apiParams);
+            $this->serviceProviderArray = $this->processApiResponse($serviceProvidersResponse, 'name', 'name');
+            if ($this->id && $this->service_provider && !isset($this->serviceProviderArray[$this->service_provider])) {
+                $this->serviceProviderArray[$this->service_provider] = $this->service_provider;
+            }
+
+            // Cargar Transport Types
+            $transportTypesResponse = $apiService->getTransportTypes($apiParams);
+            $this->transportTypeArray = $this->processApiResponse($transportTypesResponse, 'name', 'name');
+            if ($this->id && $this->mode && !isset($this->transportTypeArray[$this->mode])) {
+                $this->transportTypeArray[$this->mode] = $this->mode;
+            }
+
+            // Cargar Rate Types
+            $rateTypesResponse = $apiService->getRateTypes($apiParams);
+            $this->rateTypeArray = $this->processApiResponse($rateTypesResponse, 'name', 'name');
+            if ($this->id && $this->tariff_type && !isset($this->rateTypeArray[$this->tariff_type])) {
+                $this->rateTypeArray[$this->tariff_type] = $this->tariff_type;
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Error loading maestros options in CreatePucharseOrder', [
+                'error' => $e->getMessage(),
+                'trading_company' => $tradingCompanyValue,
+            ]);
+        }
+
+        // Agregar mensajes de "no hay datos" si los arrays están vacíos
+        // Esto se hace fuera del try-catch para garantizar que siempre se ejecute
+        if (empty($this->departurePortArray)) {
+            $this->departurePortArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+        }
+        if (empty($this->arrivalPortArray)) {
+            $this->arrivalPortArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+        }
+        if (empty($this->shippingLineArray)) {
+            $this->shippingLineArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+        }
+        if (empty($this->containerTypeArray)) {
+            $this->containerTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+        }
+        if (empty($this->serviceProviderArray)) {
+            $this->serviceProviderArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+        }
+        if (empty($this->transportTypeArray)) {
+            $this->transportTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+        }
+        if (empty($this->rateTypeArray)) {
+            $this->rateTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompanyValue}'";
+        }
+    }
+
+    /**
+     * Process API response and convert to array format for dropdowns
+     * Los resultados se ordenan alfabéticamente
+     *
+     * @param array|null $response
+     * @param string $keyField Field to use as array key
+     * @param string $valueField Field to use as array value
+     * @return array
+     */
+    protected function processApiResponse($response, $keyField = 'name', $valueField = 'name')
+    {
+        if (!$response || !isset($response['data'])) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($response['data'] as $item) {
+            $key = $item[$keyField] ?? $item['name'] ?? '';
+            $value = $item[$valueField] ?? $item['name'] ?? '';
+            if ($key && $value) {
+                $result[$key] = $value;
+            }
+        }
+
+        // Ordenar alfabéticamente por valor
+        asort($result);
+
+        return $result;
+    }
+
+    /**
+     * Filtrar valores especiales '__no_data__' para evitar guardarlos en la base de datos
+     * Convierte '__no_data__' o strings vacíos a null
+     *
+     * @param mixed $value
+     * @return mixed
+     */
+    protected function filterNoDataValue($value)
+    {
+        if ($value === '__no_data__' || $value === '') {
+            return null;
+        }
+        return $value;
     }
 
     public function generateUniqueOrderNumber()
@@ -984,6 +1179,76 @@ class CreatePucharseOrder extends Component
     public function updatedBillToId()
     {
         $this->onBillToSelected();
+    }
+
+    /**
+     * Listener para cuando cambia trading_company
+     * Recarga las opciones de los demás dropdowns
+     * Muestra una alerta mientras carga los datos de la API
+     */
+    public function updatedTradingCompany()
+    {
+        $tradingCompanyValue = trim($this->trading_company ?? '');
+
+        // Si el campo está vacío o tiene menos de 2 caracteres, limpiar los arrays
+        if (strlen($tradingCompanyValue) < 2) {
+            $this->departurePortArray = [];
+            $this->arrivalPortArray = [];
+            $this->shippingLineArray = [];
+            $this->containerTypeArray = [];
+            $this->serviceProviderArray = [];
+            $this->transportTypeArray = [];
+            $this->rateTypeArray = [];
+            return;
+        }
+
+        // Cargar datos de la API
+        $this->loadMaestrosFromApi($tradingCompanyValue);
+    }
+
+    /**
+     * Carga los datos de maestros desde la API
+     * Método separado para poder mostrar las alertas correctamente
+     */
+    public function loadMaestrosFromApi($tradingCompanyValue)
+    {
+        $this->isLoadingMaestros = true;
+
+        try {
+            // Cargar las opciones de la API
+            $this->loadMaestrosOptions();
+
+            // Contar cuántos datos se cargaron
+            $totalItems = count($this->departurePortArray) + count($this->shippingLineArray) +
+                          count($this->containerTypeArray) + count($this->serviceProviderArray) +
+                          count($this->transportTypeArray) + count($this->rateTypeArray);
+
+            if ($totalItems > 0) {
+                // Mostrar mensaje de éxito usando JavaScript
+                $this->js("
+                    window.dispatchEvent(new CustomEvent('show-success', {
+                        detail: 'Datos cargados correctamente para: {$tradingCompanyValue} ({$totalItems} opciones encontradas)'
+                    }));
+                ");
+            } else {
+                // No se encontraron datos
+                $this->js("
+                    window.dispatchEvent(new CustomEvent('show-error', {
+                        detail: 'No se encontraron datos para el cliente: {$tradingCompanyValue}'
+                    }));
+                ");
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error al cargar maestros: ' . $e->getMessage());
+            $errorMessage = addslashes($e->getMessage());
+            $this->js("
+                window.dispatchEvent(new CustomEvent('show-error', {
+                    detail: 'Error al cargar datos: {$errorMessage}'
+                }));
+            ");
+        } finally {
+            $this->isLoadingMaestros = false;
+        }
     }
 
     public function searchProducts()
@@ -1154,6 +1419,7 @@ class CreatePucharseOrder extends Component
                     'required',
                     'unique:purchase_orders,order_number,NULL,id,company_id,' . $companyId
                 ],
+                'trading_company' => 'required|string',
                 'incoterms' => "required|string|in:$allowedIncoterms",
                 'logistics_incoterm' => "required|string|in:$allowedIncoterms",
                 'price_incoterm' => "required|string|in:$allowedIncoterms",
@@ -1167,27 +1433,18 @@ class CreatePucharseOrder extends Component
                     'date',
                     function ($attribute, $value, $fail) {
                         $emisionDate = $this->emision_date_po;
-                        
+
                         if ($emisionDate && $value < $emisionDate) {
                             $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
                         }
                     }
                 ],
-                'date_carga_po' => [
-                    'nullable',
-                    'date',
-                    function ($attribute, $value, $fail) {
-                        if ($value && $this->date_theorical_load) {
-                            if ($value < $this->date_theorical_load) {
-                                $fail('La fecha de carga lista real no puede ser anterior a la fecha de carga lista teórica (' . formatDate($this->date_theorical_load) . ')');
-                            }
-                        }
-                    }
-                ],
+                'carga_lista_validada' => 'nullable|boolean',
                 'reason'                 => 'nullable|string',
             ], [
                 'order_number.required' => 'El número de orden es requerido',
                 'order_number.unique' => 'Este número de orden ya existe. Por favor, use un número diferente.',
+                'trading_company.required' => 'El campo Cliente es requerido',
                 'incoterms.required' => 'El incoterm de compra es requerido',
                 'logistics_incoterms.required' => 'El incoterms de logística es requerido',
                 'price_incoterm.required' => 'El incoterm de precio es requerido',
@@ -1239,7 +1496,7 @@ class CreatePucharseOrder extends Component
                     'release_date' => $this->release_date,
                     'material_type' => json_encode($this->material_type),
                     'ensurence_type' => $this->ensurence_type,
-                    'mode' => $this->mode,
+                    'mode' => $this->filterNoDataValue($this->mode),
                     'tracking_id' => $this->tracking_id,
                     'pallet_quantity' => $this->pallet_quantity,
                     'pallet_quantity_real' => $this->pallet_quantity_real,
@@ -1267,9 +1524,9 @@ class CreatePucharseOrder extends Component
                     //=== Campos nuevos para OLO ===
                     'factory_proforma_number' => $this->factory_proforma_number,
                     'mbl_number' => $this->mbl_number,
-                    'container_type' => $this->container_type,
+                    'container_type' => $this->filterNoDataValue($this->container_type),
                     'container_number' => $this->container_number,
-                    'shipping_line' => $this->shipping_line,
+                    'shipping_line' => $this->filterNoDataValue($this->shipping_line),
 
                     'is_dropship'  => (bool) ($this->is_dropship ?? false),
                     'applies_tlc'  => (bool) ($this->applies_tlc ?? false),
@@ -1279,7 +1536,7 @@ class CreatePucharseOrder extends Component
                     'date_booking_authorized' => $this->date_booking_authorized,
                     'date_theorical_load' => $this->date_theorical_load,
                     'date_variable_date' => $this->date_variable_date,
-                    'date_carga_po' => $this->date_carga_po,
+                    'carga_lista_validada' => $this->carga_lista_validada ?? false,
                     'date_received' => $this->date_received,
 
                     'logistics_incoterm' => $this->logistics_incoterm,
@@ -1288,20 +1545,21 @@ class CreatePucharseOrder extends Component
                     'category' => $this->category,
                     'forwarder_name' => $this->forwarder_name,
                     'cargo_invoice_number' => $this->cargo_invoice_number,
-                    'tariff_type' => $this->tariff_type,
+                    'tariff_type' => $this->filterNoDataValue($this->tariff_type),
                     'route_label' => $this->route_label,
 
-                    'departure_port' => $this->departure_port,
-                    'arrival_port' => $this->arrival_port,
+                    'departure_port' => $this->filterNoDataValue($this->departure_port),
+                    'arrival_port' => $this->filterNoDataValue($this->arrival_port),
 
                     'arrival_status' => $this->arrival_status,
                     'delay_days' => $this->delay_days,
 
                     'date_eta_initial' => $this->date_eta_initial,
+                    'date_eta_updated' => $this->date_eta_updated,
 
                     'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
                     'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
-                    'used_rate_ok'              => false, // Siempre false
+                    'used_rate_ok'              => (bool) ($this->used_rate_ok ?? false),
                     'uses_bonded_warehouse'     => (bool) ($this->uses_bonded_warehouse ?? false),
                     'apply_technical_note'      => (bool) ($this->apply_technical_note ?? false),
                     'etd_initial_validated'     => (bool) ($this->etd_initial_validated ?? false),
@@ -1319,7 +1577,7 @@ class CreatePucharseOrder extends Component
                     'retail_group'     => $this->retail_group,
                     'customer_type'    => $this->customer_type,
                     'trading_company'  => $this->trading_company,
-                    'service_provider' => $this->service_provider,
+                    'service_provider' => $this->filterNoDataValue($this->service_provider),
                     'customs_dua'      => $this->customs_dua,
                     'invoice'          => $this->invoice,
                     'factura_merca'    => $this->factura_merca,
@@ -1348,13 +1606,36 @@ class CreatePucharseOrder extends Component
                 ];
 
                 // Filtrar valores nulos o vacíos para evitar errores
+                // Mantener valores 0, 0.0, false, y strings vacíos que puedan ser necesarios
                 $poData = array_filter($poData, function($value) {
-                    return $value !== null && $value !== '' || $value === 0 || $value === 0.0;
+                    // Mantener valores numéricos (incluyendo 0), booleanos, y arrays
+                    if (is_numeric($value) || is_bool($value) || is_array($value)) {
+                        return true;
+                    }
+                    // Eliminar solo null y strings vacíos
+                    return $value !== null && $value !== '';
                 });
 
+                \Log::info('Intentando crear PO con datos', [
+                    'order_number' => $poData['order_number'] ?? 'N/A',
+                    'vendor_id' => $poData['vendor_id'] ?? 'N/A',
+                    'company_id' => $poData['company_id'] ?? 'N/A',
+                    'campos_count' => count($poData)
+                ]);
+
                 // Crear nueva orden
-                $purchaseOrder = \App\Models\PurchaseOrder::create($poData);
-                \Log::info('Orden creada con datos básicos', ['id' => $purchaseOrder->id]);
+                try {
+                    $purchaseOrder = \App\Models\PurchaseOrder::create($poData);
+                    \Log::info('Orden creada con datos básicos', ['id' => $purchaseOrder->id, 'order_number' => $purchaseOrder->order_number]);
+                } catch (\Exception $createException) {
+                    \Log::error('Error al crear PurchaseOrder', [
+                        'error' => $createException->getMessage(),
+                        'trace' => $createException->getTraceAsString(),
+                        'data_keys' => array_keys($poData),
+                        'order_number' => $poData['order_number'] ?? 'N/A'
+                    ]);
+                    throw $createException;
+                }
 
                 // Guardar el ID de la orden recién creada
                 $this->id = $purchaseOrder->id;
@@ -1369,8 +1650,46 @@ class CreatePucharseOrder extends Component
                         'unit_price' => $product['price_per_unit'] ?? 0
                     ]);
                 }
-
                 \DB::commit();
+
+                // Dispatch webhook event for created purchase order
+                if (function_exists('dispatch_webhook')) {
+                    try {
+                        \Log::info('About to dispatch webhook for PO creation from Livewire', [
+                            'po_id' => $purchaseOrder->id,
+                            'order_number' => $purchaseOrder->order_number,
+                        ]);
+
+                        $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $freshPo = $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+
+                        // Convertir a array y asegurar que sea JSON serializable
+                        $poData = $freshPo->toArray();
+                        $poData = json_decode(json_encode($poData), true);
+
+                        \Log::info('Calling dispatch_webhook from Livewire (create)', [
+                            'po_id' => $purchaseOrder->id,
+                            'has_data' => isset($poData['id']),
+                        ]);
+
+                        dispatch_webhook('purchase_order.created', [
+                            'purchase_order_id' => $purchaseOrder->id,
+                            'order_number' => $purchaseOrder->order_number,
+                            'data' => $poData,
+                        ]);
+
+                        \Log::info('dispatch_webhook completed from Livewire (create)', [
+                            'po_id' => $purchaseOrder->id,
+                        ]);
+                    } catch (\Throwable $e) {
+                        \Log::error('Error in webhook dispatch from Livewire (create)', [
+                            'po_id' => $purchaseOrder->id,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString(),
+                        ]);
+                        // No lanzar la excepción para no interrumpir el flujo principal
+                    }
+                }
 
                 // Check if actual hub is different from planned hub
                 if ($this->actual_hub_id && $this->planned_hub_id && $this->actual_hub_id !== $this->planned_hub_id) {
@@ -1427,28 +1746,55 @@ class CreatePucharseOrder extends Component
                 $this->dispatch('show-success', 'Orden de compra creada exitosamente con número: ' . $this->order_number);
                 $this->dispatch('open-modal', 'modal-purchase-order-created');
 
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                \DB::rollBack();
+                \Log::warning('ValidationException capturada en try interno', [
+                    'errors' => $e->errors(),
+                    'message' => $e->getMessage()
+                ]);
+                // Re-lanzar la ValidationException para que Livewire la maneje automáticamente
+                throw $e;
             } catch (\Exception $e) {
                 \DB::rollBack();
-                \Log::error('Error en createPurchaseOrder: ' . $e->getMessage(), [
-                    'trace' => $e->getTraceAsString()
+                \Log::error('Error en createPurchaseOrder (try interno): ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                    'class' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
                 ]);
 
                 // Check if it's a duplicate key error
-                if (strpos($e->getMessage(), 'duplicate key value violates unique constraint') !== false) {
+                if (strpos($e->getMessage(), 'duplicate key value violates unique constraint') !== false || 
+                    strpos($e->getMessage(), 'SQLSTATE[23505]') !== false) {
                     $this->addError('order_number', 'Este número de orden ya existe. Por favor, use un número diferente.');
+                    $this->dispatch('show-error', 'Este número de orden ya existe. Por favor, use un número diferente.');
                 } else {
-                    session()->flash('error', 'Error al guardar la orden: ' . $e->getMessage());
+                    $errorMessage = 'Error al guardar la orden: ' . $e->getMessage();
+                    session()->flash('error', $errorMessage);
+                    $this->dispatch('show-error', $errorMessage);
                 }
-
-                // Dispatch error event to show notification
-                $this->dispatch('show-error', 'Error al crear la orden de compra. Por favor, revise los campos y vuelva a intentar.');
+                
+                // No re-lanzar aquí, ya se manejó el error
+                return;
             }
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Error de validación', [
+            \Log::warning('Error de validación capturado en catch externo', [
                 'errors' => $e->errors(),
                 'message' => $e->getMessage()
             ]);
+            // Re-lanzar para que Livewire muestre automáticamente los errores en los campos
             throw $e;
+        } catch (\Exception $e) {
+            \Log::error('Error inesperado en createPurchaseOrder (catch externo): ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            $errorMessage = 'Error inesperado al crear la orden: ' . $e->getMessage();
+            session()->flash('error', $errorMessage);
+            $this->dispatch('show-error', $errorMessage);
         }
     }
 
@@ -1493,48 +1839,54 @@ class CreatePucharseOrder extends Component
     }
 
     public function updatePurchaseOrder($id) {
-        // Validación para actualización
-        $this->validate([
-            'date_theorical_load' => [
-                'required',
-                'date',
-                function ($attribute, $value, $fail) {
-                    $emisionDate = $this->emision_date_po;
-                    
-                    if ($emisionDate && $value < $emisionDate) {
-                        $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+        try {
+            \Log::info('=== INICIO updatePurchaseOrder ===', [
+                'id' => $id,
+                'order_number' => $this->order_number,
+                'date_theorical_load' => $this->date_theorical_load,
+                'date_variable_date' => $this->date_variable_date,
+                'carga_lista_validada' => $this->carga_lista_validada,
+                'emision_date_po' => $this->emision_date_po,
+                'forwader_date' => $this->forwader_date,
+                'date_booking_request' => $this->date_booking_request,
+                'date_booking_authorized' => $this->date_booking_authorized
+            ]);
+
+            // Validación para actualización
+            $this->validate([
+                'date_theorical_load' => [
+                    'nullable', // Cambiar a nullable para evitar errores si no está sincronizado
+                    'date',
+                    function ($attribute, $value, $fail) {
+                        if ($value) {
+                            $emisionDate = $this->emision_date_po;
+
+                            if ($emisionDate && $value < $emisionDate) {
+                                $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                            }
+                        }
                     }
-                }
-            ],
+                ],
             'date_variable_date' => [
                 'nullable',
                 'date',
                 function ($attribute, $value, $fail) {
                     if ($value) {
                         $emisionDate = $this->emision_date_po;
-                        
+
                         if ($emisionDate && $value < $emisionDate) {
                             $fail('La fecha de carga lista variable no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
                         }
                     }
                 }
             ],
-            'date_carga_po' => [
-                'nullable',
-                'date',
-                function ($attribute, $value, $fail) {
-                    if ($value && $this->date_theorical_load) {
-                        if ($value < $this->date_theorical_load) {
-                            $fail('La fecha de carga lista real no puede ser anterior a la fecha de carga lista teórica (' . formatDate($this->date_theorical_load) . ')');
-                        }
-                    }
-                }
-            ],
+            'carga_lista_validada' => 'nullable|boolean',
         ], [
             'date_theorical_load.required' => 'La fecha de Carga Lista Teorica es requerida',
         ]);
 
         $this->computeDateDiffs();
+            
             $poData = [
                 'order_number' => $this->order_number,
                 'status' => $this->id ? $this->status : 'draft',
@@ -1574,7 +1926,7 @@ class CreatePucharseOrder extends Component
                 'release_date' => $this->release_date,
                 // Otros campos
                 'ensurence_type' => $this->ensurence_type,
-                'mode' => $this->mode,
+                'mode' => $this->filterNoDataValue($this->mode),
                 'tracking_id' => $this->tracking_id,
                 'pallet_quantity' => $this->pallet_quantity,
                 'pallet_quantity_real' => $this->pallet_quantity_real,
@@ -1602,9 +1954,9 @@ class CreatePucharseOrder extends Component
                 //=== Campos nuevos para OLO ===
                 'factory_proforma_number' => $this->factory_proforma_number,
                 'mbl_number' => $this->mbl_number,
-                'container_type' => $this->container_type,
+                'container_type' => $this->filterNoDataValue($this->container_type),
                 'container_number' => $this->container_number,
-                'shipping_line' => $this->shipping_line,
+                'shipping_line' => $this->filterNoDataValue($this->shipping_line),
 
                 'is_dropship'  => (bool) ($this->is_dropship ?? false),
                 'applies_tlc'  => (bool) ($this->applies_tlc ?? false),
@@ -1614,7 +1966,7 @@ class CreatePucharseOrder extends Component
                 'date_booking_authorized' => $this->date_booking_authorized,
                 'date_theorical_load' => $this->date_theorical_load,
                 'date_variable_date' => $this->date_variable_date,
-                'date_carga_po' => $this->date_carga_po,
+                'carga_lista_validada' => $this->carga_lista_validada ?? false,
                 'date_received' => $this->date_received,
 
                 'logistics_incoterm' => $this->logistics_incoterm,
@@ -1623,11 +1975,11 @@ class CreatePucharseOrder extends Component
                 'category' => $this->category,
                 'forwarder_name' => $this->forwarder_name,
                 'cargo_invoice_number' => $this->cargo_invoice_number,
-                'tariff_type' => $this->tariff_type,
+                'tariff_type' => $this->filterNoDataValue($this->tariff_type),
                 'route_label' => $this->route_label,
 
-                'departure_port' => $this->departure_port,
-                'arrival_port' => $this->arrival_port,
+                'departure_port' => $this->filterNoDataValue($this->departure_port),
+                'arrival_port' => $this->filterNoDataValue($this->arrival_port),
 
                 'arrival_status' => $this->arrival_status,
                 'delay_days' => $this->delay_days,
@@ -1636,7 +1988,7 @@ class CreatePucharseOrder extends Component
 
                 'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
                 'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
-                'used_rate_ok'              => false, // Siempre false
+                'used_rate_ok'              => (bool) ($this->used_rate_ok ?? false),
                 'uses_bonded_warehouse'     => (bool) ($this->uses_bonded_warehouse ?? false),
                 'apply_technical_note'      => (bool) ($this->apply_technical_note ?? false),
                 'etd_initial_validated'     => (bool) ($this->etd_initial_validated ?? false),
@@ -1652,7 +2004,7 @@ class CreatePucharseOrder extends Component
                 'retail_group'                 => $this->retail_group,
                 'customer_type'                => $this->customer_type,
                 'trading_company'              => $this->trading_company,
-                'service_provider'             => $this->service_provider,
+                'service_provider'             => $this->filterNoDataValue($this->service_provider),
                 'customs_dua'                  => $this->customs_dua,
                 'invoice'                      => $this->invoice,
                 'factura_merca'                => $this->factura_merca,
@@ -1682,7 +2034,33 @@ class CreatePucharseOrder extends Component
                 \DB::beginTransaction();
 
                 $purchaseOrder = \App\Models\PurchaseOrder::findOrFail($id);
-                $purchaseOrder->update($poData);
+
+                // Usar getDirty() para obtener solo campos que realmente cambiaron
+                // Asignar valores primero sin guardar para que Eloquent detecte cambios
+                $purchaseOrder->fill($poData);
+                $dirtyFields = $purchaseOrder->getDirty();
+
+                // Construir array de cambios solo con campos que realmente cambiaron
+                $changes = [];
+                foreach ($dirtyFields as $field => $newValue) {
+                    $changes[$field] = $newValue;
+                }
+
+                \Log::info('Actualizando PO', [
+                    'id' => $id,
+                    'forwader_date' => $this->forwader_date,
+                    'emision_date_po' => $this->emision_date_po,
+                    'date_booking_request' => $this->date_booking_request,
+                    'date_booking_authorized' => $this->date_booking_authorized,
+                    'changed_fields' => array_keys($changes),
+                ]);
+
+                $purchaseOrder->save();
+
+                \Log::info('PO actualizada exitosamente', [
+                    'id' => $purchaseOrder->id,
+                    'forwader_date_guardado' => $purchaseOrder->forwader_date?->format('Y-m-d')
+                ]);
 
                 // Eliminar productos existentes
                 $purchaseOrder->products()->detach();
@@ -1696,6 +2074,54 @@ class CreatePucharseOrder extends Component
                 }
 
                 \DB::commit();
+
+                // Dispatch webhook event for updated purchase order
+                if (function_exists('dispatch_webhook')) {
+                    try {
+                        \Log::info('About to dispatch webhook for PO update from Livewire', [
+                            'po_id' => $purchaseOrder->id,
+                            'order_number' => $purchaseOrder->order_number,
+                        ]);
+
+                        $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $freshPo = $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+
+                        // Convertir a array y asegurar que sea JSON serializable
+                        $poDataForWebhook = $freshPo->toArray();
+                        $poDataForWebhook = json_decode(json_encode($poDataForWebhook), true);
+
+                        // Los cambios ya fueron calculados antes del save() usando getDirty()
+                        // $changes ya contiene solo los campos que realmente cambiaron
+
+                        \Log::info('Changes for webhook', [
+                            'changed_fields' => array_keys($changes),
+                            'changes_count' => count($changes),
+                        ]);
+
+                        \Log::info('Calling dispatch_webhook from Livewire', [
+                            'po_id' => $purchaseOrder->id,
+                            'has_data' => isset($poData['id']),
+                        ]);
+
+                        dispatch_webhook('purchase_order.updated', [
+                            'purchase_order_id' => $purchaseOrder->id,
+                            'order_number' => $purchaseOrder->order_number,
+                            'changes' => $changes,
+                            'data' => $poDataForWebhook,
+                        ]);
+
+                        \Log::info('dispatch_webhook completed from Livewire', [
+                            'po_id' => $purchaseOrder->id,
+                        ]);
+                    } catch (\Throwable $e) {
+                        \Log::error('Error in webhook dispatch from Livewire', [
+                            'po_id' => $purchaseOrder->id,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString(),
+                        ]);
+                        // No lanzar la excepción para no interrumpir el flujo principal
+                    }
+                }
 
                 // Check if actual hub is different from planned hub
                 if ($this->actual_hub_id && $this->planned_hub_id && $this->actual_hub_id !== $this->planned_hub_id) {
@@ -1722,11 +2148,45 @@ class CreatePucharseOrder extends Component
                 $this->dispatch('show-success', 'Orden de compra actualizada exitosamente con número: ' . $this->order_number);
                 $this->dispatch('open-modal', 'modal-purchase-order-created');
 
+                // RETORNAR UN VALOR EXPLÍCITO PARA INDICAR ÉXITO
+                return ['success' => true, 'message' => 'Orden actualizada exitosamente', 'id' => $purchaseOrder->id];
+
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                \DB::rollBack();
+                \Log::error('Error de validación en updatePurchaseOrder', [
+                    'errors' => $e->errors(),
+                    'order_number' => $this->order_number ?? 'N/A'
+                ]);
+                throw $e; // Re-lanzar para que Livewire muestre los errores
             } catch (\Exception $e) {
                 \DB::rollBack();
-                \Log::error('Error en updatePurchaseOrder: ' . $e->getMessage());
+                \Log::error('Error en updatePurchaseOrder: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                    'order_number' => $this->order_number ?? 'N/A',
+                    'id' => $id ?? 'N/A'
+                ]);
+
+                // Mostrar error al usuario
+                $this->dispatch('show-error', 'Error al actualizar la orden: ' . $e->getMessage());
                 session()->flash('error', 'Error al actualizar la orden: ' . $e->getMessage());
+                
+                // RETORNAR UN VALOR PARA INDICAR ERROR
+                return ['success' => false, 'message' => $e->getMessage()];
             }
+        } catch (\Exception $e) {
+            \Log::error('Error crítico en updatePurchaseOrder: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'order_number' => $this->order_number ?? 'N/A',
+                'id' => $id ?? 'N/A'
+            ]);
+
+            // Mostrar error al usuario
+            $this->dispatch('show-error', 'Error al actualizar la orden: ' . $e->getMessage());
+            session()->flash('error', 'Error al actualizar la orden: ' . $e->getMessage());
+            
+            // RETORNAR UN VALOR PARA INDICAR ERROR
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
     }
 
     public function closeModal() {
@@ -1756,6 +2216,8 @@ class CreatePucharseOrder extends Component
                           ->where('status', 'active')
                           ->get();
         $this->shipToArray = $shipTos->pluck('name', 'id')->toArray();
+
+        // Las opciones de maestros se cargan solo cuando cambia trading_company (en updatedTradingCompany)
 
         return view('livewire.forms.create-pucharse-order');
     }
@@ -1818,29 +2280,42 @@ class CreatePucharseOrder extends Component
     public function updatedFreightAmount()         { $this->calculateTotals(); }
     public function updatedCostNationalization()   { $this->calculateTotals(); }
     public function updatedOtherCosts()            { $this->calculateTotals(); }
-    
+
     // NUEVO: Listeners para actualizar arrival_status automáticamente cuando cambie la ETA
     public function updatedDateEta()               { $this->computeDateDiffs(); }
     public function updatedDateEtaInitial()        { $this->computeDateDiffs(); }
     protected function computeDateDiffs(): void
     {
-        // Usamos Carbon para diferencias con signo
-        $etdInitial = $this->date_etd_initial ? \Carbon\Carbon::parse($this->date_etd_initial) : null;
-        $etdUpdated = $this->date_etd ? \Carbon\Carbon::parse($this->date_etd) : null;
+        try {
+            // Usamos Carbon para diferencias con signo
+            $etdInitial = $this->date_etd_initial ? \Carbon\Carbon::parse($this->date_etd_initial) : null;
+            $etdUpdated = $this->date_etd ? \Carbon\Carbon::parse($this->date_etd) : null;
 
-        $etaBase    = $this->date_eta ? \Carbon\Carbon::parse($this->date_eta) : null;
-        $etaUpdated = $this->date_eta_initial ? \Carbon\Carbon::parse($this->date_eta_initial) : null;
+            $etaBase    = $this->date_eta ? \Carbon\Carbon::parse($this->date_eta) : null;
+            $etaUpdated = $this->date_eta_initial ? \Carbon\Carbon::parse($this->date_eta_initial) : null;
 
-        $this->etd_dates_difference = ($etdInitial && $etdUpdated)
-            ? $etdInitial->diffInDays($etdUpdated, true) //
-            : null;
+            $this->etd_dates_difference = ($etdInitial && $etdUpdated)
+                ? $etdInitial->diffInDays($etdUpdated, true) //
+                : null;
 
-        $this->eta_dates_difference = ($etaBase && $etaUpdated)
-            ? $etaBase->diffInDays($etaUpdated, true)
-            : null;
+            $this->eta_dates_difference = ($etaBase && $etaUpdated)
+                ? $etaBase->diffInDays($etaUpdated, true)
+                : null;
 
-        // NUEVO: Calcular automáticamente arrival_status y delay_days
-        $this->calculateArrivalStatus();
+            // NUEVO: Calcular automáticamente arrival_status y delay_days
+            $this->calculateArrivalStatus();
+        } catch (\Exception $e) {
+            \Log::warning('Error en computeDateDiffs: ' . $e->getMessage(), [
+                'date_etd_initial' => $this->date_etd_initial,
+                'date_etd' => $this->date_etd,
+                'date_eta' => $this->date_eta,
+                'date_eta_initial' => $this->date_eta_initial,
+                'date_eta_updated' => $this->date_eta_updated,
+            ]);
+            // No lanzar excepción para no interrumpir el flujo
+            $this->etd_dates_difference = null;
+            $this->eta_dates_difference = null;
+        }
     }
 
     /**
@@ -1850,7 +2325,7 @@ class CreatePucharseOrder extends Component
     {
         // Usar la ETA más reciente disponible (updated > initial > original)
         $eta = $this->date_eta_initial ?? $this->date_eta ?? null;
-        
+
         if (!$eta) {
             $this->arrival_status = null;
             $this->delay_days = null;
@@ -1859,7 +2334,7 @@ class CreatePucharseOrder extends Component
 
         $today = now()->startOfDay();
         $etaDate = \Carbon\Carbon::parse($eta)->startOfDay();
-        
+
         if ($today > $etaDate) {
             // Atrasado
             $delayDays = $etaDate->diffInDays($today);
@@ -1874,16 +2349,73 @@ class CreatePucharseOrder extends Component
 
     public function calculateLoadDateDifference()
     {
-        if (!$this->date_theorical_load || !$this->date_carga_po) {
-            return '-';
+        // Esta función ya no es necesaria ya que se eliminó date_carga_po
+        return '-';
+    }
+
+    /**
+     * Normalize value for comparison to avoid false positives.
+     * Handles different types and formats of values.
+     */
+    protected function normalizeValueForComparison($value)
+    {
+        // Handle null
+        if ($value === null) {
+            return null;
         }
 
-        $theoricalDate = \Carbon\Carbon::parse($this->date_theorical_load);
-        $realDate = \Carbon\Carbon::parse($this->date_carga_po);
+        // Handle empty string and false as null
+        if ($value === '' || $value === false) {
+            return null;
+        }
 
-        $difference = $realDate->diffInDays($theoricalDate, false);
-        
-        return $difference;
+        // Handle Carbon dates
+        if ($value instanceof \Carbon\Carbon) {
+            return $value->format('Y-m-d');
+        }
+
+        // Handle DateTime objects
+        if ($value instanceof \DateTime) {
+            return $value->format('Y-m-d');
+        }
+
+        // Handle strings - trim and normalize
+        if (is_string($value)) {
+            $trimmed = trim($value);
+            // Empty string becomes null
+            if ($trimmed === '') {
+                return null;
+            }
+            // Try to parse as number if it looks like one
+            if (is_numeric($trimmed)) {
+                $floatValue = (float) $trimmed;
+                return round($floatValue, 2);
+            }
+            return $trimmed;
+        }
+
+        // Handle numeric values - normalize to float with 2 decimal places
+        if (is_numeric($value)) {
+            $floatValue = (float) $value;
+            return round($floatValue, 2);
+        }
+
+        // Handle booleans
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+
+        // Handle arrays - convert to JSON string for comparison
+        if (is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        // For objects, convert to string
+        if (is_object($value)) {
+            return (string) $value;
+        }
+
+        return $value;
     }
 
 }

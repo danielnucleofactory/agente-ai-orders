@@ -14,11 +14,11 @@
 
         <div class="flex gap-2 items-center">
 
-            <a href="{{ route('shipping-documentation.create') }}">
+            {{-- <a href="{{ route('shipping-documentation.create') }}" class="hidden">
                 <x-secondary-button>
                     Crear nuevo embarque
                 </x-secondary-button>
-            </a>
+            </a> --}}
 
             <a href="{{ route('purchase-orders.create') }}">
                 <x-primary-button>

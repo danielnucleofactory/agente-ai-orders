@@ -168,7 +168,7 @@
         </div>
     </div>
 
-    @if($shippingDocument->tracking_id || $shippingDocument->mbl_number || $shippingDocument->container_number)
+    @if($this->shouldShowTimeline())
     <div class="mb-8">
         <h3 class="mb-6 text-lg font-bold">Estado del Envío</h3>
 

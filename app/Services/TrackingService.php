@@ -91,7 +91,7 @@ class TrackingService
             $response = Http::withHeaders([
                 'apikey' => $this->porthApiKey,
                 'Accept' => 'application/json'
-            ])->get("https://porth-api.fly.dev/api/shipment/byId/{$trackingNumber}");
+            ])->timeout(15)->get("https://api.porth.app/api/shipment/byId/{$trackingNumber}");
 
             if ($response->failed()) {
                 \Log::error('API request failed:', [
@@ -102,6 +102,7 @@ class TrackingService
             }
 
             $data = $response->json();
+
 
             if (!$data || !isset($data['phases'])) {
                 \Log::warning('Invalid or empty response from Porth API');
@@ -127,7 +128,7 @@ class TrackingService
             $response = Http::withHeaders([
                 'apikey' => $this->porthApiKey,
                 'Accept' => 'application/json'
-            ])->get("https://porth-api.fly.dev/api/shipment/byMasterBl/{$masterBl}");
+            ])->timeout(15)->get("https://api.porth.app/api/shipment/byMasterBl/{$masterBl}");
 
             if ($response->failed()) {
                 \Log::error('MasterBl API request failed:', [
@@ -138,6 +139,7 @@ class TrackingService
             }
 
             $data = $response->json();
+
 
             if (!$data || !isset($data['phases'])) {
                 \Log::warning('Invalid or empty response from Porth API for MasterBl', [
@@ -334,7 +336,7 @@ class TrackingService
             $response = Http::withHeaders([
                 'apikey' => $this->porthApiKey,
                 'Accept' => 'application/json'
-            ])->get("https://porth-api.fly.dev/api/shipment/byContainer/{$containerNumber}");
+            ])->timeout(15)->get("https://api.porth.app/api/shipment/byContainer/{$containerNumber}");
 
             if ($response->failed()) {
                 \Log::error('Container number API request failed:', [
@@ -365,16 +367,17 @@ class TrackingService
         }
     }
 
-    public function getTracking($trackingId = null, $mblNumber = null)
+    public function getTracking($trackingId = null, $mblNumber = null, $containerNumber = null)
     {
         \Log::info('TrackingService::getTracking called:', [
             'tracking_id' => $trackingId,
-            'mbl_number' => $mblNumber
+            'mbl_number' => $mblNumber,
+            'container_number' => $containerNumber
         ]);
 
-        // Si no hay tracking_id ni mbl_number, devolver datos de prueba
-        if (!$trackingId && !$mblNumber) {
-            \Log::info('No tracking ID or MBL provided, returning mock data');
+        // Si no hay tracking_id, mbl_number ni container_number, devolver datos de prueba
+        if (!$trackingId && !$mblNumber && !$containerNumber) {
+            \Log::info('No tracking ID, MBL or container number provided, returning mock data');
             return $this->getMockTrackingData();
         }
 
@@ -386,13 +389,19 @@ class TrackingService
             $trackingData = $this->getPorthTrackingByMasterBl($mblNumber);
         }
 
-        // Si no tenemos datos por MBL o no se proporcionó, intentamos con tracking ID
+        // Si no tenemos datos por MBL, intentamos con container number
+        if (!$trackingData && $containerNumber) {
+            \Log::info('Attempting to get Porth tracking data using container number', ['container' => $containerNumber]);
+            $trackingData = $this->getPorthTrackingByContainerNumber($containerNumber);
+        }
+
+        // Si no tenemos datos por container, intentamos con tracking ID
         if (!$trackingData && $trackingId) {
             \Log::info('Attempting to get Porth tracking data using ID', ['id' => $trackingId]);
             $trackingData = $this->getPorthTracking($trackingId);
         }
 
-        // Si ambos métodos fallan, devolver datos de prueba como fallback
+        // Si todos los métodos fallan, devolver datos de prueba como fallback
         if (!$trackingData) {
             \Log::info('All API calls failed, returning mock data');
             return $this->getMockTrackingData();
@@ -402,7 +411,6 @@ class TrackingService
         if (!isset($trackingData['timeline'])) {
             $trackingData['timeline'] = [];
         }
-
 
         \Log::info('Successfully retrieved Porth tracking data');
         return $trackingData;

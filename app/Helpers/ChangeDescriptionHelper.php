@@ -34,7 +34,7 @@ class ChangeDescriptionHelper
         'date_booking_authorized' => 'Fecha de Autorización de Booking',
         'date_theorical_load' => 'Fecha Teórica de Carga',
         'date_variable_date' => 'Fecha Variable',
-        'date_carga_po' => 'Fecha de Carga PO',
+        'carga_lista_validada' => 'Carga Lista Validada',
         'date_received' => 'Fecha de Recepción',
         'date_eta_updated' => 'Fecha ETA Actualizada',
         'date_etd_updated' => 'Fecha ETD Actualizada',

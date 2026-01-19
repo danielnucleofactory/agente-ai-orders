@@ -27,6 +27,16 @@ class PurchaseOrderController extends Controller
     public function createFromApi(Request $request): JsonResponse
     {
         try {
+            // Log del request completo para debugging
+            \Log::info('PO Individual - Request recibido', [
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'headers' => $request->headers->all(),
+                'json_payload' => $request->json()->all(),
+                'all_payload' => $request->all(),
+                'content_type' => $request->header('Content-Type'),
+            ]);
+
             DB::beginTransaction();
 
             // 1) Soporte JSON o x-www-form-urlencoded
@@ -34,6 +44,11 @@ class PurchaseOrderController extends Controller
             if (empty($payload)) {
                 $payload = $request->all();
             }
+
+            \Log::info('PO Individual - Payload procesado', [
+                'payload' => $payload,
+                'payload_size' => count($payload),
+            ]);
 
             // 2) Normalizar a array de órdenes
             if (isset($payload['purchase_orders']) && is_array($payload['purchase_orders'])) {
@@ -52,11 +67,26 @@ class PurchaseOrderController extends Controller
 
             $results = [];
 
-            foreach ($orders as $orderData) {
+            foreach ($orders as $index => $orderData) {
+                // Log del order individual que se está procesando
+                \Log::info("PO Individual - Procesando orden #{$index}", [
+                    'index' => $index,
+                    'order_data' => $orderData,
+                    'order_number' => data_get($orderData, 'general.order_number') ?? data_get($orderData, 'order_number'),
+                    'trading_company' => data_get($orderData, 'general.trading_company') ?? data_get($orderData, 'trading_company'),
+                ]);
+
                 // 3) Asegurar estructuras
                 $general = data_get($orderData, 'general', $orderData) ?? [];
                 $items   = data_get($orderData, 'items', []);
                 if (!is_array($items)) $items = [];
+
+                \Log::info("PO Individual - Estructura procesada", [
+                    'index' => $index,
+                    'general_keys' => array_keys($general),
+                    'general_size' => count($general),
+                    'items_count' => count($items),
+                ]);
 
                 // Helpers
                 $parseDate = static function ($v) {
@@ -161,7 +191,10 @@ class PurchaseOrderController extends Controller
                     ->first();
 
                 if ($kanbanBoard) {
-                    $status = $kanbanBoard->statuses()->where('name', 'Recepción')->first()
+                    $status = $kanbanBoard->statuses()
+                        ->where('is_hidden', false)
+                        ->where('name', 'Recepción')
+                        ->first()
                         ?: $kanbanBoard->defaultStatus();
                     $kanbanStatusId = $status?->id;
                 }
@@ -259,7 +292,7 @@ class PurchaseOrderController extends Controller
                 // 12) ===== Fechas OLO y Fechas del Formulario =====
                 foreach ([
                              'date_booking_request','date_booking_authorized','date_theorical_load','date_variable_date',
-                             'date_carga_po','date_received',
+                             'carga_lista_validada','date_received',
                              'date_etd_initial','date_etd_updated','date_eta_updated','date_eta_initial',
                              'date_etd', 'date_atd', 'date_eta', 'date_ata',
                              'date_estimated_hub_arrival', 'date_actual_hub_arrival',
@@ -307,7 +340,7 @@ class PurchaseOrderController extends Controller
                                  'etd_dates_difference', 'eta_dates_difference'];
                 // Campos de fecha que deben preservarse incluso si vienen del JSON (pueden ser null si no vienen)
                 $dateFields = ['date_booking_request', 'date_booking_authorized', 'date_theorical_load', 'date_variable_date',
-                              'date_carga_po', 'date_received', 'date_etd_initial', 'date_etd_updated', 'date_eta_updated',
+                              'date_received', 'date_etd_initial', 'date_etd_updated', 'date_eta_updated',
                               'date_eta_initial', 'date_etd', 'date_atd', 'date_eta', 'date_ata',
                               'date_estimated_hub_arrival', 'date_actual_hub_arrival', 'inspection_date', 'vgm_cut_date',
                               'balance_payment_date', 'local_charges_payment_date', 'bonded_warehouse_enter',
@@ -395,10 +428,14 @@ class PurchaseOrderController extends Controller
                         ]);
 
                         if (function_exists('dispatch_webhook')) {
+                            $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                            $poData = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user'])->toArray();
+                            $poData = json_decode(json_encode($poData), true);
+
                             dispatch_webhook('purchase_order.created', [
                                 'purchase_order_id' => $po->id,
                                 'order_number' => $po->order_number,
-                                'data' => $po->toArray(), // Incluye todos los campos (143 campos)
+                                'data' => $poData, // Incluye todos los campos (143 campos) + comentarios
                             ]);
                         } else {
                             \Log::warning('dispatch_webhook function does not exist', [
@@ -478,14 +515,23 @@ class PurchaseOrderController extends Controller
         // Relaciones (se buscan por nombre/código y se crean si no existen)
         $vendorId = data_get($general, 'vendor_id');
         $vendorName = data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
+        $vendorCompanyId = data_get($general, 'company_id', 1);
+        $vendorCompanyId = is_numeric($vendorCompanyId) ? (int) $vendorCompanyId : 1;
 
         // Buscar o crear vendor
         $vendor = null;
         if ($vendorId) {
-            $vendor = Vendor::where('vendo_code', $vendorId)->first();
+            // Primero intentar buscar por ID si es numérico
+            if (is_numeric($vendorId)) {
+                $vendor = Vendor::find($vendorId);
+            }
+            // Si no se encuentra, buscar por código
+            if (!$vendor) {
+                $vendor = Vendor::where('vendo_code', $vendorId)->first();
+            }
             if (!$vendor) {
                 $vendor = Vendor::create([
-                    'company_id' => 1,
+                    'company_id' => $vendorCompanyId,
                     'vendo_code' => (string) $vendorId,
                     'name' => $vendorName ?: ('Proveedor ' . $vendorId),
                     'status' => 'active',
@@ -495,7 +541,7 @@ class PurchaseOrderController extends Controller
             $vendor = Vendor::where('name', $vendorName)->first();
             if (!$vendor) {
                 $vendor = Vendor::create([
-                    'company_id' => 1,
+                    'company_id' => $vendorCompanyId,
                     'name' => $vendorName,
                     'vendo_code' => 'VENDOR_' . time(),
                     'status' => 'active',
@@ -508,31 +554,40 @@ class PurchaseOrderController extends Controller
         foreach ($items as $item) {
             $totalWeight += (float) data_get($item, 'peso_kg', data_get($item, 'kgs', 0));
         }
-        $netTotal = (float) (data_get($general, 'netValue', data_get($general, 'net_total', 0)));
+        // Priorizar total_amount del JSON, luego net_total, luego netValue
+        $netTotal = (float) (data_get($general, 'total_amount', data_get($general, 'net_total', data_get($general, 'netValue', 0))));
 
         // Kanban inicial
         $kanbanStatusId = null;
-        $kanbanBoard = KanbanBoard::where('company_id', 1)
+        $kanbanCompanyId = data_get($general, 'company_id', 1);
+        $kanbanCompanyId = is_numeric($kanbanCompanyId) ? (int) $kanbanCompanyId : 1;
+        $kanbanBoard = KanbanBoard::where('company_id', $kanbanCompanyId)
             ->where('type', 'po_stages')
             ->where('is_active', true)
             ->first();
 
         if ($kanbanBoard) {
-            $status = $kanbanBoard->statuses()->where('name', 'Recepción')->first()
+            $status = $kanbanBoard->statuses()
+                ->where('is_hidden', false)
+                ->where('name', 'Recepción')
+                ->first()
                 ?: $kanbanBoard->defaultStatus();
             $kanbanStatusId = $status?->id;
         }
 
         // Campos base
+        $companyId = data_get($general, 'company_id', 1);
+        $companyId = is_numeric($companyId) ? (int) $companyId : 1;
+
         $poData = [
-            'company_id'   => 1,
+            'company_id'   => $companyId,
             'order_number' => data_get($general, 'order_number') ?? \Illuminate\Support\Str::uuid()->toString(),
             'status'       => 'draft',
-            'order_date'   => now(),
+            'order_date'   => $parseDate(data_get($general, 'emision_date_po')) ?? now(),
             'currency'     => data_get($general, 'currency', 'USD'),
             'incoterms'    => data_get($general, 'incoterms', 'EXW'),
             'net_total'    => $netTotal,
-            'total'        => $netTotal,
+            'total'        => (float) (data_get($general, 'total_amount', $netTotal)),
             'material_type'  => json_encode(['Standard']),
             'ensurence_type' => data_get($general, 'ensurence_type', 'pending'),
             'mode'           => data_get($general, 'mode'),
@@ -543,10 +598,18 @@ class PurchaseOrderController extends Controller
             'date_required_in_destination' => $parseDate(data_get($general, 'date_required_in_destination')),
         ];
 
+        // Mapear comments si viene en el JSON
+        if (array_key_exists('comments', $general)) {
+            $poData['comments'] = $general['comments'];
+        }
+
         // Asignar relación con vendor si se resolvió
         if ($vendor) {
             $poData['vendor_id'] = $vendor->id;
-            $poData['vendor_number'] = $vendor->vendo_code;
+            // Solo usar el código del vendor si no viene vendor_number en el JSON
+            if (!array_key_exists('vendor_number', $general)) {
+                $poData['vendor_number'] = $vendor->vendo_code;
+            }
         }
 
         // NEW FIELDS FOR OLO (string)
@@ -576,7 +639,7 @@ class PurchaseOrderController extends Controller
         // NEW FIELDS FOR OLO (boolean)
         foreach ([
                      'is_dropship','applies_tlc','applies_af','port_of_loading_validated','has_facture_merca',
-                     'uses_bonded_warehouse','apply_technical_note','etd_initial_validated',
+                     'uses_bonded_warehouse','apply_technical_note','etd_initial_validated','used_rate_ok',
                  ] as $f) {
             // Verificar si el campo existe en el array
             if (array_key_exists($f, $general) || isset($general[$f])) {
@@ -585,8 +648,6 @@ class PurchaseOrderController extends Controller
                 $poData[$f] = false;
             }
         }
-        // Forzar used_rate_ok siempre como false
-        $poData['used_rate_ok'] = false;
 
         // NEW FIELDS FOR OLO (int)
         foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference','pallet_quantity','pallet_quantity_real'] as $f) {
@@ -613,27 +674,60 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        // Fechas OLO
-        foreach ([
-                     'date_booking_request','date_booking_authorized','date_theorical_load','date_variable_date',
-                     'date_carga_po','date_received',
-                     'date_etd_initial','date_etd_updated','date_eta_updated','date_eta_initial',
-                     'date_etd', 'date_atd', 'date_eta', 'date_ata',
-                     'date_estimated_hub_arrival', 'date_actual_hub_arrival',
-                     'inspection_date','vgm_cut_date','balance_payment_date','local_charges_payment_date',
-                     'bonded_warehouse_enter','bonded_warehouse_exit','receipt_note_date',
-                     'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','dif_load_date','emision_date_po','forwader_date',
-                     'date_consolidation','release_date',
-                 ] as $f) {
-            // Verificar si el campo existe en el array (usar array_key_exists para verificar existencia real)
-            if (array_key_exists($f, $general) || isset($general[$f])) {
+        // Fechas OLO - Procesar todas las fechas del JSON
+        $dateFieldsToProcess = [
+            'date_booking_request','date_booking_authorized','date_theorical_load','date_variable_date',
+            'date_received',
+            'date_etd_initial','date_etd_updated','date_eta_updated','date_eta_initial',
+            'date_etd', 'date_atd', 'date_eta', 'date_ata',
+            'date_estimated_hub_arrival', 'date_actual_hub_arrival',
+            'inspection_date','vgm_cut_date','balance_payment_date','local_charges_payment_date',
+            'bonded_warehouse_enter','bonded_warehouse_exit','receipt_note_date',
+            'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','dif_load_date','emision_date_po','forwader_date',
+            'date_consolidation','release_date',
+        ];
+
+        foreach ($dateFieldsToProcess as $f) {
+            // Log específico para date_etd_initial y date_eta_initial
+            if ($f === 'date_etd_initial' || $f === 'date_eta_initial') {
+                \Log::info("Procesando fecha especial: {$f}", [
+                    'field' => $f,
+                    'exists_in_general' => array_key_exists($f, $general),
+                    'value' => $general[$f] ?? 'NOT_SET',
+                    'general_keys' => array_keys($general),
+                ]);
+            }
+
+            // Verificar si el campo existe en el array y tiene valor
+            if (array_key_exists($f, $general) && $general[$f] !== null && $general[$f] !== '') {
                 $dateValue = $general[$f];
-                if ($dateValue !== null && $dateValue !== '') {
+                // Asegurar que el valor sea string antes de parsear
+                if (is_string($dateValue) || is_numeric($dateValue)) {
                     $parsedDate = $parseDate($dateValue);
                     if ($parsedDate !== null) {
                         $poData[$f] = $parsedDate;
+                        // Log específico para confirmar que se guardó
+                        if ($f === 'date_etd_initial' || $f === 'date_eta_initial') {
+                            \Log::info("Fecha {$f} parseada y agregada a poData", [
+                                'field' => $f,
+                                'original_value' => $dateValue,
+                                'parsed_date' => $parsedDate->toDateTimeString(),
+                            ]);
+                        }
+                    } else {
+                        // Log si falla el parseo para debugging
+                        \Log::warning("Failed to parse date field {$f} with value: {$dateValue} (type: " . gettype($dateValue) . ")");
                     }
+                } else {
+                    \Log::warning("Date field {$f} has invalid type: " . gettype($dateValue) . " with value: " . json_encode($dateValue));
                 }
+            } elseif ($f === 'date_etd_initial' || $f === 'date_eta_initial') {
+                // Log si la fecha no existe o está vacía
+                \Log::warning("Fecha {$f} no encontrada o vacía en general", [
+                    'field' => $f,
+                    'exists' => array_key_exists($f, $general),
+                    'value' => $general[$f] ?? 'NOT_SET',
+                ]);
             }
         }
 
@@ -657,42 +751,117 @@ class PurchaseOrderController extends Controller
             $poData['eta_dates_difference'] = (int) $general['eta_dates_difference'];
         }
 
-        // Limpiar null pero mantener campos opcionales con null y valores numéricos 0
-        $optionalTextFields = ['mbl_number', 'factory_proforma_number', 'factura_merca', 'case_number_file'];
+        // Lista de todos los campos booleanos que deben preservarse incluso si son false
+        $booleanFields = ['is_dropship', 'applies_tlc', 'applies_af', 'port_of_loading_validated', 'has_facture_merca',
+                         'uses_bonded_warehouse', 'apply_technical_note', 'etd_initial_validated', 'used_rate_ok'];
+
+        // Lista de todos los campos de texto opcionales que pueden ser null
+        $optionalTextFields = ['mbl_number', 'factory_proforma_number', 'factura_merca', 'case_number_file', 'comments',
+                              'container_number', 'container_type', 'shipping_line', 'logistics_incoterm', 'reason',
+                              'category', 'forwarder_name', 'cargo_invoice_number', 'tariff_type', 'route_label',
+                              'arrival_status', 'arrival_port', 'departure_port', 'retail_group', 'customer_type',
+                              'trading_company', 'service_provider', 'customs_dua', 'invoice', 'receipt_note',
+                              'visibility_notes', 'price_incoterm', 'consolidator_name', 'vendor_number',
+                              'insurance_type', 'tracking_id'];
+
+        // Lista de todos los campos numéricos
         $numericFields = ['weight_kg', 'weight_lb', 'cbm', 'Invoice_amount', 'freight_amount', 'other_expenses',
                          'total_amount', 'estimated_pallet_cost', 'real_cost_estimated_po', 'real_cost_real_po',
                          'net_total', 'total', 'length_cm', 'width_cm', 'height_cm',
                          'pallet_quantity', 'pallet_quantity_real', 'delay_days', 'container_free_days',
-                         'etd_dates_difference', 'eta_dates_difference'];
-        // Campos de fecha que deben preservarse incluso si vienen del JSON (pueden ser null si no vienen)
+                         'etd_dates_difference', 'eta_dates_difference', 'company_id'];
+
+        // Lista de todos los campos de fecha
         $dateFields = ['date_booking_request', 'date_booking_authorized', 'date_theorical_load', 'date_variable_date',
-                      'date_carga_po', 'date_received', 'date_etd_initial', 'date_etd_updated', 'date_eta_updated',
+                      'date_received', 'date_etd_initial', 'date_etd_updated', 'date_eta_updated',
                       'date_eta_initial', 'date_etd', 'date_atd', 'date_eta', 'date_ata',
                       'date_estimated_hub_arrival', 'date_actual_hub_arrival', 'inspection_date', 'vgm_cut_date',
                       'balance_payment_date', 'local_charges_payment_date', 'bonded_warehouse_enter',
                       'bonded_warehouse_exit', 'receipt_note_date', 'estimated_dc_availability_date',
                       'date_invoice_received', 'date_vendor_document_received', 'dif_load_date', 'emision_date_po',
-                      'forwader_date', 'date_consolidation', 'release_date', 'date_required_in_destination'];
-        $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields, $dateFields) {
-            // Permitir null para campos de texto opcionales (para que se guarden explícitamente como null)
-            if (in_array($k, $optionalTextFields)) {
-                return true; // Mantener siempre estos campos, incluso si son null
+                      'forwader_date', 'date_consolidation', 'release_date', 'date_required_in_destination', 'order_date'];
+
+        // Campos que siempre deben mantenerse (incluso si son null o false)
+        $alwaysKeepFields = ['company_id', 'order_number', 'status', 'currency', 'incoterms', 'mode', 'kanban_status_id',
+                            'material_type', 'ensurence_type', 'vendor_id', 'vendor_number'];
+
+        // Log antes del filtro para verificar que date_etd_initial y date_eta_initial están en poData
+        if (isset($poData['date_etd_initial']) || isset($poData['date_eta_initial'])) {
+            \Log::info("Antes del filtro - Fechas especiales en poData", [
+                'date_etd_initial' => $poData['date_etd_initial'] ?? 'NOT_SET',
+                'date_eta_initial' => $poData['date_eta_initial'] ?? 'NOT_SET',
+                'date_etd_initial_type' => isset($poData['date_etd_initial']) ? gettype($poData['date_etd_initial']) : 'NOT_SET',
+                'date_eta_initial_type' => isset($poData['date_eta_initial']) ? gettype($poData['date_eta_initial']) : 'NOT_SET',
+            ]);
+        }
+
+        // Filtrar solo campos que realmente son null o strings vacíos, pero mantener todos los campos procesados
+        $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields, $dateFields, $alwaysKeepFields, $booleanFields) {
+            // Mantener siempre campos críticos
+            if (in_array($k, $alwaysKeepFields)) {
+                return true;
             }
-            // Permitir valores numéricos 0 (que son válidos)
+            // Mantener campos booleanos (incluso si son false)
+            if (in_array($k, $booleanFields)) {
+                return true;
+            }
+            // Mantener campos de texto opcionales (incluso si son null)
+            if (in_array($k, $optionalTextFields)) {
+                return true;
+            }
+            // Mantener campos numéricos si tienen valor (incluyendo 0)
             if (in_array($k, $numericFields)) {
                 return $v !== null && $v !== '';
             }
-            // Permitir campos de fecha si vienen del JSON (incluso si se parsean como null)
+            // Mantener campos de fecha si fueron procesados
             if (in_array($k, $dateFields)) {
-                // Si el campo existe en $poData, mantenerlo (incluso si es null, significa que vino del JSON)
+                // Log específico para date_etd_initial y date_eta_initial
+                if ($k === 'date_etd_initial' || $k === 'date_eta_initial') {
+                    \Log::info("Filtro - Manteniendo fecha {$k}", [
+                        'field' => $k,
+                        'value' => $v ? $v->toDateTimeString() : 'NULL',
+                        'in_dateFields' => in_array($k, $dateFields),
+                    ]);
+                }
                 return true;
             }
-            // Para otros campos, eliminar null y strings vacíos, pero permitir 0 y false
-            return $v !== null && $v !== '' && $v !== false;
+            // Para cualquier otro campo que fue agregado a $poData, mantenerlo si tiene valor
+            // Solo eliminar null y strings vacíos, pero permitir 0, false, y cualquier otro valor
+            return $v !== null && $v !== '';
         }, ARRAY_FILTER_USE_BOTH);
+
+        // Log después del filtro para verificar que date_etd_initial y date_eta_initial siguen en poData
+        if (isset($poData['date_etd_initial']) || isset($poData['date_eta_initial'])) {
+            \Log::info("Después del filtro - Fechas especiales en poData", [
+                'date_etd_initial' => $poData['date_etd_initial'] ?? 'NOT_SET',
+                'date_eta_initial' => $poData['date_eta_initial'] ?? 'NOT_SET',
+            ]);
+        } else {
+            \Log::warning("Después del filtro - Fechas especiales NO están en poData", [
+                'poData_keys' => array_keys($poData),
+            ]);
+        }
+
+        // Log final antes de crear la PO con las fechas especiales
+        \Log::info("Antes de crear PO - Verificando fechas especiales", [
+            'date_etd_initial' => $poData['date_etd_initial'] ?? 'NOT_SET',
+            'date_eta_initial' => $poData['date_eta_initial'] ?? 'NOT_SET',
+            'date_etd_initial_in_array' => isset($poData['date_etd_initial']),
+            'date_eta_initial_in_array' => isset($poData['date_eta_initial']),
+            'poData_keys_count' => count($poData),
+            'poData_sample_keys' => array_slice(array_keys($poData), 0, 20),
+        ]);
 
         // Crear PO
         $purchaseOrder = PurchaseOrder::create($poData);
+
+        // Log después de crear para verificar que se guardaron
+        \Log::info("Después de crear PO - Verificando fechas especiales guardadas", [
+            'po_id' => $purchaseOrder->id,
+            'order_number' => $purchaseOrder->order_number,
+            'date_etd_initial' => $purchaseOrder->date_etd_initial ? $purchaseOrder->date_etd_initial->toDateTimeString() : 'NULL',
+            'date_eta_initial' => $purchaseOrder->date_eta_initial ? $purchaseOrder->date_eta_initial->toDateTimeString() : 'NULL',
+        ]);
 
         // Ítems (si existen)
         if ($items) {
@@ -856,13 +1025,51 @@ class PurchaseOrderController extends Controller
 
             // Dispatch webhook event for updated purchase order
             if (function_exists('dispatch_webhook')) {
-                $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
-                dispatch_webhook('purchase_order.updated', [
-                    'purchase_order_id' => $purchaseOrder->id,
+                \Log::info('About to dispatch webhook for PO update', [
+                    'po_id' => $purchaseOrder->id,
                     'order_number' => $purchaseOrder->order_number,
-                    'changes' => $changes,
-                    'data' => $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus'])->toArray(), // Incluye todos los campos (143 campos)
                 ]);
+
+                try {
+                    $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                    $freshPo = $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+
+                    // Convertir a array y asegurar que sea JSON serializable
+                    $poData = $freshPo->toArray();
+
+                    // Convertir fechas y objetos a strings para asegurar serialización correcta
+                    $poData = json_decode(json_encode($poData), true);
+
+                    \Log::info('Calling dispatch_webhook', [
+                        'po_id' => $purchaseOrder->id,
+                        'has_data' => isset($poData['id']),
+                        'data_size' => strlen(json_encode($poData)),
+                    ]);
+
+                    dispatch_webhook('purchase_order.updated', [
+                        'purchase_order_id' => $purchaseOrder->id,
+                        'order_number' => $purchaseOrder->order_number,
+                        'changes' => $changes,
+                        'data' => $poData,
+                    ]);
+
+                    \Log::info('dispatch_webhook completed', [
+                        'po_id' => $purchaseOrder->id,
+                    ]);
+                } catch (\Throwable $e) {
+                    \Log::error('Error in webhook dispatch', [
+                        'po_id' => $purchaseOrder->id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                    // No lanzar la excepción para no interrumpir el flujo principal
+                }
+
+                \Log::info('dispatch_webhook called successfully', [
+                    'po_id' => $purchaseOrder->id,
+                ]);
+            } else {
+                \Log::warning('dispatch_webhook function does not exist');
             }
 
             return response()->json($response, 200);
@@ -897,18 +1104,22 @@ class PurchaseOrderController extends Controller
         $fieldMapping = [
             // Campos básicos
             'order_number'            => 'order_number',
+            'vendor_id'               => 'vendor_id',
             'vendor_number'           => 'vendor_number',
             'vendor_name'             => 'vendor_name',
             'route_label'             => 'route_label',
             'net_total'               => 'net_total',
+            'total'                   => 'total',
             'currency'                => 'currency',
             'emision_date_po'         => 'emision_date_po',
+            'order_date'              => 'order_date',
             'category'                => 'category',
             'incoterms'               => 'incoterms',
             'logistics_incoterm'      => 'logistics_incoterm',
             'price_incoterm'          => 'price_incoterm',
             'trading_company'         => 'trading_company',
             'mode'                    => 'mode',
+            'company_id'              => 'company_id',
 
             // Transporte y contenedores
             'shipping_line'           => 'shipping_line',
@@ -938,7 +1149,7 @@ class PurchaseOrderController extends Controller
             'vgm_cut_date'            => 'vgm_cut_date',
             'date_theorical_load'     => 'date_theorical_load',
             'date_variable_date'      => 'date_variable_date',
-            'date_carga_po'           => 'date_carga_po',
+            'carga_lista_validada'    => 'carga_lista_validada',
             'release_date'            => 'release_date',
             'date_consolidation'      => 'date_consolidation',
             'date_etd_initial'        => 'date_etd_initial',
@@ -955,9 +1166,9 @@ class PurchaseOrderController extends Controller
             'local_charges_payment_date' => 'local_charges_payment_date',
             'date_invoice_received'   => 'date_invoice_received',
             'date_vendor_document_received' => 'date_vendor_document_received',
+            'dif_load_date'           => 'dif_load_date',
 
             // Diferencias y enteros
-            'dif_load_date'           => 'dif_load_date',
             'etd_dates_difference'    => 'etd_dates_difference',
             'eta_dates_difference'    => 'eta_dates_difference',
             'container_free_days'     => 'container_free_days',
@@ -1014,6 +1225,26 @@ class PurchaseOrderController extends Controller
             $oldValue = $po->$modelField;
 
             switch ($apiField) {
+                case 'vendor_id': {
+                    // Si viene como ID numérico, buscar directamente
+                    if (is_numeric($value)) {
+                        $vendor = \App\Models\Vendor::find($value);
+                        if (!$vendor) {
+                            throw new \Exception("Vendor not found with ID: {$value}");
+                        }
+                        $po->vendor_id = $vendor->id;
+                        $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->id];
+                    } else {
+                        // Si viene como código, buscar por código
+                        $vendor = \App\Models\Vendor::where('vendo_code', $value)->first();
+                        if (!$vendor) {
+                            throw new \Exception("Vendor not found with code: {$value}");
+                        }
+                        $po->vendor_id = $vendor->id;
+                        $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->id];
+                    }
+                    break;
+                }
                 case 'vendor_name': {
                     $vendor = \App\Models\Vendor::where('name', $value)->first();
                     if (!$vendor) {
@@ -1029,12 +1260,14 @@ class PurchaseOrderController extends Controller
                         throw new \Exception("Vendor not found with code: {$value}");
                     }
                     $po->vendor_id = $vendor->id;
+                    $po->vendor_number = $vendor->vendo_code;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->vendo_code];
                     break;
                 }
 
                 // Fechas
                 case 'emision_date_po':
+                case 'order_date':
                 case 'date_booking_request':
                 case 'date_booking_authorized':
                 case 'forwader_date':
@@ -1042,7 +1275,7 @@ class PurchaseOrderController extends Controller
                 case 'vgm_cut_date':
                 case 'date_theorical_load':
                 case 'date_variable_date':
-                case 'date_carga_po':
+                case 'carga_lista_validada':
                 case 'release_date':
                 case 'date_consolidation':
                 case 'date_etd_initial':
@@ -1058,7 +1291,8 @@ class PurchaseOrderController extends Controller
                 case 'balance_payment_date':
                 case 'local_charges_payment_date':
                 case 'date_invoice_received':
-                case 'date_vendor_document_received': {
+                case 'date_vendor_document_received':
+                case 'dif_load_date': {
                     $po->$modelField = $value ? \Carbon\Carbon::parse($value) : null;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
                     break;
@@ -1066,6 +1300,7 @@ class PurchaseOrderController extends Controller
 
                 // Montos (decimales)
                 case 'net_total':
+                case 'total':
                 case 'Invoice_amount':
                 case 'freight_amount':
                 case 'other_expenses':
@@ -1097,11 +1332,11 @@ class PurchaseOrderController extends Controller
                 // Enteros
                 case 'etd_dates_difference':
                 case 'eta_dates_difference':
-                case 'dif_load_date':
                 case 'container_free_days':
                 case 'delay_days':
                 case 'pallet_quantity':
-                case 'pallet_quantity_real': {
+                case 'pallet_quantity_real':
+                case 'company_id': {
                     $po->$modelField = ($value !== null && $value !== '') ? (int) $value : null;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => ($value !== null && $value !== '') ? (int) $value : null];
                     break;
@@ -1149,9 +1384,16 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        // Recalcular totales si se actualizó net_total
+        // Recalcular totales si se actualizó net_total o total_amount
         if (isset($payload['net_total'])) {
             $po->total = $po->net_total;
+        } elseif (isset($payload['total_amount'])) {
+            $po->total = $po->total_amount;
+        }
+
+        // Actualizar order_date si viene emision_date_po
+        if (isset($payload['emision_date_po'])) {
+            $po->order_date = $po->emision_date_po;
         }
 
         return $changes;
@@ -1179,10 +1421,25 @@ class PurchaseOrderController extends Controller
 
     public function bulk(Request $request): JsonResponse
     {
+        // Log del request completo para debugging
+        \Log::info('PO Bulk - Request recibido', [
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
+            'headers' => $request->headers->all(),
+            'json_payload' => $request->json()->all(),
+            'all_payload' => $request->all(),
+            'content_type' => $request->header('Content-Type'),
+        ]);
+
         $payload = $request->json()->all();
         if (empty($payload)) {
             $payload = $request->all();
         }
+
+        \Log::info('PO Bulk - Payload procesado', [
+            'payload' => $payload,
+            'payload_size' => count($payload),
+        ]);
 
         // Normalizar a lista de items
         $items = [];
@@ -1205,11 +1462,24 @@ class PurchaseOrderController extends Controller
         $results = [];
 
         foreach ($items as $index => $item) {
+            // Log del item individual que se está procesando
+            \Log::info("PO Bulk - Procesando item #{$index}", [
+                'index' => $index,
+                'item' => $item,
+                'order_number' => data_get($item, 'order_number'),
+                'trading_company' => data_get($item, 'trading_company'),
+            ]);
+
             // Validar únicamente order_number y trading_company
             $orderNumber = data_get($item, 'order_number');
             $tradingCompany = data_get($item, 'trading_company');
 
             if (!$orderNumber || !$tradingCompany) {
+                \Log::warning("PO Bulk - Validación fallida para item #{$index}", [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'trading_company' => $tradingCompany,
+                ]);
                 $results[] = [
                     'index' => $index,
                     'order_number' => $orderNumber,
@@ -1274,16 +1544,20 @@ class PurchaseOrderController extends Controller
                     DB::commit();
 
                     // Dispatch webhook event for created purchase order
-                    $po = PurchaseOrder::with(['products', 'vendor', 'shipTo', 'kanbanStatus'])->find($createdPo->id);
+                    $po = PurchaseOrder::with(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user'])->find($createdPo->id);
                     if ($po && function_exists('dispatch_webhook')) {
                         \Log::info('Dispatching webhook for bulk created PO', [
                             'po_id' => $po->id,
                             'order_number' => $po->order_number,
                         ]);
+                        $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $poData = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user'])->toArray();
+                        $poData = json_decode(json_encode($poData), true);
+
                         dispatch_webhook('purchase_order.created', [
                             'purchase_order_id' => $po->id,
                             'order_number' => $po->order_number,
-                            'data' => $po->toArray(), // Incluye todos los campos (143 campos)
+                            'data' => $poData, // Incluye todos los campos (143 campos) + comentarios
                         ]);
                     }
 
@@ -1345,10 +1619,25 @@ class PurchaseOrderController extends Controller
      */
     public function bulkUpdate(Request $request): JsonResponse
     {
+        // Log del request completo para debugging
+        \Log::info('PO Bulk Update - Request recibido', [
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
+            'headers' => $request->headers->all(),
+            'json_payload' => $request->json()->all(),
+            'all_payload' => $request->all(),
+            'content_type' => $request->header('Content-Type'),
+        ]);
+
         $payload = $request->json()->all();
         if (empty($payload)) {
             $payload = $request->all();
         }
+
+        \Log::info('PO Bulk Update - Payload procesado', [
+            'payload' => $payload,
+            'payload_size' => count($payload),
+        ]);
 
         // Normalizar a lista de items
         $items = [];
@@ -1371,11 +1660,24 @@ class PurchaseOrderController extends Controller
         $results = [];
 
         foreach ($items as $index => $item) {
+            // Log del item individual que se está procesando
+            \Log::info("PO Bulk Update - Procesando item #{$index}", [
+                'index' => $index,
+                'item' => $item,
+                'order_number' => data_get($item, 'order_number'),
+                'trading_company' => data_get($item, 'trading_company'),
+            ]);
+
             // Validar únicamente order_number y trading_company
             $orderNumber = data_get($item, 'order_number');
             $tradingCompany = data_get($item, 'trading_company');
 
             if (!$orderNumber || !$tradingCompany) {
+                \Log::warning("PO Bulk Update - Validación fallida para item #{$index}", [
+                    'index' => $index,
+                    'order_number' => $orderNumber,
+                    'trading_company' => $tradingCompany,
+                ]);
                 $results[] = [
                     'index' => $index,
                     'order_number' => $orderNumber,
@@ -1446,7 +1748,13 @@ class PurchaseOrderController extends Controller
 
                 // Dispatch webhook event for updated purchase order
                 if (function_exists('dispatch_webhook')) {
-                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                    $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+
+                    // Convertir a array y asegurar que sea JSON serializable
+                    $poData = $freshPo->toArray();
+                    $poData = json_decode(json_encode($poData), true);
+
                     \Log::info('Dispatching webhook for bulk updated PO', [
                         'po_id' => $po->id,
                         'order_number' => $po->order_number,
@@ -1455,7 +1763,7 @@ class PurchaseOrderController extends Controller
                         'purchase_order_id' => $po->id,
                         'order_number' => $po->order_number,
                         'changes' => $changes,
-                        'data' => $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus'])->toArray(), // Incluye todos los campos (143 campos)
+                        'data' => $poData,
                     ]);
                 }
 

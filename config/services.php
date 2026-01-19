@@ -49,4 +49,8 @@ return [
         'phone' => env('WHATSAPP_PHONE', '50670715265'),
     ],
 
+    'maestros' => [
+        'base_url' => env('MAESTROS_API_BASE_URL', 'https://olo.md.orders.raga-x.ai'),
+    ],
+
 ];

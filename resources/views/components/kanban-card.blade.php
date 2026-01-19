@@ -11,10 +11,12 @@
 
 @php
     use App\Models\PurchaseOrder;
+    use App\Services\TrackingService;
 
     // Trae también las anuladas (soft-deleted)
+    // NO cargar shippingDocuments aquí para evitar consultas N+1 en el kanban
     $purchaseOrder = PurchaseOrder::withTrashed()
-        ->with(['actualHub']) // si no existe la relación, quítala
+        ->with(['actualHub', 'vendor'])
         ->find($id);
 
     $isTrashed = $purchaseOrder?->trashed() ?? false;
@@ -28,11 +30,6 @@
     $hubId          = $purchaseOrder?->actual_hub_id;
     $hub            = $purchaseOrder?->actualHub?->name ?? 'Sin Hub';
 
-    $leadTime       = $fmt($purchaseOrder?->date_required_in_destination);
-    $recolectaTime  = $fmt($purchaseOrder?->date_estimated_hub_arrival);
-    $pickupTime     = $fmt($purchaseOrder?->date_planned_pickup);
-
-    $totalWeight    = $purchaseOrder?->total_weight ?? null;
     $dangerLevel    = $purchaseOrder?->material_type ?? null;
     $materialTypeRaw = $purchaseOrder?->material_type ?? '';
     $materialType    = strtolower(trim((string) $materialTypeRaw));
@@ -40,62 +37,79 @@
 
     $eta            = $fmt($purchaseOrder?->date_eta);
     $ata            = $fmt($purchaseOrder?->date_ata);
+    $atd            = $fmt($purchaseOrder?->date_atd);
+    $etaEstimado    = $fmt($purchaseOrder?->date_eta_initial ?? $purchaseOrder?->date_eta);
+    $puertoDestino  = $purchaseOrder?->arrival_port ?? 'N/A';
+    $proveedorServicio = $purchaseOrder?->service_provider ?? 'N/A';
+    $cliente        = $purchaseOrder?->trading_company ?? 'N/A';
 
-    // Cálculos con guardas
-    $expectedLeadTime = ($purchaseOrder?->date_required_in_destination && $purchaseOrder?->date_planned_pickup)
-        ? \Carbon\Carbon::parse($purchaseOrder->date_planned_pickup)
-            ->diffInDays(\Carbon\Carbon::parse($purchaseOrder->date_required_in_destination))
-        : null;
+    // Obtener mbl_number y container_number directamente de la PO
+    // No cargar shippingDocuments para evitar consultas N+1 en el kanban
+    $mblNumber = $purchaseOrder?->mbl_number ?? null;
+    $containerNumber = $purchaseOrder?->container_number ?? null;
 
-    $realLeadTime = ($purchaseOrder?->date_eta && $purchaseOrder?->date_actual_pickup)
-        ? \Carbon\Carbon::parse($purchaseOrder->date_actual_pickup)
-            ->diffInDays(\Carbon\Carbon::parse($purchaseOrder->date_eta))
-        : null;
+    // NO cargar datos de tracking en el kanban - esto causa timeouts
+    // La línea de tiempo se mostrará solo si hay datos disponibles sin hacer llamadas HTTP
+    // Los datos de tracking se cargarán de forma lazy/asíncrona cuando sea necesario
+    $kanbanStatusId = $purchaseOrder?->kanban_status_id ?? 0;
+    $shouldShowTimeline = false;
+    $trackingData = null;
+    // La línea de tiempo se mostrará solo si hay datos disponibles sin hacer llamadas HTTP
+    // Los datos de tracking se cargarán de forma lazy/asíncrona cuando sea necesario
+    $shouldShowTimeline = false;
+    $trackingData = null;
 
+    // Cálculos con guardas (mantenidos para posibles usos futuros)
     $delayDays = ($purchaseOrder?->date_eta && $purchaseOrder?->date_ata)
         ? \Carbon\Carbon::parse($purchaseOrder->date_eta)
             ->diffInDays(\Carbon\Carbon::parse($purchaseOrder->date_ata), false) // ATA - ETA (con signo)
         : null;
-
-    $actualLeadTime = ($purchaseOrder?->date_ata && $purchaseOrder?->date_planned_pickup)
-        ? \Carbon\Carbon::parse($purchaseOrder->date_planned_pickup)
-            ->diffInDays(\Carbon\Carbon::parse($purchaseOrder->date_ata))
-        : null;
 @endphp
 
 
-<li class="kanban-card relative flex justify-between min-h-[180px] w-full gap-5 rounded-[0.625rem] border-2 border-[#D4F5ED] bg-white px-4 py-2 text-xs"
+<li class="kanban-card relative flex flex-col min-h-[180px] w-full rounded-[0.625rem] border-2 border-[#D4F5ED] bg-white px-4 py-2 text-xs"
     x-data x-init="$el.addEventListener('click', () => {
         window.selectedTaskId = '{{ $trackingId }}';
         console.log('Card clicked, set ID:', window.selectedTaskId);
         document.dispatchEvent(new CustomEvent('card-selected', { detail: { id: '{{ $trackingId }}' } }));
     });" data-task-id="{{ $trackingId }}">
 
-    <div class="flex grow flex-col space-y-[0.875rem]">
-        <div class="flex gap-4">
-            <div class="space-y-1 text-sm">
-                <p>
-                    @if (!$isTrashed)
-                        <a class="text-[#127A62] underline underline-offset-4"
-                           href="/purchase-orders/{{ $trackingId }}/detail">
-                            PO: {{ $po }}
-                        </a>
-                    @else
-                        <span class="text-gray-400 cursor-not-allowed select-none"
-                              title="PO anulada: detalle bloqueado">
-                            PO: {{ $po }}
-                        </span>
+    {{-- Primer tercio (33%): Número de PO e ID Tracking --}}
+    <div class="flex-shrink-0 h-1/3 flex items-center justify-between border-b border-[#D4F5ED] pb-2 mb-2">
+        <div class="space-y-1 text-sm w-full">
+            <p>
+                @if (!$isTrashed)
+                    <a class="text-[#127A62] underline underline-offset-4 font-semibold"
+                       href="/purchase-orders/{{ $trackingId }}/detail">
+                        PO: {{ $po }}
+                    </a>
+                @else
+                    <span class="text-gray-400 cursor-not-allowed select-none font-semibold"
+                          title="PO anulada: detalle bloqueado">
+                        PO: {{ $po }}
+                    </span>
+                @endif
+            </p>
+            @if($mblNumber || $containerNumber || ($trackingIdCode && $trackingIdCode !== 'N/A'))
+                <div class="text-xs text-gray-600 space-y-0.5">
+                    @if($mblNumber)
+                        <p>MBL: {{ $mblNumber }}</p>
                     @endif
-                </p>
-
-                <p>ID Tracking: {{ $trackingIdCode ?? 'N/A' }}</p>
-            </div>
+                    @if($containerNumber)
+                        <p>Contenedor: {{ $containerNumber }}</p>
+                    @endif
+                    @if($trackingIdCode && $trackingIdCode !== 'N/A')
+                        <p>Booking: {{ $trackingIdCode }}</p>
+                    @endif
+                </div>
+            @endif
         </div>
     </div>
 
-    <div class="flex flex-col justify-between">
-        <div class="flex gap-2 mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 18 20" fill="none">
+    {{-- Dos tercios restantes (67%): Campos adicionales --}}
+    <div class="flex-1 flex flex-col justify-between min-h-0">
+        <div class="flex gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="20" viewBox="0 0 18 20" fill="none" class="flex-shrink-0">
                 <path
                     d="M5.625 10.25C5.32663 10.25 5.04048 10.3685 4.8295 10.5795C4.61853 10.7905 4.5 11.0766 4.5 11.375C4.5 11.6734 4.61853 11.9595 4.8295 12.1705C5.04048 12.3815 5.32663 12.5 5.625 12.5C5.92337 12.5 6.20952 12.3815 6.4205 12.1705C6.63147 11.9595 6.75 11.6734 6.75 11.375C6.75 11.0766 6.63147 10.7905 6.4205 10.5795C6.20952 10.3685 5.92337 10.25 5.625 10.25ZM7.875 11.375C7.875 11.0766 7.99353 10.7905 8.2045 10.5795C8.41548 10.3685 8.70163 10.25 9 10.25H12.375C12.6734 10.25 12.9595 10.3685 13.1705 10.5795C13.3815 10.7905 13.5 11.0766 13.5 11.375C13.5 11.6734 13.3815 11.9595 13.1705 12.1705C12.9595 12.3815 12.6734 12.5 12.375 12.5H9C8.70163 12.5 8.41548 12.3815 8.2045 12.1705C7.99353 11.9595 7.875 11.6734 7.875 11.375ZM5.625 13.25C5.32663 13.25 5.04048 13.3685 4.8295 13.5795C4.61853 13.7905 4.5 14.0766 4.5 14.375C4.5 14.6734 4.61853 14.9595 4.8295 15.1705C5.04048 15.3815 5.32663 15.5 5.625 15.5H9C9.29837 15.5 9.58452 15.3815 9.79549 15.1705C10.0065 14.9595 10.125 14.6734 10.125 14.375C10.125 14.0766 10.0065 13.7905 9.79549 13.5795C9.58452 13.3685 9.29837 13.25 9 13.25H5.625Z"
                     fill="black" />
@@ -104,22 +118,61 @@
                     fill="black" />
             </svg>
 
-            <div class="space-y-1">
-                <p class="whitespace-nowrap">Lead requerido: <span>{{ $expectedLeadTime ?? 'N/A' }}</span></p>
-                <p class="whitespace-nowrap">Lead en transito: <span>{{ $realLeadTime ?? 'N/A '}}</span></p>
+            <div class="space-y-1 flex-1">
+                <p class="whitespace-nowrap">ATD: <span>{{ $atd ?? 'N/A' }}</span></p>
+                <p class="whitespace-nowrap">ETA Estimado: <span>{{ $etaEstimado ?? 'N/A' }}</span></p>
+                <p class="whitespace-nowrap">Puerto destino: <span>{{ $puertoDestino }}</span></p>
+                <p class="whitespace-nowrap">Proveedor de Servicio: <span>{{ $proveedorServicio }}</span></p>
+                <p class="whitespace-nowrap">Cliente: <span>{{ $cliente }}</span></p>
             </div>
         </div>
 
-        <div class="flex gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 16 18" fill="none">
-                <path
-                    d="M2.00016 16H14.0002L12.5752 6H3.42517L2.00016 16ZM8.00016 4C8.2835 4 8.52116 3.904 8.71317 3.712C8.90517 3.52 9.00083 3.28267 9.00016 3C8.9995 2.71733 8.9035 2.48 8.71216 2.288C8.52083 2.096 8.2835 2 8.00016 2C7.71683 2 7.4795 2.096 7.28817 2.288C7.09683 2.48 7.00083 2.71733 7.00016 3C6.9995 3.28267 7.0955 3.52033 7.28817 3.713C7.48083 3.90567 7.71816 4.00133 8.00016 4ZM10.8252 4H12.5752C13.0752 4 13.5085 4.16667 13.8752 4.5C14.2418 4.83333 14.4668 5.24167 14.5502 5.725L15.9752 15.725C16.0585 16.325 15.9045 16.8543 15.5132 17.313C15.1218 17.7717 14.6175 18.0007 14.0002 18H2.00016C1.3835 18 0.879165 17.771 0.487165 17.313C0.0951649 16.855 -0.058835 16.3257 0.025165 15.725L1.45016 5.725C1.5335 5.24167 1.7585 4.83333 2.12516 4.5C2.49183 4.16667 2.92517 4 3.42517 4H5.17517C5.12516 3.83333 5.0835 3.671 5.05017 3.513C5.01683 3.355 5.00016 3.184 5.00016 3C5.00016 2.16667 5.29183 1.45833 5.87516 0.875C6.4585 0.291667 7.16683 0 8.00016 0C8.8335 0 9.54183 0.291667 10.1252 0.875C10.7085 1.45833 11.0002 2.16667 11.0002 3C11.0002 3.18333 10.9835 3.35433 10.9502 3.513C10.9168 3.67167 10.8752 3.834 10.8252 4Z"
-                    fill="black" />
-            </svg>
+        @if($shouldShowTimeline && $trackingData && isset($trackingData['timeline']) && count($trackingData['timeline']) > 0)
+            {{-- Línea de tiempo compacta --}}
+            <div class="mb-2 mt-2 pt-2 border-t border-gray-200">
+                <p class="mb-1 text-xs font-semibold text-[#127A62]">Estado del Envío</p>
+                <div class="relative">
+                    {{-- Timeline track --}}
+                    <div class="absolute h-[2px] top-2 left-0 right-0 flex">
+                        @php
+                            $completedPhases = collect($trackingData['timeline'])->where('is_completed', true)->count();
+                            $totalPhases = count($trackingData['timeline']);
+                            $completedWidth = $totalPhases > 0 ? ($completedPhases / $totalPhases) * 100 : 0;
+                        @endphp
+                        <div class="bg-[#127A62]" style="width: {{ $completedWidth }}%"></div>
+                        <div class="bg-gray-200" style="width: {{ 100 - $completedWidth }}%"></div>
+                    </div>
 
-            <div>
-                <p>Peso total: <span>{{ $totalWeight }}</span></p>
+                    {{-- Timeline events compactos --}}
+                    <div class="flex relative justify-between mt-1">
+                        @foreach($trackingData['timeline'] as $phase)
+                            <div class="flex flex-col items-center" style="flex: 1;">
+                                {{-- Status dot --}}
+                                <div class="z-20 flex items-center justify-center w-6 h-6 mb-1 rounded-full transition-all duration-300
+                                    {{ $phase['is_completed'] ? 'bg-[#127A62]' : ($phase['is_current'] ? 'bg-[#127A62]' : 'bg-gray-200') }}">
+                                    @if($phase['is_completed'] || $phase['is_current'])
+                                        <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                    @endif
+                                </div>
+                                {{-- Phase name (solo mostrar si está completada o es actual) --}}
+                                @if($phase['is_completed'] || $phase['is_current'])
+                                    <p class="text-[8px] text-center text-[#127A62] font-medium leading-tight mt-0.5" style="max-width: 40px;">
+                                        {{ strlen($phase['name']) > 12 ? substr($phase['name'], 0, 12) . '...' : $phase['name'] }}
+                                    </p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                @if(isset($trackingData['current_phase']))
+                    <p class="mt-1 text-[10px] text-gray-600">
+                        Fase actual: {{ $trackingData['current_phase'] }}
+                    </p>
+                @endif
             </div>
-        </div>
+        @endif
+
     </div>
 </li>

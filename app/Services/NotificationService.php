@@ -238,6 +238,11 @@ class NotificationService
                 'category' => 'ordenes',
                 'description' => 'Notificaciones cuando una orden se crea con un hub real diferente al planificado'
             ],
+            'vendor_created' => [
+                'name' => 'Proveedor Nuevo Creado',
+                'category' => 'proveedores',
+                'description' => 'Notificaciones cuando se crea un nuevo proveedor sin correo electrónico'
+            ],
         ];
 
         $typeData = $typeMap[$type] ?? [

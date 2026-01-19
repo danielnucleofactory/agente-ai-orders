@@ -203,16 +203,14 @@ class DashboardService
             }
 
             // Aplicar filtros adicionales
+            // Nota: Los filtros po_retraso_cl y po_adelanto_cl ya no están disponibles
+            // ya que se eliminó el campo date_carga_po y se reemplazó por carga_lista_validada (checkbox)
             if (!empty($filters['po_retraso_cl'])) {
-                $query->whereNotNull('date_carga_po')
-                      ->whereNotNull('date_theorical_load')
-                      ->whereRaw('DATEDIFF(date_carga_po, date_theorical_load) >= 7');
+                // Este filtro ya no es aplicable sin date_carga_po
             }
 
             if (!empty($filters['po_adelanto_cl'])) {
-                $query->whereNotNull('date_carga_po')
-                      ->whereNotNull('date_theorical_load')
-                      ->whereRaw('DATEDIFF(date_carga_po, date_theorical_load) <= -7');
+                // Este filtro ya no es aplicable sin date_carga_po
             }
 
             if (!empty($filters['indicador_capacidad'])) {
@@ -621,11 +619,105 @@ class DashboardService
             $materials = $this->getMaterialOptions($companyId);
             Log::info('Materials retrieved', ['count' => $materials->count()]);
 
+            Log::info('Getting customer types...');
+            $customerTypes = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
+                    return $query->where('company_id', $companyId);
+                })
+                ->whereNotNull('customer_type')
+                ->distinct()
+                ->pluck('customer_type')
+                ->filter()
+                ->map(function ($type) {
+                    return ['id' => $type, 'name' => $type];
+                })
+                ->values();
+            Log::info('Customer types retrieved', ['count' => $customerTypes->count()]);
+
+            Log::info('Getting arrival statuses...');
+            $arrivalStatuses = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
+                    return $query->where('company_id', $companyId);
+                })
+                ->whereNotNull('arrival_status')
+                ->distinct()
+                ->pluck('arrival_status')
+                ->filter()
+                ->map(function ($status) {
+                    return ['id' => $status, 'name' => $status];
+                })
+                ->values();
+            Log::info('Arrival statuses retrieved', ['count' => $arrivalStatuses->count()]);
+
+            Log::info('Getting departure ports...');
+            $departurePorts = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
+                    return $query->where('company_id', $companyId);
+                })
+                ->whereNotNull('departure_port')
+                ->distinct()
+                ->pluck('departure_port')
+                ->filter()
+                ->map(function ($port) {
+                    return ['id' => $port, 'name' => $port];
+                })
+                ->values();
+            Log::info('Departure ports retrieved', ['count' => $departurePorts->count()]);
+
+            Log::info('Getting arrival ports...');
+            $arrivalPorts = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
+                    return $query->where('company_id', $companyId);
+                })
+                ->whereNotNull('arrival_port')
+                ->distinct()
+                ->pluck('arrival_port')
+                ->filter()
+                ->map(function ($port) {
+                    return ['id' => $port, 'name' => $port];
+                })
+                ->values();
+            Log::info('Arrival ports retrieved', ['count' => $arrivalPorts->count()]);
+
+            Log::info('Getting shipping lines...');
+            $shippingLines = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
+                    return $query->where('company_id', $companyId);
+                })
+                ->whereNotNull('shipping_line')
+                ->distinct()
+                ->pluck('shipping_line')
+                ->filter()
+                ->map(function ($line) {
+                    return ['id' => $line, 'name' => $line];
+                })
+                ->values();
+            Log::info('Shipping lines retrieved', ['count' => $shippingLines->count()]);
+
+            Log::info('Getting service providers...');
+            $serviceProviders = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
+                    return $query->where('company_id', $companyId);
+                })
+                ->where(function ($query) {
+                    $query->whereNotNull('forwarder_name')
+                          ->orWhereNotNull('service_provider');
+                })
+                ->selectRaw('COALESCE(forwarder_name, service_provider) as provider')
+                ->distinct()
+                ->pluck('provider')
+                ->filter()
+                ->map(function ($provider) {
+                    return ['id' => $provider, 'name' => $provider];
+                })
+                ->values();
+            Log::info('Service providers retrieved', ['count' => $serviceProviders->count()]);
+
             $result = [
                 'products' => $products,
                 'hubs' => $hubs,
                 'vendors' => $vendors,
                 'materials' => $materials,
+                'customer_types' => $customerTypes,
+                'arrival_statuses' => $arrivalStatuses,
+                'departure_ports' => $departurePorts,
+                'arrival_ports' => $arrivalPorts,
+                'shipping_lines' => $shippingLines,
+                'service_providers' => $serviceProviders,
             ];
 
             Log::info('Filter options retrieved successfully');
@@ -827,6 +919,71 @@ class DashboardService
                 if (!empty($stages)) {
                     $query->whereHas('kanbanStatus', function ($q) use ($stages) {
                         $q->whereIn('name', $stages);
+                    });
+                }
+            }
+
+            // Filtro por tipo de cliente
+            if (!empty($filters['customer_type'])) {
+                Log::info('Applying customer_type filter', ['customer_type' => $filters['customer_type']]);
+                $customerTypes = is_array($filters['customer_type']) ? $filters['customer_type'] : [$filters['customer_type']];
+                $customerTypes = array_filter($customerTypes);
+                if (!empty($customerTypes)) {
+                    $query->whereIn('customer_type', $customerTypes);
+                }
+            }
+
+            // Filtro por estado de llegada
+            if (!empty($filters['arrival_status'])) {
+                Log::info('Applying arrival_status filter', ['arrival_status' => $filters['arrival_status']]);
+                $arrivalStatuses = is_array($filters['arrival_status']) ? $filters['arrival_status'] : [$filters['arrival_status']];
+                $arrivalStatuses = array_filter($arrivalStatuses);
+                if (!empty($arrivalStatuses)) {
+                    $query->whereIn('arrival_status', $arrivalStatuses);
+                }
+            }
+
+            // Filtro por puerto de embarque
+            if (!empty($filters['departure_port'])) {
+                Log::info('Applying departure_port filter', ['departure_port' => $filters['departure_port']]);
+                $ports = is_array($filters['departure_port']) ? $filters['departure_port'] : [$filters['departure_port']];
+                $ports = array_filter($ports);
+                if (!empty($ports)) {
+                    $query->whereIn('departure_port', $ports);
+                }
+            }
+
+            // Filtro por puerto de arribo
+            if (!empty($filters['arrival_port'])) {
+                Log::info('Applying arrival_port filter', ['arrival_port' => $filters['arrival_port']]);
+                $ports = is_array($filters['arrival_port']) ? $filters['arrival_port'] : [$filters['arrival_port']];
+                $ports = array_filter($ports);
+                if (!empty($ports)) {
+                    $query->whereIn('arrival_port', $ports);
+                }
+            }
+
+            // Filtro por naviera
+            if (!empty($filters['shipping_line'])) {
+                Log::info('Applying shipping_line filter', ['shipping_line' => $filters['shipping_line']]);
+                $shippingLines = is_array($filters['shipping_line']) ? $filters['shipping_line'] : [$filters['shipping_line']];
+                $shippingLines = array_filter($shippingLines);
+                if (!empty($shippingLines)) {
+                    $query->whereIn('shipping_line', $shippingLines);
+                }
+            }
+
+            // Filtro por proveedor de servicios (agente de carga)
+            if (!empty($filters['service_provider'])) {
+                Log::info('Applying service_provider filter', ['service_provider' => $filters['service_provider']]);
+                $serviceProviders = is_array($filters['service_provider']) ? $filters['service_provider'] : [$filters['service_provider']];
+                $serviceProviders = array_filter($serviceProviders);
+                if (!empty($serviceProviders)) {
+                    $query->where(function($q) use ($serviceProviders) {
+                        foreach ($serviceProviders as $provider) {
+                            $q->orWhere('forwarder_name', $provider)
+                              ->orWhere('service_provider', $provider);
+                        }
                     });
                 }
             }

@@ -23,6 +23,10 @@ class ListPurchaseOrders extends Component
         'status' => true,
         'order_date' => true,
         'total' => true,
+        'route_label' => true,
+        'mbl_number' => true,
+        'container_number' => true,
+        'customer' => true,
         'actions' => true,
         'updated_at' => true,
     ];
@@ -131,7 +135,7 @@ class ListPurchaseOrders extends Component
     {
         $purchaseOrders = \App\Models\PurchaseOrder::query()
             ->withTrashed() // incluye activas + anuladas
-            ->with('kanbanStatus') // cargar relación kanban status
+            ->with(['kanbanStatus', 'billTo']) // cargar relación kanban status y billTo para cliente
             ->when($this->search, function ($query) {
                 $searchTerm = strtolower($this->search);
                 $query->where(function ($query) use ($searchTerm) {

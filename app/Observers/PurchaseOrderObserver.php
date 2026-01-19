@@ -32,7 +32,7 @@ class PurchaseOrderObserver
         'date_booking_authorized',
         'date_theorical_load',
         'date_variable_date',
-        'date_carga_po',
+        'carga_lista_validada',
         'date_received',
         'date_eta_updated',
         'date_etd_updated',
@@ -194,16 +194,21 @@ class PurchaseOrderObserver
                     ]);
 
                     // Dispatch webhook event if status changed
+                    // NOTE: We do NOT dispatch purchase_order.updated here to avoid duplicates
+                    // The controllers/Livewire components already dispatch purchase_order.updated
+                    // This observer only handles audit comments and status_changed events
                     if ($isStatusChange && function_exists('dispatch_webhook')) {
-                        $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus']);
+                        $purchaseOrder->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
                         dispatch_webhook('purchase_order.status_changed', [
                             'purchase_order_id' => $purchaseOrder->id,
                             'order_number' => $purchaseOrder->order_number,
                             'old_status' => $oldValues['status'] ?? $oldValues['kanban_status_id'] ?? null,
                             'new_status' => $trackedChanges['status'] ?? $trackedChanges['kanban_status_id'] ?? null,
-                            'data' => $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus'])->toArray(), // Incluye todos los campos (143 campos)
+                            'data' => $purchaseOrder->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user'])->toArray(), // Incluye todos los campos (143 campos)
                         ]);
                     }
+                    // NOTE: purchase_order.updated is NOT dispatched here to avoid duplicate webhooks
+                    // Controllers and Livewire components handle purchase_order.updated events
                 } catch (\Exception $e) {
                     // Si falla la creación del comentario, solo loguear el error
                     // No interrumpir el flujo principal
