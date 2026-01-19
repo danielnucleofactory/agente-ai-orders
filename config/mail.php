@@ -123,6 +123,14 @@ return [
     |
     */
 
+    'support' => [
+        'address' => env('MAIL_SUPPORT_EMAIL', 'soporte@example.com'),
+    ],
+    'admin' => [
+        'address' => env('MAIL_ADMIN_EMAIL', null),
+    ],
+
+    // Mantener compatibilidad con código legacy
     'support_email' => env('MAIL_SUPPORT_EMAIL', null),
     'admin_email' => env('MAIL_ADMIN_EMAIL', null),
 

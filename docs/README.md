@@ -18,5 +18,8 @@ La documentación está organizada en las siguientes secciones principales:
     - [Guías de Desarrollo con IA](./guides/AI_DEVELOPMENT_GUIDELINES.md) - Mejores prácticas para desarrollo asistido por IA
     - [Mejores Prácticas del Proyecto](./guides/PROJECT_BEST_PRACTICES.md) - Guía completa de mejores prácticas de desarrollo
 
+- **[/docs/SUPPORT_EMAIL_SYSTEM.md](./SUPPORT_EMAIL_SYSTEM.md):**
+  - **Sistema de Envío de Correos con CC.** Documentación completa del sistema de notificaciones por correo electrónico que envía un único correo a soporte con copia (CC) al usuario y administrador. Incluye configuración, uso, tests y personalización.
+
 ## Cómo Mantener la Documentación
 Para asegurar que esta documentación se mantenga siempre sincronizada con el código, por favor sigue las instrucciones en la [**Guía para Actualizar la Documentación**](./guides/PROMPT_UPDATE_DOCS.md).
