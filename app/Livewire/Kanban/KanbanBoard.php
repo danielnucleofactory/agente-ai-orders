@@ -712,6 +712,58 @@ class KanbanBoard extends Component
         }
     }
 
+    /**
+     * Se ejecuta automáticamente cuando newColumnId cambia.
+     * Recarga los maestros correspondientes a la nueva etapa.
+     */
+    public function updatedNewColumnId($value)
+    {
+        // Solo cargar maestros si hay una tarea actual y una PO válida
+        if (!$this->currentTaskId) {
+            return;
+        }
+
+        $po = PurchaseOrder::find($this->currentTaskId);
+        if (!$po || !$po->trading_company) {
+            return;
+        }
+
+        $newStage = (int)($value ?? 0);
+
+        // Limpiar arrays de maestros antes de cargar nuevos
+        $this->serviceProviderArray = [];
+        $this->shippingLineArray = [];
+        $this->departurePortArray = [];
+        $this->arrivalPortArray = [];
+        $this->containerTypeArray = [];
+        $this->transportTypeArray = [];
+
+        // Cargar maestros según la nueva etapa
+        // Etapa 2 (Producción) o 3 (Booking): service_provider
+        if ($newStage == 2 || $newStage == 3) {
+            $this->service_provider = $po->service_provider;
+            $this->loadServiceProviders($po->trading_company, $po->service_provider);
+        }
+
+        // Etapa 3 (Booking): transport_types
+        if ($newStage == 3) {
+            $this->mode = $po->mode;
+            $this->loadTransportTypes($po->trading_company, $po->mode);
+        }
+
+        // Etapa 5 (En Tránsito): shipping_line, puertos, container_type
+        if ($newStage == 5) {
+            $this->shipping_line = $po->shipping_line;
+            $this->departure_port = $po->departure_port;
+            $this->arrival_port = $po->arrival_port;
+            $this->container_type = $po->container_type;
+            
+            $this->loadShippingLines($po->trading_company, $po->shipping_line);
+            $this->loadPorts($po->trading_company, $po->departure_port, $po->arrival_port);
+            $this->loadContainerTypes($po->trading_company, $po->container_type);
+        }
+    }
+
     public function saveAttachment($poId)
     {
         $this->validate([
