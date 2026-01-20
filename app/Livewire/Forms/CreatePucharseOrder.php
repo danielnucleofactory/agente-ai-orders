@@ -850,7 +850,9 @@ class CreatePucharseOrder extends Component
                 $this->eta_dates_difference = $this->purchaseOrder->eta_dates_difference;
 
                 $this->date_eta_initial = optional($this->purchaseOrder->date_eta_initial)?->format('Y-m-d');
-                $this->date_eta_updated = optional($this->purchaseOrder->date_eta_updated)?->format('Y-m-d');
+                // ETA Variable se guarda en date_eta, no en date_eta_updated (que no existe en BD)
+                // Cargar desde date_eta en lugar de date_eta_updated
+                $this->date_eta_updated = optional($this->purchaseOrder->date_eta)?->format('Y-m-d');
 
                 //Campos extras que faltaban
                 $this->cbm               = $this->purchaseOrder->cbm;
@@ -1840,24 +1842,6 @@ class CreatePucharseOrder extends Component
 
     public function updatePurchaseOrder($id) {
         try {
-            // #region agent log
-            \Log::debug('updatePurchaseOrder ENTRY', [
-                'id' => 'log_'.time().'_1',
-                'timestamp' => time()*1000,
-                'location' => 'CreatePucharseOrder.php:1843',
-                'message' => 'updatePurchaseOrder ENTRY',
-                'data' => [
-                    'po_id' => $id,
-                    'date_eta_updated_value' => $this->date_eta_updated,
-                    'date_eta_value' => $this->date_eta,
-                    'date_ata_value' => $this->date_ata,
-                    'date_eta_initial_value' => $this->date_eta_initial
-                ],
-                'sessionId' => 'debug-session',
-                'runId' => 'run1',
-                'hypothesisId' => 'A'
-            ]);
-            // #endregion
             \Log::info('=== INICIO updatePurchaseOrder ===', [
                 'id' => $id,
                 'order_number' => $this->order_number,
@@ -2060,65 +2044,10 @@ class CreatePucharseOrder extends Component
 
                 $purchaseOrder = \App\Models\PurchaseOrder::findOrFail($id);
 
-                // #region agent log
-                \Log::debug('ANTES fill - poData contiene', [
-                    'id' => 'log_'.time().'_2',
-                    'timestamp' => time()*1000,
-                    'location' => 'CreatePucharseOrder.php:2040',
-                    'message' => 'ANTES fill - poData contiene',
-                    'data' => [
-                        'date_eta_in_poData' => isset($poData['date_eta']),
-                        'date_eta_value' => $poData['date_eta'] ?? 'NOT_SET',
-                        'date_ata_in_poData' => isset($poData['date_ata']),
-                        'date_ata_value' => $poData['date_ata'] ?? 'NOT_SET',
-                        'date_eta_initial_in_poData' => isset($poData['date_eta_initial']),
-                        'date_eta_initial_value' => $poData['date_eta_initial'] ?? 'NOT_SET'
-                    ],
-                    'sessionId' => 'debug-session',
-                    'runId' => 'run1',
-                    'hypothesisId' => 'A'
-                ]);
-                // #endregion
                 // Usar getDirty() para obtener solo campos que realmente cambiaron
                 // Asignar valores primero sin guardar para que Eloquent detecte cambios
                 $purchaseOrder->fill($poData);
-                // #region agent log
-                \Log::debug('DESPUES fill - valores en modelo', [
-                    'id' => 'log_'.time().'_3',
-                    'timestamp' => time()*1000,
-                    'location' => 'CreatePucharseOrder.php:2043',
-                    'message' => 'DESPUES fill - valores en modelo',
-                    'data' => [
-                        'date_eta_in_model' => isset($purchaseOrder->date_eta),
-                        'date_eta_value' => $purchaseOrder->date_eta ? ($purchaseOrder->date_eta instanceof \Carbon\Carbon ? $purchaseOrder->date_eta->format('Y-m-d') : $purchaseOrder->date_eta) : 'NOT_SET',
-                        'date_ata_in_model' => isset($purchaseOrder->date_ata),
-                        'date_ata_value' => $purchaseOrder->date_ata ? ($purchaseOrder->date_ata instanceof \Carbon\Carbon ? $purchaseOrder->date_ata->format('Y-m-d') : $purchaseOrder->date_ata) : 'NOT_SET',
-                        'date_eta_initial_in_model' => isset($purchaseOrder->date_eta_initial),
-                        'date_eta_initial_value' => $purchaseOrder->date_eta_initial ? ($purchaseOrder->date_eta_initial instanceof \Carbon\Carbon ? $purchaseOrder->date_eta_initial->format('Y-m-d') : $purchaseOrder->date_eta_initial) : 'NOT_SET'
-                    ],
-                    'sessionId' => 'debug-session',
-                    'runId' => 'run1',
-                    'hypothesisId' => 'A'
-                ]);
-                // #endregion
                 $dirtyFields = $purchaseOrder->getDirty();
-                // #region agent log
-                \Log::debug('getDirty campos modificados', [
-                    'id' => 'log_'.time().'_4',
-                    'timestamp' => time()*1000,
-                    'location' => 'CreatePucharseOrder.php:2045',
-                    'message' => 'getDirty campos modificados',
-                    'data' => [
-                        'dirty_fields' => array_keys($dirtyFields),
-                        'date_eta_is_dirty' => isset($dirtyFields['date_eta']),
-                        'date_ata_is_dirty' => isset($dirtyFields['date_ata']),
-                        'date_eta_initial_is_dirty' => isset($dirtyFields['date_eta_initial'])
-                    ],
-                    'sessionId' => 'debug-session',
-                    'runId' => 'run1',
-                    'hypothesisId' => 'A'
-                ]);
-                // #endregion
 
                 // Construir array de cambios solo con campos que realmente cambiaron
                 $changes = [];
@@ -2140,77 +2069,11 @@ class CreatePucharseOrder extends Component
                     'date_ata_in_changes' => isset($changes['date_ata']),
                 ]);
 
-                // #region agent log
-                \Log::debug('ANTES save - intentando guardar', [
-                    'id' => 'log_'.time().'_5a',
-                    'timestamp' => time()*1000,
-                    'location' => 'CreatePucharseOrder.php:2077',
-                    'message' => 'ANTES save - intentando guardar',
-                    'data' => [
-                        'po_id' => $purchaseOrder->id,
-                        'date_eta_before_save' => $purchaseOrder->date_eta ? ($purchaseOrder->date_eta instanceof \Carbon\Carbon ? $purchaseOrder->date_eta->format('Y-m-d') : $purchaseOrder->date_eta) : 'NULL',
-                        'date_ata_before_save' => $purchaseOrder->date_ata ? ($purchaseOrder->date_ata instanceof \Carbon\Carbon ? $purchaseOrder->date_ata->format('Y-m-d') : $purchaseOrder->date_ata) : 'NULL',
-                        'date_eta_type' => gettype($purchaseOrder->date_eta),
-                        'date_ata_type' => gettype($purchaseOrder->date_ata)
-                    ],
-                    'sessionId' => 'debug-session',
-                    'runId' => 'run1',
-                    'hypothesisId' => 'A'
-                ]);
-                // #endregion
                 try {
                     $purchaseOrder->save();
-                    // #region agent log
-                    \Log::debug('DESPUES save - save() ejecutado', [
-                        'id' => 'log_'.time().'_5b',
-                        'timestamp' => time()*1000,
-                        'location' => 'CreatePucharseOrder.php:2079',
-                        'message' => 'DESPUES save - save() ejecutado',
-                        'data' => [
-                            'po_id' => $purchaseOrder->id,
-                            'save_success' => true
-                        ],
-                        'sessionId' => 'debug-session',
-                        'runId' => 'run1',
-                        'hypothesisId' => 'A'
-                    ]);
-                    // #endregion
                 } catch (\Exception $saveException) {
-                    // #region agent log
-                    \Log::debug('ERROR en save()', [
-                        'id' => 'log_'.time().'_5c',
-                        'timestamp' => time()*1000,
-                        'location' => 'CreatePucharseOrder.php:2081',
-                        'message' => 'ERROR en save()',
-                        'data' => [
-                            'po_id' => $purchaseOrder->id,
-                            'error_message' => $saveException->getMessage(),
-                            'error_class' => get_class($saveException)
-                        ],
-                        'sessionId' => 'debug-session',
-                        'runId' => 'run1',
-                        'hypothesisId' => 'A'
-                    ]);
-                    // #endregion
                     throw $saveException;
                 }
-                // #region agent log
-                \Log::debug('DESPUES save - valores guardados en BD', [
-                    'id' => 'log_'.time().'_5',
-                    'timestamp' => time()*1000,
-                    'location' => 'CreatePucharseOrder.php:2058',
-                    'message' => 'DESPUES save - valores guardados en BD',
-                    'data' => [
-                        'po_id' => $purchaseOrder->id,
-                        'date_eta_guardado' => $purchaseOrder->fresh()->date_eta ? $purchaseOrder->fresh()->date_eta->format('Y-m-d') : 'NULL',
-                        'date_ata_guardado' => $purchaseOrder->fresh()->date_ata ? $purchaseOrder->fresh()->date_ata->format('Y-m-d') : 'NULL',
-                        'date_eta_initial_guardado' => $purchaseOrder->fresh()->date_eta_initial ? $purchaseOrder->fresh()->date_eta_initial->format('Y-m-d') : 'NULL'
-                    ],
-                    'sessionId' => 'debug-session',
-                    'runId' => 'run1',
-                    'hypothesisId' => 'A'
-                ]);
-                // #endregion
 
                 \Log::info('PO actualizada exitosamente', [
                     'id' => $purchaseOrder->id,
