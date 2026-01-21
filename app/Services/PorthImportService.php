@@ -4,11 +4,18 @@ namespace App\Services;
 
 use App\Helpers\PorthImportHelper;
 use App\Models\PurchaseOrder;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PorthImportService
 {
+    /**
+     * Email del usuario sistema para sincronizaciones automáticas
+     */
+    protected const SYSTEM_USER_EMAIL = 'apps@raga-x.ai';
+
     public function __construct(
         protected PorthImportHelper $helper
     ) {
@@ -18,40 +25,100 @@ class PorthImportService
      * Importa un detalle de envío de Porth y lo guarda en las PurchaseOrders.
      * Actualiza TODAS las POs que tienen el mismo porth_id.
      * 
+     * Autentica temporalmente al usuario sistema "Next Orders" para que
+     * los cambios se registren en el historial de auditoría.
+     * 
      * @param array $data Datos del shipment de Porth
      * @return PurchaseOrder|null Primera PO actualizada o null si no hay match
      */
     public function importShipment(array $data): ?PurchaseOrder
     {
-        return DB::transaction(function () use ($data) {
-            $purchaseOrders = $this->resolvePurchaseOrders($data);
+        // Guardar usuario actual (si hay uno)
+        $previousUser = Auth::user();
+        
+        // Autenticar usuario sistema para que el Observer registre los cambios
+        $this->authenticateSystemUser();
 
-            if ($purchaseOrders->isEmpty()) {
-                Log::warning('porth_import:no_purchase_order_match', [
-                    'porth_id' => $data['id'] ?? null,
-                ]);
-                return null;
-            }
+        try {
+            return DB::transaction(function () use ($data) {
+                $purchaseOrders = $this->resolvePurchaseOrders($data);
 
-            $firstPO = null;
-            $updatedCount = 0;
-
-            foreach ($purchaseOrders as $po) {
-                $this->updatePurchaseOrder($po, $data);
-
-                if (!$firstPO) {
-                    $firstPO = $po->fresh();
+                if ($purchaseOrders->isEmpty()) {
+                    Log::warning('porth_import:no_purchase_order_match', [
+                        'porth_id' => $data['id'] ?? null,
+                    ]);
+                    return null;
                 }
-                $updatedCount++;
+
+                $firstPO = null;
+                $updatedCount = 0;
+
+                foreach ($purchaseOrders as $po) {
+                    $this->updatePurchaseOrder($po, $data);
+
+                    if (!$firstPO) {
+                        $firstPO = $po->fresh();
+                    }
+                    $updatedCount++;
+                }
+
+                Log::info('porth_import:completed', [
+                    'porth_id' => $data['id'] ?? null,
+                    'updated_count' => $updatedCount,
+                ]);
+
+                return $firstPO;
+            });
+        } finally {
+            // Restaurar usuario anterior o desautenticar
+            $this->restoreUser($previousUser);
+        }
+    }
+
+    /**
+     * Autentica el usuario sistema "Raga-X Apps" para registrar cambios en auditoría
+     */
+    protected function authenticateSystemUser(): void
+    {
+        try {
+            $systemUser = User::where('email', self::SYSTEM_USER_EMAIL)->first();
+            
+            if ($systemUser) {
+                Auth::login($systemUser);
+                Log::debug('porth_import:system_user_authenticated', [
+                    'user_id' => $systemUser->id,
+                    'user_name' => $systemUser->name,
+                ]);
+            } else {
+                Log::warning('porth_import:system_user_not_found', [
+                    'email' => self::SYSTEM_USER_EMAIL,
+                    'message' => 'Los cambios no se registrarán en el historial de auditoría',
+                ]);
             }
-
-            Log::info('porth_import:completed', [
-                'porth_id' => $data['id'] ?? null,
-                'updated_count' => $updatedCount,
+        } catch (\Exception $e) {
+            Log::error('porth_import:auth_error', [
+                'error' => $e->getMessage(),
             ]);
+        }
+    }
 
-            return $firstPO;
-        });
+    /**
+     * Restaura el usuario anterior o desautentica
+     */
+    protected function restoreUser($previousUser): void
+    {
+        try {
+            if ($previousUser) {
+                Auth::login($previousUser);
+            } else {
+                Auth::logout();
+            }
+        } catch (\Exception $e) {
+            // Ignorar errores de logout en contexto de consola
+            Log::debug('porth_import:restore_user_skipped', [
+                'reason' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

@@ -17,6 +17,13 @@ class Kernel extends ConsoleKernel
             ->hourly()
             ->withoutOverlapping()
             ->runInBackground();
+
+        // Importar datos de POs recién vinculadas cada 5 minutos
+        // Busca POs con porth_id pero sin last_porth_sync_at (pendientes de primera importación)
+        $schedule->command('porth:import-pending --limit=20')
+            ->everyFiveMinutes()
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**
