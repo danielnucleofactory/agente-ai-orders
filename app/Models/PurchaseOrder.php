@@ -593,4 +593,71 @@ class PurchaseOrder extends Model implements HasMedia
 
         return $this->save();
     }
+
+    /**
+     * Boot method to add event listeners
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Disparar sincronización automática cuando se crea o actualiza
+        static::saved(function ($purchaseOrder) {
+            static::dispatchPorthSync($purchaseOrder);
+        });
+
+        static::updated(function ($purchaseOrder) {
+            static::dispatchPorthSync($purchaseOrder);
+        });
+    }
+
+    /**
+     * Disparar sincronización con Porth
+     */
+    protected static function dispatchPorthSync($purchaseOrder)
+    {
+        // Verificar si la sincronización está habilitada
+        $syncEnabled = config('services.porth.sync_enabled', true);
+        if (!$syncEnabled) {
+            \Log::info('Porth sync disabled by configuration', [
+                'purchase_order_id' => $purchaseOrder->id,
+                'sync_enabled' => $syncEnabled
+            ]);
+            return;
+        }
+
+        // Verificar si hay campos que requieren sincronización
+        $syncFields = ['tracking_id', 'mbl_number', 'container_number'];
+        $hasChanges = false;
+        $hasValidIdentifier = false;
+
+        // Verificar si hay algún identificador válido
+        foreach ($syncFields as $field) {
+            if (!empty($purchaseOrder->$field)) {
+                $hasValidIdentifier = true;
+                // Si este campo cambió, es un cambio válido
+                if ($purchaseOrder->isDirty($field)) {
+                    $hasChanges = true;
+                    break;
+                }
+            }   
+        }
+
+        // Sincronizar si:
+        // 1. Cambió un campo relevante Y no tiene porth_id, O
+        // 2. Tiene un identificador válido pero no tiene porth_id (por si acaso no se sincronizó antes)
+        if (($hasChanges || $hasValidIdentifier) && empty($purchaseOrder->porth_id)) {
+            \Log::info('Dispatching Porth sync job for PurchaseOrder', [
+                'purchase_order_id' => $purchaseOrder->id,
+                'changed_fields' => array_filter($syncFields, function($field) use ($purchaseOrder) {
+                    return $purchaseOrder->isDirty($field) && !empty($purchaseOrder->$field);
+                })
+            ]);
+
+            // Disparar job de sincronización con delay
+            \App\Jobs\PorthSyncJob::dispatch($purchaseOrder->id, get_class($purchaseOrder))
+                ->onQueue('porth-sync')
+                ->delay(now()->addSeconds(5));
+        }
+    }
 }
