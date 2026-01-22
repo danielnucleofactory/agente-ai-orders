@@ -199,6 +199,20 @@ class PurchaseOrderController extends Controller
                     $kanbanStatusId = $status?->id;
                 }
 
+                // Si el status es null o es 1 (etapa "Nuevo" oculta), buscar el primer status visible que no sea 1
+                if ($kanbanStatusId === null || $kanbanStatusId === 1) {
+                    if ($kanbanBoard) {
+                        $firstVisibleStatus = $kanbanBoard->statuses()
+                            ->where('is_hidden', false)
+                            ->where('id', '!=', 1)
+                            ->orderBy('id')
+                            ->first();
+                        $kanbanStatusId = $firstVisibleStatus?->id ?? 2;
+                    } else {
+                        $kanbanStatusId = 2;
+                    }
+                }
+
                 // 7) Campos base
                 $poData = [
                     'company_id'   => 1,
@@ -573,6 +587,20 @@ class PurchaseOrderController extends Controller
                 ->first()
                 ?: $kanbanBoard->defaultStatus();
             $kanbanStatusId = $status?->id;
+        }
+
+        // Si el status es null o es 1 (etapa "Nuevo" oculta), buscar el primer status visible que no sea 1
+        if ($kanbanStatusId === null || $kanbanStatusId === 1) {
+            if ($kanbanBoard) {
+                $firstVisibleStatus = $kanbanBoard->statuses()
+                    ->where('is_hidden', false)
+                    ->where('id', '!=', 1)
+                    ->orderBy('id')
+                    ->first();
+                $kanbanStatusId = $firstVisibleStatus?->id ?? 2;
+            } else {
+                $kanbanStatusId = 2;
+            }
         }
 
         // Campos base
