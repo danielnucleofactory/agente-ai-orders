@@ -361,10 +361,17 @@ class PurchaseOrderController extends Controller
                               'bonded_warehouse_exit', 'receipt_note_date', 'estimated_dc_availability_date',
                               'date_invoice_received', 'date_vendor_document_received', 'dif_load_date', 'emision_date_po',
                               'forwader_date', 'date_consolidation', 'release_date', 'date_required_in_destination'];
-                $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields, $dateFields) {
+                // Campos booleanos que deben preservarse incluso si son false
+                $booleanFields = ['is_dropship', 'applies_tlc', 'applies_af', 'port_of_loading_validated', 'has_facture_merca',
+                                 'uses_bonded_warehouse', 'apply_technical_note', 'etd_initial_validated', 'used_rate_ok'];
+                $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields, $dateFields, $booleanFields) {
                     // Permitir null para campos de texto opcionales (para que se guarden explícitamente como null)
                     if (in_array($k, $optionalTextFields)) {
                         return true; // Mantener siempre estos campos, incluso si son null
+                    }
+                    // Mantener campos booleanos (incluso si son false)
+                    if (in_array($k, $booleanFields)) {
+                        return true;
                     }
                     // Permitir valores numéricos 0 (que son válidos)
                     if (in_array($k, $numericFields)) {
@@ -376,7 +383,7 @@ class PurchaseOrderController extends Controller
                         return true;
                     }
                     // Para otros campos, eliminar null y strings vacíos, pero permitir 0 y false
-                    return $v !== null && $v !== '' && $v !== false;
+                    return $v !== null && $v !== '';
                 }, ARRAY_FILTER_USE_BOTH);
 
                 // 15) Crear PO
