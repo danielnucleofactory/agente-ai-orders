@@ -266,7 +266,7 @@ class PurchaseOrderController extends Controller
                 // 9) ===== NEW FIELDS FOR OLO (boolean) =====
                 foreach ([
                              'is_dropship','applies_tlc','applies_af','port_of_loading_validated','has_facture_merca',
-                             'uses_bonded_warehouse','apply_technical_note','etd_initial_validated',
+                             'uses_bonded_warehouse','apply_technical_note','etd_initial_validated','used_rate_ok',
                          ] as $f) {
                     // Verificar si el campo existe en el array
                     if (array_key_exists($f, $general) || isset($general[$f])) {
@@ -275,8 +275,6 @@ class PurchaseOrderController extends Controller
                         $poData[$f] = false;
                     }
                 }
-                // Forzar used_rate_ok siempre como false
-                $poData['used_rate_ok'] = false;
 
                 // 10) ===== NEW FIELDS FOR OLO (int) =====
                 foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference','pallet_quantity','pallet_quantity_real'] as $f) {
