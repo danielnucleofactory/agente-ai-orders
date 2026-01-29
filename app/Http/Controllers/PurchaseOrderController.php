@@ -325,6 +325,14 @@ class PurchaseOrderController extends Controller
                     }
                 }
 
+                // date_carga_po (alias): lo que llega en date_carga_po se replica en date_variable_date
+                if (array_key_exists('date_carga_po', $general) && $general['date_carga_po'] !== null && $general['date_carga_po'] !== '') {
+                    $parsedDate = $parseDate($general['date_carga_po']);
+                    if ($parsedDate !== null) {
+                        $poData['date_variable_date'] = $parsedDate;
+                    }
+                }
+
                 // 13) Cálculo de diferencias (firmadas): positivo = atraso; negativo = adelanto
                 // ETD: preferimos (updated - initial). Si no hay initial, caemos a (updated - etd).
                 $etdBase = $poData['date_etd_initial'] ?? $poData['date_etd'] ?? null;
@@ -764,6 +772,14 @@ class PurchaseOrderController extends Controller
             }
         }
 
+        // date_carga_po (alias): lo que llega en date_carga_po se replica en date_variable_date
+        if (array_key_exists('date_carga_po', $general) && $general['date_carga_po'] !== null && $general['date_carga_po'] !== '') {
+            $parsedDate = $parseDate($general['date_carga_po']);
+            if ($parsedDate !== null) {
+                $poData['date_variable_date'] = $parsedDate;
+            }
+        }
+
         // Cálculo de diferencias
         $etdBase = $poData['date_etd_initial'] ?? $poData['date_etd'] ?? null;
         $etdNew  = $poData['date_etd_updated'] ?? null;
@@ -1182,6 +1198,7 @@ class PurchaseOrderController extends Controller
             'vgm_cut_date'            => 'vgm_cut_date',
             'date_theorical_load'     => 'date_theorical_load',
             'date_variable_date'      => 'date_variable_date',
+            'date_carga_po'            => 'date_variable_date', // alias: se guarda en date_variable_date
             'carga_lista_validada'    => 'carga_lista_validada',
             'release_date'            => 'release_date',
             'date_consolidation'      => 'date_consolidation',
@@ -1308,6 +1325,7 @@ class PurchaseOrderController extends Controller
                 case 'vgm_cut_date':
                 case 'date_theorical_load':
                 case 'date_variable_date':
+                case 'date_carga_po': // alias: se guarda en date_variable_date
                 case 'carga_lista_validada':
                 case 'release_date':
                 case 'date_consolidation':
