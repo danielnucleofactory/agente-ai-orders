@@ -865,7 +865,8 @@ class CreatePucharseOrder extends Component
                 //Campos extras que faltaban
                 $this->cbm               = $this->purchaseOrder->cbm;
                 $this->consolidator_name = $this->purchaseOrder->consolidator_name;
-                $this->vendor_number     = $this->purchaseOrder->vendor_number;
+                // No sobrescribir vendor_number si la PO lo tiene vacío (mantener el asignado desde vendor en mount)
+                $this->vendor_number     = $this->purchaseOrder->vendor_number ?? $this->vendor_number;
 
                 $this->dif_load_date     = optional($this->purchaseOrder->dif_load_date)?->format('Y-m-d');
                 $this->emision_date_po   = optional($this->purchaseOrder->emision_date_po)?->format('Y-m-d');
