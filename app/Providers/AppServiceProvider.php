@@ -19,9 +19,11 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\Failed;
+use Illuminate\Mail\Events\MessageSending;
 use App\Listeners\LogUserLogin;
 use App\Listeners\LogUserLogout;
 use App\Listeners\LogFailedLogin;
+use App\Listeners\AddSupportReplyTo;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -47,6 +49,9 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(Login::class, LogUserLogin::class);
         Event::listen(Logout::class, LogUserLogout::class);
         Event::listen(Failed::class, LogFailedLogin::class);
+
+        // Agregar Reply-To de soporte a todos los correos salientes (si no tienen uno definido)
+        Event::listen(MessageSending::class, AddSupportReplyTo::class);
 
         // Registrar componente de breadcrumb explícitamente
         Blade::component('breadcrumb', Breadcrumb::class);
