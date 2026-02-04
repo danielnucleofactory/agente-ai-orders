@@ -16,7 +16,7 @@
 
 @endphp
 
-<div x-data="{
+<div name="{{ $name }}" x-data="{
     show: @js($show),
     focusables() {
         // All focusable element types...

@@ -57,10 +57,10 @@ class KanbanBoard extends Component
     public $container_number;
     public $mbl_number;
     public $bill_of_lading;
-    public $shipment_amount;
+    public $freight_amount;
     public $shipping_line;
-    public $shipment_status;
-    public $merchandise_invoice;
+    public $arrival_status;
+    public $factura_merca;
     public $tracking_id;
     public $departure_port;
     public $arrival_port;
@@ -490,7 +490,7 @@ class KanbanBoard extends Component
     }
 
     //Metodo para guardar datos y luego mover de etapa
-    public function saveAndMove(): void
+    public function saveAndMove(): array
     {
         $poId = (int)($this->currentTaskId ?? 0);
         $stage = (int)($this->newColumnId ?? 0);
@@ -499,12 +499,12 @@ class KanbanBoard extends Component
         if ($po && $po->trashed()) {
             session()->flash('message', 'Esta orden está anulada y no puede cambiar de etapa.');
             $this->dispatch('refreshKanban'); // revierte visualmente el movimiento
-            return;
+            return ['success' => false, 'message' => 'Esta orden está anulada y no puede cambiar de etapa.'];
         }
 
         if (!$poId || !$stage) {
             session()->flash('message', 'Falta la PO o la etapa.');
-            return;
+            return ['success' => false, 'message' => 'Falta la PO o la etapa.'];
         }
 
         // Validar que la etapa destino no esté oculta
@@ -512,7 +512,7 @@ class KanbanBoard extends Component
         if ($targetStatus && $targetStatus->is_hidden) {
             session()->flash('message', 'No se puede mover a una etapa oculta.');
             $this->dispatch('refreshKanban');
-            return;
+            return ['success' => false, 'message' => 'No se puede mover a una etapa oculta.'];
         }
 
         try {
@@ -534,7 +534,7 @@ class KanbanBoard extends Component
             session()->flash('message', $saveResult['message'] ?? 'No se pudo guardar los datos de la etapa.');
             // NO mover la tarea si el guardado falló
             $this->dispatch('refreshKanban');
-            return;
+            return ['success' => false, 'message' => $saveResult['message'] ?? 'No se pudo guardar los datos de la etapa.'];
         }
 
         // 3) Mover a la etapa nueva (y notificar)
@@ -551,6 +551,8 @@ class KanbanBoard extends Component
 
         // 5) Cerrar el modal unificado
         $this->dispatch('close-modal', 'modal-po-stage-change');
+        
+        return ['success' => true, 'message' => 'PO movida correctamente.'];
     }
 
     /**
@@ -686,15 +688,15 @@ class KanbanBoard extends Component
             }
             $this->container_number = $po->container_number;
             $this->mbl_number = $po->mbl_number;
-            $this->shipment_amount = $po->shipment_amount ?? null;
+            $this->freight_amount = $po->freight_amount ?? null;
             // shipping_line, departure_port y arrival_port ya se cargaron arriba si estamos en etapa 5
             if ($newColumnId != 5) {
                 $this->shipping_line = $po->shipping_line;
                 $this->departure_port = $po->departure_port;
                 $this->arrival_port = $po->arrival_port;
             }
-            $this->shipment_status = $po->shipment_status ?? null;
-            $this->merchandise_invoice = $po->merchandise_invoice ?? null;
+            $this->arrival_status = $po->arrival_status ?? null; // Solo lectura
+            $this->factura_merca = $po->factura_merca ?? null;
             $this->tracking_id = $po->tracking_id;
 
             // Puerto - convertir fechas al formato Y-m-d
@@ -980,9 +982,9 @@ class KanbanBoard extends Component
             5 => [
                 'date_atd', 'date_eta', 'date_eta_initial', 'container_type',
                 'container_number', 'mbl_number',
-                'shipment_amount', 'shipping_line', 'shipment_status', 'merchandise_invoice',
+                'freight_amount', 'shipping_line', 'factura_merca',
                 'tracking_id', 'departure_port', 'arrival_port',
-            ], // En transito
+            ], // En transito (arrival_status es solo lectura, no se guarda aquí)
             6 => ['date_ata'], // Puerto
             7 => ['bonded_warehouse_enter', 'bonded_warehouse_exit', 'date_ata'], // Alm. Fiscal
             9 => ['estimated_dc_availability_date'], // Recibiendo CDI
@@ -1024,14 +1026,18 @@ class KanbanBoard extends Component
         try {
             DB::beginTransaction();
 
+            // Verificar que la PO exista ANTES del update
+            $poExists = DB::table('purchase_orders')->where('id', $poId)->exists();
+            if (!$poExists) {
+                throw new \RuntimeException('PO no encontrada');
+            }
+
             $updated = DB::table('purchase_orders')
                 ->where('id', $poId)
                 ->update($payload);
 
-            // si quieres, puedes verificar que exista la PO
-             if ($updated === 0) { 
-                 throw new \RuntimeException('PO no encontrada'); 
-             }
+            // Nota: $updated === 0 es válido si los datos ya tenían los mismos valores
+            // No es un error, simplemente no hubo cambios que hacer
 
             // NUEVO: Actualizar automáticamente arrival_status y delay_days si se actualizó la ETA
             $po = PurchaseOrder::find($poId);
