@@ -344,8 +344,8 @@
                             <div>
                                 <x-form-input>
                                     <x-slot:label>Monto</x-slot:label>
-                                    <x-slot:input type="number" step="0.01" inputmode="decimal" name="shipment_amount" placeholder="0" wire:model="shipment_amount" autocomplete="off"
-                                                  class="pr-10 {{ $errors->has('shipment_amount') ? 'border-red-500' : '' }}"></x-slot:input>
+                                    <x-slot:input type="number" step="0.01" inputmode="decimal" name="freight_amount" placeholder="0" wire:model="freight_amount" autocomplete="off"
+                                                  class="pr-10 {{ $errors->has('freight_amount') ? 'border-red-500' : '' }}"></x-slot:input>
                                     {{-- Error oculto --}}
                                 </x-form-input>
                             </div>
@@ -362,18 +362,18 @@
 
                             <div>
                                 <x-form-input>
-                                    <x-slot:label>Estado</x-slot:label>
-                                    <x-slot:input name="shipment_status" wire:model="shipment_status" placeholder="Ingrese estado"
-                                                  class="pr-10 {{ $errors->has('shipment_status') ? 'border-red-500' : '' }}"></x-slot:input>
-                                    {{-- Error oculto --}}
+                                    <x-slot:label>Estado de Llegada</x-slot:label>
+                                    <x-slot:input name="arrival_status" wire:model="arrival_status" readonly disabled
+                                                  class="pr-10 bg-gray-100 cursor-not-allowed"></x-slot:input>
+                                    {{-- Campo de solo lectura --}}
                                 </x-form-input>
                             </div>
 
                             <div>
                                 <x-form-input>
                                     <x-slot:label>Factura de Mercancía</x-slot:label>
-                                    <x-slot:input name="merchandise_invoice" wire:model="merchandise_invoice" placeholder="Ingrese factura de mercancia"
-                                                  class="pr-10 {{ $errors->has('merchandise_invoice') ? 'border-red-500' : '' }}"></x-slot:input>
+                                    <x-slot:input name="factura_merca" wire:model="factura_merca" placeholder="Ingrese factura de mercancía"
+                                                  class="pr-10 {{ $errors->has('factura_merca') ? 'border-red-500' : '' }}"></x-slot:input>
                                     {{-- Error oculto --}}
                                 </x-form-input>
                             </div>
@@ -473,12 +473,12 @@
 
                 {{-- Etapa 9: Recibiendo CDI (ID 9) --}}
                 <div class="{{ $newColumnId == 9 ? '' : 'hidden' }}">
-                    <div class="mb-8">
+                    <div class="mb-8" wire:ignore>
                         <x-form-input>
                             <x-slot:label>Fecha Disp. Bodega Estimada <span class="text-red-500">*</span></x-slot:label>
                             <x-slot:input type="date" name="estimated_dc_availability_date" wire:model="estimated_dc_availability_date"
                                           class="pr-10 {{ $errors->has('estimated_dc_availability_date') ? 'border-red-500' : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('estimated_dc_availability_date') }}</x-slot:error>
+                            {{-- Error oculto --}}
                         </x-form-input>
                     </div>
                     <div class="mb-8">
@@ -524,11 +524,24 @@
                         </div>
                     </div>
 
+                    {{-- Mostrar errores de validación --}}
+                    @if ($errors->any())
+                        <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p class="text-red-600 font-medium text-sm mb-1">Por favor corrija los siguientes errores:</p>
+                            <ul class="list-disc list-inside text-red-500 text-sm">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     <div class="flex gap-[1.875rem]">
                         <x-secondary-button wire:click="cancelModal" class="w-full">Cancelar</x-secondary-button>
                         <x-primary-button 
-                            x-on:click="syncKanbanDateFieldsAndSave($wire)"
-                            class="w-full">Continuar</x-primary-button>
+                            x-on:click="syncKanbanDateFieldsAndSave($wire, $event.currentTarget)"
+                            class="w-full"
+                            id="btn-continuar-stage">Continuar</x-primary-button>
                     </div>
                 </div>
             </div>
@@ -672,18 +685,25 @@
          * el DOM de estos inputs, así que debemos hacerlo manualmente.
          * 
          * @param {Object} $wire - El objeto $wire de Livewire pasado desde Alpine.js
+         * @param {Number} attempts - Número de intentos realizados (para limitar reintentos)
          */
-        function populateDateFieldsFromLivewire($wire) {
+        function populateDateFieldsFromLivewire($wire, attempts) {
+            attempts = attempts || 0;
+            const MAX_ATTEMPTS = 15; // máximo ~3 segundos (15 * 200ms)
+            
             console.log('Poblando campos de fecha desde Livewire...');
             
             // Buscar el modal primero para asegurar que estamos buscando dentro del contexto correcto
-            const modal = document.querySelector('[name="modal-po-stage-change"]')?.closest('div[x-data]') ||
-                         document.querySelector('.modal-po-stage-change-content');
+            const modal = document.querySelector('[name="modal-po-stage-change"]');
             
             if (!modal) {
-                console.warn('Modal no encontrado, reintentando en 200ms...');
+                if (attempts >= MAX_ATTEMPTS) {
+                    console.error('Modal no encontrado después de ' + MAX_ATTEMPTS + ' intentos. Abortando.');
+                    return;
+                }
+                console.warn('Modal no encontrado, reintentando en 200ms... (intento ' + (attempts + 1) + '/' + MAX_ATTEMPTS + ')');
                 setTimeout(function() {
-                    populateDateFieldsFromLivewire($wire);
+                    populateDateFieldsFromLivewire($wire, attempts + 1);
                 }, 200);
                 return;
             }
@@ -701,7 +721,8 @@
                 'date_eta_initial',
                 'date_ata',
                 'bonded_warehouse_enter',
-                'bonded_warehouse_exit'
+                'bonded_warehouse_exit',
+                'estimated_dc_availability_date'
             ];
             
             let populatedCount = 0;
@@ -755,8 +776,9 @@
          * antes de ejecutar saveAndMove()
          * 
          * @param {Object} $wire - El objeto $wire de Livewire pasado desde Alpine.js
+         * @param {HTMLElement} button - El botón que disparó la acción (opcional)
          */
-        function syncKanbanDateFieldsAndSave($wire) {
+        async function syncKanbanDateFieldsAndSave($wire, button) {
             console.log('Sincronizando campos de fecha del modal Kanban...');
 
             if (!$wire) {
@@ -764,83 +786,140 @@
                 return;
             }
 
-            // Buscar el modal del cambio de etapa
-            const modal = document.querySelector('[name="modal-po-stage-change"]')?.closest('div[x-data]') ||
-                         document.querySelector('div.mb-4');
-            
-            // Buscar TODOS los inputs de fecha con wire:ignore que estén VISIBLES
-            // (es decir, que no estén dentro de un div con clase 'hidden')
-            let wireIgnoreInputs = [];
-            
-            // Buscar todos los divs con wire:ignore que contengan inputs de fecha
-            // Incluir inputs que puedan haber sido convertidos a "text" por Flatpickr
-            const allWireIgnoreDivs = document.querySelectorAll('[wire\\:ignore]');
-            allWireIgnoreDivs.forEach(function(div) {
-                // Verificar que el div NO esté dentro de un contenedor oculto
-                const parentWithHidden = div.closest('.hidden');
-                if (!parentWithHidden) {
-                    // Buscar inputs de fecha dentro de este div
-                    // Incluir inputs type="date" y también inputs con clase flatpickr-initialized o que tengan wire:model con "date"
-                    const dateInputs = div.querySelectorAll('input[type="date"], input.flatpickr-initialized, input[name*="date"], input[name*="Date"]');
-                    dateInputs.forEach(function(input) {
-                        // Verificar que tenga wire:model relacionado con fechas
-                        const wireModel = input.getAttribute('wire:model') ||
-                                         input.getAttribute('wire:model.live') ||
-                                         input.getAttribute('wire:model.defer') ||
-                                         input.getAttribute('wire:model.lazy');
-                        if (wireModel && wireModel.toLowerCase().includes('date')) {
-                            wireIgnoreInputs.push(input);
+            // Mostrar estado de carga en el botón - mantener colores primarios
+            if (button) {
+                button.disabled = true;
+                button.dataset.originalText = button.innerHTML;
+                // Mantener el fondo verde (primario) y usar spinner blanco
+                button.style.backgroundColor = '#1AAD8A';
+                button.style.opacity = '1';
+                button.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span class="text-white font-medium">Procesando...</span>';
+            }
+
+            try {
+                // Buscar el modal del cambio de etapa
+                const modal = document.querySelector('[name="modal-po-stage-change"]');
+                
+                // Buscar TODOS los inputs de fecha con wire:ignore que estén VISIBLES
+                // (es decir, que no estén dentro de un div con clase 'hidden')
+                let wireIgnoreInputs = [];
+                
+                // Buscar todos los divs con wire:ignore que contengan inputs de fecha
+                // Incluir inputs que puedan haber sido convertidos a "text" por Flatpickr
+                const allWireIgnoreDivs = document.querySelectorAll('[wire\\:ignore]');
+                allWireIgnoreDivs.forEach(function(div) {
+                    // Verificar que el div NO esté dentro de un contenedor oculto
+                    const parentWithHidden = div.closest('.hidden');
+                    if (!parentWithHidden) {
+                        // Buscar inputs de fecha dentro de este div
+                        // Incluir inputs type="date" y también inputs con clase flatpickr-initialized o que tengan wire:model con "date"
+                        const dateInputs = div.querySelectorAll('input[type="date"], input.flatpickr-initialized, input[name*="date"], input[name*="Date"]');
+                        dateInputs.forEach(function(input) {
+                            // Verificar que tenga wire:model relacionado con fechas
+                            const wireModel = input.getAttribute('wire:model') ||
+                                             input.getAttribute('wire:model.live') ||
+                                             input.getAttribute('wire:model.defer') ||
+                                             input.getAttribute('wire:model.lazy');
+                            if (wireModel && wireModel.toLowerCase().includes('date')) {
+                                wireIgnoreInputs.push(input);
+                            }
+                        });
+                    }
+                });
+                
+                console.log('Inputs de fecha visibles con wire:ignore:', wireIgnoreInputs.length);
+
+                // Sincronizar valores de campos con wire:ignore usando $wire.set()
+                let syncCount = 0;
+                let syncPromises = [];
+                
+                wireIgnoreInputs.forEach(function(input) {
+                    const wireModel = input.getAttribute('wire:model') ||
+                                     input.getAttribute('wire:model.live') ||
+                                     input.getAttribute('wire:model.defer') ||
+                                     input.getAttribute('wire:model.lazy');
+
+                    if (wireModel) {
+                        // Obtener el valor del input (puede ser del input original o de Flatpickr)
+                        let value = null;
+
+                        if (input._flatpickr && input._flatpickr.selectedDates.length > 0) {
+                            // Si tiene Flatpickr, usar el valor de Flatpickr
+                            value = input._flatpickr.formatDate(input._flatpickr.selectedDates[0], 'Y-m-d');
+                        } else {
+                            // Si no tiene Flatpickr, usar el valor del input directamente
+                            value = input.value || input.getAttribute('data-date-value') || null;
                         }
-                    });
-                }
-            });
-            
-            console.log('Inputs de fecha visibles con wire:ignore:', wireIgnoreInputs.length);
 
-            // Sincronizar valores de campos con wire:ignore usando $wire.set()
-            let syncCount = 0;
-            wireIgnoreInputs.forEach(function(input) {
-                const wireModel = input.getAttribute('wire:model') ||
-                                 input.getAttribute('wire:model.live') ||
-                                 input.getAttribute('wire:model.defer') ||
-                                 input.getAttribute('wire:model.lazy');
-
-                if (wireModel) {
-                    // Obtener el valor del input (puede ser del input original o de Flatpickr)
-                    let value = null;
-
-                    if (input._flatpickr && input._flatpickr.selectedDates.length > 0) {
-                        // Si tiene Flatpickr, usar el valor de Flatpickr
-                        value = input._flatpickr.formatDate(input._flatpickr.selectedDates[0], 'Y-m-d');
+                        // Usar $wire.set() para establecer el valor - devuelve una promesa en Livewire 3
+                        try {
+                            const setPromise = $wire.set(wireModel, value, false); // false = no commit inmediato
+                            if (setPromise && typeof setPromise.then === 'function') {
+                                syncPromises.push(setPromise);
+                            }
+                            syncCount++;
+                            console.log('✓ Sincronizado', wireModel, '=', value !== null ? value : '(vacío/null)');
+                        } catch (e) {
+                            console.warn('⚠ Error al sincronizar', wireModel, ':', e);
+                        }
                     } else {
-                        // Si no tiene Flatpickr, usar el valor del input directamente
-                        value = input.value || input.getAttribute('data-date-value') || null;
+                        console.warn('⚠ Input sin wire:model:', input.name || input.id || 'sin nombre');
                     }
+                });
+                
+                console.log(`Total de campos sincronizados: ${syncCount} de ${wireIgnoreInputs.length}`);
 
-                    // Usar $wire.set() para establecer el valor directamente
-                    try {
-                        $wire.set(wireModel, value);
-                        syncCount++;
-                        console.log('✓ Sincronizado', wireModel, '=', value !== null ? value : '(vacío/null)');
-                    } catch (e) {
-                        console.warn('⚠ Error al sincronizar', wireModel, ':', e);
-                    }
-                } else {
-                    console.warn('⚠ Input sin wire:model:', input.name || input.id || 'sin nombre');
+                // Esperar a que todas las sincronizaciones se completen
+                if (syncPromises.length > 0) {
+                    await Promise.all(syncPromises);
                 }
-            });
-            
-            console.log(`Total de campos sincronizados: ${syncCount} de ${wireIgnoreInputs.length}`);
 
-            // Esperar un momento para que Livewire procese los cambios y luego ejecutar saveAndMove
-            setTimeout(function() {
+                // Forzar commit de todos los cambios pendientes antes de saveAndMove
+                if ($wire.$commit && typeof $wire.$commit === 'function') {
+                    console.log('Ejecutando $commit para sincronizar cambios...');
+                    await $wire.$commit();
+                }
+
+                // Pequeña espera adicional para asegurar que el DOM esté sincronizado
+                await new Promise(resolve => setTimeout(resolve, 100));
+
                 console.log('Ejecutando saveAndMove...');
-                try {
-                    $wire.saveAndMove();
-                } catch (e) {
-                    console.error('Error al ejecutar saveAndMove:', e);
+                
+                // Llamar a saveAndMove y esperar el resultado
+                const result = await $wire.saveAndMove();
+                console.log('saveAndMove completado:', result);
+                
+                // Manejar el resultado
+                if (result && result.success) {
+                    console.log('✓ PO movida correctamente');
+                    // Cerrar el modal manualmente por si el dispatch no llegó
+                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'modal-po-stage-change' }));
+                    // Refrescar el kanban
+                    $wire.$refresh();
+                } else if (result && !result.success) {
+                    console.warn('✗ Error al mover PO:', result.message);
+                    // El mensaje ya se muestra en el modal vía session flash
                 }
-            }, 300);
+                
+            } catch (e) {
+                console.error('Error en syncKanbanDateFieldsAndSave:', e);
+                
+                // Si es un error de validación de Livewire, no mostrar alerta (los errores se muestran en el modal)
+                if (e.name !== 'ValidationException' && !e.message?.includes('validation')) {
+                    // Solo mostrar alerta para errores inesperados
+                    console.error('Error inesperado:', e.message || e);
+                }
+            } finally {
+                // Restaurar el botón
+                if (button) {
+                    button.disabled = false;
+                    button.style.backgroundColor = '';
+                    button.style.opacity = '';
+                    if (button.dataset.originalText) {
+                        button.innerHTML = button.dataset.originalText;
+                    }
+                }
+            }
         }
     </script>
 </div>
