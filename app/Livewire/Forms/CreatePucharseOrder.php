@@ -1615,6 +1615,8 @@ class CreatePucharseOrder extends Component
                     'forwader_date'     => $this->forwader_date,
 
                 ];
+                // po_amount no está en PurchaseOrder::$fillable ni en la tabla; no enviarlo a create()
+                unset($poData['po_amount']);
 
                 // Filtrar valores nulos o vacíos para evitar errores
                 // Mantener valores 0, 0.0, false, y strings vacíos que puedan ser necesarios

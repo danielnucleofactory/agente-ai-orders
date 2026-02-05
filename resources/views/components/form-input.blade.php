@@ -8,16 +8,20 @@
         </label>
     @endif
 
+    @php
+        $inputClass = 'rounded-xl border-2 border-[#28C7A1] py-[0.625rem] px-3 text-lg text-[#2E2E2E] placeholder:text-[#AFAFAF] leading-none';
+        $inputType = $input->attributes->get('type', 'text');
+    @endphp
     @if ($icon)
         <div class="relative">
             <input @if ($input->attributes->has('name')) id="{{ $input->attributes->get('name') }}" @endif
-                {{ $input->attributes->merge(['class' => 'rounded-xl border-2 border-[#28C7A1] py-[0.625rem] px-3 text-lg text-[#2E2E2E] placeholder:text-[#AFAFAF] w-full leading-none', 'type' => 'text']) }}>
+                {{ $input->attributes->merge(['class' => $inputClass . ' w-full', 'type' => $inputType]) }}>
 
             {{ $icon }}
         </div>
     @else
         <input @if ($input->attributes->has('name')) id="{{ $input->attributes->get('name') }}" @endif
-            {{ $input->attributes->merge(['class' => 'rounded-xl border-2 border-[#28C7A1] py-[0.625rem] px-3 text-lg text-[#2E2E2E] placeholder:text-[#AFAFAF] leading-none', 'type' => 'text']) }}>
+            {{ $input->attributes->merge(['class' => $inputClass, 'type' => $inputType]) }}>
     @endif
 
     @if ($error)
