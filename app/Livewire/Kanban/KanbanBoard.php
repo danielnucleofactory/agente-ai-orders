@@ -78,7 +78,7 @@ class KanbanBoard extends Component
 
 
     public $comment_stage_08;
-    
+
     // Recibiendo CDI (id 9)
     public $estimated_dc_availability_date;
     public $comment_stage_09;
@@ -165,12 +165,12 @@ class KanbanBoard extends Component
 
     /**
      * Carga las columnas (estados) del tablero Kanban.
-     * 
+     *
      * IMPORTANTE: El orden de las columnas es crítico. La vista blade depende de índices
      * de array ($columns[0], $columns[1], etc.) para mostrar los campos correctos en el modal.
      * Si el orden de las columnas cambia o se eliminan columnas, el modal puede no funcionar
      * correctamente.
-     * 
+     *
      * @return void
      */
     public function loadColumns()
@@ -524,7 +524,8 @@ class KanbanBoard extends Component
         // 1) Guardar comentario + adjunto si existen
         $hasComment = is_string($this->comment ?? '') && trim($this->comment) !== '';
         if ($hasComment || $this->attachment) {
-            $this->setComments($poId, (string)($this->comment ?? ''));
+            // No disparar webhook aquí porque saveDataByModal() lo hará después
+            $this->setComments($poId, (string)($this->comment ?? ''), false);
         }
 
         // 2) Guardar campos del formulario de la etapa
@@ -551,7 +552,7 @@ class KanbanBoard extends Component
 
         // 5) Cerrar el modal unificado
         $this->dispatch('close-modal', 'modal-po-stage-change');
-        
+
         return ['success' => true, 'message' => 'PO movida correctamente.'];
     }
 
@@ -610,7 +611,7 @@ class KanbanBoard extends Component
         // Cerrar el modal y forzar actualización del componente
         $this->dispatch('close-modal', 'modal-po-stage-change');
         $this->dispatch('refreshKanban');
-        
+
         // Forzar re-render del componente para limpiar el estado en el frontend
         $this->dispatch('$refresh');
     }
@@ -658,7 +659,7 @@ class KanbanBoard extends Component
                 $this->departure_port = $po->departure_port;
                 $this->arrival_port = $po->arrival_port;
                 $this->container_type = $po->container_type;
-                
+
                 $this->loadShippingLines($po->trading_company, $po->shipping_line);
                 $this->loadPorts($po->trading_company, $po->departure_port, $po->arrival_port);
                 $this->loadContainerTypes($po->trading_company, $po->container_type);
@@ -759,7 +760,7 @@ class KanbanBoard extends Component
             $this->departure_port = $po->departure_port;
             $this->arrival_port = $po->arrival_port;
             $this->container_type = $po->container_type;
-            
+
             $this->loadShippingLines($po->trading_company, $po->shipping_line);
             $this->loadPorts($po->trading_company, $po->departure_port, $po->arrival_port);
             $this->loadContainerTypes($po->trading_company, $po->container_type);
@@ -807,7 +808,7 @@ class KanbanBoard extends Component
         $this->dispatch('purchaseOrderStatusUpdated');
     }
 
-    public function setComments($taskId, $comment)
+    public function setComments($taskId, $comment, $dispatchWebhook = true)
     {
         // Si no hay comentario, no hacemos nada y retornamos
         if (empty(trim($comment))) {
@@ -839,7 +840,9 @@ class KanbanBoard extends Component
             $this->attachment = null;
 
             // Dispatch webhook event for updated purchase order (comment added)
-            if (function_exists('dispatch_webhook')) {
+            // Solo si $dispatchWebhook es true (por defecto true para mantener compatibilidad)
+            // Cuando se llama desde saveAndMove(), se pasa false para evitar duplicados
+            if ($dispatchWebhook && function_exists('dispatch_webhook')) {
                 try {
                     $po = PurchaseOrder::find($taskId);
                     if ($po) {
@@ -1227,7 +1230,7 @@ class KanbanBoard extends Component
 
     /**
      * Cargar proveedores de servicio desde la API
-     * 
+     *
      * @param string $tradingCompany
      * @param string|null $currentServiceProvider Valor actual guardado en la PO (opcional)
      * @return void
@@ -1237,13 +1240,13 @@ class KanbanBoard extends Component
         // PRIMERO: Asegurar que el valor guardado esté en el array desde el inicio
         // Esto garantiza que esté disponible inmediatamente cuando Livewire renderiza el select
         $serviceProviderToAdd = $currentServiceProvider ?? $this->service_provider;
-        
+
         $this->serviceProviderArray = [];
-        
+
         if ($serviceProviderToAdd && trim($serviceProviderToAdd) !== '') {
             $this->serviceProviderArray[$serviceProviderToAdd] = $serviceProviderToAdd;
         }
-        
+
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
             if (empty($this->serviceProviderArray)) {
@@ -1264,7 +1267,7 @@ class KanbanBoard extends Component
 
             $serviceProvidersResponse = $this->getServiceProvidersWithCustomTimeout($apiService, $apiParams, 8);
             $serviceProvidersArray = $this->processApiResponse($serviceProvidersResponse, 'name', 'name');
-            
+
             // Combinar resultados de la API con el valor guardado (sin sobrescribir)
             foreach ($serviceProvidersArray as $key => $value) {
                 if (!isset($this->serviceProviderArray[$key])) {
@@ -1291,7 +1294,7 @@ class KanbanBoard extends Component
 
     /**
      * Cargar shipping lines desde la API
-     * 
+     *
      * @param string $tradingCompany
      * @param string|null $currentShippingLine Valor actual guardado en la PO (opcional)
      * @return void
@@ -1301,13 +1304,13 @@ class KanbanBoard extends Component
         // PRIMERO: Asegurar que el valor guardado esté en el array desde el inicio
         // Esto garantiza que esté disponible inmediatamente cuando Livewire renderiza el select
         $shippingLineToAdd = $currentShippingLine ?? $this->shipping_line;
-        
+
         $this->shippingLineArray = [];
-        
+
         if ($shippingLineToAdd) {
             $this->shippingLineArray[$shippingLineToAdd] = $shippingLineToAdd;
         }
-        
+
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
             // Si no hay trading company y no hay valor guardado, mostrar mensaje
@@ -1330,7 +1333,7 @@ class KanbanBoard extends Component
             // Intentar solo una vez con timeout más corto (8 segundos)
             $shippingLinesResponse = $this->getShippingLinesWithCustomTimeout($apiService, $apiParams, 8);
             $shippingLinesArray = $this->processApiResponse($shippingLinesResponse, 'name', 'name');
-            
+
             // Combinar los valores de la API con el valor guardado (sin duplicar)
             foreach ($shippingLinesArray as $key => $value) {
                 if (!isset($this->shippingLineArray[$key])) {
@@ -1340,7 +1343,7 @@ class KanbanBoard extends Component
         } catch (\Exception $e) {
             // El valor guardado ya está en el array desde el inicio, así que no lo perdemos
         }
-        
+
         // Si después de todos los intentos el array está vacío (y no hay valor guardado), agregar mensaje informativo
         if (empty($this->shippingLineArray)) {
             $this->shippingLineArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente "' . $tradingCompanyValue . '"';
@@ -1349,7 +1352,7 @@ class KanbanBoard extends Component
 
     /**
      * Cargar puertos desde la API
-     * 
+     *
      * @param string $tradingCompany
      * @param string|null $currentDeparturePort Valor actual guardado en la PO para puerto de embarque (opcional)
      * @param string|null $currentArrivalPort Valor actual guardado en la PO para puerto de arribo (opcional)
@@ -1361,18 +1364,18 @@ class KanbanBoard extends Component
         // Esto garantiza que estén disponibles inmediatamente cuando Livewire renderiza el select
         $departurePortToAdd = $currentDeparturePort ?? $this->departure_port;
         $arrivalPortToAdd = $currentArrivalPort ?? $this->arrival_port;
-        
+
         $this->departurePortArray = [];
         $this->arrivalPortArray = [];
-        
+
         if ($departurePortToAdd && trim($departurePortToAdd) !== '') {
             $this->departurePortArray[$departurePortToAdd] = $departurePortToAdd;
         }
-        
+
         if ($arrivalPortToAdd && trim($arrivalPortToAdd) !== '') {
             $this->arrivalPortArray[$arrivalPortToAdd] = $arrivalPortToAdd;
         }
-        
+
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
             // Si no hay trading company y no hay valores guardados, mostrar mensaje
@@ -1398,7 +1401,7 @@ class KanbanBoard extends Component
             // Intentar solo una vez con timeout más corto (8 segundos)
             $portsResponse = $this->getPortsWithCustomTimeout($apiService, $apiParams, 8);
             $portsArray = $this->processApiResponse($portsResponse, 'name', 'name');
-            
+
             // Combinar los valores de la API con los valores guardados (sin duplicar)
             foreach ($portsArray as $key => $value) {
                 if (!isset($this->departurePortArray[$key])) {
@@ -1411,7 +1414,7 @@ class KanbanBoard extends Component
         } catch (\Exception $e) {
             // Los valores guardados ya están en los arrays desde el inicio, así que no los perdemos
         }
-        
+
         // Si después de todos los intentos los arrays están vacíos (y no hay valores guardados), agregar mensaje informativo
         if (empty($this->departurePortArray)) {
             $this->departurePortArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente "' . $tradingCompanyValue . '"';
@@ -1423,7 +1426,7 @@ class KanbanBoard extends Component
 
     /**
      * Cargar tipos de contenedor desde la API
-     * 
+     *
      * @param string $tradingCompany
      * @param string|null $currentContainerType Valor actual guardado en la PO (opcional)
      * @return void
@@ -1431,13 +1434,13 @@ class KanbanBoard extends Component
     protected function loadContainerTypes(string $tradingCompany, ?string $currentContainerType = null): void
     {
         $containerTypeToAdd = $currentContainerType ?? $this->container_type;
-        
+
         $this->containerTypeArray = [];
-        
+
         if ($containerTypeToAdd && trim($containerTypeToAdd) !== '') {
             $this->containerTypeArray[$containerTypeToAdd] = $containerTypeToAdd;
         }
-        
+
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
             if (empty($this->containerTypeArray)) {
@@ -1458,7 +1461,7 @@ class KanbanBoard extends Component
 
             $containerTypesResponse = $this->getContainerTypesWithCustomTimeout($apiService, $apiParams, 8);
             $containerTypesArray = $this->processApiResponse($containerTypesResponse, 'name', 'name');
-            
+
             foreach ($containerTypesArray as $key => $value) {
                 if (!isset($this->containerTypeArray[$key])) {
                     $this->containerTypeArray[$key] = $value;
@@ -1478,7 +1481,7 @@ class KanbanBoard extends Component
 
     /**
      * Cargar tipos de transporte desde la API
-     * 
+     *
      * @param string $tradingCompany
      * @param string|null $currentMode Valor actual guardado en la PO (opcional)
      * @return void
@@ -1486,13 +1489,13 @@ class KanbanBoard extends Component
     protected function loadTransportTypes(string $tradingCompany, ?string $currentMode = null): void
     {
         $modeToAdd = $currentMode ?? $this->mode;
-        
+
         $this->transportTypeArray = [];
-        
+
         if ($modeToAdd && trim($modeToAdd) !== '') {
             $this->transportTypeArray[$modeToAdd] = $modeToAdd;
         }
-        
+
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
             if (empty($this->transportTypeArray)) {
@@ -1513,7 +1516,7 @@ class KanbanBoard extends Component
 
             $transportTypesResponse = $this->getTransportTypesWithCustomTimeout($apiService, $apiParams, 8);
             $transportTypesArray = $this->processApiResponse($transportTypesResponse, 'name', 'name');
-            
+
             foreach ($transportTypesArray as $key => $value) {
                 if (!isset($this->transportTypeArray[$key])) {
                     $this->transportTypeArray[$key] = $value;
@@ -1533,7 +1536,7 @@ class KanbanBoard extends Component
 
     /**
      * Obtener shipping lines con timeout personalizado
-     * 
+     *
      * @param MaestrosApiService $apiService
      * @param array $params
      * @param int $timeout Segundos de timeout
@@ -1563,7 +1566,7 @@ class KanbanBoard extends Component
 
     /**
      * Obtener puertos con timeout personalizado
-     * 
+     *
      * @param MaestrosApiService $apiService
      * @param array $params
      * @param int $timeout Segundos de timeout
@@ -1593,7 +1596,7 @@ class KanbanBoard extends Component
 
     /**
      * Obtener container types con timeout personalizado
-     * 
+     *
      * @param MaestrosApiService $apiService
      * @param array $params
      * @param int $timeout Segundos de timeout
@@ -1623,7 +1626,7 @@ class KanbanBoard extends Component
 
     /**
      * Obtener transport types con timeout personalizado
-     * 
+     *
      * @param MaestrosApiService $apiService
      * @param array $params
      * @param int $timeout Segundos de timeout
@@ -1653,7 +1656,7 @@ class KanbanBoard extends Component
 
     /**
      * Obtener service providers con timeout personalizado
-     * 
+     *
      * @param MaestrosApiService $apiService
      * @param array $params
      * @param int $timeout Segundos de timeout
@@ -1683,7 +1686,7 @@ class KanbanBoard extends Component
 
     /**
      * Process API response and convert to array format for dropdowns
-     * 
+     *
      * @param array|null $response
      * @param string $keyField Field to use as array key
      * @param string $valueField Field to use as array value
