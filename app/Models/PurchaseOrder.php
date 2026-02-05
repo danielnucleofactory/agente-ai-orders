@@ -201,6 +201,40 @@ class PurchaseOrder extends Model implements HasMedia
     ];
 
     /**
+     * Campos crudos de Porth excluidos de toArray()/toJson() (webhook, API, etc.).
+     * Los campos de maestros (departure_port, arrival_port, shipping_line, mode, date_etd, date_eta, etc.) sí se envían.
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'porth_id',
+        'porth_shipment_number',
+        'porth_carrier_code',
+        'porth_pol',
+        'porth_pod',
+        'porth_pol_name',
+        'porth_pod_name',
+        'porth_phase',
+        'porth_priority',
+        'porth_modality',
+        'porth_vessel_voyage',
+        'porth_origin',
+        'porth_final_destination',
+        'porth_first_eta',
+        'porth_first_etd',
+        'porth_ready',
+        'porth_to_origin_port',
+        'porth_at_origin_port',
+        'porth_in_transit',
+        'porth_at_destination_port',
+        'porth_to_final_destination',
+        'porth_delivered',
+        'porth_free_time_at_destination',
+        'porth_manual_tracking',
+        'last_porth_sync_at',
+    ];
+
+    /**
      * The attributes that should be cast.
      *
      * @var array<string, string>

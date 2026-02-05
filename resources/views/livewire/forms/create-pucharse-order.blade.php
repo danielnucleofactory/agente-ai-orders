@@ -601,7 +601,7 @@
                         </x-form-input>
                     </div>
 
-                    <div wire:ignore>
+                    <div>
                         <x-form-input>
                             <x-slot:label>Fecha Carga Lista Teórica <span class="text-red-500">*</span></x-slot:label>
                             @if($id)
@@ -615,7 +615,7 @@
                         </x-form-input>
                     </div>
 
-                    <div wire:ignore>
+                    <div>
                         <x-form-input>
                             <x-slot:label>Fecha Carga Lista Variable</x-slot:label>
                             <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500' : '' }}"></x-slot:input>

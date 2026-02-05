@@ -815,11 +815,46 @@
                     <table class="w-full">
                         <thead class="bg-[#D4F5ED]">
                             <tr>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Fecha</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Usuario</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Tipo</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Comentario</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Archivos</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('created_at')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Fecha
+                                        @if($commentSortField === 'created_at')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('user_name')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Usuario
+                                        @if($commentSortField === 'user_name')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('action_type')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Tipo
+                                        @if($commentSortField === 'action_type')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('comment')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Comentario
+                                        @if($commentSortField === 'comment')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('attachment_name')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Archivos
+                                        @if($commentSortField === 'attachment_name')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
                                 <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Acciones</th>
                             </tr>
                         </thead>
