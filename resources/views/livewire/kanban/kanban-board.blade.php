@@ -192,6 +192,7 @@
                             name="service_provider"
                             wire:model.live="service_provider"
                             :options="$serviceProviderArray"
+                            :value="$service_provider"
                             :error="false"
                         />
                         {{-- Error oculto --}}
@@ -231,6 +232,7 @@
                             name="service_provider"
                             wire:model.live="service_provider"
                             :options="$serviceProviderArray"
+                            :value="$service_provider"
                             :error="false"
                         />
                     </div>
@@ -329,6 +331,7 @@
                                     name="container_type"
                                     wire:model.live="container_type"
                                     :options="$containerTypeArray"
+                                    :value="$container_type"
                                     :error="$errors->has('container_type')" />
                                 {{-- Error oculto --}}
                             </div>
@@ -356,6 +359,7 @@
                                     name="shipping_line"
                                     wire:model.live="shipping_line"
                                     :options="$shippingLineArray"
+                                    :value="$shipping_line"
                                     :error="$errors->has('shipping_line')"
                                     :showError="false" />
                             </div>
@@ -397,6 +401,7 @@
                                     name="departure_port"
                                     wire:model.live="departure_port"
                                     :options="$departurePortArray"
+                                    :value="$departure_port"
                                     :error="$errors->has('departure_port')"
                                     :showError="false" />
                             </div>
@@ -407,6 +412,7 @@
                                     name="arrival_port"
                                     wire:model.live="arrival_port"
                                     :options="$arrivalPortArray"
+                                    :value="$arrival_port"
                                     :error="$errors->has('arrival_port')"
                                     :showError="false" />
                             </div>

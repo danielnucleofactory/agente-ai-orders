@@ -7,6 +7,7 @@
     'wireModel' => '',
     'error' => false,
     'showError' => true,
+    'value' => null,
 ])
 
 <div class="relative flex flex-col">
@@ -25,7 +26,7 @@
             @if($key === '__no_data__')
                 <option value="" disabled style="color: #ef4444; font-style: italic;">{{ $option }}</option>
             @else
-                <option value="{{ $key }}">{{ $option }}</option>
+                <option value="{{ $key }}" @selected($value !== null && (string)$key === (string)$value)>{{ $option }}</option>
             @endif
         @endforeach
     </select>
