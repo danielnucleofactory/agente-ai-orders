@@ -114,6 +114,16 @@
                 background: #127A62 !important;
             }
             
+            /* Animación para el spinner del botón de descarga */
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            
+            #export-btn:disabled {
+                pointer-events: none;
+            }
+            
             /* Estilos para filtros de 150x40 - Máxima especificidad para sobrescribir styles.css */
             .filters-section .filter-group {
                 width: 150px !important;
@@ -376,7 +386,7 @@
           </svg>
         </div>
         <h3 class="modal-title success">Archivo descargado exitosamente</h3>
-        <p class="modal-text">El archivo CSV se ha descargado correctamente</p>
+        <p class="modal-text">El archivo Excel se ha descargado correctamente</p>
       </div>
       <button id="closeSuccessBtn" class="modal-btn">Aceptar</button>
     </div>

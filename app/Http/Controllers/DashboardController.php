@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Services\DashboardService;
+use App\Exports\DashboardExport;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class DashboardController extends Controller
 {
@@ -126,12 +128,12 @@ class DashboardController extends Controller
     }
 
     /**
-     * Export dashboard trend table data
+     * Export dashboard trend table data as Excel
      *
      * @param Request $request
-     * @return StreamedResponse
+     * @return BinaryFileResponse
      */
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request): BinaryFileResponse
     {
         try {
             Log::info('Dashboard export called', [
@@ -139,31 +141,64 @@ class DashboardController extends Controller
                 'request_data' => $request->all()
             ]);
 
-            // Exportar tabla de tendencias en lugar de POs individuales
-            $filters = $this->getFilters($request);
-            $exportData = $this->dashboardService->getTrendTableExportData($filters);
-
-            Log::info('Export data retrieved', ['rows_count' => count($exportData)]);
-
-            $filename = 'tendencia_lineas_canceladas_' . now()->format('Y-m-d_H-i-s') . '.csv';
-
-            return response()->streamDownload(function () use ($exportData) {
-                $handle = fopen('php://output', 'w');
-
-                // Add BOM for proper UTF-8 encoding in Excel
-                fwrite($handle, "\xEF\xBB\xBF");
-
-                // CSV Data (ya incluye headers en la primera fila)
-                foreach ($exportData as $row) {
-                    // Usar punto y coma como delimitador para mejor compatibilidad con Excel en español
-                    fputcsv($handle, $row, ';');
+            // Obtener filtros aplicados (incluyendo los del dashboard-kpi)
+            $filters = $this->getExportFilters($request);
+            
+            Log::info('Export filters applied', ['filters' => $filters]);
+            
+            // Obtener datos de la tabla de tendencias con rango de fechas dinámico
+            $trendData = $this->dashboardService->getCanceledLinesTrendTable($filters);
+            
+            // Obtener los meses dinámicos del resultado
+            $monthKeys = $trendData['month_keys'] ?? [];
+            $monthLabels = $trendData['month_labels'] ?? [];
+            
+            // Si no hay month_labels, crear etiquetas básicas
+            if (empty($monthLabels)) {
+                foreach ($monthKeys as $key) {
+                    $monthLabels[$key] = $key;
                 }
+            }
+            
+            // Preparar datos para el Excel con columnas dinámicas
+            $exportData = [];
+            $categoryOrder = [
+                'Producción',
+                'Booking',
+                'Transito',
+                'Puerto',
+                'Recibiendo CDI',
+                'Ingresada',
+                'Anulada'
+            ];
+            
+            foreach ($categoryOrder as $category) {
+                $row = [$category];
+                foreach ($monthKeys as $monthKey) {
+                    $value = $trendData['categories'][$category][$monthKey] ?? 0;
+                    $row[] = $value === 0 ? '-' : $value;
+                }
+                $exportData[] = $row;
+            }
 
-                fclose($handle);
-            }, $filename, [
-                'Content-Type' => 'text/csv; charset=UTF-8',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            // Convertir monthLabels a array ordenado para los headers
+            $headerLabels = [];
+            foreach ($monthKeys as $key) {
+                $headerLabels[] = $monthLabels[$key] ?? $key;
+            }
+
+            Log::info('Export data prepared', [
+                'rows_count' => count($exportData),
+                'columns_count' => count($monthKeys),
+                'date_range' => ($trendData['date_from'] ?? 'N/A') . ' - ' . ($trendData['date_to'] ?? 'N/A')
             ]);
+
+            $filename = 'tendencia_etapas_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+
+            return Excel::download(
+                new DashboardExport($exportData, $headerLabels, $filters),
+                $filename
+            );
         } catch (\Exception $e) {
             Log::error('Error exporting dashboard data', [
                 'error' => $e->getMessage(),
@@ -174,10 +209,46 @@ class DashboardController extends Controller
                 'file' => $e->getFile(),
             ]);
 
-            return response()->streamDownload(function () use ($e) {
-                echo "Error al exportar los datos: " . $e->getMessage();
-            }, 'error.txt');
+            // En caso de error, devolver un archivo vacío con mensaje de error
+            abort(500, 'Error al exportar los datos: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Get filters from request for export (includes dashboard-kpi filters)
+     *
+     * @param Request $request
+     * @return array
+     */
+    private function getExportFilters(Request $request): array
+    {
+        $filters = [
+            // Filtros de fecha
+            'date_from' => $request->get('date_from'),
+            'date_to' => $request->get('date_to'),
+            
+            // Filtros del dashboard original
+            'customer_type' => $request->get('customer_type'),
+            'arrival_status' => $request->get('arrival_status'),
+            'vendor_id' => $request->get('vendor_id'),
+            'departure_port' => $request->get('departure_port'),
+            'arrival_port' => $request->get('arrival_port'),
+            'shipping_line' => $request->get('shipping_line'),
+            'service_provider' => $request->get('service_provider'),
+            
+            // Filtros adicionales del dashboard-kpi
+            'trading_company' => $request->get('trading_company'),
+            'stage' => $request->get('stage'),
+            'route_label' => $request->get('route_label'),
+            'order_number' => $request->get('order_number'),
+            
+            // Filtros de botones adicionales
+            'po_retraso_cl' => $request->boolean('po_retraso_cl', false),
+            'po_adelanto_cl' => $request->boolean('po_adelanto_cl', false),
+            'indicador_capacidad' => $request->boolean('indicador_capacidad', false),
+        ];
+        
+        return $filters;
     }
 
     /**

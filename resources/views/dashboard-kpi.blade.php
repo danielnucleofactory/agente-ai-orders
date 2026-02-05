@@ -16,6 +16,16 @@
                 box-sizing: border-box !important;
                 margin: 0 !important;
             }
+            
+            /* Animación para el spinner del botón de descarga */
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            
+            #export-btn:disabled {
+                pointer-events: none;
+            }
         </style>
     @endpush
 
@@ -84,7 +94,7 @@
             </div>
             <div class="action-buttons" style="display: flex; gap: 16px; align-items: flex-end; margin-left: auto;">
                 <button class="btn-primary" id="btn-apply-filters" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: none; background: #1AAD8A; color: #F7F7F7; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; justify-content: center; cursor: pointer;">Aceptar</button>
-                <button class="btn-secondary" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: 2px solid #1AAD8A; background: #fff; color: #1AAD8A; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; gap: 8px; justify-content: center; cursor: pointer;">
+                <button id="export-btn" class="btn-secondary" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: 2px solid #1AAD8A; background: #fff; color: #1AAD8A; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; gap: 8px; justify-content: center; cursor: pointer;">
                     <i class="fas fa-download"></i>
                     Descargar
                 </button>
@@ -753,8 +763,46 @@
         </div>
     </div>
 
+    <!-- Success Modal -->
+    <div id="successModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px;">
+            <div class="modal-body">
+                <div class="modal-icon success" style="width: 80px; height: 80px; background: #1AAD8A; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 6L9 17L4 12" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h3 class="modal-title success" style="color: #1AAD8A; font-size: 20px; margin-bottom: 10px;">Archivo descargado exitosamente</h3>
+                <p class="modal-text" style="color: #666; margin-bottom: 20px;">El archivo Excel se ha descargado correctamente</p>
+            </div>
+            <button id="closeSuccessBtn" class="modal-btn" style="background: #1AAD8A; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 16px; cursor: pointer;">Aceptar</button>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px;">
+            <div class="modal-body">
+                <div class="modal-icon error" style="width: 80px; height: 80px; background: #FF3459; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2"/>
+                        <path d="M12 8V12M12 16H12.01" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h3 class="modal-title error" style="color: #FF3459; font-size: 20px; margin-bottom: 10px;">¡Ha ocurrido un error!</h3>
+                <p class="modal-text" style="color: #666; margin-bottom: 20px;">No se pudo descargar correctamente el reporte</p>
+            </div>
+            <button id="closeErrorBtn" class="modal-btn" style="background: #FF3459; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 16px; cursor: pointer;">Intentar de nuevo</button>
+        </div>
+    </div>
+
     @push('scripts')
+        <script>
+            // CSRF Token para las peticiones AJAX
+            window.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        </script>
         <script src="{{ asset('js/dashboard-kpi.js') }}"></script>
+        <script src="{{ asset('js/dashboard-dynamic.js') }}"></script>
         <script>
             // Tab switching
             document.querySelectorAll('.tab').forEach(tab => {

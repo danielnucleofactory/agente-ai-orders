@@ -181,6 +181,7 @@ class DashboardService
 
     /**
      * Get trend table data counting PO by stage and month
+     * Supports dynamic date ranges based on filters
      * 
      * @param array $filters Optional filters to apply
      * @return array
@@ -190,34 +191,52 @@ class DashboardService
         try {
             Log::info('DashboardService::getCanceledLinesTrendTable starting', ['filters' => $filters]);
 
-            $currentYear = now()->year;
             $companyId = auth()->user()->company_id ?? null;
             
-            // Obtener todas las PO del año actual (no solo anuladas)
+            // Determinar rango de fechas
+            $dateFrom = !empty($filters['date_from']) ? Carbon::parse($filters['date_from']) : Carbon::now()->startOfYear();
+            $dateTo = !empty($filters['date_to']) ? Carbon::parse($filters['date_to']) : Carbon::now()->endOfYear();
+            
+            Log::info('Date range for export', [
+                'date_from' => $dateFrom->format('Y-m-d'),
+                'date_to' => $dateTo->format('Y-m-d')
+            ]);
+            
+            // Nombres de meses en español
+            $monthNamesSpanish = [
+                1 => 'Ene', 2 => 'Feb', 3 => 'Mar', 4 => 'Abr',
+                5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Ago',
+                9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dic'
+            ];
+            
+            // Generar lista de meses en el rango (formato: "2025-01", "2025-02", etc.)
+            $monthKeys = [];
+            $monthLabels = [];
+            $currentMonth = $dateFrom->copy()->startOfMonth();
+            while ($currentMonth <= $dateTo) {
+                $key = $currentMonth->format('Y-m');
+                $monthKeys[] = $key;
+                $monthNumber = (int) $currentMonth->format('n');
+                $year = $currentMonth->format('Y');
+                $monthLabels[$key] = $monthNamesSpanish[$monthNumber] . '-' . $year; // Ej: "Ene-2025"
+                $currentMonth->addMonth();
+            }
+            
+            // Construir query base
             $query = PurchaseOrder::withTrashed()
-                ->whereYear('order_date', $currentYear);
+                ->whereBetween('order_date', [$dateFrom->format('Y-m-d'), $dateTo->format('Y-m-d')]);
             
             // Filtrar por company_id si el usuario tiene uno asignado
             if ($companyId) {
                 $query->where('company_id', $companyId);
             }
 
-            // Aplicar filtros adicionales
-            // Nota: Los filtros po_retraso_cl y po_adelanto_cl ya no están disponibles
-            // ya que se eliminó el campo date_carga_po y se reemplazó por carga_lista_validada (checkbox)
-            if (!empty($filters['po_retraso_cl'])) {
-                // Este filtro ya no es aplicable sin date_carga_po
-            }
-
-            if (!empty($filters['po_adelanto_cl'])) {
-                // Este filtro ya no es aplicable sin date_carga_po
-            }
-
+            // Aplicar filtros adicionales del panel de filtros
             if (!empty($filters['indicador_capacidad'])) {
                 $query->whereNull('date_etd_initial');
             }
 
-            // Aplicar otros filtros del getBaseQuery si existen
+            // Filtro por proveedor (vendor)
             if (!empty($filters['vendor_id'])) {
                 $vendorIds = is_array($filters['vendor_id']) ? $filters['vendor_id'] : [$filters['vendor_id']];
                 $vendorIds = array_filter($vendorIds);
@@ -226,6 +245,56 @@ class DashboardService
                 }
             }
 
+            // Filtro por trading_company (Cliente)
+            if (!empty($filters['trading_company'])) {
+                $query->where('trading_company', $filters['trading_company']);
+            }
+
+            // Filtro por etapa (stage)
+            if (!empty($filters['stage'])) {
+                $stages = is_array($filters['stage']) ? $filters['stage'] : [$filters['stage']];
+                $stages = array_filter($stages);
+                if (!empty($stages)) {
+                    $query->whereHas('kanbanStatus', function ($q) use ($stages) {
+                        $q->whereIn('name', $stages);
+                    });
+                }
+            }
+
+            // Filtro por proveedor de servicio
+            if (!empty($filters['service_provider'])) {
+                $query->where(function($q) use ($filters) {
+                    $q->where('forwarder_name', $filters['service_provider'])
+                      ->orWhere('service_provider', $filters['service_provider']);
+                });
+            }
+
+            // Filtro por puerto de embarque
+            if (!empty($filters['departure_port'])) {
+                $query->where('departure_port', $filters['departure_port']);
+            }
+
+            // Filtro por puerto de arribo
+            if (!empty($filters['arrival_port'])) {
+                $query->where('arrival_port', $filters['arrival_port']);
+            }
+
+            // Filtro por naviera
+            if (!empty($filters['shipping_line'])) {
+                $query->where('shipping_line', $filters['shipping_line']);
+            }
+
+            // Filtro por ruta logística
+            if (!empty($filters['route_label'])) {
+                $query->where('route_label', $filters['route_label']);
+            }
+
+            // Filtro por número de orden
+            if (!empty($filters['order_number'])) {
+                $query->where('order_number', 'like', '%' . $filters['order_number'] . '%');
+            }
+
+            // Filtro por hub
             if (!empty($filters['hub_id'])) {
                 $hubIds = is_array($filters['hub_id']) ? $filters['hub_id'] : [$filters['hub_id']];
                 $hubIds = array_filter($hubIds, function($value) {
@@ -250,16 +319,6 @@ class DashboardService
                     });
                 }
             }
-
-            if (!empty($filters['stage'])) {
-                $stages = is_array($filters['stage']) ? $filters['stage'] : [$filters['stage']];
-                $stages = array_filter($stages);
-                if (!empty($stages)) {
-                    $query->whereHas('kanbanStatus', function ($q) use ($stages) {
-                        $q->whereIn('name', $stages);
-                    });
-                }
-            }
             
             $purchaseOrders = $query->with(['kanbanStatus'])->get();
 
@@ -279,21 +338,24 @@ class DashboardService
             
             $kanbanStages = $kanbanStagesQuery->pluck('name', 'id')->toArray();
 
-            // Inicializar estructura de categorías con meses (claves como strings "1" a "12")
-            $monthKeys = array_map('strval', range(1, 12));
-            $categories = [
-                'Producción' => array_fill_keys($monthKeys, 0),
-                'Booking' => array_fill_keys($monthKeys, 0),
-                'Transito' => array_fill_keys($monthKeys, 0),
-                'Puerto' => array_fill_keys($monthKeys, 0),
-                'Recibiendo CDI' => array_fill_keys($monthKeys, 0),
-                'Ingresada' => array_fill_keys($monthKeys, 0),
-                'Anulada' => array_fill_keys($monthKeys, 0),
+            // Inicializar estructura de categorías con meses dinámicos
+            $categoryNames = [
+                'Producción',
+                'Booking',
+                'Transito',
+                'Puerto',
+                'Recibiendo CDI',
+                'Ingresada',
+                'Anulada'
             ];
+            
+            $categories = [];
+            foreach ($categoryNames as $catName) {
+                $categories[$catName] = array_fill_keys($monthKeys, 0);
+            }
 
             // Función helper para mapear nombre de etapa a categoría
             $mapStageToCategory = function($stageName) {
-                $stageNameLower = strtolower($stageName);
                 if (stripos($stageName, 'producción') !== false || stripos($stageName, 'produccion') !== false) {
                     return 'Producción';
                 } elseif (stripos($stageName, 'booking') !== false) {
@@ -320,31 +382,41 @@ class DashboardService
                     continue;
                 }
                 
-                $month = (int) \Carbon\Carbon::parse($dateToUse)->format('n'); // 1-12
-                $monthKey = (string)$month; // Clave como string
+                $monthKey = Carbon::parse($dateToUse)->format('Y-m'); // Formato: "2025-01"
+                
+                // Verificar que el mes está en el rango
+                if (!in_array($monthKey, $monthKeys)) {
+                    continue;
+                }
 
                 // Categorizar por etapa del kanban
                 if ($po->kanban_status_id && isset($kanbanStages[$po->kanban_status_id])) {
                     $stageName = $kanbanStages[$po->kanban_status_id];
                     $category = $mapStageToCategory($stageName);
                     
-                    if ($category && isset($categories[$category])) {
-                        $categories[$category][$monthKey] += 1; // Contar PO, no sumar montos
+                    if ($category && isset($categories[$category][$monthKey])) {
+                        $categories[$category][$monthKey] += 1;
                     }
                 } elseif ($po->deleted_at) {
                     // PO anulada sin etapa asignada
-                    $categories['Anulada'][$monthKey] += 1;
+                    if (isset($categories['Anulada'][$monthKey])) {
+                        $categories['Anulada'][$monthKey] += 1;
+                    }
                 }
             }
 
-            // Los valores ya son enteros (conteos), no necesitan redondeo
             $result = [
                 'categories' => $categories,
-                'year' => $currentYear,
+                'month_keys' => $monthKeys,
+                'month_labels' => $monthLabels,
+                'date_from' => $dateFrom->format('Y-m-d'),
+                'date_to' => $dateTo->format('Y-m-d'),
             ];
 
             Log::info('DashboardService::getCanceledLinesTrendTable completed', [
-                'year' => $currentYear,
+                'date_from' => $dateFrom->format('Y-m-d'),
+                'date_to' => $dateTo->format('Y-m-d'),
+                'total_months' => count($monthKeys),
                 'total_pos' => $purchaseOrders->count()
             ]);
 
@@ -354,7 +426,14 @@ class DashboardService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            // Retornar estructura vacía en caso de error (con claves como strings)
+            
+            // Retornar estructura vacía en caso de error
+            $currentYear = now()->year;
+            $monthKeys = [];
+            for ($m = 1; $m <= 12; $m++) {
+                $monthKeys[] = $currentYear . '-' . str_pad($m, 2, '0', STR_PAD_LEFT);
+            }
+            
             $emptyCategories = [];
             $categoryNames = [
                 'Producción',
@@ -366,12 +445,15 @@ class DashboardService
                 'Anulada'
             ];
             foreach ($categoryNames as $catName) {
-                $emptyCategories[$catName] = array_fill_keys(array_map('strval', range(1, 12)), 0);
+                $emptyCategories[$catName] = array_fill_keys($monthKeys, 0);
             }
             
             return [
                 'categories' => $emptyCategories,
-                'year' => now()->year,
+                'month_keys' => $monthKeys,
+                'month_labels' => [],
+                'date_from' => now()->startOfYear()->format('Y-m-d'),
+                'date_to' => now()->endOfYear()->format('Y-m-d'),
             ];
         }
     }

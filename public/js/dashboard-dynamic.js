@@ -73,7 +73,8 @@ class DashboardManager {
         // Export button
         const exportBtn = document.getElementById('export-btn');
         if (exportBtn) {
-            exportBtn.addEventListener('click', () => {
+            exportBtn.addEventListener('click', (e) => {
+                e.preventDefault();
                 this.exportData();
             });
         }
@@ -203,7 +204,9 @@ class DashboardManager {
     }
 
     collectPanelFilters(searchParams) {
-        // Recopilar fechas
+        // ========== FILTROS DEL DASHBOARD ORIGINAL ==========
+        
+        // Recopilar fechas (dashboard original)
         const startDate = document.getElementById('startDate');
         if (startDate && startDate.value) {
             searchParams.append('date_from', startDate.value);
@@ -213,6 +216,76 @@ class DashboardManager {
         if (endDate && endDate.value) {
             searchParams.append('date_to', endDate.value);
         }
+
+        // ========== FILTROS DEL DASHBOARD-KPI ==========
+        
+        // Fecha inicio (dashboard-kpi)
+        const filterDateFrom = document.getElementById('filter-date-from');
+        if (filterDateFrom && filterDateFrom.value && !startDate?.value) {
+            searchParams.append('date_from', filterDateFrom.value);
+        }
+
+        // Fecha fin (dashboard-kpi)
+        const filterDateTo = document.getElementById('filter-date-to');
+        if (filterDateTo && filterDateTo.value && !endDate?.value) {
+            searchParams.append('date_to', filterDateTo.value);
+        }
+
+        // Cliente / Trading Company (dashboard-kpi)
+        const tradingCompany = document.getElementById('filter-trading-company');
+        if (tradingCompany && tradingCompany.value) {
+            searchParams.append('trading_company', tradingCompany.value);
+        }
+
+        // Etapa (dashboard-kpi)
+        const filterStage = document.getElementById('filter-stage');
+        if (filterStage && filterStage.value) {
+            searchParams.append('stage', filterStage.value);
+        }
+
+        // Proveedor de Mercancía (dashboard-kpi)
+        const filterVendorId = document.getElementById('filter-vendor-id');
+        if (filterVendorId && filterVendorId.value) {
+            searchParams.append('vendor_id', filterVendorId.value);
+        }
+
+        // Proveedor de Servicio (dashboard-kpi)
+        const filterServiceProvider = document.getElementById('filter-service-provider');
+        if (filterServiceProvider && filterServiceProvider.value) {
+            searchParams.append('service_provider', filterServiceProvider.value);
+        }
+
+        // Puerto de Embarque (dashboard-kpi)
+        const filterDeparturePort = document.getElementById('filter-departure-port');
+        if (filterDeparturePort && filterDeparturePort.value) {
+            searchParams.append('departure_port', filterDeparturePort.value);
+        }
+
+        // Puerto de Arribo (dashboard-kpi)
+        const filterArrivalPort = document.getElementById('filter-arrival-port');
+        if (filterArrivalPort && filterArrivalPort.value) {
+            searchParams.append('arrival_port', filterArrivalPort.value);
+        }
+
+        // Naviera (dashboard-kpi)
+        const filterShippingLine = document.getElementById('filter-shipping-line');
+        if (filterShippingLine && filterShippingLine.value) {
+            searchParams.append('shipping_line', filterShippingLine.value);
+        }
+
+        // Ruta Logística (dashboard-kpi)
+        const filterRouteLabel = document.getElementById('filter-route-label');
+        if (filterRouteLabel && filterRouteLabel.value) {
+            searchParams.append('route_label', filterRouteLabel.value);
+        }
+
+        // Número de PO (dashboard-kpi)
+        const filterOrderNumber = document.getElementById('filter-order-number');
+        if (filterOrderNumber && filterOrderNumber.value) {
+            searchParams.append('order_number', filterOrderNumber.value);
+        }
+
+        // ========== FILTROS MULTI-SELECT DEL DASHBOARD ORIGINAL ==========
 
         // Recopilar filtro de Tipo de Cliente
         const customerTypeSelect = document.getElementById('customer-type-filter');
@@ -242,7 +315,7 @@ class DashboardManager {
 
         // Recopilar filtros de Vendor (buscar en top primero, luego en panel si existe)
         const vendorSelect = document.getElementById('vendor-filter-top') || document.querySelector('.filters-panel .multi-select[data-placeholder*="vendors"]');
-        if (vendorSelect) {
+        if (vendorSelect && !filterVendorId?.value) {
             const selectedVendors = Array.from(vendorSelect.querySelectorAll('.multi-select-option.selected'))
                 .map(opt => opt.dataset.value)
                 .filter(Boolean);
@@ -253,9 +326,9 @@ class DashboardManager {
             }
         }
 
-        // Recopilar filtro de Puerto de Embarque
+        // Recopilar filtro de Puerto de Embarque (multi-select)
         const departurePortSelect = document.getElementById('departure-port-filter');
-        if (departurePortSelect) {
+        if (departurePortSelect && !filterDeparturePort?.value) {
             const selectedPorts = Array.from(departurePortSelect.querySelectorAll('.multi-select-option.selected'))
                 .map(opt => opt.dataset.value)
                 .filter(Boolean);
@@ -266,9 +339,9 @@ class DashboardManager {
             }
         }
 
-        // Recopilar filtro de Puerto de Arribo
+        // Recopilar filtro de Puerto de Arribo (multi-select)
         const arrivalPortSelect = document.getElementById('arrival-port-filter');
-        if (arrivalPortSelect) {
+        if (arrivalPortSelect && !filterArrivalPort?.value) {
             const selectedPorts = Array.from(arrivalPortSelect.querySelectorAll('.multi-select-option.selected'))
                 .map(opt => opt.dataset.value)
                 .filter(Boolean);
@@ -279,9 +352,9 @@ class DashboardManager {
             }
         }
 
-        // Recopilar filtro de Naviera
+        // Recopilar filtro de Naviera (multi-select)
         const shippingLineSelect = document.getElementById('shipping-line-filter');
-        if (shippingLineSelect) {
+        if (shippingLineSelect && !filterShippingLine?.value) {
             const selectedLines = Array.from(shippingLineSelect.querySelectorAll('.multi-select-option.selected'))
                 .map(opt => opt.dataset.value)
                 .filter(Boolean);
@@ -292,9 +365,9 @@ class DashboardManager {
             }
         }
 
-        // Recopilar filtro de Proveedor de Servicios
+        // Recopilar filtro de Proveedor de Servicios (multi-select)
         const serviceProviderSelect = document.getElementById('service-provider-filter');
-        if (serviceProviderSelect) {
+        if (serviceProviderSelect && !filterServiceProvider?.value) {
             const selectedProviders = Array.from(serviceProviderSelect.querySelectorAll('.multi-select-option.selected'))
                 .map(opt => opt.dataset.value)
                 .filter(Boolean);
@@ -305,7 +378,8 @@ class DashboardManager {
             }
         }
 
-        // Recopilar filtros adicionales de botones
+        // ========== FILTROS ADICIONALES (BOTONES) ==========
+
         const poRetrasoBtn = document.getElementById('btn-po-retraso-cl');
         if (poRetrasoBtn && poRetrasoBtn.classList.contains('active')) {
             searchParams.append('po_retraso_cl', '1');
@@ -339,22 +413,42 @@ class DashboardManager {
     }
 
     async exportData() {
+        const exportBtn = document.getElementById('export-btn');
+        
+        if (!exportBtn) {
+            return;
+        }
+        
+        const originalContent = exportBtn.innerHTML;
+        
         try {
-            console.log('Exporting data...');
-            this.showLoading();
+            // Mostrar loader en el botón
+            exportBtn.disabled = true;
+            exportBtn.innerHTML = `
+                <svg style="width: 18px; height: 18px; animation: spin 1s linear infinite;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="31.4 31.4" stroke-dashoffset="0"></circle>
+                </svg>
+                Descargando...
+            `;
+            exportBtn.style.opacity = '0.7';
+            exportBtn.style.cursor = 'wait';
 
-            // La exportación de la tabla de tendencias no requiere filtros
-            // Solo necesita el año actual y la compañía del usuario (manejado en el backend)
-            const response = await fetch('/dashboard/export', {
+            // Recopilar los filtros actuales para exportar con los mismos criterios
+            const searchParams = new URLSearchParams();
+            this.collectPanelFilters(searchParams);
+
+            const exportUrl = `/dashboard/export?${searchParams.toString()}`;
+
+            const response = await fetch(exportUrl, {
                 method: 'GET',
                 headers: {
                     'X-CSRF-TOKEN': window.csrfToken,
-                    'Accept': 'text/csv',
+                    'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 }
             });
 
             if (!response.ok) {
-                throw new Error('Error al exportar los datos');
+                throw new Error('Error al exportar los datos: ' + response.status);
             }
 
             // Create blob and download
@@ -364,11 +458,11 @@ class DashboardManager {
 
             // Get filename from response headers if available
             const contentDisposition = response.headers.get('Content-Disposition');
-            let filename = 'dashboard_export.csv';
+            let filename = 'tendencia_etapas.xlsx';
             if (contentDisposition) {
-                const matches = /filename="(.+)"/.exec(contentDisposition);
-                if (matches) {
-                    filename = matches[1];
+                const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+                if (matches && matches[1]) {
+                    filename = matches[1].replace(/['"]/g, '');
                 }
             }
 
@@ -381,10 +475,13 @@ class DashboardManager {
 
             this.showModal('successModal');
         } catch (error) {
-            console.error('Error exporting data:', error);
             this.showErrorModal('Error al exportar los datos: ' + error.message);
         } finally {
-            this.hideLoading();
+            // Restaurar el botón
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = originalContent;
+            exportBtn.style.opacity = '1';
+            exportBtn.style.cursor = 'pointer';
         }
     }
 
@@ -640,15 +737,27 @@ class DashboardManager {
     }
 }
 
-// Initialize dashboard when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM Content Loaded - Initializing Dashboard');
-    window.dashboardManager = new DashboardManager();
-});
+// Initialize dashboard only once
+(function() {
+    function initDashboard() {
+        if (window.dashboardManager) {
+            console.log('DashboardManager already initialized, skipping...');
+            return;
+        }
+        console.log('Initializing DashboardManager...');
+        window.dashboardManager = new DashboardManager();
+    }
 
-// Also handle case where this script loads after DOM is ready
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    console.log('DOM already ready - Initializing Dashboard');
-    window.dashboardManager = new DashboardManager();
-}
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        // DOM already ready
+        console.log('DOM already ready');
+        initDashboard();
+    } else {
+        // Wait for DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded');
+            initDashboard();
+        });
+    }
+})();
 
