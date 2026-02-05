@@ -338,7 +338,7 @@ class PucharseOrderConsolidateDetail extends Component {
                         'filename' => $attachment->file_name,
                         'file_type' => strtoupper(pathinfo($attachment->file_name, PATHINFO_EXTENSION)),
                         'file_size' => $this->formatFileSize($attachment->size),
-                        'url' => $attachment->getUrl()
+                        'url' => route('media.download', $attachment->id)
                     ];
                 })->toArray();
 
@@ -385,7 +385,7 @@ class PucharseOrderConsolidateDetail extends Component {
                     'file_type' => strtoupper(pathinfo($media->file_name, PATHINFO_EXTENSION)),
                     'file_size' => $this->formatFileSize($media->size),
                     'created_at' => $media->created_at,
-                    'url' => $media->getUrl(),
+                    'url' => route('media.download', $media->id),
                     'type' => 'attachment' // Necesario para identificar el tipo en la tabla
                 ];
             })

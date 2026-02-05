@@ -162,7 +162,7 @@
 
             <div>
                 <p>Carga total: <span>{{ number_format($totalWeight, 0) }} kg</span></p>
-                <p>Master BL: <span>{{ $shippingDocument->mbl_number ?? 'N/A' }}</span></p>
+                <p>Documento de Embarque: <span>{{ $shippingDocument->mbl_number ?? 'N/A' }}</span></p>
                 <p>Container: <span>{{ $shippingDocument->container_number ?? 'N/A' }}</span></p>
             </div>
         </div>
@@ -285,7 +285,7 @@
         @else
             <div class="py-8 text-center text-gray-500">
                 <p>No hay datos de tracking disponibles en Porth</p>
-                <p class="text-sm mt-2">El contenedor, MBL o booking no tiene información en Porth</p>
+                <p class="text-sm mt-2">El contenedor, Documento de Embarque o booking no tiene información en Porth</p>
             </div>
         @endif
     </div>

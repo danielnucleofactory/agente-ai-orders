@@ -362,7 +362,7 @@
                         </div>
 
                         <x-form-input>
-                            <x-slot:label>MBL Number</x-slot:label>
+                            <x-slot:label>Documento de Embarque</x-slot:label>
                             <x-slot:input name="mbl_number" wire:model="mbl_number" placeholder="Ingrese número"></x-slot:input>
                         </x-form-input>
 

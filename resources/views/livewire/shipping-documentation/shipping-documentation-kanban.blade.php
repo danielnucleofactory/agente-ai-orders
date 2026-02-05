@@ -239,7 +239,7 @@
                 {{-- Tránsito (ID: 5) --}}
                 <div class="{{ (isset($columns[4]) && $newColumnId == $columns[4]['id']) ? '' : 'hidden' }}">
                     <div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm">
-                        <p><strong>Nota:</strong> Debe proporcionar al menos uno de los siguientes: Número de Booking, MBL o Número de Contenedor.</p>
+                        <p><strong>Nota:</strong> Debe proporcionar al menos uno de los siguientes: Número de Booking, Documento de Embarque o Número de Contenedor.</p>
                     </div>
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {{-- Fechas --}}
@@ -275,8 +275,8 @@
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>MBL</x-slot:label>
-                            <x-slot:input type="text" wire:model="bill_of_lading" placeholder="Ingrese MBL" class="pr-10 {{ $errors->has('bill_of_lading') ? 'border-red-500'  : '' }}"></x-slot:input>
+                            <x-slot:label>Documento de Embarque</x-slot:label>
+                            <x-slot:input type="text" wire:model="bill_of_lading" placeholder="Ingrese Documento de Embarque" class="pr-10 {{ $errors->has('bill_of_lading') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('bill_of_lading') }}</x-slot:error>
                         </x-form-input>
 

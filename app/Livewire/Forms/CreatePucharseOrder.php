@@ -2391,8 +2391,10 @@ class CreatePucharseOrder extends Component
         if ($this->id) {
             return redirect()->route('purchase-orders.detail', $this->id);
         } else {
-            // Si no hay ID, redirigir al listado de POs
-            return redirect()->route('purchase-orders.index');
+            // Si no hay ID, redirigir al listado de POs sin parámetros de query
+            // Esto evita que los filtros anteriores queden "pegados"
+            // Usamos to() para construir una URL limpia sin parámetros de query
+            return redirect()->to(route('purchase-orders.index'));
         }
     }
 

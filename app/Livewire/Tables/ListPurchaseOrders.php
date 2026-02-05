@@ -48,6 +48,7 @@ class ListPurchaseOrders extends Component
         'statusFilter' => ['except' => ''],
     ];
 
+
     // === Acciones UI ===
     public function toggleColumn($columnName)
     {
@@ -67,7 +68,25 @@ class ListPurchaseOrders extends Component
         $this->sortField = $field;
     }
 
-    public function updatingSearch()      { $this->resetPage(); }
+    public function updatingSearch($value)
+    {
+        $this->resetPage();
+    }
+
+    public function clearSearch()
+    {
+        $this->search = '';
+        $this->resetPage();
+    }
+
+    public function clearFilters()
+    {
+        $this->search = '';
+        $this->statusFilter = '';
+        $this->sortField = 'created_at';
+        $this->sortDirection = 'desc';
+        $this->resetPage();
+    }
     public function updatingStatusFilter(){ $this->resetPage(); }
     public function updatingPerPage()     { $this->resetPage(); }
     public function previousPage()        { $this->setPage($this->getPage() - 1); }

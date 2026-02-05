@@ -225,7 +225,7 @@ class History extends Component
                     'has_changes' => !empty($comment->old_values) || !empty($comment->new_values),
                     'attachment' => $displayAttachment ? [
                         'name' => $displayAttachment->file_name . ($pendingAttachment ? ' (pendiente de aprobación)' : ''),
-                        'url' => $attachment ? $displayAttachment->getUrl() : '#',
+                        'url' => $attachment ? route('media.download', $displayAttachment->id) : '#',
                         'type' => strtoupper($displayAttachment->extension),
                         'is_pending' => $pendingAttachment ? true : false
                     ] : null

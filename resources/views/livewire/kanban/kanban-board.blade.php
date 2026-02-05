@@ -240,7 +240,7 @@
                     {{-- Campos de tracking para habilitar seguimiento --}}
                     <div class="mb-4">
                         <div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm">
-                            <p><strong>Nota:</strong> Debe proporcionar al menos uno de los siguientes: Número de Booking, MBL o Número de Contenedor.</p>
+                            <p><strong>Nota:</strong> Debe proporcionar al menos uno de los siguientes: Número de Booking, Documento de Embarque o Número de Contenedor.</p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
                             <div>
@@ -253,8 +253,8 @@
 
                             <div>
                                 <x-form-input>
-                                    <x-slot:label>MBL</x-slot:label>
-                                    <x-slot:input name="mbl_number" wire:model="mbl_number" placeholder="Ingrese MBL"
+                                    <x-slot:label>Documento de Embarque</x-slot:label>
+                                    <x-slot:input name="mbl_number" wire:model="mbl_number" placeholder="Ingrese Documento de Embarque"
                                                   class="pr-10 {{ $errors->has('mbl_number') ? 'border-red-500' : '' }}"></x-slot:input>
                                 </x-form-input>
                             </div>
@@ -338,8 +338,8 @@
 
                             <div class="hidden">
                                 <x-form-input>
-                                    <x-slot:label>MBL</x-slot:label>
-                                    <x-slot:input name="mbl_number" wire:model="mbl_number" placeholder="Ingrese MBL"
+                                    <x-slot:label>Documento de Embarque</x-slot:label>
+                                    <x-slot:input name="mbl_number" wire:model="mbl_number" placeholder="Ingrese Documento de Embarque"
                                                   class="pr-10 {{ $errors->has('mbl_number') ? 'border-red-500' : '' }}"></x-slot:input>
                                 </x-form-input>
                             </div>

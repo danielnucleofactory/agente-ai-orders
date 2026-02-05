@@ -452,7 +452,7 @@ class PucharseOrderDetail extends Component
                     'has_changes' => !empty($comment->old_values) || !empty($comment->new_values),
                     'attachment' => $displayAttachment ? [
                         'name' => $displayAttachment->file_name . ($pendingAttachment ? ' (pendiente de aprobación)' : ''),
-                        'url' => $attachment ? $displayAttachment->getUrl() : '#', // Solo URL para archivos aprobados
+                        'url' => $attachment ? route('media.download', $displayAttachment->id) : '#', // Usar ruta de descarga con autenticación
                         'type' => strtoupper($displayAttachment->extension),
                         'is_pending' => $pendingAttachment ? true : false
                     ] : null,

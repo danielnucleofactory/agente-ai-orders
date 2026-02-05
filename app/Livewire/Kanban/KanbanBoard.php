@@ -913,7 +913,7 @@ class KanbanBoard extends Component
                     'created_at' => formatDateTime($comment->created_at),
                     'attachment' => $comment->getAttachment() ? [
                         'name' => $comment->getAttachment()->name,
-                        'url' => $comment->getAttachment()->getUrl()
+                        'url' => route('media.download', $comment->getAttachment()->id)
                     ] : null
                 ];
             });
@@ -1177,7 +1177,7 @@ class KanbanBoard extends Component
             'date_eta'               => 'ETA Variable',
             'container_number'       => 'Contenedor',
             'container_type'         => 'Tipo de contenedor',
-            'mbl_number'             => 'MBL',
+            'mbl_number'             => 'Documento de Embarque',
             'bill_of_lading'         => 'BL',
             'shipping_line'          => 'Naviera',
             'tracking_id'            => 'Tracking',
@@ -1211,7 +1211,7 @@ class KanbanBoard extends Component
 
         $messages = [
             'required' => 'El campo :attribute es requerido.',
-            'required_without_all' => 'Debe proporcionar al menos uno: Número de Booking, MBL o Número de Contenedor.',
+            'required_without_all' => 'Debe proporcionar al menos uno: Número de Booking, Documento de Embarque o Número de Contenedor.',
             'date'     => 'El campo :attribute debe ser una fecha válida.',
             'string'   => 'El campo :attribute debe ser texto.',
             'numeric'  => 'El campo :attribute debe ser numérico.',
