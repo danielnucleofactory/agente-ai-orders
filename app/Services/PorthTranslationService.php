@@ -139,7 +139,7 @@ class PorthTranslationService
 
     /**
      * Traduce código de naviera Porth a nombre Maestros
-     * 
+     *
      * @param string|null $carrierCode Código SCAC (ej: MAEU, MEDU, CMDU)
      * @return string|null Nombre de la naviera en formato Maestros
      */
@@ -150,7 +150,7 @@ class PorthTranslationService
         }
 
         $shippingLine = $this->findShippingLineByCode($carrierCode);
-        
+
         if ($shippingLine) {
             return strtoupper(trim($shippingLine['name']));
         }
@@ -160,6 +160,39 @@ class PorthTranslationService
         ]);
 
         return null;
+    }
+
+    /**
+     * Obtiene el carrierCode (SCAC) a partir del nombre de la naviera en Maestros.
+     * Para usar al crear embarques en Porth; si no se envía carrierCode, Porth puede no traer la información correcta.
+     *
+     * @param string|null $shippingLineName Nombre de la línea (ej: "MAERSK", "CMA CGM", "MSC")
+     * @return string|null Código SCAC (ej: MAEU, CMDU, MEDU) o null si no hay match
+     */
+    public function getCarrierCodeFromShippingLineName(?string $shippingLineName): ?string
+    {
+        if (empty($shippingLineName)) {
+            return null;
+        }
+
+        $normalized = strtoupper(trim($shippingLineName));
+        $lines = $this->getShippingLinesCache();
+
+        $exact = $lines->first(function ($line) use ($normalized) {
+            return strtoupper(trim($line['name'])) === $normalized;
+        });
+        if ($exact) {
+            return $exact['code'];
+        }
+
+        $partial = $lines->first(function ($line) use ($normalized) {
+            $name = strtoupper(trim($line['name']));
+            return $name === $normalized
+                || str_contains($name, $normalized)
+                || str_contains($normalized, $name);
+        });
+
+        return $partial ? $partial['code'] : null;
     }
 
     /**
@@ -398,6 +431,17 @@ class PorthTranslationService
         Log::info('porth_translation:shipping_lines_loaded', ['count' => $shippingLines->count()]);
 
         return $shippingLines;
+    }
+
+    /**
+     * Devuelve todas las navieras (nombre + código) para uso en Porth u otros listados.
+     * Códigos tipo SCAC usados como carrierCode en creación de embarques Porth.
+     *
+     * @return \Illuminate\Support\Collection<int, array{name: string, code: string}>
+     */
+    public function getShippingLinesForExport(): Collection
+    {
+        return $this->getShippingLinesCache()->values();
     }
 
     /**

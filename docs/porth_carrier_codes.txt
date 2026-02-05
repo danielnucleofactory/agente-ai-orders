@@ -1,0 +1,54 @@
+# carrierCode	Nombre (Maestros)
+ACLU	ACL
+ANNU	ANL
+ANRM	Alianca
+ARKU	Arkas Line
+BALC	BALC
+CLNE	Honour Lane
+CMCU	Crowley
+CMDU	CMA CGM
+COSU	COSCO SHIPPING Lines
+CR-DSV	DSV
+CSYU	Cordelia
+CULU	China United Lines
+EGLV	Evergreen
+ESPU	Emirates Shipping Line
+GFRU	COSIARMA
+GPRS	GRUPO RAS
+GRIU	Grimaldi
+GSLU	Gold Star Line
+GWFC	Great White Fleet
+HDGL	Hyundai Glovis Co Ltd
+HDMU	Hyundai Merchant Marine Co.
+HEUN	Heung-A Shipping
+HLCU	Hapag-Lloyd
+IAAU	Interasia Lines
+KMTU	Korea Marine Transport
+KOSU	King Ocean
+KUEH	Kuehne Nagel - K&N
+LMCU	Linea Messina
+MAEU	Maersk Line
+MATS	Matson
+MEDU	MSC
+MFTU	Marfret
+MOLU	MOLACE
+NIRU	Nirint Shipping B.V.
+NSAU	Bahri
+NYKU	NYK Line
+ONEY	ONE
+OOLU	OOCL
+PCIU	PIL
+POLU	Pan Ocean
+SAFM	Safmarine
+SCIU	SCI
+SEAU	Sealand
+SKLU	Sinokor Merchant Marine
+SMCU	SM Line
+SMLU	Seaboard Marine
+SNLU	Sino Lines
+SUDU	Hamburg Süd
+TFLU	Transfar Shipping
+TRKU	Turkon Line
+WHLU	Wan Hai Lines
+YMLU	Yang Ming
+ZIMU	ZIM

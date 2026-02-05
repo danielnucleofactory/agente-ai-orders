@@ -1474,6 +1474,7 @@ class CreatePucharseOrder extends Component
                     'company_id' => $companyId,
                     'order_number' => $this->order_number,
                     'status' => $this->id ? $this->status : 'draft',
+                    'kanban_status_id' => $this->id ? $this->kanban_status_id : 2,
                     'notes' => $this->notes,
                     'vendor_id' => $this->vendor_id,
                     'ship_to_id' => $this->ship_to_id,
