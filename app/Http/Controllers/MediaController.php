@@ -20,43 +20,36 @@ class MediaController extends Controller
             // Obtener el disco configurado
             $disk = Storage::disk($media->disk);
             
-            // Obtener la ruta relativa del archivo usando el método correcto de Spatie Media Library
-            // El método getPath() devuelve la ruta relativa desde la raíz del disco
-            $filePath = $media->getPath();
+            // getPath() devuelve la ruta absoluta completa
+            $fullPath = $media->getPath();
+            $diskRoot = $disk->path('');
             
-            // Verificar que el archivo existe en el disco
-            if (!$disk->exists($filePath)) {
-                \Log::warning('Archivo de media no encontrado en disco', [
+            // Extraer la ruta relativa desde la raíz del disco (para discos remotos como S3)
+            $relativePath = str_replace($diskRoot, '', $fullPath);
+            $relativePath = ltrim($relativePath, '/\\');
+            
+            // Verificar que el archivo existe físicamente (usar la ruta absoluta)
+            if (!file_exists($fullPath)) {
+                \Log::warning('Archivo de media no encontrado físicamente', [
                     'media_id' => $mediaId,
                     'disk' => $media->disk,
-                    'path' => $filePath,
+                    'full_path' => $fullPath,
+                    'relative_path' => $relativePath,
                     'media_collection' => $media->collection_name
                 ]);
                 abort(404, 'Archivo no encontrado');
             }
 
-            // Para discos locales ('public' o 'local'), obtener la ruta física
+            // Para discos locales ('public' o 'local'), usar la ruta absoluta directamente
             if (in_array($media->disk, ['public', 'local'])) {
-                $physicalPath = $disk->path($filePath);
-                
-                // Verificar que el archivo existe físicamente
-                if (!file_exists($physicalPath)) {
-                    \Log::warning('Archivo de media no existe físicamente', [
-                        'media_id' => $mediaId,
-                        'physical_path' => $physicalPath,
-                        'disk_path' => $filePath
-                    ]);
-                    abort(404, 'Archivo no encontrado');
-                }
-
-                // Servir el archivo con los headers apropiados
-                return response()->file($physicalPath, [
+                // Servir el archivo con los headers apropiados usando la ruta absoluta
+                return response()->file($fullPath, [
                     'Content-Type' => $media->mime_type ?? 'application/octet-stream',
                     'Content-Disposition' => 'inline; filename="' . $media->file_name . '"',
                 ]);
             } else {
-                // Para otros discos (como S3), usar download
-                return $disk->download($filePath, $media->file_name);
+                // Para otros discos (como S3), usar download con la ruta relativa
+                return $disk->download($relativePath, $media->file_name);
             }
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
