@@ -100,8 +100,8 @@
                     </span>
                 </x-primary-button>
             @else
-                <x-primary-button 
-                    wire:click="createPurchaseOrder" 
+                <x-primary-button
+                    wire:click="createPurchaseOrder"
                     wire:loading.attr="disabled"
                     wire:target="createPurchaseOrder"
                     class="w-[209px] relative">
@@ -121,7 +121,7 @@
     </div>
 
     {{-- Overlay de carga para crear/actualizar PO --}}
-    <div wire:loading wire:target="createPurchaseOrder,updatePurchaseOrder" 
+    <div wire:loading wire:target="createPurchaseOrder,updatePurchaseOrder"
          class="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-90 backdrop-blur-sm">
         <div class="flex flex-col items-center p-8 bg-white rounded-2xl shadow-xl border-2 border-[#D4F5ED]">
             <svg class="w-12 h-12 text-[#127A62] animate-spin mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -618,7 +618,7 @@
                     <div>
                         <x-form-input>
                             <x-slot:label>Fecha Carga Lista Variable</x-slot:label>
-                            <x-slot:input type="date" name="date_variable_date" wire:model="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500' : '' }}"></x-slot:input>
+                            <x-slot:input type="date" name="date_variable_date" wire:model.live="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500' : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('date_variable_date') }}</x-slot:error>
                         </x-form-input>
                     </div>
@@ -1600,13 +1600,81 @@
 
     // Función para sincronizar campos con wire:ignore antes de guardar
     function syncDateFieldsBeforeSave(poId) {
-        console.log('Sincronizando campos con wire:ignore antes de guardar...');
+        console.log('Sincronizando campos de fecha antes de guardar...');
 
         // Buscar todos los inputs de fecha dentro de divs con wire:ignore
         // Incluir inputs que puedan haber sido convertidos a "text" por Flatpickr
         const wireIgnoreInputs = document.querySelectorAll('[wire\\:ignore] input[type="date"], [wire\\:ignore] input.flatpickr-initialized, [wire\\:ignore] input[name*="date"], [wire\\:ignore] input[name*="Date"]');
 
+        // También buscar campos de fecha que NO tienen wire:ignore pero pueden tener Flatpickr
+        // Estos campos también necesitan sincronización porque Flatpickr puede modificar sus valores
+        // Buscar específicamente por name="date_variable_date" y también por wire:model
+        const dateVarInput = document.querySelector('input[name="date_variable_date"]') ||
+                            document.querySelector('input[wire\\:model="date_variable_date"]') ||
+                            document.querySelector('input[wire\\:model.live="date_variable_date"]');
+        const allDateInputs = document.querySelectorAll('input[name*="date"], input[name*="Date"], input.flatpickr-initialized');
+
         console.log('Inputs encontrados con wire:ignore:', wireIgnoreInputs.length);
+        console.log('Total inputs de fecha encontrados:', allDateInputs.length);
+        console.log('date_variable_date input encontrado:', !!dateVarInput);
+
+        // #region agent log
+        if (dateVarInput) {
+            const wireModel = dateVarInput.getAttribute('wire:model') ||
+                             dateVarInput.getAttribute('wire:model.live') ||
+                             dateVarInput.getAttribute('wire:model.defer') ||
+                             dateVarInput.getAttribute('wire:model.lazy');
+            const hasFlatpickr = !!dateVarInput._flatpickr;
+            const flatpickrValue = hasFlatpickr && dateVarInput._flatpickr.selectedDates.length > 0
+                ? dateVarInput._flatpickr.formatDate(dateVarInput._flatpickr.selectedDates[0], 'Y-m-d')
+                : null;
+            const inputValue = dateVarInput.value;
+            const dataDateValue = dateVarInput.getAttribute('data-date-value');
+
+            console.log('[DEBUG] date_variable_date input details:', {
+                wireModel: wireModel,
+                hasFlatpickr: hasFlatpickr,
+                flatpickrValue: flatpickrValue,
+                inputValue: inputValue,
+                dataDateValue: dataDateValue,
+            });
+
+            fetch('http://127.0.0.1:7242/ingest/26d00db5-9206-445f-bdde-879ec3db4e9b', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    sessionId: 'debug-session',
+                    runId: 'run1',
+                    hypothesisId: 'H1',
+                    location: 'create-pucharse-order.blade.php:syncDateFieldsBeforeSave',
+                    message: 'date_variable_date input found - details',
+                    data: {
+                        wireModel: wireModel,
+                        hasFlatpickr: hasFlatpickr,
+                        flatpickrValue: flatpickrValue,
+                        inputValue: inputValue,
+                        dataDateValue: dataDateValue,
+                    },
+                    timestamp: Date.now()
+                })
+            }).catch(() => {});
+        } else {
+            console.warn('[DEBUG] date_variable_date input NOT FOUND!');
+            fetch('http://127.0.0.1:7242/ingest/26d00db5-9206-445f-bdde-879ec3db4e9b', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    sessionId: 'debug-session',
+                    runId: 'run1',
+                    hypothesisId: 'H1',
+                    location: 'create-pucharse-order.blade.php:syncDateFieldsBeforeSave',
+                    message: 'date_variable_date input NOT FOUND',
+                    data: {},
+                    timestamp: Date.now()
+                })
+            }).catch(() => {});
+        }
+        // #endregion
 
         // Usar @this de Livewire si está disponible (más confiable)
         let formComponent = window.poFormComponent || null;
@@ -1662,49 +1730,199 @@
 
         console.log('Componente Livewire del formulario encontrado:', formComponent);
 
-        // Sincronizar valores de campos con wire:ignore usando component.set()
-        // Esto asegura que los valores se establezcan directamente en el componente
-        wireIgnoreInputs.forEach(function(input) {
+        // Función helper para sincronizar un input de fecha
+        function syncDateInput(input, formComponent, source) {
             const wireModel = input.getAttribute('wire:model') ||
                              input.getAttribute('wire:model.live') ||
                              input.getAttribute('wire:model.defer') ||
                              input.getAttribute('wire:model.lazy');
 
-            if (wireModel) {
-                // Obtener el valor del input (puede ser del input original o de Flatpickr)
-                let value = null;
+            if (!wireModel) {
+                return;
+            }
 
-                if (input._flatpickr && input._flatpickr.selectedDates.length > 0) {
-                    // Si tiene Flatpickr, usar el valor de Flatpickr
-                    value = input._flatpickr.formatDate(input._flatpickr.selectedDates[0], 'Y-m-d');
-                } else {
-                    // Si no tiene Flatpickr, usar el valor del input directamente
-                    value = input.value || input.getAttribute('data-date-value') || '';
-                }
+            // Obtener el valor del input (puede ser del input original o de Flatpickr)
+            let value = null;
 
-                // Usar component.set() para establecer el valor directamente
-                try {
-                    if (typeof formComponent.set === 'function') {
-                        formComponent.set(wireModel, value || null);
-                        console.log('Sincronizado', wireModel, '=', value || '(vacío)');
-                    } else {
-                        // Si set no está disponible, usar eventos como respaldo
-                        input.value = value;
-                        input.setAttribute('data-date-value', value);
-                        input.dispatchEvent(new Event('input', { bubbles: true }));
-                        input.dispatchEvent(new Event('change', { bubbles: true }));
-                        console.log('Sincronizado (eventos)', wireModel, '=', value || '(vacío)');
+            if (input._flatpickr && input._flatpickr.selectedDates.length > 0) {
+                // Si tiene Flatpickr, usar el valor de Flatpickr
+                value = input._flatpickr.formatDate(input._flatpickr.selectedDates[0], 'Y-m-d');
+            } else {
+                // Si no tiene Flatpickr, usar el valor del input directamente
+                value = input.value || input.getAttribute('data-date-value') || '';
+            }
+
+            // Normalizar: cadena vacía se convierte a null
+            if (value === '' || value === null) {
+                value = null;
+            }
+
+            // #region agent log
+            if (wireModel === 'date_variable_date') {
+                fetch('http://127.0.0.1:7242/ingest/26d00db5-9206-445f-bdde-879ec3db4e9b', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        sessionId: 'debug-session',
+                        runId: 'run1',
+                        hypothesisId: 'H1',
+                        location: 'create-pucharse-order.blade.php:syncDateInput',
+                        message: 'syncDateInput - date_variable_date value extracted',
+                        data: {
+                            wireModel: wireModel,
+                            source: source,
+                            hasFlatpickr: !!input._flatpickr,
+                            flatpickrDates: input._flatpickr ? input._flatpickr.selectedDates.length : 0,
+                            inputValue: input.value,
+                            dataDateValue: input.getAttribute('data-date-value'),
+                            extractedValue: value,
+                        },
+                        timestamp: Date.now()
+                    })
+                }).catch(() => {});
+            }
+            // #endregion
+
+            // Usar component.set() para establecer el valor directamente
+            try {
+                if (typeof formComponent.set === 'function') {
+                    formComponent.set(wireModel, value);
+                    console.log('✓ Sincronizado [' + source + ']', wireModel, '=', value !== null ? value : '(null)');
+
+                    // #region agent log
+                    if (wireModel === 'date_variable_date') {
+                        fetch('http://127.0.0.1:7242/ingest/26d00db5-9206-445f-bdde-879ec3db4e9b', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                sessionId: 'debug-session',
+                                runId: 'run1',
+                                hypothesisId: 'H1',
+                                location: 'create-pucharse-order.blade.php:syncDateInput',
+                                message: 'syncDateInput - date_variable_date set via formComponent.set',
+                                data: {
+                                    wireModel: wireModel,
+                                    valueSet: value,
+                                    method: 'formComponent.set',
+                                },
+                                timestamp: Date.now()
+                            })
+                        }).catch(() => {});
                     }
-                } catch (e) {
-                    console.warn('Error al sincronizar', wireModel, ':', e);
-                    // Intentar con eventos como respaldo
-                    input.value = value;
-                    input.setAttribute('data-date-value', value);
+                    // #endregion
+                } else {
+                    // Si set no está disponible, usar eventos como respaldo
+                    input.value = value || '';
+                    input.setAttribute('data-date-value', value || '');
                     input.dispatchEvent(new Event('input', { bubbles: true }));
                     input.dispatchEvent(new Event('change', { bubbles: true }));
+                    console.log('✓ Sincronizado (eventos) [' + source + ']', wireModel, '=', value !== null ? value : '(null)');
+
+                    // #region agent log
+                    if (wireModel === 'date_variable_date') {
+                        fetch('http://127.0.0.1:7242/ingest/26d00db5-9206-445f-bdde-879ec3db4e9b', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                sessionId: 'debug-session',
+                                runId: 'run1',
+                                hypothesisId: 'H1',
+                                location: 'create-pucharse-order.blade.php:syncDateInput',
+                                message: 'syncDateInput - date_variable_date set via events',
+                                data: {
+                                    wireModel: wireModel,
+                                    valueSet: value,
+                                    method: 'events',
+                                },
+                                timestamp: Date.now()
+                            })
+                        }).catch(() => {});
+                    }
+                    // #endregion
                 }
+            } catch (e) {
+                console.warn('Error al sincronizar', wireModel, ':', e);
+                // Intentar con eventos como respaldo
+                input.value = value || '';
+                input.setAttribute('data-date-value', value || '');
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+
+        // Sincronizar valores de campos con wire:ignore usando component.set()
+        // Esto asegura que los valores se establezcan directamente en el componente
+        wireIgnoreInputs.forEach(function(input) {
+            syncDateInput(input, formComponent, 'wire:ignore');
+        });
+
+        // También sincronizar campos de fecha que NO tienen wire:ignore pero tienen wire:model
+        // Esto es importante para campos como date_variable_date que pueden tener Flatpickr
+        allDateInputs.forEach(function(input) {
+            // Saltar si ya está en wireIgnoreInputs
+            if (input.closest('[wire\\:ignore]')) {
+                return;
+            }
+
+            const wireModel = input.getAttribute('wire:model') ||
+                             input.getAttribute('wire:model.live') ||
+                             input.getAttribute('wire:model.defer') ||
+                             input.getAttribute('wire:model.lazy');
+
+            // Solo sincronizar si tiene wire:model (no wire:ignore)
+            if (wireModel) {
+                syncDateInput(input, formComponent, 'normal');
             }
         });
+
+        // #region agent log
+        // Log para verificar que date_variable_date se sincronizó después de syncDateFieldsBeforeSave
+        setTimeout(function() {
+            if (typeof formComponent.get === 'function') {
+                const dateVarValue = formComponent.get('date_variable_date');
+                console.log('[DEBUG H1] After syncDateFieldsBeforeSave - date_variable_date value in Livewire:', dateVarValue);
+                fetch('http://127.0.0.1:7242/ingest/26d00db5-9206-445f-bdde-879ec3db4e9b', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        sessionId: 'debug-session',
+                        runId: 'run1',
+                        hypothesisId: 'H1',
+                        location: 'create-pucharse-order.blade.php:afterSync',
+                        message: 'After syncDateFieldsBeforeSave - date_variable_date value in Livewire',
+                        data: {
+                            date_variable_date: dateVarValue,
+                            date_variable_date_type: typeof dateVarValue,
+                        },
+                        timestamp: Date.now()
+                    })
+                }).catch(() => {});
+            }
+        }, 100);
+        // #endregion
+
+        // #region agent log
+        // Log para verificar que date_variable_date se sincronizó
+        if (typeof formComponent.get === 'function') {
+            const dateVarValue = formComponent.get('date_variable_date');
+            fetch('http://127.0.0.1:7242/ingest/26d00db5-9206-445f-bdde-879ec3db4e9b', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    sessionId: 'debug-session',
+                    runId: 'run1',
+                    hypothesisId: 'H1',
+                    location: 'create-pucharse-order.blade.php:' + (typeof __LINE__ !== 'undefined' ? __LINE__ : 'sync'),
+                    message: 'After syncDateFieldsBeforeSave - date_variable_date value in Livewire',
+                    data: {
+                        date_variable_date: dateVarValue,
+                        date_variable_date_type: typeof dateVarValue,
+                    },
+                    timestamp: Date.now()
+                })
+            }).catch(() => {});
+        }
+        // #endregion
 
         // MEJORAR: Esperar a que Livewire procese los cambios antes de ejecutar updatePurchaseOrder
         // Usar requestAnimationFrame para asegurar que el DOM se actualice
@@ -1716,7 +1934,7 @@
                         console.log('Llamando formComponent.call("updatePurchaseOrder", ' + poId + ')');
                         formComponent.call('updatePurchaseOrder', poId).then(function(result) {
                             console.log('updatePurchaseOrder completado:', result);
-                            
+
                             // VERIFICAR EL RESULTADO
                             if (result && result.success) {
                                 console.log('✅ PO actualizada exitosamente:', result.message);
@@ -1726,7 +1944,7 @@
                                 // Si result es null, puede ser que la función no retornó nada
                                 // Verificar si hay errores en el componente
                                 console.warn('⚠️ updatePurchaseOrder retornó null. Verificando estado...');
-                                
+
                                 // Esperar un momento y verificar si hay errores de validación
                                 setTimeout(function() {
                                     const errors = formComponent.get('errors') || {};
@@ -1740,10 +1958,10 @@
                         }).catch(function(error) {
                             console.error('❌ Error en updatePurchaseOrder:', error);
                             console.error('Stack trace:', error.stack);
-                            
+
                             // Mostrar error al usuario
                             if (window.Livewire) {
-                                Livewire.dispatch('show-error', { 
+                                Livewire.dispatch('show-error', {
                                     message: 'Error al actualizar la orden: ' + (error.message || 'Error desconocido')
                                 });
                             }
