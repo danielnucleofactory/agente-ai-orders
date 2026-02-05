@@ -19,8 +19,9 @@ class PorthSyncService
     protected $porthApiKey;
     protected $porthBaseUrl;
 
-    public function __construct()
-    {
+    public function __construct(
+        protected PorthTranslationService $translationService
+    ) {
         $this->porthApiKey = config('services.porth.api_key');
         $this->porthBaseUrl = rtrim(config('services.porth.api_url', 'https://api.porth.app'), '/');
     }
@@ -229,7 +230,9 @@ class PorthSyncService
     }
 
     /**
-     * Construir payload para creación
+     * Construir payload para creación.
+     * Incluye container/BL/booking cuando existan y carrierCode (desde porth_carrier_code o nombre de naviera)
+     * para que Porth traiga la información correcta.
      */
     private function buildCreatePayload($identifier, $document)
     {
@@ -249,28 +252,53 @@ class PorthSyncService
             ]
         ];
 
-        // Enriquecer con datos del ShippingDocument
+        // Identificador usado: container, BL o booking (según tipo)
+        if (!empty($identifier['value'])) {
+            if ($identifier['type'] === 'container_number') {
+                $basePayload['container'] = $identifier['value'];
+                $basePayload['cargo'] = [['type' => 'container', 'number' => $identifier['value'], 'name' => $identifier['value']]];
+            } elseif ($identifier['type'] === 'mbl_number') {
+                $basePayload['masterBl'] = $identifier['value'];
+            } elseif ($identifier['type'] === 'booking_code') {
+                $basePayload['bookingNumber'] = $identifier['value'];
+            }
+        }
+
+        // Enriquecer con datos del documento (sobrescriben si ya se puso por identifier)
         if ($document instanceof ShippingDocument) {
-            $basePayload = array_merge($basePayload, [
-                'masterBl' => $document->mbl_number,
-                'houseBl' => $document->hbl_number,
-                'etd' => $document->estimated_departure_date?->toISOString(),
-                'eta' => $document->estimated_arrival_date?->toISOString(),
-                'notes' => $document->notes,
-            ]);
+            $basePayload['masterBl'] = $document->mbl_number ?? $basePayload['masterBl'] ?? null;
+            $basePayload['houseBl'] = $document->hbl_number;
+            $basePayload['bookingNumber'] = $document->booking_code ?? $basePayload['bookingNumber'] ?? null;
+            $basePayload['etd'] = $document->estimated_departure_date?->toISOString();
+            $basePayload['eta'] = $document->estimated_arrival_date?->toISOString();
+            $basePayload['notes'] = $document->notes;
+            if ($document->container_number && empty($basePayload['cargo'])) {
+                $basePayload['container'] = $document->container_number;
+                $basePayload['cargo'] = [['type' => 'container', 'number' => $document->container_number, 'name' => $document->container_number]];
+            }
         }
 
-        // Enriquecer con datos del PurchaseOrder
         if ($document instanceof PurchaseOrder) {
-            $basePayload = array_merge($basePayload, [
-                'masterBl' => $document->mbl_number,
-                'etd' => $document->date_etd?->toISOString(),
-                'eta' => $document->date_eta?->toISOString(),
-                'notes' => $document->notes,
-            ]);
+            $basePayload['masterBl'] = $document->mbl_number ?? $basePayload['masterBl'] ?? null;
+            $basePayload['etd'] = $document->date_etd?->toISOString();
+            $basePayload['eta'] = $document->date_eta?->toISOString();
+            $basePayload['notes'] = $document->notes;
+            if ($document->container_number && empty($basePayload['cargo'])) {
+                $basePayload['container'] = $document->container_number;
+                $basePayload['cargo'] = [['type' => 'container', 'number' => $document->container_number, 'name' => $document->container_number]];
+            }
         }
 
-        return $basePayload;
+        // carrierCode: si ya está guardado (porth_carrier_code) o se resuelve desde shipping_line (nombre Maestros)
+        $carrierCode = $document->porth_carrier_code ?? null;
+        if (empty($carrierCode) && !empty($document->shipping_line)) {
+            $carrierCode = $this->translationService->getCarrierCodeFromShippingLineName($document->shipping_line);
+        }
+        if (!empty($carrierCode)) {
+            $basePayload['carrierCode'] = $carrierCode;
+        }
+
+        return array_filter($basePayload, fn ($v) => $v !== null && $v !== '');
     }
 
     /**
