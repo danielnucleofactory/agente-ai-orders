@@ -237,6 +237,17 @@
                         />
                     </div>
 
+                    <div class="mb-8">
+                        <x-form-select
+                            label="Naviera"
+                            name="shipping_line"
+                            wire:model.live="shipping_line"
+                            :options="$shippingLineArray"
+                            :value="$shipping_line"
+                            :error="false"
+                        />
+                    </div>
+
                     {{-- Campos de tracking para habilitar seguimiento --}}
                     <div class="mb-4">
                         <div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm">

@@ -645,10 +645,12 @@ class KanbanBoard extends Component
                 $this->loadServiceProviders($po->trading_company, $po->service_provider);
             }
 
-            // Cargar transport types si estamos en la etapa "Booking"
+            // Cargar transport types y shipping lines si estamos en la etapa "Booking"
             if ($newColumnId == 3 && $po->trading_company) {
                 $this->mode = $po->mode;
+                $this->shipping_line = $po->shipping_line;
                 $this->loadTransportTypes($po->trading_company, $po->mode);
+                $this->loadShippingLines($po->trading_company, $po->shipping_line);
             }
 
             // Cargar shipping lines, puertos y container types si estamos en la etapa "En Tránsito"
@@ -748,10 +750,12 @@ class KanbanBoard extends Component
             $this->loadServiceProviders($po->trading_company, $po->service_provider);
         }
 
-        // Etapa 3 (Booking): transport_types
+        // Etapa 3 (Booking): transport_types y shipping_line
         if ($newStage == 3) {
             $this->mode = $po->mode;
+            $this->shipping_line = $po->shipping_line;
             $this->loadTransportTypes($po->trading_company, $po->mode);
+            $this->loadShippingLines($po->trading_company, $po->shipping_line);
         }
 
         // Etapa 5 (En Tránsito): shipping_line, puertos, container_type
@@ -980,7 +984,7 @@ class KanbanBoard extends Component
         return [
             2 => ['date_variable_date', 'date_theorical_load', 'service_provider', 'forwarder_name'], // Producción
             3 => ['date_variable_date', 'date_theorical_load', 'service_provider',
-                  'container_number', 'mbl_number', 'tracking_id'], // Booking (mismos campos que Producción + tracking)
+                  'container_number', 'mbl_number', 'tracking_id', 'shipping_line'], // Booking (mismos campos que Producción + tracking + naviera)
             4 => [], // Consolidador (sin campos específicos)
             5 => [
                 'date_atd', 'date_eta', 'date_eta_initial', 'container_type',
