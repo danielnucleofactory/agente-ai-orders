@@ -140,12 +140,15 @@ class PorthImportService
      */
     protected function updatePurchaseOrder(PurchaseOrder $po, array $data): void
     {
+        // Guardar valores originales antes de actualizar para detectar cambios reales
+        $originalValues = [];
         $fieldsToUpdate = [];
         
         // BL fields - SOLO si están vacíos localmente
         $blFields = $this->helper->getBlFields($data);
         foreach ($blFields as $field => $value) {
             if (empty($po->$field)) {
+                $originalValues[$field] = $po->$field;
                 $fieldsToUpdate[$field] = $value;
             }
         }
@@ -153,6 +156,9 @@ class PorthImportService
         // Container - SOLO si vacío
         if (empty($po->container_number)) {
             $containerFields = $this->helper->getContainerFields($data);
+            foreach ($containerFields as $field => $value) {
+                $originalValues[$field] = $po->$field;
+            }
             $fieldsToUpdate = array_merge($fieldsToUpdate, $containerFields);
         }
         
@@ -164,6 +170,7 @@ class PorthImportService
             $value = $payloadValues[$payloadKey] ?? null;
             // Solo actualizar si el campo local está vacío
             if (empty($po->$poField) && $value !== null) {
+                $originalValues[$poField] = $po->$poField;
                 $fieldsToUpdate[$poField] = $value;
             }
         }
@@ -172,15 +179,38 @@ class PorthImportService
         $maestrosFields = $this->helper->getMaestrosFields($data);
         foreach ($maestrosFields as $field => $value) {
             if (empty($po->$field) && $value !== null) {
+                $originalValues[$field] = $po->$field;
                 $fieldsToUpdate[$field] = $value;
             }
         }
         
         // Campos de Porth - SIEMPRE se actualizan (son campos de tracking)
+        // Guardar valores originales antes de actualizar
         $porthFields = $this->buildPorthFieldsForPO($data);
+        foreach ($porthFields as $field => $value) {
+            $originalValues[$field] = $po->$field;
+        }
         $fieldsToUpdate = array_merge($fieldsToUpdate, $porthFields);
 
         if (!empty($fieldsToUpdate)) {
+            // Detectar cambios reales comparando valores originales con nuevos
+            $actualChanges = [];
+            foreach ($fieldsToUpdate as $field => $newValue) {
+                $oldValue = $originalValues[$field] ?? null;
+                
+                // Normalizar valores para comparación
+                $normalizedOld = $this->normalizeValueForComparison($oldValue);
+                $normalizedNew = $this->normalizeValueForComparison($newValue);
+                
+                // Solo incluir si realmente cambió
+                if ($normalizedOld !== $normalizedNew) {
+                    $actualChanges[$field] = [
+                        'old' => $oldValue,
+                        'new' => $newValue,
+                    ];
+                }
+            }
+
             $po->fill($fieldsToUpdate);
             $po->save();
 
@@ -188,7 +218,81 @@ class PorthImportService
                 'purchase_order_id' => $po->id,
                 'order_number' => $po->order_number,
                 'fields_updated' => array_keys($fieldsToUpdate),
+                'actual_changes' => array_keys($actualChanges),
             ]);
+
+            // Disparar webhook solo si hay cambios reales
+            if (!empty($actualChanges) && function_exists('dispatch_webhook')) {
+                $this->dispatchWebhookForPorthUpdate($po, $actualChanges);
+            }
+        }
+    }
+
+    /**
+     * Normaliza un valor para comparación
+     */
+    private function normalizeValueForComparison($value)
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if ($value instanceof \Carbon\Carbon || $value instanceof \DateTime) {
+            return $value->format('Y-m-d H:i:s');
+        }
+
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+
+        if (is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE);
+        }
+
+        if (is_string($value)) {
+            return trim($value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Dispara webhook para actualización desde Porth
+     */
+    private function dispatchWebhookForPorthUpdate(PurchaseOrder $po, array $changes): void
+    {
+        try {
+            Log::info('porth_import:dispatching_webhook', [
+                'purchase_order_id' => $po->id,
+                'order_number' => $po->order_number,
+                'changes_count' => count($changes),
+                'changes_keys' => array_keys($changes),
+            ]);
+
+            // Construir payload con solo los datos actualizados
+            $updatedData = [];
+            foreach ($changes as $field => $changeData) {
+                $updatedData[$field] = $changeData['new'];
+            }
+
+            dispatch_webhook('purchase_order.updated', [
+                'purchase_order_id' => $po->id,
+                'order_number' => $po->order_number,
+                'source' => 'porth_sync',
+                'changes' => $changes,
+                'data' => $updatedData, // Solo datos actualizados, no toda la PO
+            ]);
+
+            Log::info('porth_import:webhook_dispatched', [
+                'purchase_order_id' => $po->id,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('porth_import:webhook_error', [
+                'purchase_order_id' => $po->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            // No lanzar la excepción para no interrumpir el flujo principal
         }
     }
 
@@ -221,7 +325,7 @@ class PorthImportService
             'porth_to_final_destination' => $this->parseDateTime($data['toFinalDestination'] ?? null),
             'porth_delivered' => $this->parseDateTime($data['delivered'] ?? null),
             'porth_free_time_at_destination' => $data['freeTimeAtDestination'] ?? null,
-            'porth_manual_tracking' => isset($data['manualTracking']) ? (bool) $data['manualTracking'] : null,
+            'porth_manual_tracking' => isset($data['manualTracking']) ? (bool) $data['manualTracking'] : false,
             'last_porth_sync_at' => now(),
             'freight_type' => !empty($data['freightType']) ? strtolower(trim($data['freightType'])) : null,
         ];
