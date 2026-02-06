@@ -2125,10 +2125,9 @@ class CreatePucharseOrder extends Component
                     $normalizedOld = $this->normalizeValueForComparison($oldValue);
                     $normalizedNew = $this->normalizeValueForComparison($newValue);
 
-                    // Log especial para date_variable_date para depurar
-                    if ($field === 'date_variable_date') {
-                        // #region agent log
-                        \Log::info('[DEBUG H4] Comparing date_variable_date values', [
+                    // Log especial para date_variable_date y date_theorical_load para depurar
+                    if ($field === 'date_variable_date' || $field === 'date_theorical_load') {
+                        \Log::info('[DEBUG] Comparing date field values', [
                             'field' => $field,
                             'oldValue' => $oldValue,
                             'oldValue_type' => gettype($oldValue),
@@ -2139,23 +2138,14 @@ class CreatePucharseOrder extends Component
                             'son_iguales' => $normalizedOld === $normalizedNew,
                             'will_be_included' => $normalizedOld !== $normalizedNew,
                         ]);
-                        // #endregion
-
-                        \Log::info('Comparando date_variable_date', [
-                            'field' => $field,
-                            'oldValue' => $oldValue,
-                            'oldValue_type' => gettype($oldValue),
-                            'newValue' => $newValue,
-                            'newValue_type' => gettype($newValue),
-                            'normalizedOld' => $normalizedOld,
-                            'normalizedNew' => $normalizedNew,
-                            'son_iguales' => $normalizedOld === $normalizedNew,
-                        ]);
                     }
 
                     // Solo incluir si realmente cambió
                     if ($normalizedOld !== $normalizedNew) {
-                        $changes[$field] = $newValue;
+                        $changes[$field] = [
+                            'old' => $oldValue,
+                            'new' => $newValue,
+                        ];
                     } else {
                         // Log campos que fueron filtrados (no cambiaron realmente)
                         $filteredOut[$field] = [
@@ -2298,11 +2288,25 @@ class CreatePucharseOrder extends Component
                             'changes' => $changes,
                         ]);
 
+                        // Construir payload con solo los datos actualizados (no toda la PO)
+                        $updatedData = [];
+                        foreach ($changes as $field => $changeData) {
+                            $updatedData[$field] = $changeData['new'];
+                        }
+
+                        \Log::info('Dispatching webhook with only updated fields', [
+                            'po_id' => $purchaseOrder->id,
+                            'changes_count' => count($changes),
+                            'changes_keys' => array_keys($changes),
+                            'updated_data_keys' => array_keys($updatedData),
+                        ]);
+
                         dispatch_webhook('purchase_order.updated', [
                             'purchase_order_id' => $purchaseOrder->id,
                             'order_number' => $purchaseOrder->order_number,
-                            'changes' => $changes, // Array de cambios filtrados
-                            'data' => $poDataForWebhook,
+                            'trading_company' => $purchaseOrder->trading_company,
+                            'changes' => $changes, // Array de cambios filtrados con formato old/new
+                            'data' => $updatedData, // Solo datos actualizados, no toda la PO
                         ]);
 
                         \Log::info('dispatch_webhook completed from Livewire', [

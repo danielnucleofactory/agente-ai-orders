@@ -264,7 +264,7 @@ class ChangeDescriptionHelper
         
         if ($field === 'kanban_status_id') {
             $status = KanbanStatus::find($value);
-            return $status ? $status->name : "ID: {$value}";
+            return $status ? ($status->slug ?? $status->name) : "ID: {$value}";
         }
         
         // Manejar estados
@@ -307,7 +307,7 @@ class ChangeDescriptionHelper
         // Manejar relaciones
         if ($field === 'kanban_status_id') {
             $status = KanbanStatus::find($value);
-            return $status ? $status->name : "ID: {$value}";
+            return $status ? ($status->slug ?? $status->name) : "ID: {$value}";
         }
         
         // Manejar estados

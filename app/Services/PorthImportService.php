@@ -278,6 +278,7 @@ class PorthImportService
             dispatch_webhook('purchase_order.updated', [
                 'purchase_order_id' => $po->id,
                 'order_number' => $po->order_number,
+                'trading_company' => $po->trading_company,
                 'source' => 'porth_sync',
                 'changes' => $changes,
                 'data' => $updatedData, // Solo datos actualizados, no toda la PO

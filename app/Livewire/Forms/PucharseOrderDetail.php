@@ -581,6 +581,7 @@ class PucharseOrderDetail extends Component
                     dispatch_webhook('purchase_order.updated', [
                         'purchase_order_id' => $this->purchaseOrder->id,
                         'order_number' => $this->purchaseOrder->order_number,
+                        'trading_company' => $this->purchaseOrder->trading_company,
                         'changes' => ['comments' => 'new_comment_added'],
                         'data' => $poData,
                     ]);
@@ -745,6 +746,7 @@ class PucharseOrderDetail extends Component
                                     dispatch_webhook('purchase_order.updated', [
                                         'purchase_order_id' => $this->purchaseOrder->id,
                                         'order_number' => $this->purchaseOrder->order_number,
+                                        'trading_company' => $this->purchaseOrder->trading_company,
                                         'changes' => ['comments' => 'file_attached_to_comment'],
                                         'data' => $poData,
                                     ]);
@@ -857,6 +859,7 @@ class PucharseOrderDetail extends Component
                     dispatch_webhook('purchase_order.updated', [
                         'purchase_order_id' => $this->purchaseOrder->id,
                         'order_number' => $this->purchaseOrder->order_number,
+                        'trading_company' => $this->purchaseOrder->trading_company,
                         'changes' => ['comments' => 'new_comment_added'],
                         'data' => $poData,
                     ]);

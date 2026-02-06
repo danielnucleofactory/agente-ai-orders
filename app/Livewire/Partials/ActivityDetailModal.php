@@ -385,7 +385,7 @@ class ActivityDetailModal extends Component
         return $this->fieldLabels[$field] ?? $field;
     }
 
-    public function formatValue($value)
+    public function formatValue($value, $field = null)
     {
         // Si es null, mostrar como "(sin valor)"
         if ($value === null) {
@@ -400,6 +400,15 @@ class ActivityDetailModal extends Component
         // Si es el string "N/A" literal, mantenerlo pero con estilo
         if (is_string($value) && strtoupper(trim($value)) === 'N/A') {
             return '<span class="text-gray-400">N/A</span>';
+        }
+        
+        // Formatear kanban_status_id usando el slug en lugar del ID
+        if ($field === 'kanban_status_id' && is_numeric($value)) {
+            $status = \App\Models\KanbanStatus::find($value);
+            if ($status) {
+                $displayValue = $status->slug ?? $status->name ?? "ID: {$value}";
+                return htmlspecialchars((string) $displayValue);
+            }
         }
         
         if (is_array($value)) {

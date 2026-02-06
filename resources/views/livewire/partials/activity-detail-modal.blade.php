@@ -133,10 +133,10 @@
                                                 {{ $this->getFieldLabel($field) }}
                                             </td>
                                             <td class="px-4 py-3 text-sm text-gray-500">
-                                                {!! $this->formatValue($this->oldValues[$field] ?? null) !!}
+                                                {!! $this->formatValue($this->oldValues[$field] ?? null, $field) !!}
                                             </td>
                                             <td class="px-4 py-3 text-sm text-gray-900 font-medium">
-                                                {!! $this->formatValue($this->newValues[$field] ?? null) !!}
+                                                {!! $this->formatValue($this->newValues[$field] ?? null, $field) !!}
                                             </td>
                                         </tr>
                                         @endforeach

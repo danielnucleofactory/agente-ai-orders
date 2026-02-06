@@ -860,6 +860,7 @@ class KanbanBoard extends Component
                         dispatch_webhook('purchase_order.updated', [
                             'purchase_order_id' => $po->id,
                             'order_number' => $po->order_number,
+                            'trading_company' => $po->trading_company,
                             'changes' => ['comments' => 'new_comment_added'],
                             'data' => $poData,
                         ]);
@@ -1014,14 +1015,34 @@ class KanbanBoard extends Component
             return ['ok' => true, 'updated' => 0];
         }
 
-        // Armar payload solo con props existentes y con valor
+        // Obtener la PO antes de comparar valores
+        $po = PurchaseOrder::find($poId);
+        if (!$po) {
+            return ['ok' => false, 'message' => 'PO no encontrada'];
+        }
+
+        // Armar payload solo con campos que realmente cambiaron
         $payload = [];
+        $changes = [];
         foreach ($fields as $name) {
             if (property_exists($this, $name)) {
-                $val = $this->$name;
+                $newVal = $this->$name;
                 // Filtrar valores especiales que indican "no hay datos"
-                if (!is_null($val) && $val !== '__no_data__' && (!(is_string($val)) || trim($val) !== '')) {
-                    $payload[$name] = $val;
+                if (!is_null($newVal) && $newVal !== '__no_data__' && (!(is_string($newVal)) || trim($newVal) !== '')) {
+                    $oldVal = $po->$name;
+                    
+                    // Normalizar valores para comparación
+                    $normalizedOld = $this->normalizeValueForComparison($oldVal);
+                    $normalizedNew = $this->normalizeValueForComparison($newVal);
+                    
+                    // Solo incluir si realmente cambió
+                    if ($normalizedOld !== $normalizedNew) {
+                        $payload[$name] = $newVal;
+                        $changes[$name] = [
+                            'old' => $oldVal,
+                            'new' => $newVal,
+                        ];
+                    }
                 }
             }
         }
@@ -1033,12 +1054,6 @@ class KanbanBoard extends Component
         try {
             DB::beginTransaction();
 
-            // Verificar que la PO exista ANTES del update
-            $poExists = DB::table('purchase_orders')->where('id', $poId)->exists();
-            if (!$poExists) {
-                throw new \RuntimeException('PO no encontrada');
-            }
-
             $updated = DB::table('purchase_orders')
                 ->where('id', $poId)
                 ->update($payload);
@@ -1047,7 +1062,7 @@ class KanbanBoard extends Component
             // No es un error, simplemente no hubo cambios que hacer
 
             // NUEVO: Actualizar automáticamente arrival_status y delay_days si se actualizó la ETA
-            $po = PurchaseOrder::find($poId);
+            $po = $po->fresh();
             if ($po && (isset($payload['date_eta']) || isset($payload['date_eta_initial']))) {
                 $po->updateArrivalStatus();
             }
@@ -1060,20 +1075,22 @@ class KanbanBoard extends Component
                     \Log::info('About to dispatch webhook for PO update from KanbanBoard', [
                         'po_id' => $po->id,
                         'order_number' => $po->order_number,
+                        'changes_count' => count($changes),
+                        'changes_keys' => array_keys($changes),
                     ]);
 
-                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
-                    $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
-
-                    // Convertir a array y asegurar que sea JSON serializable
-                    $poData = $freshPo->toArray();
-                    $poData = json_decode(json_encode($poData), true);
+                    // Construir payload con solo los datos actualizados (no toda la PO)
+                    $updatedData = [];
+                    foreach ($changes as $field => $changeData) {
+                        $updatedData[$field] = $changeData['new'];
+                    }
 
                     dispatch_webhook('purchase_order.updated', [
                         'purchase_order_id' => $po->id,
                         'order_number' => $po->order_number,
-                        'changes' => $payload,
-                        'data' => $poData,
+                        'trading_company' => $po->trading_company,
+                        'changes' => $changes, // Array con formato old/new
+                        'data' => $updatedData, // Solo datos actualizados, no toda la PO
                     ]);
 
                     \Log::info('dispatch_webhook completed from KanbanBoard', [
@@ -1715,6 +1732,75 @@ class KanbanBoard extends Component
         asort($result);
 
         return $result;
+    }
+
+    /**
+     * Normalize value for comparison to avoid false positives.
+     * Handles different types and formats of values.
+     */
+    protected function normalizeValueForComparison($value)
+    {
+        // Handle null
+        if ($value === null) {
+            return null;
+        }
+
+        // Handle empty string and false as null
+        if ($value === '' || $value === false) {
+            return null;
+        }
+
+        // Handle Carbon dates
+        if ($value instanceof \Carbon\Carbon) {
+            return $value->format('Y-m-d');
+        }
+
+        // Handle DateTime objects
+        if ($value instanceof \DateTime) {
+            return $value->format('Y-m-d');
+        }
+
+        // Handle strings - trim and normalize
+        if (is_string($value)) {
+            $trimmed = trim($value);
+            // Empty string becomes null
+            if ($trimmed === '') {
+                return null;
+            }
+            // Try to parse as date first (common formats: Y-m-d, d/m/Y, etc.)
+            try {
+                // Try to parse as date and normalize to Y-m-d format
+                $parsedDate = \Carbon\Carbon::parse($trimmed);
+                return $parsedDate->format('Y-m-d');
+            } catch (\Exception $e) {
+                // Not a date, continue with other checks
+            }
+            // Try to parse as number if it looks like one
+            if (is_numeric($trimmed)) {
+                $floatValue = (float) $trimmed;
+                return round($floatValue, 2);
+            }
+            return $trimmed;
+        }
+
+        // Handle numeric values - normalize to float with 2 decimal places
+        if (is_numeric($value)) {
+            $floatValue = (float) $value;
+            return round($floatValue, 2);
+        }
+
+        // Handle booleans - convert to int
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+
+        // Handle arrays - convert to JSON string
+        if (is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE);
+        }
+
+        // Default: convert to string
+        return (string) $value;
     }
 
 }
