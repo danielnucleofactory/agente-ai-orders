@@ -284,86 +284,100 @@ class PorthApiService
 
     /**
      * Sincroniza cambios de campos de negocio desde Orders hacia Porth.
-     * Solo se ejecuta si la PO tiene porth_id y los campos relevantes cambiaron.
      * 
-     * Campos monitoreados:
-     *   - mbl_number → masterBl
-     *   - container_number → cargo[0].number
-     *   - tracking_id → bookingNumber
-     *   - shipping_line → carrierCode (traduce nombre a código SCAC)
+     * Dos comportamientos según el tipo de campo:
+     * 
+     * A) MBL, contenedor, booking → El embarque cambió.
+     *    Se limpia porth_id y se despacha PorthSyncJob para buscar/crear
+     *    el nuevo embarque en Porth y obtener el nuevo porth_id.
+     * 
+     * B) Naviera (shipping_line) → Corrección al embarque actual.
+     *    Se actualiza el carrierCode en el embarque existente de Porth.
      * 
      * @param \App\Models\PurchaseOrder $po La PO con datos actualizados
-     * @param array $changedFields Array asociativo campo => nuevo_valor de los campos que cambiaron
+     * @param array $changedFields Array asociativo campo => nuevo_valor
      */
     public function pushChangesToPorth(\App\Models\PurchaseOrder $po, array $changedFields): void
     {
-        $porthId = $po->porth_id;
-        if (empty($porthId)) {
-            return;
-        }
+        // Campos que implican un cambio de embarque → nuevo porth_id
+        $shipmentIdentifiers = ['mbl_number', 'container_number', 'tracking_id'];
+        $identifierChanges = array_intersect_key($changedFields, array_flip($shipmentIdentifiers));
 
-        // Mapeo de campos Orders → Porth
-        $porthPayload = [];
-        $relevantFields = ['mbl_number', 'container_number', 'tracking_id', 'shipping_line'];
-        $hasRelevantChanges = false;
+        // Campos que son correcciones al embarque actual → update en Porth
+        $updateFields = ['shipping_line'];
+        $updateChanges = array_intersect_key($changedFields, array_flip($updateFields));
 
-        foreach ($relevantFields as $field) {
-            if (!array_key_exists($field, $changedFields)) {
-                continue;
-            }
+        // A) Si cambiaron identificadores de embarque: limpiar porth_id y re-vincular
+        if (!empty($identifierChanges)) {
+            $oldPorthId = $po->porth_id;
 
-            $hasRelevantChanges = true;
-            $newValue = $changedFields[$field];
-
-            switch ($field) {
-                case 'mbl_number':
-                    $porthPayload['masterBl'] = $newValue ?? '';
-                    break;
-
-                case 'container_number':
-                    $porthPayload['cargo'] = [
-                        ['type' => 'container', 'number' => $newValue ?? '', 'name' => $newValue ?? ''],
-                    ];
-                    break;
-
-                case 'tracking_id':
-                    $porthPayload['bookingNumber'] = $newValue ?? '';
-                    break;
-
-                case 'shipping_line':
-                    // Traducir nombre de naviera a carrierCode (SCAC)
-                    if (!empty($newValue)) {
-                        $translationService = app(PorthTranslationService::class);
-                        $carrierCode = $translationService->getCarrierCodeFromShippingLineName($newValue);
-                        if ($carrierCode) {
-                            $porthPayload['carrierCode'] = $carrierCode;
-                        }
-                    }
-                    break;
-            }
-        }
-
-        if (!$hasRelevantChanges || empty($porthPayload)) {
-            return;
-        }
-
-        Log::info('porth_api:pushing_changes_to_porth', [
-            'purchase_order_id' => $po->id,
-            'order_number' => $po->order_number,
-            'porth_id' => $porthId,
-            'porth_payload' => $porthPayload,
-        ]);
-
-        // Ejecutar en background para no bloquear la respuesta al usuario
-        try {
-            $this->updateShipment($porthId, $porthPayload);
-        } catch (\Throwable $e) {
-            Log::error('porth_api:push_changes_error', [
+            Log::info('porth_api:shipment_changed_relinking', [
                 'purchase_order_id' => $po->id,
-                'porth_id' => $porthId,
-                'error' => $e->getMessage(),
+                'order_number' => $po->order_number,
+                'old_porth_id' => $oldPorthId,
+                'changed_identifiers' => array_keys($identifierChanges),
             ]);
-            // No lanzar excepción para no interrumpir el flujo
+
+            // Limpiar porth_id y last_porth_sync_at para que PorthSyncJob
+            // busque/cree el nuevo embarque en Porth
+            \Illuminate\Support\Facades\DB::table('purchase_orders')
+                ->where('id', $po->id)
+                ->update([
+                    'porth_id' => null,
+                    'last_porth_sync_at' => null,
+                    'porth_shipment_number' => null,
+                ]);
+
+            // Refrescar el modelo para que dispatchPorthSync vea porth_id vacío
+            $po->refresh();
+
+            // Despachar job de búsqueda/creación del nuevo embarque en Porth
+            \App\Jobs\PorthSyncJob::dispatch($po->id, get_class($po))
+                ->onQueue('porth-sync')
+                ->delay(now()->addSeconds(5));
+
+            Log::info('porth_api:porth_sync_job_dispatched', [
+                'purchase_order_id' => $po->id,
+                'order_number' => $po->order_number,
+                'new_identifiers' => $identifierChanges,
+            ]);
+
+            return; // No tiene sentido actualizar el embarque viejo si ya cambiamos de embarque
+        }
+
+        // B) Si solo cambió la naviera: actualizar el embarque existente en Porth
+        if (!empty($updateChanges) && !empty($po->porth_id)) {
+            $porthId = $po->porth_id;
+            $porthPayload = [];
+
+            if (isset($updateChanges['shipping_line']) && !empty($updateChanges['shipping_line'])) {
+                $translationService = app(PorthTranslationService::class);
+                $carrierCode = $translationService->getCarrierCodeFromShippingLineName($updateChanges['shipping_line']);
+                if ($carrierCode) {
+                    $porthPayload['carrierCode'] = $carrierCode;
+                }
+            }
+
+            if (empty($porthPayload)) {
+                return;
+            }
+
+            Log::info('porth_api:updating_existing_shipment', [
+                'purchase_order_id' => $po->id,
+                'order_number' => $po->order_number,
+                'porth_id' => $porthId,
+                'porth_payload' => $porthPayload,
+            ]);
+
+            try {
+                $this->updateShipment($porthId, $porthPayload);
+            } catch (\Throwable $e) {
+                Log::error('porth_api:push_changes_error', [
+                    'purchase_order_id' => $po->id,
+                    'porth_id' => $porthId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 
