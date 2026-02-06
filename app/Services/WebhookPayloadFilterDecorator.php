@@ -8,13 +8,16 @@ use RagaOrders\Webhook\Services\WebhookService;
  * Decorador del WebhookService del módulo que post-procesa el payload de PO
  * para ocultar date_variable_date (solo se envía date_carga_po) y current_timestamp.
  *
- * Así la app no depende de modificar internal_modules (que puede estar en .gitignore).
+ * Extiende WebhookService para que el type-hint en WebhookSettingsController
+ * siga siendo válido (evita error 500 en /webhook/settings).
  */
-class WebhookPayloadFilterDecorator
+class WebhookPayloadFilterDecorator extends WebhookService
 {
     public function __construct(
         protected WebhookService $inner
-    ) {}
+    ) {
+        // No llamar a parent::__construct(); el comportamiento real está en $inner
+    }
 
     /**
      * Transforma el payload y luego quita campos que no deben ir al endpoint.
