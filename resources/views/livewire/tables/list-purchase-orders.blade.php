@@ -91,7 +91,7 @@
                             <div class="px-4 py-2">
                                 <label class="flex items-center space-x-2">
                                     <input type="checkbox" wire:model.live="visibleColumns.mbl_number" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-blue-500">
-                                    <span class="text-sm text-gray-700">Documento de Embarque</span>
+                                    <span class="text-sm text-gray-700">Documento de tránsito</span>
                                 </label>
                             </div>
                             <div class="px-4 py-2">
@@ -255,7 +255,7 @@
                         @if($visibleColumns['mbl_number'])
                         <th scope="col" class="px-6 py-5 text-xs font-bold tracking-wider text-left text-black uppercase cursor-pointer">
                             <div class="flex items-center space-x-1 cursor-pointer" wire:click="sortBy('mbl_number')">
-                                <span>Documento de Embarque</span>
+                                <span>Documento de tránsito</span>
                                 @if ($sortField === 'mbl_number')
                                     <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         @if ($sortDirection === 'asc')

@@ -1098,7 +1098,6 @@ class PurchaseOrderController extends Controller
                     dispatch_webhook('purchase_order.updated', [
                         'purchase_order_id' => $purchaseOrder->id,
                         'order_number' => $purchaseOrder->order_number,
-                        'trading_company' => $purchaseOrder->trading_company,
                         'changes' => $changes,
                         'data' => $poData,
                     ]);
@@ -1814,7 +1813,6 @@ class PurchaseOrderController extends Controller
                     dispatch_webhook('purchase_order.updated', [
                         'purchase_order_id' => $po->id,
                         'order_number' => $po->order_number,
-                        'trading_company' => $po->trading_company,
                         'changes' => $changes,
                         'data' => $poData,
                     ]);

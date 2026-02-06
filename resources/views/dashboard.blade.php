@@ -187,13 +187,13 @@
 
     <!-- Filter Controls -->
     <div class="filters-section" style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; font-family: 'Lato', sans-serif; margin-bottom: 24px;">
-      <div class="filter-group" data-filter="date-from" style="width: 150px;">
+      <div class="filter-group" data-filter="date-from" style="width: 150px;" x-data="datePicker('')">
         <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Fecha inicio</label>
-        <input type="date" id="startDate" class="date-input" style="height: 40px; width: 150px; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
+        <input x-ref="picker" type="text" id="startDate" class="date-input" style="height: 40px; width: 150px; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
       </div>
-      <div class="filter-group" data-filter="date-to" style="width: 150px;">
+      <div class="filter-group" data-filter="date-to" style="width: 150px;" x-data="datePicker('')">
         <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Fecha fin</label>
-        <input type="date" id="endDate" class="date-input" style="height: 40px; width: 150px; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
+        <input x-ref="picker" type="text" id="endDate" class="date-input" style="height: 40px; width: 150px; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
       </div>
       <div class="filter-group" data-filter="customer-type" style="width: 150px;">
         <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Tipo de cliente</label>

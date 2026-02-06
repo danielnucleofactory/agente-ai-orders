@@ -93,7 +93,7 @@
             @if($mblNumber || $containerNumber || ($trackingIdCode && $trackingIdCode !== 'N/A'))
                 <div class="text-xs text-gray-600 space-y-0.5">
                     @if($mblNumber)
-                        <p>Documento de Embarque: {{ $mblNumber }}</p>
+                        <p>Documento de tránsito: {{ $mblNumber }}</p>
                     @endif
                     @if($containerNumber)
                         <p>Contenedor: {{ $containerNumber }}</p>

@@ -72,22 +72,11 @@ input.flatpickr-alt-input {
     @apply rounded-xl border-2 border-[#28C7A1] py-[0.625rem] px-3 text-lg text-[#2E2E2E] placeholder:text-[#AFAFAF] w-full leading-none cursor-pointer bg-white;
 }
 
-/* Prioridad para borde rojo en errores de validación */
-input.flatpickr-alt-input.border-red-500 {
+/* Prioridad para borde rojo en errores de validación - via CSS cascading desde el contenedor */
+input.flatpickr-alt-input.border-red-500,
+.date-picker-error .flatpickr-alt-input {
     border-color: #ef4444 !important;
     border-width: 2px !important;
-}
-
-/* Ocultar el input original cuando altInput está activo */
-input.flatpickr-input.flatpickr-initialized {
-    position: absolute !important;
-    visibility: hidden !important;
-    width: 0 !important;
-    height: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border: 0 !important;
-    opacity: 0 !important;
 }
 html,
 body {

@@ -164,7 +164,7 @@ class CustomPurchaseOrdersTable extends Component
             \DB::commit();
 
             // Show success message
-            session()->flash('message', 'Documento de embarque ' . $shippingDocument->document_number . ' creado exitosamente con ' . count($this->selected) . ' órdenes y un peso total de ' . number_format($totalWeight, 0) . ' kg.');
+            session()->flash('message', 'Documento de tránsito ' . $shippingDocument->document_number . ' creado exitosamente con ' . count($this->selected) . ' órdenes y un peso total de ' . number_format($totalWeight, 0) . ' kg.');
 
             // Reset selection after creating document
             $this->selected = [];

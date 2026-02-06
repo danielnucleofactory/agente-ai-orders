@@ -32,13 +32,13 @@
 
         <!-- Filter Controls -->
         <div class="filters-section" style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: nowrap; font-family: 'Lato', sans-serif;">
-            <div class="filter-group" data-filter="date-from" style="width: 180px;">
+            <div class="filter-group" data-filter="date-from" style="width: 180px;" x-data="datePicker('{{ request('date_from') ?? '' }}')">
                 <label class="filter-label" style="color: #565AFF; font-size: 14px;">Fecha inicio</label>
-                <input type="date" id="startDate" name="date_from" value="{{ request('date_from') }}" class="date-input" style="height: 40px; width: 180px; padding: 8px 14px; border: 2px solid #7288FF; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
+                <input x-ref="picker" type="text" id="startDate" name="date_from" class="date-input" style="height: 40px; width: 180px; padding: 8px 14px; border: 2px solid #7288FF; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
             </div>
-            <div class="filter-group" data-filter="date-to" style="width: 180px;">
+            <div class="filter-group" data-filter="date-to" style="width: 180px;" x-data="datePicker('{{ request('date_to') ?? '' }}')">
                 <label class="filter-label" style="color: #565AFF; font-size: 14px;">Fecha fin</label>
-                <input type="date" id="endDate" name="date_to" value="{{ request('date_to') }}" class="date-input" style="height: 40px; width: 180px; padding: 8px 14px; border: 2px solid #7288FF; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
+                <input x-ref="picker" type="text" id="endDate" name="date_to" class="date-input" style="height: 40px; width: 180px; padding: 8px 14px; border: 2px solid #7288FF; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
             </div>
             <div class="filter-group" data-filter="vendor" style="width: 180px;">
                 <label class="filter-label" style="color: #565AFF; font-size: 14px;">Vendor</label>

@@ -55,13 +55,7 @@
                                 </x-slot:input>
                             </x-form-input>
                         </div>
-                        <x-form-input class="grow">
-                            <x-slot:label>
-                                Fecha de Liberación
-                            </x-slot:label>
-                            <x-slot:input name="release_date" type="date" wire:model="release_date">
-                            </x-slot:input>
-                        </x-form-input>
+                        <x-date-picker wire:model="release_date" label="Fecha de Liberación" class="grow" />
                     </div>
                 </div>
             </div>
@@ -115,13 +109,7 @@
                     </x-slot:input>
                 </x-form-input>
 
-                <x-form-input>
-                    <x-slot:label>
-                        Delivery Date
-                    </x-slot:label>
-                    <x-slot:input name="delivery_date" type="date" wire:model="delivery_date">
-                    </x-slot:input>
-                </x-form-input>
+                <x-date-picker wire:model="delivery_date" label="Delivery Date" />
 
                 <x-form-input>
                     <x-slot:label>

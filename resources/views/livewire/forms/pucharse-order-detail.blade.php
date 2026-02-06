@@ -159,7 +159,7 @@
         @else
             <div class="py-8 text-center text-gray-500">
                 <p>No hay datos de tracking disponibles en Porth</p>
-                <p class="text-sm mt-2">El contenedor, Documento de Embarque o booking no tiene información en Porth</p>
+                <p class="text-sm mt-2">El contenedor, Documento de tránsito o booking no tiene información en Porth</p>
             </div>
         @endif
     </div>
@@ -335,7 +335,7 @@
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Identificadores de embarque</h4>
             <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                 <div>
-                    <p class="mb-1 text-gray-500">Documento de Embarque</p>
+                    <p class="mb-1 text-gray-500">Documento de tránsito</p>
                     <p class="font-semibold">{{ $purchaseOrder->mbl_number ?? '-' }}</p>
                 </div>
                 <div>

@@ -3,9 +3,7 @@
         <link rel="stylesheet" href="{{ asset('css/dashboard-kpi.css') }}">
         <style>
             /* Estilos específicos para inputs de períodos de comparación - sobrescribir Flatpickr */
-            .comparison-period-filters input.flatpickr-alt-input,
-            .comparison-period-filters input[type="date"].flatpickr-alt-input,
-            .comparison-period-filters input.flatpickr-input.flatpickr-initialized {
+            .comparison-period-filters input.flatpickr-alt-input {
                 width: 150px !important;
                 height: 40px !important;
                 padding: 8px 14px !important;
@@ -32,13 +30,13 @@
     <div class="dashboard-kpi-container">
         <!-- Filtros Globales -->
         <div class="filters-section" id="filtersSection" style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; font-family: 'Lato', sans-serif; margin-bottom: 24px; background: transparent; border: none; padding: 0;">
-            <div class="filter-group">
+            <div class="filter-group" x-data="datePicker('')">
                 <label class="filter-label">Fecha inicio</label>
-                <input type="date" id="filter-date-from" class="date-input filter-input" value="">
+                <input x-ref="picker" type="text" id="filter-date-from" class="date-input filter-input" value="">
             </div>
-            <div class="filter-group">
+            <div class="filter-group" x-data="datePicker('')">
                 <label class="filter-label">Fecha fin</label>
-                <input type="date" id="filter-date-to" class="date-input filter-input" value="">
+                <input x-ref="picker" type="text" id="filter-date-to" class="date-input filter-input" value="">
             </div>
             <div class="filter-group">
                 <label class="filter-label">Cliente</label>
@@ -570,31 +568,31 @@
                         <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
                             <!-- Período A -->
                             <div style="display: flex; align-items: flex-end; gap: 8px;">
-                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; flex-direction: column; gap: 4px;" x-data="datePicker('')">
                                     <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Inicio</label>
-                                    <input type="date" id="comp-period-a-from" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                    <input x-ref="picker" type="text" id="comp-period-a-from" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
                                 </div>
-                                <div style="display: flex; flex-direction: column; gap: 4px; position: relative;">
+                                <div style="display: flex; flex-direction: column; gap: 4px; position: relative;" x-data="datePicker('')">
                                     <div style="display: flex; align-items: center; width: 150px; position: relative;">
                                         <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Fin</label>
                                         <span style="font-size: 14px; font-weight: 700; color: #1AAD8A; white-space: nowrap; position: absolute; right: 0;">Período A</span>
                                     </div>
-                                    <input type="date" id="comp-period-a-to" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                    <input x-ref="picker" type="text" id="comp-period-a-to" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
                                 </div>
                             </div>
                             
                             <!-- Período B -->
                             <div style="display: flex; align-items: flex-end; gap: 8px;">
-                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; flex-direction: column; gap: 4px;" x-data="datePicker('')">
                                     <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Inicio</label>
-                                    <input type="date" id="comp-period-b-from" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                    <input x-ref="picker" type="text" id="comp-period-b-from" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
                                 </div>
-                                <div style="display: flex; flex-direction: column; gap: 4px; position: relative;">
+                                <div style="display: flex; flex-direction: column; gap: 4px; position: relative;" x-data="datePicker('')">
                                     <div style="display: flex; align-items: center; width: 150px; position: relative;">
                                         <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Fin</label>
                                         <span style="font-size: 14px; font-weight: 700; color: #1AAD8A; white-space: nowrap; position: absolute; right: 0;">Período B</span>
                                     </div>
-                                    <input type="date" id="comp-period-b-to" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                    <input x-ref="picker" type="text" id="comp-period-b-to" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
                                 </div>
                             </div>
                         </div>

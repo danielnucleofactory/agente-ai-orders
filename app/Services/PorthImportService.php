@@ -135,8 +135,9 @@ class PorthImportService
     }
 
     /**
-     * Actualiza una PurchaseOrder con datos de Porth
-     * IMPORTANTE: Los campos existentes solo se actualizan si están vacíos localmente
+     * Actualiza una PurchaseOrder con datos de Porth.
+     * Porth SIEMPRE sobrescribe los campos de negocio (fechas, puertos, naviera, etc.)
+     * Los cambios quedan registrados en el historial con el usuario "Next Orders".
      */
     protected function updatePurchaseOrder(PurchaseOrder $po, array $data): void
     {
@@ -144,48 +145,42 @@ class PorthImportService
         $originalValues = [];
         $fieldsToUpdate = [];
         
-        // BL fields - SOLO si están vacíos localmente
+        // BL fields - siempre sobrescribir si Porth trae valor
         $blFields = $this->helper->getBlFields($data);
         foreach ($blFields as $field => $value) {
-            if (empty($po->$field)) {
-                $originalValues[$field] = $po->$field;
-                $fieldsToUpdate[$field] = $value;
-            }
+            $originalValues[$field] = $po->$field;
+            $fieldsToUpdate[$field] = $value;
         }
         
-        // Container - SOLO si vacío
-        if (empty($po->container_number)) {
-            $containerFields = $this->helper->getContainerFields($data);
-            foreach ($containerFields as $field => $value) {
-                $originalValues[$field] = $po->$field;
-            }
-            $fieldsToUpdate = array_merge($fieldsToUpdate, $containerFields);
+        // Container - siempre sobrescribir si Porth trae valor
+        $containerFields = $this->helper->getContainerFields($data);
+        foreach ($containerFields as $field => $value) {
+            $originalValues[$field] = $po->$field;
+            $fieldsToUpdate[$field] = $value;
         }
         
-        // Fechas principales desde payload
+        // Fechas principales desde payload - siempre sobrescribir
         $payloadValues = $this->helper->buildPurchaseOrderPayloadValues($data);
         $fieldsMap = $this->helper->getPurchaseOrderFieldsMap();
         
         foreach ($fieldsMap as $payloadKey => $poField) {
             $value = $payloadValues[$payloadKey] ?? null;
-            // Solo actualizar si el campo local está vacío
-            if (empty($po->$poField) && $value !== null) {
+            if ($value !== null) {
                 $originalValues[$poField] = $po->$poField;
                 $fieldsToUpdate[$poField] = $value;
             }
         }
         
-        // Campos de maestros traducidos - SOLO si están vacíos
+        // Campos de maestros traducidos - siempre sobrescribir
         $maestrosFields = $this->helper->getMaestrosFields($data);
         foreach ($maestrosFields as $field => $value) {
-            if (empty($po->$field) && $value !== null) {
+            if ($value !== null) {
                 $originalValues[$field] = $po->$field;
                 $fieldsToUpdate[$field] = $value;
             }
         }
         
-        // Campos de Porth - SIEMPRE se actualizan (son campos de tracking)
-        // Guardar valores originales antes de actualizar
+        // Campos de Porth - SIEMPRE se actualizan (son campos de tracking internos)
         $porthFields = $this->buildPorthFieldsForPO($data);
         foreach ($porthFields as $field => $value) {
             $originalValues[$field] = $po->$field;
@@ -257,35 +252,60 @@ class PorthImportService
     }
 
     /**
-     * Dispara webhook para actualización desde Porth
+     * Dispara webhook para actualización desde Porth.
+     * Solo envía campos editables en el front (no campos porth_* internos).
+     * Envía la PO completa en 'data' para que transformPurchaseOrderPayload
+     * pueda traducir y filtrar correctamente.
      */
     private function dispatchWebhookForPorthUpdate(PurchaseOrder $po, array $changes): void
     {
         try {
+            // Filtrar: solo enviar campos de negocio editables en el front,
+            // no campos internos de Porth (porth_*, last_porth_sync_at)
+            $businessChanges = [];
+            foreach ($changes as $field => $changeData) {
+                if (str_starts_with($field, 'porth_') || $field === 'last_porth_sync_at') {
+                    continue;
+                }
+                $businessChanges[$field] = $changeData;
+            }
+
             Log::info('porth_import:dispatching_webhook', [
                 'purchase_order_id' => $po->id,
                 'order_number' => $po->order_number,
-                'changes_count' => count($changes),
-                'changes_keys' => array_keys($changes),
+                'total_changes' => count($changes),
+                'business_changes_count' => count($businessChanges),
+                'business_changes_keys' => array_keys($businessChanges),
+                'filtered_out_porth_fields' => count($changes) - count($businessChanges),
             ]);
 
-            // Construir payload con solo los datos actualizados
-            $updatedData = [];
-            foreach ($changes as $field => $changeData) {
-                $updatedData[$field] = $changeData['new'];
+            // Si no hay cambios de negocio, no enviar webhook
+            if (empty($businessChanges)) {
+                Log::info('porth_import:webhook_skipped_no_business_changes', [
+                    'purchase_order_id' => $po->id,
+                    'order_number' => $po->order_number,
+                ]);
+                return;
             }
+
+            // Enviar PO completa en 'data' para que transformPurchaseOrderPayload
+            // + filterPayloadForUpdate funcionen igual que en los demás flujos
+            $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+            $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+            $poData = $freshPo->toArray();
+            $poData = json_decode(json_encode($poData), true);
 
             dispatch_webhook('purchase_order.updated', [
                 'purchase_order_id' => $po->id,
                 'order_number' => $po->order_number,
-                'trading_company' => $po->trading_company,
                 'source' => 'porth_sync',
-                'changes' => $changes,
-                'data' => $updatedData, // Solo datos actualizados, no toda la PO
+                'changes' => $businessChanges,
+                'data' => $poData,
             ]);
 
             Log::info('porth_import:webhook_dispatched', [
                 'purchase_order_id' => $po->id,
+                'changes_keys' => array_keys($businessChanges),
             ]);
         } catch (\Throwable $e) {
             Log::error('porth_import:webhook_error', [

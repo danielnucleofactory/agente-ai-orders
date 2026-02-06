@@ -84,7 +84,7 @@
             @if($id)
                 <x-primary-button
                     id="btn-update-po"
-                    onclick="syncDateFieldsBeforeSave({{ $id }})"
+                    wire:click="updatePurchaseOrder({{ $id }})"
                     wire:loading.attr="disabled"
                     wire:target="updatePurchaseOrder"
                     class="w-[209px] relative">
@@ -164,16 +164,7 @@
                                 </x-slot:error>
                             </x-form-input>
 
-                            <div wire:ignore>
-                                <x-form-input>
-                                    <x-slot name="label">Fecha emisión PO</x-slot>
-                                    <x-slot:input
-                                        type="date"
-                                        name="emision_date_po"
-                                        wire:model="emision_date_po">
-                                    </x-slot:input>
-                                </x-form-input>
-                            </div>
+                            <x-date-picker wire:model="emision_date_po" label="Fecha emisión PO" />
 
                             {{-- Fecha de creación --}}
                             <x-form-input>
@@ -362,7 +353,7 @@
                         </div>
 
                         <x-form-input>
-                            <x-slot:label>Documento de Embarque</x-slot:label>
+                            <x-slot:label>Documento de tránsito</x-slot:label>
                             <x-slot:input name="mbl_number" wire:model="mbl_number" placeholder="Ingrese número"></x-slot:input>
                         </x-form-input>
 
@@ -557,71 +548,24 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Booking y coordinación</h4>
                     </div>
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Solicitud de Booking</x-slot:label>
-                            <x-slot:input type="date" name="date_booking_request" wire:model="date_booking_request"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model="date_booking_request" label="Solicitud de Booking" />
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Autorización Booking</x-slot:label>
-                            <x-slot:input type="date" name="date_booking_authorized" wire:model="date_booking_authorized"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model="date_booking_authorized" label="Autorización Booking" />
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Fecha de asignación de agente de carga</x-slot:label>
-                            <x-slot:input
-                                type="date"
-                                name="forwader_date"
-                                wire:model="forwader_date">
-                            </x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model="forwader_date" label="Fecha de asignación de agente de carga" />
 
                     <!-- Origen: preparación y carga -->
                     <div class="col-span-3">
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Origen: preparación y carga</h4>
                     </div>
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Fecha Inspección</x-slot:label>
-                            <x-slot:input type="date" wire:model.live="inspection_date"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model.live="inspection_date" label="Fecha Inspección" />
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Fecha Corte VGM</x-slot:label>
-                            <x-slot:input type="date" wire:model.live="vgm_cut_date"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model.live="vgm_cut_date" label="Fecha Corte VGM" />
 
-                    <div>
-                        <x-form-input>
-                            <x-slot:label>Fecha Carga Lista Teórica <span class="text-red-500">*</span></x-slot:label>
-                            @if($id)
-                                <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" readonly class="pr-10 bg-gray-100 cursor-not-allowed {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
-                                </x-slot:input>
-                            @else
-                                <x-slot:input type="date" name="date_theorical_load" wire:model="date_theorical_load" class="pr-10 {{ $errors->has('date_theorical_load') ? 'border-red-500' : '' }}">
-                                </x-slot:input>
-                            @endif
-                            <x-slot:error>{{ $errors->first('date_theorical_load') }}</x-slot:error>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model="date_theorical_load" label="Fecha Carga Lista Teórica <span class='text-red-500'>*</span>" :readonly="(bool)$id" :error="$errors->first('date_theorical_load')" />
 
-                    <div>
-                        <x-form-input>
-                            <x-slot:label>Fecha Carga Lista Variable</x-slot:label>
-                            <x-slot:input type="date" name="date_variable_date" wire:model.live="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500' : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('date_variable_date') }}</x-slot:error>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model.live="date_variable_date" label="Fecha Carga Lista Variable" :error="$errors->first('date_variable_date')" />
 
                     <div class="flex items-center gap-3">
                         <input id="carga_lista_validada" type="checkbox" wire:model="carga_lista_validada"
@@ -632,29 +576,13 @@
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
 
-                    <x-form-input class="hidden">
-                        <x-slot:label>Fecha pickup planificada</x-slot:label>
-                        <x-slot:input type="date" name="date_planned_pickup" wire:model="date_planned_pickup"></x-slot:input>
-                    </x-form-input>
+                    <x-date-picker wire:model="date_planned_pickup" label="Fecha pickup planificada" class="hidden" />
 
-                    <x-form-input class="hidden">
-                        <x-slot:label>Fecha pickup real</x-slot:label>
-                        <x-slot:input type="date" name="date_actual_pickup" wire:model="date_actual_pickup"></x-slot:input>
-                    </x-form-input>
+                    <x-date-picker wire:model="date_actual_pickup" label="Fecha pickup real" class="hidden" />
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Fecha de consolidado</x-slot:label>
-                            <x-slot:input type="date" name="date_consolidation" wire:model="date_consolidation"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model="date_consolidation" label="Fecha de consolidado" />
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Fecha de release</x-slot:label>
-                            <x-slot:input type="date" name="release_date" wire:model="release_date"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model="release_date" label="Fecha de release" />
 
                     <x-form-input>
                         <x-slot:label>Diferencia de fecha de carga lista</x-slot:label>
@@ -681,11 +609,8 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Salida (origen)</h4>
                     </div>
 
-                    <div class="space-y-2" wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>ETD Inicial</x-slot:label>
-                            <x-slot:input type="date" wire:model.live="date_etd_initial"></x-slot:input>
-                        </x-form-input>
+                    <div class="space-y-2">
+                        <x-date-picker wire:model.live="date_etd_initial" label="ETD Inicial" />
                         <div class="flex items-center">
                             <input id="etd_initial_validated" type="checkbox" wire:model="etd_initial_validated"
                                    class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
@@ -693,29 +618,13 @@
                         </div>
                     </div>
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>ETD Variable</x-slot:label>
-                            <x-slot:input type="date" name="date_etd" wire:model="date_etd"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model="date_etd" label="ETD Variable" />
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>ATD </x-slot:label>
-                            <x-slot:input type="date" name="date_atd" wire:model="date_atd"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model="date_atd" label="ATD" />
 
-                    <x-form-input class="hidden">
-                        <x-slot:label>Fecha estimada de llegada al hub</x-slot:label>
-                        <x-slot:input type="date" name="date_estimated_hub_arrival" wire:model="date_estimated_hub_arrival"></x-slot:input>
-                    </x-form-input>
+                    <x-date-picker wire:model="date_estimated_hub_arrival" label="Fecha estimada de llegada al hub" class="hidden" />
 
-                    <x-form-input class="hidden">
-                        <x-slot:label>Fecha de llegada real al hub</x-slot:label>
-                        <x-slot:input type="date" name="date_actual_hub_arrival" wire:model="date_actual_hub_arrival"></x-slot:input>
-                    </x-form-input>
+                    <x-date-picker wire:model="date_actual_hub_arrival" label="Fecha de llegada real al hub" class="hidden" />
 
 
                     <!-- Arribo a destino -->
@@ -723,100 +632,37 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Arribo a destino</h4>
                     </div>
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>ETA Inicial</x-slot:label>
-                            <x-slot:input type="date" name="date_eta_initial" wire:model="date_eta_initial"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model="date_eta_initial" label="ETA Inicial" />
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>ETA Variable</x-slot:label>
-                            <x-slot:input type="date" name="date_eta_updated" wire:model="date_eta_updated"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model="date_eta_updated" label="ETA Variable" />
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>ATA</x-slot:label>
-                            <x-slot:input type="date" name="date_ata" wire:model="date_ata"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model="date_ata" label="ATA" />
 
-                    <x-form-input class="hidden">
-                        <x-slot:label>Fecha requerida en destino</x-slot:label>
-                        <x-slot:input
-                            type="date"
-                            name="date_required_in_destination"
-                            wire:model="date_required_in_destination"
-                            class="pr-10 {{ $errors->has('date_required_in_destination') ? 'border-red-500' : '' }}">
-                        </x-slot:input>
-                        <x-slot:error>
-                            {{ $errors->first('date_required_in_destination') }}
-                        </x-slot:error>
-                    </x-form-input>
+                    <x-date-picker wire:model="date_required_in_destination" label="Fecha requerida en destino" :error="$errors->first('date_required_in_destination')" class="hidden" />
 
                     <!-- Almacén fiscal y recepción -->
                     <div class="col-span-3">
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Almacén fiscal y recepción</h4>
                     </div>
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Ingreso Almacén Fiscal</x-slot:label>
-                            <x-slot:input type="date" name="bonded_warehouse_enter" wire:model.live="bonded_warehouse_enter" class="pr-10 {{ $errors->has('bonded_warehouse_enter') ? 'border-red-500' : '' }}">
-                            </x-slot:input>
-                            <x-slot:error>{{ $errors->first('bonded_warehouse_enter') }}</x-slot:error>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model.live="bonded_warehouse_enter" label="Ingreso Almacén Fiscal" :error="$errors->first('bonded_warehouse_enter')" />
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Salida Almacén Fiscal</x-slot:label>
-                            <x-slot:input type="date" wire:model.live="bonded_warehouse_exit" name="bonded_warehouse_exit" class="pr-10 {{ $errors->has('bonded_warehouse_exit') ? 'border-red-500' : '' }}">
-                            </x-slot:input>
-                            <x-slot:error>{{ $errors->first('bonded_warehouse_exit') }}</x-slot:error>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model.live="bonded_warehouse_exit" label="Salida Almacén Fiscal" :error="$errors->first('bonded_warehouse_exit')" />
 
-                    <x-form-input class="hidden">
-                        <x-slot:label>Fecha Recepción</x-slot:label>
-                        <x-slot:input type="date" name="date_received" wire:model="date_received"></x-slot:input>
-                    </x-form-input>
+                    <x-date-picker wire:model="date_received" label="Fecha Recepción" class="hidden" />
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Fecha Nota de Recibo</x-slot:label>
-                            <x-slot:input type="date" wire:model.live="receipt_note_date"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model.live="receipt_note_date" label="Fecha Nota de Recibo" />
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Fecha Disp. Bogeda Estimada</x-slot:label>
-                            <x-slot:input type="date" wire:model.live="estimated_dc_availability_date"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model.live="estimated_dc_availability_date" label="Fecha Disp. Bogeda Estimada" />
 
                     <!-- Pagos y cargos -->
                     <div class="col-span-3">
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Pagos y cargos</h4>
                     </div>
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Fecha Pago Balance</x-slot:label>
-                            <x-slot:input type="date" wire:model.live="balance_payment_date"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model.live="balance_payment_date" label="Fecha Pago Balance" />
 
-                    <div wire:ignore>
-                        <x-form-input>
-                            <x-slot:label>Fecha Pago Cargos Locales</x-slot:label>
-                            <x-slot:input type="date" wire:model.live="local_charges_payment_date"></x-slot:input>
-                        </x-form-input>
-                    </div>
+                    <x-date-picker wire:model.live="local_charges_payment_date" label="Fecha Pago Cargos Locales" />
 
                     <!-- Métricas y varios -->
                     <div class="col-span-3">
@@ -1159,19 +1005,9 @@
                             <x-slot:input type="text" placeholder="Ingrese factura" wire:model.live="invoice"></x-slot:input>
                         </x-form-input>
 
-                        <div wire:ignore>
-                            <x-form-input>
-                                <x-slot:label>Fecha recepción de factura</x-slot:label>
-                                <x-slot:input type="date" name="date_invoice_received" wire:model="date_invoice_received"></x-slot:input>
-                            </x-form-input>
-                        </div>
+                        <x-date-picker wire:model="date_invoice_received" label="Fecha recepción de factura" />
 
-                        <div wire:ignore>
-                            <x-form-input>
-                                <x-slot:label>Fecha recepción doc. proveedor</x-slot:label>
-                                <x-slot:input type="date" name="date_vendor_document_received" wire:model="date_vendor_document_received"></x-slot:input>
-                            </x-form-input>
-                        </div>
+                        <x-date-picker wire:model="date_vendor_document_received" label="Fecha recepción doc. proveedor" />
 
                         <x-form-input>
                             <x-slot:label>Factura Flete</x-slot:label>
@@ -1598,383 +1434,4 @@
         console.log('Script de cálculo inicializado');
     });
 
-    // Función para sincronizar campos con wire:ignore antes de guardar
-    function syncDateFieldsBeforeSave(poId) {
-        console.log('Sincronizando campos de fecha antes de guardar...');
-
-        // Buscar todos los inputs de fecha dentro de divs con wire:ignore
-        // Incluir inputs que puedan haber sido convertidos a "text" por Flatpickr
-        const wireIgnoreInputs = document.querySelectorAll('[wire\\:ignore] input[type="date"], [wire\\:ignore] input.flatpickr-initialized, [wire\\:ignore] input[name*="date"], [wire\\:ignore] input[name*="Date"]');
-
-        // También buscar campos de fecha que NO tienen wire:ignore pero pueden tener Flatpickr
-        // Estos campos también necesitan sincronización porque Flatpickr puede modificar sus valores
-        // Buscar específicamente por name="date_variable_date" y también por wire:model
-        const dateVarInput = document.querySelector('input[name="date_variable_date"]') ||
-                            document.querySelector('input[wire\\:model="date_variable_date"]') ||
-                            document.querySelector('input[wire\\:model.live="date_variable_date"]');
-        const allDateInputs = document.querySelectorAll('input[name*="date"], input[name*="Date"], input.flatpickr-initialized');
-
-        console.log('Inputs encontrados con wire:ignore:', wireIgnoreInputs.length);
-        console.log('Total inputs de fecha encontrados:', allDateInputs.length);
-        console.log('date_variable_date input encontrado:', !!dateVarInput);
-
-        // #region agent log
-        if (dateVarInput) {
-            const wireModel = dateVarInput.getAttribute('wire:model') ||
-                             dateVarInput.getAttribute('wire:model.live') ||
-                             dateVarInput.getAttribute('wire:model.defer') ||
-                             dateVarInput.getAttribute('wire:model.lazy');
-            const hasFlatpickr = !!dateVarInput._flatpickr;
-            const flatpickrValue = hasFlatpickr && dateVarInput._flatpickr.selectedDates.length > 0
-                ? dateVarInput._flatpickr.formatDate(dateVarInput._flatpickr.selectedDates[0], 'Y-m-d')
-                : null;
-            const inputValue = dateVarInput.value;
-            const dataDateValue = dateVarInput.getAttribute('data-date-value');
-
-            console.log('[DEBUG] date_variable_date input details:', {
-                wireModel: wireModel,
-                hasFlatpickr: hasFlatpickr,
-                flatpickrValue: flatpickrValue,
-                inputValue: inputValue,
-                dataDateValue: dataDateValue,
-            });
-
-            fetch('http://127.0.0.1:7242/ingest/26d00db5-9206-445f-bdde-879ec3db4e9b', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    sessionId: 'debug-session',
-                    runId: 'run1',
-                    hypothesisId: 'H1',
-                    location: 'create-pucharse-order.blade.php:syncDateFieldsBeforeSave',
-                    message: 'date_variable_date input found - details',
-                    data: {
-                        wireModel: wireModel,
-                        hasFlatpickr: hasFlatpickr,
-                        flatpickrValue: flatpickrValue,
-                        inputValue: inputValue,
-                        dataDateValue: dataDateValue,
-                    },
-                    timestamp: Date.now()
-                })
-            }).catch(() => {});
-        } else {
-            console.warn('[DEBUG] date_variable_date input NOT FOUND!');
-            fetch('http://127.0.0.1:7242/ingest/26d00db5-9206-445f-bdde-879ec3db4e9b', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    sessionId: 'debug-session',
-                    runId: 'run1',
-                    hypothesisId: 'H1',
-                    location: 'create-pucharse-order.blade.php:syncDateFieldsBeforeSave',
-                    message: 'date_variable_date input NOT FOUND',
-                    data: {},
-                    timestamp: Date.now()
-                })
-            }).catch(() => {});
-        }
-        // #endregion
-
-        // Usar @this de Livewire si está disponible (más confiable)
-        let formComponent = window.poFormComponent || null;
-
-        // Si no está disponible, buscar el componente manualmente
-        if (!formComponent) {
-            const updateButton = document.getElementById('btn-update-po');
-            let currentElement = updateButton;
-
-            // Buscar el componente Livewire más cercano al botón, excluyendo el sidebar
-            while (currentElement && !formComponent) {
-                // Verificar que no estemos en el sidebar
-                if (currentElement.closest('sidebar') || currentElement.closest('.main-sidebar')) {
-                    currentElement = currentElement.parentElement;
-                    continue;
-                }
-
-                const wireId = currentElement.getAttribute('wire:id') ||
-                              currentElement.closest('[wire\\:id]')?.getAttribute('wire:id');
-                if (wireId && window.Livewire) {
-                    const component = Livewire.find(wireId);
-                    if (component) {
-                        formComponent = component;
-                        break;
-                    }
-                }
-                currentElement = currentElement.parentElement;
-            }
-
-            // Si no se encontró, buscar todos los componentes y encontrar el correcto
-            if (!formComponent) {
-                const allWireIds = document.querySelectorAll('[wire\\:id]');
-                for (let el of allWireIds) {
-                    // Verificar que NO sea el sidebar
-                    if (!el.closest('sidebar') && !el.closest('.main-sidebar')) {
-                        const wireId = el.getAttribute('wire:id');
-                        if (wireId && window.Livewire) {
-                            const component = Livewire.find(wireId);
-                            if (component) {
-                                formComponent = component;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (!formComponent) {
-            console.error('No se encontró el componente Livewire del formulario');
-            return;
-        }
-
-        console.log('Componente Livewire del formulario encontrado:', formComponent);
-
-        // Función helper para sincronizar un input de fecha
-        function syncDateInput(input, formComponent, source) {
-            const wireModel = input.getAttribute('wire:model') ||
-                             input.getAttribute('wire:model.live') ||
-                             input.getAttribute('wire:model.defer') ||
-                             input.getAttribute('wire:model.lazy');
-
-            if (!wireModel) {
-                return;
-            }
-
-            // Obtener el valor del input (puede ser del input original o de Flatpickr)
-            let value = null;
-
-            if (input._flatpickr && input._flatpickr.selectedDates.length > 0) {
-                // Si tiene Flatpickr, usar el valor de Flatpickr
-                value = input._flatpickr.formatDate(input._flatpickr.selectedDates[0], 'Y-m-d');
-            } else {
-                // Si no tiene Flatpickr, usar el valor del input directamente
-                value = input.value || input.getAttribute('data-date-value') || '';
-            }
-
-            // Normalizar: cadena vacía se convierte a null
-            if (value === '' || value === null) {
-                value = null;
-            }
-
-            // #region agent log
-            if (wireModel === 'date_variable_date') {
-                fetch('http://127.0.0.1:7242/ingest/26d00db5-9206-445f-bdde-879ec3db4e9b', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        sessionId: 'debug-session',
-                        runId: 'run1',
-                        hypothesisId: 'H1',
-                        location: 'create-pucharse-order.blade.php:syncDateInput',
-                        message: 'syncDateInput - date_variable_date value extracted',
-                        data: {
-                            wireModel: wireModel,
-                            source: source,
-                            hasFlatpickr: !!input._flatpickr,
-                            flatpickrDates: input._flatpickr ? input._flatpickr.selectedDates.length : 0,
-                            inputValue: input.value,
-                            dataDateValue: input.getAttribute('data-date-value'),
-                            extractedValue: value,
-                        },
-                        timestamp: Date.now()
-                    })
-                }).catch(() => {});
-            }
-            // #endregion
-
-            // Usar component.set() para establecer el valor directamente
-            try {
-                if (typeof formComponent.set === 'function') {
-                    formComponent.set(wireModel, value);
-                    console.log('✓ Sincronizado [' + source + ']', wireModel, '=', value !== null ? value : '(null)');
-
-                    // #region agent log
-                    if (wireModel === 'date_variable_date') {
-                        fetch('http://127.0.0.1:7242/ingest/26d00db5-9206-445f-bdde-879ec3db4e9b', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                sessionId: 'debug-session',
-                                runId: 'run1',
-                                hypothesisId: 'H1',
-                                location: 'create-pucharse-order.blade.php:syncDateInput',
-                                message: 'syncDateInput - date_variable_date set via formComponent.set',
-                                data: {
-                                    wireModel: wireModel,
-                                    valueSet: value,
-                                    method: 'formComponent.set',
-                                },
-                                timestamp: Date.now()
-                            })
-                        }).catch(() => {});
-                    }
-                    // #endregion
-                } else {
-                    // Si set no está disponible, usar eventos como respaldo
-                    input.value = value || '';
-                    input.setAttribute('data-date-value', value || '');
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                    input.dispatchEvent(new Event('change', { bubbles: true }));
-                    console.log('✓ Sincronizado (eventos) [' + source + ']', wireModel, '=', value !== null ? value : '(null)');
-
-                    // #region agent log
-                    if (wireModel === 'date_variable_date') {
-                        fetch('http://127.0.0.1:7242/ingest/26d00db5-9206-445f-bdde-879ec3db4e9b', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                sessionId: 'debug-session',
-                                runId: 'run1',
-                                hypothesisId: 'H1',
-                                location: 'create-pucharse-order.blade.php:syncDateInput',
-                                message: 'syncDateInput - date_variable_date set via events',
-                                data: {
-                                    wireModel: wireModel,
-                                    valueSet: value,
-                                    method: 'events',
-                                },
-                                timestamp: Date.now()
-                            })
-                        }).catch(() => {});
-                    }
-                    // #endregion
-                }
-            } catch (e) {
-                console.warn('Error al sincronizar', wireModel, ':', e);
-                // Intentar con eventos como respaldo
-                input.value = value || '';
-                input.setAttribute('data-date-value', value || '');
-                input.dispatchEvent(new Event('input', { bubbles: true }));
-                input.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-        }
-
-        // Sincronizar valores de campos con wire:ignore usando component.set()
-        // Esto asegura que los valores se establezcan directamente en el componente
-        wireIgnoreInputs.forEach(function(input) {
-            syncDateInput(input, formComponent, 'wire:ignore');
-        });
-
-        // También sincronizar campos de fecha que NO tienen wire:ignore pero tienen wire:model
-        // Esto es importante para campos como date_variable_date que pueden tener Flatpickr
-        allDateInputs.forEach(function(input) {
-            // Saltar si ya está en wireIgnoreInputs
-            if (input.closest('[wire\\:ignore]')) {
-                return;
-            }
-
-            const wireModel = input.getAttribute('wire:model') ||
-                             input.getAttribute('wire:model.live') ||
-                             input.getAttribute('wire:model.defer') ||
-                             input.getAttribute('wire:model.lazy');
-
-            // Solo sincronizar si tiene wire:model (no wire:ignore)
-            if (wireModel) {
-                syncDateInput(input, formComponent, 'normal');
-            }
-        });
-
-        // #region agent log
-        // Log para verificar que date_variable_date se sincronizó después de syncDateFieldsBeforeSave
-        setTimeout(function() {
-            if (typeof formComponent.get === 'function') {
-                const dateVarValue = formComponent.get('date_variable_date');
-                console.log('[DEBUG H1] After syncDateFieldsBeforeSave - date_variable_date value in Livewire:', dateVarValue);
-                fetch('http://127.0.0.1:7242/ingest/26d00db5-9206-445f-bdde-879ec3db4e9b', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        sessionId: 'debug-session',
-                        runId: 'run1',
-                        hypothesisId: 'H1',
-                        location: 'create-pucharse-order.blade.php:afterSync',
-                        message: 'After syncDateFieldsBeforeSave - date_variable_date value in Livewire',
-                        data: {
-                            date_variable_date: dateVarValue,
-                            date_variable_date_type: typeof dateVarValue,
-                        },
-                        timestamp: Date.now()
-                    })
-                }).catch(() => {});
-            }
-        }, 100);
-        // #endregion
-
-        // #region agent log
-        // Log para verificar que date_variable_date se sincronizó
-        if (typeof formComponent.get === 'function') {
-            const dateVarValue = formComponent.get('date_variable_date');
-            fetch('http://127.0.0.1:7242/ingest/26d00db5-9206-445f-bdde-879ec3db4e9b', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    sessionId: 'debug-session',
-                    runId: 'run1',
-                    hypothesisId: 'H1',
-                    location: 'create-pucharse-order.blade.php:' + (typeof __LINE__ !== 'undefined' ? __LINE__ : 'sync'),
-                    message: 'After syncDateFieldsBeforeSave - date_variable_date value in Livewire',
-                    data: {
-                        date_variable_date: dateVarValue,
-                        date_variable_date_type: typeof dateVarValue,
-                    },
-                    timestamp: Date.now()
-                })
-            }).catch(() => {});
-        }
-        // #endregion
-
-        // MEJORAR: Esperar a que Livewire procese los cambios antes de ejecutar updatePurchaseOrder
-        // Usar requestAnimationFrame para asegurar que el DOM se actualice
-        requestAnimationFrame(function() {
-            setTimeout(function() {
-                console.log('Ejecutando updatePurchaseOrder con ID:', poId);
-                try {
-                    if (typeof formComponent.call === 'function') {
-                        console.log('Llamando formComponent.call("updatePurchaseOrder", ' + poId + ')');
-                        formComponent.call('updatePurchaseOrder', poId).then(function(result) {
-                            console.log('updatePurchaseOrder completado:', result);
-
-                            // VERIFICAR EL RESULTADO
-                            if (result && result.success) {
-                                console.log('✅ PO actualizada exitosamente:', result.message);
-                            } else if (result && !result.success) {
-                                console.error('❌ Error al actualizar PO:', result.message);
-                            } else {
-                                // Si result es null, puede ser que la función no retornó nada
-                                // Verificar si hay errores en el componente
-                                console.warn('⚠️ updatePurchaseOrder retornó null. Verificando estado...');
-
-                                // Esperar un momento y verificar si hay errores de validación
-                                setTimeout(function() {
-                                    const errors = formComponent.get('errors') || {};
-                                    if (Object.keys(errors).length > 0) {
-                                        console.error('❌ Errores de validación encontrados:', errors);
-                                    } else {
-                                        console.log('⚠️ No se encontraron errores de validación. La actualización puede haber sido exitosa.');
-                                    }
-                                }, 500);
-                            }
-                        }).catch(function(error) {
-                            console.error('❌ Error en updatePurchaseOrder:', error);
-                            console.error('Stack trace:', error.stack);
-
-                            // Mostrar error al usuario
-                            if (window.Livewire) {
-                                Livewire.dispatch('show-error', {
-                                    message: 'Error al actualizar la orden: ' + (error.message || 'Error desconocido')
-                                });
-                            }
-                        });
-                    } else {
-                        console.error('formComponent.call no está disponible');
-                        console.log('formComponent:', formComponent);
-                    }
-                } catch (e) {
-                    console.error('Error al ejecutar updatePurchaseOrder:', e);
-                    console.error('Stack trace:', e.stack);
-                }
-            }, 1000); // AUMENTAR TIMEOUT A 1000ms PARA PRODUCCIÓN
-        });
-    }
 </script>

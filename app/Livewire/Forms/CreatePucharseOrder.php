@@ -2114,38 +2114,39 @@ class CreatePucharseOrder extends Component
                     'todos_dirtyFields' => array_keys($dirtyFields),
                 ]);
 
+                // Campos computados automáticamente que no deben enviarse como cambios del usuario
+                // (se guardan en la BD pero no se reportan en el webhook como cambios del usuario)
+                $computedFields = [
+                    'arrival_status',
+                    'delay_days',
+                    'etd_dates_difference',
+                    'eta_dates_difference',
+                ];
+
                 // Construir array de cambios solo con campos que realmente cambiaron
                 // Filtrar campos donde el valor nuevo es igual al valor original (para evitar falsos positivos)
                 $changes = [];
                 $filteredOut = [];
                 foreach ($dirtyFields as $field => $newValue) {
+                    // Excluir campos computados del webhook
+                    if (in_array($field, $computedFields)) {
+                        $filteredOut[$field] = [
+                            'old' => $purchaseOrder->getOriginal($field),
+                            'new' => $newValue,
+                            'reason' => 'computed_field',
+                        ];
+                        continue;
+                    }
+
                     $oldValue = $purchaseOrder->getOriginal($field);
 
                     // Normalizar valores para comparación
                     $normalizedOld = $this->normalizeValueForComparison($oldValue);
                     $normalizedNew = $this->normalizeValueForComparison($newValue);
 
-                    // Log especial para date_variable_date y date_theorical_load para depurar
-                    if ($field === 'date_variable_date' || $field === 'date_theorical_load') {
-                        \Log::info('[DEBUG] Comparing date field values', [
-                            'field' => $field,
-                            'oldValue' => $oldValue,
-                            'oldValue_type' => gettype($oldValue),
-                            'newValue' => $newValue,
-                            'newValue_type' => gettype($newValue),
-                            'normalizedOld' => $normalizedOld,
-                            'normalizedNew' => $normalizedNew,
-                            'son_iguales' => $normalizedOld === $normalizedNew,
-                            'will_be_included' => $normalizedOld !== $normalizedNew,
-                        ]);
-                    }
-
                     // Solo incluir si realmente cambió
                     if ($normalizedOld !== $normalizedNew) {
-                        $changes[$field] = [
-                            'old' => $oldValue,
-                            'new' => $newValue,
-                        ];
+                        $changes[$field] = $newValue;
                     } else {
                         // Log campos que fueron filtrados (no cambiaron realmente)
                         $filteredOut[$field] = [
@@ -2288,25 +2289,11 @@ class CreatePucharseOrder extends Component
                             'changes' => $changes,
                         ]);
 
-                        // Construir payload con solo los datos actualizados (no toda la PO)
-                        $updatedData = [];
-                        foreach ($changes as $field => $changeData) {
-                            $updatedData[$field] = $changeData['new'];
-                        }
-
-                        \Log::info('Dispatching webhook with only updated fields', [
-                            'po_id' => $purchaseOrder->id,
-                            'changes_count' => count($changes),
-                            'changes_keys' => array_keys($changes),
-                            'updated_data_keys' => array_keys($updatedData),
-                        ]);
-
                         dispatch_webhook('purchase_order.updated', [
                             'purchase_order_id' => $purchaseOrder->id,
                             'order_number' => $purchaseOrder->order_number,
-                            'trading_company' => $purchaseOrder->trading_company,
-                            'changes' => $changes, // Array de cambios filtrados con formato old/new
-                            'data' => $updatedData, // Solo datos actualizados, no toda la PO
+                            'changes' => $changes, // Array de cambios filtrados
+                            'data' => $poDataForWebhook,
                         ]);
 
                         \Log::info('dispatch_webhook completed from Livewire', [
@@ -2625,18 +2612,19 @@ class CreatePucharseOrder extends Component
             if ($trimmed === '') {
                 return null;
             }
-            // Try to parse as date first (common formats: Y-m-d, d/m/Y, etc.)
-            try {
-                // Try to parse as date and normalize to Y-m-d format
-                $parsedDate = \Carbon\Carbon::parse($trimmed);
-                return $parsedDate->format('Y-m-d');
-            } catch (\Exception $e) {
-                // Not a date, continue with other checks
-            }
-            // Try to parse as number if it looks like one
+            // Check numeric FIRST to avoid Carbon::parse("0.00") returning "1970-01-01"
             if (is_numeric($trimmed)) {
                 $floatValue = (float) $trimmed;
                 return round($floatValue, 2);
+            }
+            // Try to parse as date only if it looks like a date (starts with YYYY-MM-DD pattern)
+            if (preg_match('/^\d{4}-\d{2}-\d{2}/', $trimmed)) {
+                try {
+                    $parsedDate = \Carbon\Carbon::parse($trimmed);
+                    return $parsedDate->format('Y-m-d');
+                } catch (\Exception $e) {
+                    // Not a date, continue
+                }
             }
             return $trimmed;
         }
