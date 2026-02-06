@@ -100,6 +100,8 @@
                     </span>
                 </x-primary-button>
             @else
+                <livewire:import-csv-purchase-orders />
+
                 <x-primary-button
                     wire:click="createPurchaseOrder"
                     wire:loading.attr="disabled"
