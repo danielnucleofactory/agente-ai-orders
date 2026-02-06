@@ -1133,6 +1133,23 @@ class KanbanBoard extends Component
                 DB::commit();
             }
 
+            // Push cambios relevantes a Porth (MBL, container, booking, naviera)
+            if ($po && !empty($po->porth_id) && !empty($dbChanges)) {
+                $porthRelevantFields = ['mbl_number', 'container_number', 'tracking_id', 'shipping_line'];
+                $porthChanges = array_intersect_key($dbChanges, array_flip($porthRelevantFields));
+                if (!empty($porthChanges)) {
+                    try {
+                        $porthApi = app(\App\Services\PorthApiService::class);
+                        $porthApi->pushChangesToPorth($po, $porthChanges);
+                    } catch (\Throwable $e) {
+                        \Log::error('kanban:porth_push_error', [
+                            'purchase_order_id' => $po->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+
             // Dispatch webhook event for updated purchase order
             if ($po && function_exists('dispatch_webhook')) {
                 try {

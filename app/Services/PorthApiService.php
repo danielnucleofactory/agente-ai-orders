@@ -224,6 +224,150 @@ class PorthApiService
     }
 
     /**
+     * Actualiza un shipment existente en Porth.
+     * Solo envía los campos proporcionados (partial update).
+     * 
+     * Campos soportados: masterBl, bookingNumber, carrierCode, cargo, etc.
+     * 
+     * @param string $shipmentId ID del shipment en Porth
+     * @param array $data Campos a actualizar
+     * @return array|null Datos del shipment actualizado o null si falló
+     */
+    public function updateShipment(string $shipmentId, array $data): ?array
+    {
+        if (!$this->isEnabled()) {
+            Log::warning('porth_api:disabled_missing_key');
+            return null;
+        }
+
+        try {
+            $endpoint = "{$this->apiUrl}/api/shipment/update/{$shipmentId}";
+
+            Log::info('porth_api:updateShipment_request', [
+                'shipment_id' => $shipmentId,
+                'endpoint' => $endpoint,
+                'fields' => array_keys($data),
+            ]);
+
+            $response = Http::timeout($this->timeout)
+                ->withHeaders([
+                    $this->authHeader => $this->apiKey,
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ])
+                ->put($endpoint, $data);
+
+            if ($response->successful()) {
+                $responseData = $response->json();
+                Log::info('porth_api:updateShipment_success', [
+                    'shipment_id' => $shipmentId,
+                    'updated_fields' => array_keys($data),
+                ]);
+                return $responseData;
+            }
+
+            Log::error('porth_api:updateShipment_failed', [
+                'shipment_id' => $shipmentId,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('porth_api:updateShipment_exception', [
+                'shipment_id' => $shipmentId,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Sincroniza cambios de campos de negocio desde Orders hacia Porth.
+     * Solo se ejecuta si la PO tiene porth_id y los campos relevantes cambiaron.
+     * 
+     * Campos monitoreados:
+     *   - mbl_number → masterBl
+     *   - container_number → cargo[0].number
+     *   - tracking_id → bookingNumber
+     *   - shipping_line → carrierCode (traduce nombre a código SCAC)
+     * 
+     * @param \App\Models\PurchaseOrder $po La PO con datos actualizados
+     * @param array $changedFields Array asociativo campo => nuevo_valor de los campos que cambiaron
+     */
+    public function pushChangesToPorth(\App\Models\PurchaseOrder $po, array $changedFields): void
+    {
+        $porthId = $po->porth_id;
+        if (empty($porthId)) {
+            return;
+        }
+
+        // Mapeo de campos Orders → Porth
+        $porthPayload = [];
+        $relevantFields = ['mbl_number', 'container_number', 'tracking_id', 'shipping_line'];
+        $hasRelevantChanges = false;
+
+        foreach ($relevantFields as $field) {
+            if (!array_key_exists($field, $changedFields)) {
+                continue;
+            }
+
+            $hasRelevantChanges = true;
+            $newValue = $changedFields[$field];
+
+            switch ($field) {
+                case 'mbl_number':
+                    $porthPayload['masterBl'] = $newValue ?? '';
+                    break;
+
+                case 'container_number':
+                    $porthPayload['cargo'] = [
+                        ['type' => 'container', 'number' => $newValue ?? '', 'name' => $newValue ?? ''],
+                    ];
+                    break;
+
+                case 'tracking_id':
+                    $porthPayload['bookingNumber'] = $newValue ?? '';
+                    break;
+
+                case 'shipping_line':
+                    // Traducir nombre de naviera a carrierCode (SCAC)
+                    if (!empty($newValue)) {
+                        $translationService = app(PorthTranslationService::class);
+                        $carrierCode = $translationService->getCarrierCodeFromShippingLineName($newValue);
+                        if ($carrierCode) {
+                            $porthPayload['carrierCode'] = $carrierCode;
+                        }
+                    }
+                    break;
+            }
+        }
+
+        if (!$hasRelevantChanges || empty($porthPayload)) {
+            return;
+        }
+
+        Log::info('porth_api:pushing_changes_to_porth', [
+            'purchase_order_id' => $po->id,
+            'order_number' => $po->order_number,
+            'porth_id' => $porthId,
+            'porth_payload' => $porthPayload,
+        ]);
+
+        // Ejecutar en background para no bloquear la respuesta al usuario
+        try {
+            $this->updateShipment($porthId, $porthPayload);
+        } catch (\Throwable $e) {
+            Log::error('porth_api:push_changes_error', [
+                'purchase_order_id' => $po->id,
+                'porth_id' => $porthId,
+                'error' => $e->getMessage(),
+            ]);
+            // No lanzar excepción para no interrumpir el flujo
+        }
+    }
+
+    /**
      * Busca un shipment por número de booking
      * 
      * @param string $bookingNumber Número de booking

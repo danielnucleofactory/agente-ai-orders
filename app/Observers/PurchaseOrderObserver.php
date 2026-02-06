@@ -209,6 +209,22 @@ class PurchaseOrderObserver
                     }
                     // NOTE: purchase_order.updated is NOT dispatched here to avoid duplicate webhooks
                     // Controllers and Livewire components handle purchase_order.updated events
+
+                    // Push cambios relevantes a Porth (MBL, container, booking, naviera)
+                    // Solo si la PO tiene porth_id y los campos relevantes cambiaron
+                    $porthRelevantFields = ['mbl_number', 'container_number', 'tracking_id', 'shipping_line'];
+                    $porthChanges = array_intersect_key($trackedChanges, array_flip($porthRelevantFields));
+                    if (!empty($porthChanges) && !empty($purchaseOrder->porth_id)) {
+                        try {
+                            $porthApi = app(\App\Services\PorthApiService::class);
+                            $porthApi->pushChangesToPorth($purchaseOrder, $porthChanges);
+                        } catch (\Throwable $e) {
+                            Log::error('observer:porth_push_error', [
+                                'purchase_order_id' => $purchaseOrder->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
                 } catch (\Exception $e) {
                     // Si falla la creación del comentario, solo loguear el error
                     // No interrumpir el flujo principal

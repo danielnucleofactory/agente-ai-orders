@@ -348,9 +348,9 @@ class PorthTranslationService
         }
 
         // Saltar header
-        fgetcsv($handle, 0, ';');
+        fgetcsv($handle, 0, ';', '"', '');
 
-        while (($row = fgetcsv($handle, 0, ';')) !== false) {
+        while (($row = fgetcsv($handle, 0, ';', '"', '')) !== false) {
             if (count($row) < 7 || empty($row[0]) || empty($row[1])) {
                 continue;
             }
@@ -401,9 +401,9 @@ class PorthTranslationService
         }
 
         // Saltar header
-        fgetcsv($handle, 0, ';');
+        fgetcsv($handle, 0, ';', '"', '');
 
-        while (($row = fgetcsv($handle, 0, ';')) !== false) {
+        while (($row = fgetcsv($handle, 0, ';', '"', '')) !== false) {
             if (count($row) < 11 || empty($row[8]) || empty($row[10])) {
                 continue;
             }

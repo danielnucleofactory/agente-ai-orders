@@ -563,7 +563,11 @@
 
                     <x-date-picker wire:model.live="vgm_cut_date" label="Fecha Corte VGM" />
 
-                    <x-date-picker wire:model="date_theorical_load" label="Fecha Carga Lista Teórica <span class='text-red-500'>*</span>" :readonly="(bool)$id" :error="$errors->first('date_theorical_load')" />
+                    @if($id)
+                    <x-date-picker wire:model="date_theorical_load" label="Fecha Carga Lista Teórica <span class='text-red-500'>*</span>" readonly :error="$errors->first('date_theorical_load')" />
+                    @else
+                    <x-date-picker wire:model="date_theorical_load" label="Fecha Carga Lista Teórica <span class='text-red-500'>*</span>" :error="$errors->first('date_theorical_load')" />
+                    @endif
 
                     <x-date-picker wire:model.live="date_variable_date" label="Fecha Carga Lista Variable" :error="$errors->first('date_variable_date')" />
 
