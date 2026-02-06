@@ -103,7 +103,8 @@ class PucharseOrderDetail extends Component
         // Cargar tracking si la PO está en "Booking" (etapa 3) o superior
         // y tiene tracking_id, mbl_number o container_number (directamente o en shipping document)
         $kanbanStatusId = $this->purchaseOrder->kanban_status_id ?? 0;
-        $hasTrackingData = $this->purchaseOrder->tracking_id 
+        $hasTrackingData = $this->purchaseOrder->porth_id
+            || $this->purchaseOrder->tracking_id 
             || $this->purchaseOrder->mbl_number 
             || $this->purchaseOrder->container_number
             || ($this->shippingDocument && (
@@ -285,7 +286,8 @@ class PucharseOrderDetail extends Component
         $this->loadingTracking = true;
 
         try {
-            // Obtener tracking_id y mbl_number de la PO o del shipping document
+            // Obtener identificadores de la PO o del shipping document
+            $porthId = $this->purchaseOrder->porth_id ?? null;
             $trackingId = $this->purchaseOrder->tracking_id 
                 ?? ($this->shippingDocument->tracking_id ?? null);
             $mblNumber = $this->purchaseOrder->mbl_number 
@@ -295,14 +297,14 @@ class PucharseOrderDetail extends Component
 
             Log::info('Loading tracking data for purchase order (Porth):', [
                 'purchase_order_id' => $this->purchaseOrder->id ?? null,
+                'porth_id' => $porthId,
                 'tracking_id' => $trackingId,
                 'mbl_number' => $mblNumber,
                 'container_number' => $containerNumber
             ]);
 
             $trackingService = new TrackingService();
-            // Usar getTracking que soporta Porth con tracking_id, mbl_number y container_number
-            $this->trackingData = $trackingService->getTracking($trackingId, $mblNumber, $containerNumber);
+            $this->trackingData = $trackingService->getTracking($trackingId, $mblNumber, $containerNumber, $porthId);
 
             if ($this->trackingData) {
                 Log::info('Tracking data loaded successfully (Porth)', [
@@ -344,8 +346,9 @@ class PucharseOrderDetail extends Component
             return false;
         }
 
-        // Verificar si hay identificadores de tracking
-        $hasTrackingIdentifiers = $this->purchaseOrder->tracking_id 
+        // Verificar si hay identificadores de tracking (incluye porth_id)
+        $hasTrackingIdentifiers = $this->purchaseOrder->porth_id
+            || $this->purchaseOrder->tracking_id 
             || $this->purchaseOrder->mbl_number 
             || $this->purchaseOrder->container_number
             || ($this->shippingDocument && (
