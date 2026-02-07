@@ -6,7 +6,8 @@ use RagaOrders\Webhook\Services\WebhookService;
 
 /**
  * Decorador del WebhookService del módulo que post-procesa el payload de PO
- * para ocultar date_variable_date (solo se envía date_carga_po).
+ * para ocultar date_variable_date (solo se envía date_carga_po)
+ * y freight_type (redundante con mode, que ya lleva el valor correcto).
  *
  * Extiende WebhookService para que el type-hint en WebhookSettingsController
  * siga siendo válido (evita error 500 en /webhook/settings).
@@ -28,6 +29,9 @@ class WebhookPayloadFilterDecorator extends WebhookService
 
         // Ocultar date_variable_date (el valor ya está en date_carga_po)
         unset($transformed['date_variable_date']);
+
+        // Ocultar freight_type (redundante con mode, que ya lleva "MARITIMO", "AÉREO", etc.)
+        unset($transformed['freight_type']);
 
         return $transformed;
     }
