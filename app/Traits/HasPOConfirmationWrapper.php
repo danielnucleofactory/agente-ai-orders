@@ -222,7 +222,8 @@ trait HasPOConfirmationWrapper
         if (config('po-confirmation.enabled', false)) {
             try {
                 $this->update([
-                    'date_theorical_load' => $newDate,
+                    'date_variable_date' => $newDate,       // Fecha validada (confirmada por proveedor)
+                    'carga_lista_validada' => true,         // Marcar como validada
                     'update_date_po' => $newDate,
                 ]);
 
