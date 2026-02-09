@@ -187,12 +187,16 @@ class PurchaseOrderObserver
                 $description = "Cambios en " . count($trackedChanges) . " campo(s)";
             }
 
+            // Capturar datos de Auth AHORA, antes del afterCommit
+            // (en contexto de PorthSync, Auth::logout() ocurre antes de que afterCommit se ejecute)
+            $currentUserId = Auth::id();
+
             // Crear comentario después del commit de la transacción
-            DB::afterCommit(function () use ($purchaseOrder, $actionType, $oldValues, $trackedChanges, $description, $isStatusChange) {
+            DB::afterCommit(function () use ($purchaseOrder, $actionType, $oldValues, $trackedChanges, $description, $isStatusChange, $currentUserId) {
                 try {
                     PurchaseOrderComment::create([
                         'purchase_order_id' => $purchaseOrder->id,
-                        'user_id' => Auth::id(),
+                        'user_id' => $currentUserId,
                         'comment' => $description,
                         'action_type' => $actionType,
                         'old_values' => $oldValues,
@@ -280,21 +284,27 @@ class PurchaseOrderObserver
         $changedKeys = array_keys($changes);
         $description = 'Actualización desde Porth (tracking). Campos: ' . implode(', ', $changedKeys);
 
-        DB::afterCommit(function () use ($purchaseOrder, $description, $oldValues, $newValues) {
+        // Capturar Auth::id() AHORA, antes de que DB::afterCommit se ejecute
+        // (PorthImportService hace Auth::logout() en finally, que ocurre antes del afterCommit
+        // cuando save() está dentro de DB::transaction())
+        $userId = Auth::id();
+        $poId = $purchaseOrder->id;
+
+        DB::afterCommit(function () use ($poId, $description, $oldValues, $newValues, $userId) {
             try {
                 PurchaseOrderComment::create([
-                    'purchase_order_id' => $purchaseOrder->id,
-                    'user_id' => Auth::id(),
+                    'purchase_order_id' => $poId,
+                    'user_id' => $userId,
                     'comment' => $description,
                     'action_type' => 'porth_sync',
                     'old_values' => $oldValues,
                     'new_values' => $newValues,
                     'ip_address' => request()->ip(),
-                    'user_agent' => request()->userAgent(),
+                    'user_agent' => 'PorthSync',
                 ]);
             } catch (\Exception $e) {
                 Log::error('Error creando comentario de auditoría Porth en PurchaseOrderObserver: ' . $e->getMessage(), [
-                    'purchase_order_id' => $purchaseOrder->id,
+                    'purchase_order_id' => $poId,
                     'error' => $e->getTraceAsString(),
                 ]);
             }
