@@ -280,8 +280,9 @@ class PorthImportService
             ]);
 
             // Enviar webhook siempre que Porth haya actualizado la PO (aunque solo sean campos de tracking),
-            // para que la integración reciba el estado actual completo. No enviar flags internos en el payload.
-            $changesForPayload = !empty($businessChanges) ? $businessChanges : [];
+            // Si hay cambios de negocio, enviarlos. Si solo cambió tracking, enviar indicador mínimo
+            // para que se aplique el filtro y solo se envíen campos de identificación (no todo el payload)
+            $changesForPayload = !empty($businessChanges) ? $businessChanges : ['_porth_sync' => true];
 
             // Enviar PO completa en 'data' para que transformPurchaseOrderPayload
             // + filterPayloadForUpdate funcionen igual que en los demás flujos

@@ -74,7 +74,7 @@ class PorthDispatchWebhookSynced extends Command
                     'order_number' => $po->order_number,
                     'source' => 'porth_sync_replay',
                     'timestamp' => format_webhook_date($syncAt),
-                    'changes' => [],
+                    'changes' => ['porth_resync' => true],  // Indicador para que se aplique el filtrado
                     'data' => $poData,
                 ]);
 

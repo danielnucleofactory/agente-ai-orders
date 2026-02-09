@@ -1159,18 +1159,19 @@ class KanbanBoard extends Component
                         'changes_keys' => array_keys($realChanges),
                     ]);
 
-                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
-                    $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
-
-                    // Convertir a array y asegurar que sea JSON serializable
-                    $poData = $freshPo->toArray();
-                    $poData = json_decode(json_encode($poData), true);
+                    // Construir payload con solo los datos actualizados (no toda la PO)
+                    $updatedData = [];
+                    foreach ($realChanges as $field => $value) {
+                        if ($field !== 'comments') {
+                            $updatedData[$field] = $value;
+                        }
+                    }
 
                     dispatch_webhook('purchase_order.updated', [
                         'purchase_order_id' => $po->id,
                         'order_number' => $po->order_number,
                         'changes' => $realChanges,
-                        'data' => $poData,
+                        'data' => $updatedData,
                     ]);
 
                     \Log::info('dispatch_webhook completed from KanbanBoard', [
