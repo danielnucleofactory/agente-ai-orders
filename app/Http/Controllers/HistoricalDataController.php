@@ -24,14 +24,14 @@ class HistoricalDataController extends Controller
 
             $query = HistoricalPurchaseOrder::query();
 
-            // Aplicar búsqueda
+            // Aplicar búsqueda (case-insensitive)
             if ($request->has('search') && !empty($request->search)) {
-                $search = $request->search;
-                $query->where(function($q) use ($search) {
-                    $q->where('order_number', 'like', '%' . $search . '%')
-                      ->orWhere('vendor_name', 'like', '%' . $search . '%')
-                      ->orWhere('container_number', 'like', '%' . $search . '%')
-                      ->orWhere('mbl_number', 'like', '%' . $search . '%');
+                $searchTerm = '%' . strtolower(trim($request->search)) . '%';
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->whereRaw('LOWER(order_number) LIKE ?', [$searchTerm])
+                      ->orWhereRaw('LOWER(vendor_name) LIKE ?', [$searchTerm])
+                      ->orWhereRaw('LOWER(container_number) LIKE ?', [$searchTerm])
+                      ->orWhereRaw('LOWER(mbl_number) LIKE ?', [$searchTerm]);
                 });
             }
 

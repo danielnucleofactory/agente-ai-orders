@@ -51,10 +51,13 @@ class Users extends Component
 
     public function render()
     {
+        $searchTerm = '%' . strtolower(trim($this->search)) . '%';
         $users = User::with('roles')
-            ->when($this->search, function ($query) {
-                return $query->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('email', 'like', '%' . $this->search . '%');
+            ->when($this->search, function ($query) use ($searchTerm) {
+                return $query->where(function ($q) use ($searchTerm) {
+                    $q->whereRaw('LOWER(name) LIKE ?', [$searchTerm])
+                        ->orWhereRaw('LOWER(email) LIKE ?', [$searchTerm]);
+                });
             })
             ->get();
 

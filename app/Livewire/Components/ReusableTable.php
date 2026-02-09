@@ -282,18 +282,19 @@ class ReusableTable extends Component
             $query->with($this->relationColumns);
         }
 
-        // Apply search if searchable fields are provided
+        // Apply search if searchable fields are provided (case-insensitive)
         if (!empty($this->search) && !empty($this->searchable)) {
-            $query->where(function (Builder $q) {
+            $searchTerm = '%' . strtolower(trim($this->search)) . '%';
+            $query->where(function (Builder $q) use ($searchTerm) {
                 foreach ($this->searchable as $field) {
                     // Handle relationship fields
                     if (strpos($field, '.') !== false) {
                         [$relation, $relationField] = explode('.', $field);
-                        $q->orWhereHas($relation, function (Builder $subQ) use ($relationField) {
-                            $subQ->where($relationField, 'like', '%' . $this->search . '%');
+                        $q->orWhereHas($relation, function (Builder $subQ) use ($relationField, $searchTerm) {
+                            $subQ->whereRaw('LOWER(' . $relationField . ') LIKE ?', [$searchTerm]);
                         });
                     } else {
-                        $q->orWhere($field, 'like', '%' . $this->search . '%');
+                        $q->orWhereRaw('LOWER(' . $field . ') LIKE ?', [$searchTerm]);
                     }
                 }
             });
