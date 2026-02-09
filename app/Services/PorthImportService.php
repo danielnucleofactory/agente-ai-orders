@@ -279,14 +279,9 @@ class PorthImportService
                 'filtered_out_porth_fields' => count($changes) - count($businessChanges),
             ]);
 
-            // Si no hay cambios de negocio, no enviar webhook
-            if (empty($businessChanges)) {
-                Log::info('porth_import:webhook_skipped_no_business_changes', [
-                    'purchase_order_id' => $po->id,
-                    'order_number' => $po->order_number,
-                ]);
-                return;
-            }
+            // Enviar webhook siempre que Porth haya actualizado la PO (aunque solo sean campos de tracking),
+            // para que la integración reciba el estado actual completo.
+            $changesForPayload = !empty($businessChanges) ? $businessChanges : ['_tracking_updated' => true];
 
             // Enviar PO completa en 'data' para que transformPurchaseOrderPayload
             // + filterPayloadForUpdate funcionen igual que en los demás flujos
@@ -299,13 +294,13 @@ class PorthImportService
                 'purchase_order_id' => $po->id,
                 'order_number' => $po->order_number,
                 'source' => 'porth_sync',
-                'changes' => $businessChanges,
+                'changes' => $changesForPayload,
                 'data' => $poData,
             ]);
 
             Log::info('porth_import:webhook_dispatched', [
                 'purchase_order_id' => $po->id,
-                'changes_keys' => array_keys($businessChanges),
+                'changes_keys' => array_keys($changesForPayload),
             ]);
         } catch (\Throwable $e) {
             Log::error('porth_import:webhook_error', [

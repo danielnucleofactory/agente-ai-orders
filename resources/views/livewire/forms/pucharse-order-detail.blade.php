@@ -884,6 +884,10 @@
                                             <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-green-800 bg-green-100 rounded-full">
                                                 Creación
                                             </span>
+                                        @elseif($comment['action_type'] === 'porth_sync')
+                                            <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-sky-800 bg-sky-100 rounded-full">
+                                                Actualización Porth
+                                            </span>
                                         @else
                                             <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-gray-800 bg-gray-100 rounded-full">
                                                 Otro

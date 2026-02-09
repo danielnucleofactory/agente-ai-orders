@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Log;
 
 class PurchaseOrderObserver
 {
+    /** Email del usuario sistema (sync Porth) para registrar sus actualizaciones en el histórico */
+    protected const PORTH_SYSTEM_USER_EMAIL = 'apps@raga-x.ai';
+
     /**
      * Campos críticos que se deben trackear para auditoría
      */
@@ -127,7 +130,12 @@ class PurchaseOrderObserver
             // Filtrar solo campos trackeados
             $trackedChanges = array_intersect_key($changes, array_flip($this->trackedFields));
 
+            // Si no hay cambios en campos trackeados pero el usuario es el sync de Porth,
+            // registrar igual una entrada en el histórico (p. ej. actualizaciones de porth_*, last_porth_sync_at)
             if (empty($trackedChanges)) {
+                if ($this->isPorthSyncUser() && !empty($changes)) {
+                    $this->registerPorthSyncAudit($purchaseOrder, $changes);
+                }
                 return;
             }
 
@@ -242,6 +250,55 @@ class PurchaseOrderObserver
                 'error' => $e->getTraceAsString()
             ]);
         }
+    }
+
+    /**
+     * Indica si el usuario actual es el de sincronización Porth (sistema).
+     */
+    protected function isPorthSyncUser(): bool
+    {
+        $user = Auth::user();
+        return $user && $user->email === self::PORTH_SYSTEM_USER_EMAIL;
+    }
+
+    /**
+     * Registra en el histórico una actualización desde Porth cuando solo cambiaron campos no trackeados
+     * (porth_*, last_porth_sync_at, etc.), para que el usuario vea que hubo sync.
+     */
+    protected function registerPorthSyncAudit(PurchaseOrder $purchaseOrder, array $changes): void
+    {
+        // Guardar valores anteriores y nuevos para que se vean en el modal de detalle
+        $oldValues = [];
+        $newValues = [];
+        foreach ($changes as $field => $newValue) {
+            $original = $purchaseOrder->getOriginal($field);
+            // Serializar Carbon/DateTime a string
+            $oldValues[$field] = ($original instanceof \DateTimeInterface) ? $original->format('Y-m-d H:i:s') : $original;
+            $newValues[$field] = ($newValue instanceof \DateTimeInterface) ? $newValue->format('Y-m-d H:i:s') : $newValue;
+        }
+
+        $changedKeys = array_keys($changes);
+        $description = 'Actualización desde Porth (tracking). Campos: ' . implode(', ', $changedKeys);
+
+        DB::afterCommit(function () use ($purchaseOrder, $description, $oldValues, $newValues) {
+            try {
+                PurchaseOrderComment::create([
+                    'purchase_order_id' => $purchaseOrder->id,
+                    'user_id' => Auth::id(),
+                    'comment' => $description,
+                    'action_type' => 'porth_sync',
+                    'old_values' => $oldValues,
+                    'new_values' => $newValues,
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Error creando comentario de auditoría Porth en PurchaseOrderObserver: ' . $e->getMessage(), [
+                    'purchase_order_id' => $purchaseOrder->id,
+                    'error' => $e->getTraceAsString(),
+                ]);
+            }
+        });
     }
 
     /**

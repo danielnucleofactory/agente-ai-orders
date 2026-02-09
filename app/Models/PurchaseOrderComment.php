@@ -137,6 +137,7 @@ class PurchaseOrderComment extends Model implements HasMedia
             'field_change' => 'Cambio de Datos',
             'status_change' => 'Cambio de Estado',
             'record_create' => 'Creación',
+            'porth_sync' => 'Actualización Porth',
             default => 'Otro'
         };
     }
