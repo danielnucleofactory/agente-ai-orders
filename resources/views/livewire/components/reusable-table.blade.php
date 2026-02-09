@@ -1,5 +1,10 @@
 <div>
-    {{-- In work, do what you enjoy. --}}
+    @if (session()->has('message'))
+        <div class="p-4 mb-4 text-green-700 bg-green-100 rounded border border-green-400">
+            {{ session('message') }}
+        </div>
+    @endif
+
     <div class="flex justify-between mb-4">
         @if ($showSearch && !empty($searchable))
             <div class="flex items-center">
@@ -291,10 +296,38 @@
                 <button class="w-1/2 py-3 font-medium transition duration-200 rounded-lg border-[3px] text-neutral-blue border-neutral-blue" wire:click="cancelDelete">
                     Cancelar
                 </button>
-                <button class="w-1/2 py-3 font-medium text-white transition duration-200 bg-red-600 rounded-lg hover:bg-red-700" wire:click="delete">
+                <button type="button" class="w-1/2 py-3 font-medium text-white transition duration-200 bg-red-600 rounded-lg hover:bg-red-700" wire:click="delete">
                     Eliminar
                 </button>
             </div>
         </x-modal-warning>
+    @endif
+
+    <!-- Modal de error al eliminar -->
+    @if ($deleteError)
+        <div class="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 overflow-y-auto sm:px-0" x-data="{ show: true }" x-show="show" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+            <div class="fixed inset-0 transition-all transform" wire:click="dismissDeleteError">
+                <div class="absolute inset-0 bg-[#171717] opacity-25"></div>
+            </div>
+            <div class="relative z-10 sm:max-w-lg sm:w-full mx-auto mb-6 transform overflow-hidden rounded-xl bg-white p-9 shadow-[8px_8px_30px_0_rgba(0,0,0,0.28)] transition-all"
+                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" @click.stop>
+                <div class="mb-4 flex flex-col items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="94" height="94" viewBox="0 0 94 94" fill="none">
+                        <path d="M47 20.67v29.33M47 62.67h.02M90.33 47a43.33 43.33 0 1 1-86.66 0 43.33 43.33 0 0 1 86.66 0Z"
+                            stroke="#DC2626" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <h3 class="text-lg font-bold text-red-600">No se puede eliminar</h3>
+                </div>
+                <p class="mb-4 text-center text-gray-700">{{ $deleteError }}</p>
+                <div class="flex justify-center">
+                    <button type="button" class="w-full py-3 font-medium text-white transition duration-200 rounded-lg bg-[#1AAD8A] hover:bg-[#0F614D]" wire:click="dismissDeleteError">
+                        Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
     @endif
 </div>

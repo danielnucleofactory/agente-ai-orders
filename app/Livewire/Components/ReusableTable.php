@@ -35,6 +35,7 @@ class ReusableTable extends Component
     // Deletion confirmation
     public $confirmingDelete = false;
     public $deleteId = null;
+    public $deleteError = null;
 
     // Data source
     public $model = null;
@@ -73,17 +74,14 @@ class ReusableTable extends Component
         $this->reset(['confirmingDelete', 'deleteId']);
     }
 
+    public function dismissDeleteError()
+    {
+        $this->deleteError = null;
+    }
+
     public function delete()
     {
-        // Debugging: Log the state before attempting deletion
-        \Log::info('Delete method called', [
-            'useModel' => $this->useModel,
-            'deleteId' => $this->deleteId,
-            'model' => $this->model
-        ]);
-
         if (!$this->useModel || !$this->deleteId) {
-            \Log::info('Delete cancelled - not using model or no deleteId');
             return;
         }
 
@@ -92,29 +90,17 @@ class ReusableTable extends Component
             if ($this->model === 'Spatie\\Permission\\Models\\Role') {
                 $record = $this->model::find($this->deleteId);
                 if ($record) {
-                    \Log::info('Found Spatie role to delete', ['id' => $this->deleteId]);
                     $record->delete();
-                    \Log::info('Role deleted successfully');
-                } else {
-                    \Log::error('Role not found', ['id' => $this->deleteId]);
                 }
             }
-            // For standard Laravel models that support findOrFail
             elseif (method_exists($this->model, 'findOrFail')) {
                 $record = $this->model::findOrFail($this->deleteId);
-                \Log::info('Found record to delete', ['id' => $this->deleteId]);
                 $record->delete();
-                \Log::info('Record deleted successfully');
             }
-            // Fallback for other models - try to use find() method
             else {
-                \Log::info('Using find() method fallback');
                 $record = $this->model::find($this->deleteId);
                 if ($record) {
                     $record->delete();
-                    \Log::info('Record deleted using find() fallback');
-                } else {
-                    \Log::error('Record not found with find() fallback', ['id' => $this->deleteId]);
                 }
             }
 
@@ -125,10 +111,12 @@ class ReusableTable extends Component
 
             $this->reset(['confirmingDelete', 'deleteId']);
 
-            // Emit event for notification
+            session()->flash('message', 'Registro eliminado correctamente.');
             $this->dispatch('itemDeleted');
 
         } catch (\Exception $e) {
+            $this->reset(['confirmingDelete', 'deleteId']);
+            $this->deleteError = $e->getMessage();
             \Log::error('Error deleting record', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
         }
     }
