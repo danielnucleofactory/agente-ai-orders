@@ -270,7 +270,7 @@ class PorthImportService
                 $businessChanges[$field] = $changeData;
             }
 
-            Log::info('porth_import:dispatching_webhook', [
+            Log::info('porth_import:webhook_evaluation', [
                 'purchase_order_id' => $po->id,
                 'order_number' => $po->order_number,
                 'total_changes' => count($changes),
@@ -279,29 +279,32 @@ class PorthImportService
                 'filtered_out_porth_fields' => count($changes) - count($businessChanges),
             ]);
 
-            // Enviar webhook siempre que Porth haya actualizado la PO (aunque solo sean campos de tracking),
-            // Si hay cambios de negocio, enviarlos. Si solo cambió tracking, enviar indicador mínimo
-            // para que se aplique el filtro y solo se envíen campos de identificación (no todo el payload)
-            $changesForPayload = !empty($businessChanges) ? $businessChanges : ['_porth_sync' => true];
+            // Si no hay cambios de negocio, no enviar webhook
+            if (empty($businessChanges)) {
+                Log::info('porth_import:webhook_skipped_no_business_changes', [
+                    'purchase_order_id' => $po->id,
+                    'order_number' => $po->order_number,
+                ]);
+                return;
+            }
 
-            // Enviar PO completa en 'data' para que transformPurchaseOrderPayload
-            // + filterPayloadForUpdate funcionen igual que en los demás flujos
-            $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
-            $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
-            $poData = $freshPo->toArray();
-            $poData = json_decode(json_encode($poData), true);
+            // Construir payload con solo los datos actualizados (no toda la PO)
+            $updatedData = [];
+            foreach ($businessChanges as $field => $changeData) {
+                $updatedData[$field] = $changeData['new'];
+            }
 
             dispatch_webhook('purchase_order.updated', [
                 'purchase_order_id' => $po->id,
                 'order_number' => $po->order_number,
                 'source' => 'porth_sync',
-                'changes' => $changesForPayload,
-                'data' => $poData,
+                'changes' => $businessChanges,
+                'data' => $updatedData,
             ]);
 
             Log::info('porth_import:webhook_dispatched', [
                 'purchase_order_id' => $po->id,
-                'changes_keys' => array_keys($changesForPayload),
+                'changes_keys' => array_keys($businessChanges),
             ]);
         } catch (\Throwable $e) {
             Log::error('porth_import:webhook_error', [
