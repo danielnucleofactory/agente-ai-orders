@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Helpers\PorthImportHelper;
+use App\Models\KanbanBoard;
+use App\Models\KanbanStatus;
 use App\Models\PurchaseOrder;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -216,11 +218,114 @@ class PorthImportService
                 'actual_changes' => array_keys($actualChanges),
             ]);
 
+            // Automatización: transiciones Kanban según estado Porth
+            $this->applyPorthKanbanTransitions($po->fresh(), $data);
+
             // Disparar webhook solo si hay cambios reales
             if (!empty($actualChanges) && function_exists('dispatch_webhook')) {
                 $this->dispatchWebhookForPorthUpdate($po, $actualChanges);
             }
         }
+    }
+
+    /**
+     * Automatización: transiciones de Kanban según estado Porth.
+     * - Si Porth indica "in transit" → pasar de Consolidador (4) a En tránsito (5)
+     * - Si Porth indica "at destination port" → pasar de En tránsito (5) a Puerto (6)
+     */
+    protected function applyPorthKanbanTransitions(PurchaseOrder $po, array $data): void
+    {
+        if (!config('services.porth.kanban_auto_transition', true)) {
+            return;
+        }
+
+        $stages = config('services.porth.kanban_stages', []);
+        if (empty($stages['consolidador']) || empty($stages['en_transito']) || empty($stages['puerto'])) {
+            return;
+        }
+
+        $board = KanbanBoard::where('company_id', $po->company_id)
+            ->where('type', 'po_stages')
+            ->first();
+
+        if (!$board) {
+            return;
+        }
+
+        $currentStatus = $po->kanbanStatus;
+        if (!$currentStatus) {
+            return;
+        }
+
+        $currentName = $currentStatus->name ?? '';
+
+        // Detectar si Porth indica "in transit" (fecha inTransit o phase in_transit/40_in_transit)
+        $hasInTransit = !empty($data['inTransit'])
+            || in_array(strtolower($data['phase'] ?? ''), ['in_transit', '40_in_transit'], true);
+
+        // Detectar si Porth indica "at destination port" (fecha atDestinationPort o phase at_destination_port/50_at_destination_port)
+        $hasAtDestinationPort = !empty($data['atDestinationPort'])
+            || in_array(strtolower($data['phase'] ?? ''), ['at_destination_port', '50_at_destination_port'], true);
+
+        // Prioridad 1: En tránsito O Consolidador → Puerto cuando Porth señala "at destination port"
+        if ($hasAtDestinationPort) {
+            $inConsolidador = $this->statusMatchesNames($currentName, $stages['consolidador']);
+            $inEnTransito = $this->statusMatchesNames($currentName, $stages['en_transito']);
+            if ($inConsolidador || $inEnTransito) {
+                $targetStatus = $this->findStatusByName($board, $stages['puerto']);
+                if ($targetStatus) {
+                    $po->update(['kanban_status_id' => $targetStatus->id]);
+                    Log::info('porth_import:kanban_auto_transition', [
+                        'purchase_order_id' => $po->id,
+                        'order_number' => $po->order_number,
+                        'from' => $currentName,
+                        'to' => $targetStatus->name,
+                        'trigger' => 'porth_at_destination_port',
+                    ]);
+                }
+                return;
+            }
+        }
+
+        // Prioridad 2: Consolidador → En tránsito cuando Porth señala "in transit"
+        if ($hasInTransit && $this->statusMatchesNames($currentName, $stages['consolidador'])) {
+            $targetStatus = $this->findStatusByName($board, $stages['en_transito']);
+            if ($targetStatus) {
+                $po->update(['kanban_status_id' => $targetStatus->id]);
+                Log::info('porth_import:kanban_auto_transition', [
+                    'purchase_order_id' => $po->id,
+                    'order_number' => $po->order_number,
+                    'from' => $currentName,
+                    'to' => $targetStatus->name,
+                    'trigger' => 'porth_in_transit',
+                ]);
+            }
+        }
+    }
+
+    private function statusMatchesNames(string $statusName, array $allowedNames): bool
+    {
+        $normalized = strtolower(trim($statusName));
+        foreach ($allowedNames as $name) {
+            if ($normalized === strtolower(trim($name))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function findStatusByName(KanbanBoard $board, array $names): ?KanbanStatus
+    {
+        foreach ($names as $name) {
+            $status = $board->statuses()
+                ->where('name', $name)
+                ->where('is_hidden', false)
+                ->first();
+            if ($status) {
+                return $status;
+            }
+        }
+        return null;
     }
 
     /**
