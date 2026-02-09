@@ -128,10 +128,7 @@
                         @endif
                     </th>
                     <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
-                        Estado
-                    </th>
-                    <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
-                        Comentarios
+                        Tipo
                     </th>
                     <th class="px-6 py-6 text-xs font-bold text-left text-black uppercase">
                         Archivos adjuntos
@@ -213,11 +210,6 @@
                                 </span>
                             @endif
                         </td>
-                        <td class="max-w-xs px-6 py-4 text-sm">
-                            <div class="truncate" title="{{ $comment['comment'] }}">
-                                {{ $comment['comment'] }}
-                            </div>
-                        </td>
                         <td class="px-6 py-4 text-sm whitespace-nowrap">
                             @if($comment['attachment'])
                                 @if($comment['attachment']['is_pending'])
@@ -254,7 +246,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="10" class="px-6 py-8 text-center text-gray-500">
+                        <td colspan="9" class="px-6 py-8 text-center text-gray-500">
                             <div class="flex flex-col items-center">
                                 <svg class="w-12 h-12 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -275,12 +267,20 @@
         </table>
     </div>
 
-    @if(count($comments) > 0)
-        <div class="mt-4 text-sm text-gray-600">
-            Mostrando {{ count($comments) }} comentario(s) de todas las órdenes de compra
-            @if(!empty($search))
-                que contienen "{{ $search }}"
-            @endif
+    {{-- Paginador --}}
+    @if($comments->hasPages() || $comments->total() > 0)
+        <div class="flex items-center justify-between mt-4">
+            <div class="flex items-center gap-3 text-sm text-gray-600">
+                <span>Mostrando {{ $comments->firstItem() }}–{{ $comments->lastItem() }} de {{ $comments->total() }} registro(s)</span>
+                <select wire:model.live="perPage" class="rounded-lg border border-gray-300 text-sm py-1 px-2 focus:border-[#1AAD8A] focus:ring-[#1AAD8A]">
+                    <option value="25">25 por página</option>
+                    <option value="50">50 por página</option>
+                    <option value="100">100 por página</option>
+                </select>
+            </div>
+            <div>
+                {{ $comments->links() }}
+            </div>
         </div>
     @endif
 
