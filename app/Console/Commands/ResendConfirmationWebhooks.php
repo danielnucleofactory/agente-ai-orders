@@ -103,13 +103,29 @@ class ResendConfirmationWebhooks extends Command
                         'updated_at' => $po->updated_at,
                     ]);
 
+                    $confirmedDate = $po->date_variable_date?->format('Y-m-d');
+                    $changes = [
+                        'confirm_update_date_po' => true,
+                        'date_variable_date' => $confirmedDate,
+                    ];
+                    $updatedData = [
+                        'id' => $po->id,
+                        'order_number' => $po->order_number,
+                        'trading_company' => $po->trading_company,
+                        'company_id' => $po->company_id,
+                        'kanban_status_id' => $po->kanban_status_id,
+                        'confirm_update_date_po' => true,
+                        'date_variable_date' => $confirmedDate,
+                    ];
+
                     dispatch_webhook('purchase_order.updated', [
                         'purchase_order_id' => $po->id,
                         'order_number' => $po->order_number,
                         'action' => 'po_confirmed_by_vendor_resent',
-                        'confirmed_date' => $po->date_variable_date?->format('Y-m-d'),
+                        'confirmed_date' => $confirmedDate,
                         'resent_at' => now()->toISOString(),
-                        'data' => $po->toArray(),
+                        'changes' => $changes,
+                        'data' => $updatedData,
                     ]);
 
                     $successCount++;

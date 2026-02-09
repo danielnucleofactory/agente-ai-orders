@@ -65,17 +65,21 @@ class PorthDispatchWebhookSynced extends Command
             }
 
             try {
-                $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
-                $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
-                $poData = json_decode(json_encode($freshPo->toArray()), true);
+                $updatedData = [
+                    'id' => $po->id,
+                    'order_number' => $po->order_number,
+                    'trading_company' => $po->trading_company,
+                    'company_id' => $po->company_id,
+                    'kanban_status_id' => $po->kanban_status_id,
+                ];
 
                 dispatch_webhook('purchase_order.updated', [
                     'purchase_order_id' => $po->id,
                     'order_number' => $po->order_number,
                     'source' => 'porth_sync_replay',
                     'timestamp' => format_webhook_date($syncAt),
-                    'changes' => ['porth_resync' => true],  // Indicador para que se aplique el filtrado
-                    'data' => $poData,
+                    'changes' => ['porth_resync' => true],
+                    'data' => $updatedData,
                 ]);
 
                 $sent++;
