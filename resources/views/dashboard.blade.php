@@ -358,15 +358,15 @@
             <div class="additional-filters-buttons" style="display: flex; flex-direction: column; gap: 12px;">
               <button type="button" class="filter-button" id="btn-po-retraso-cl" data-filter="po_retraso_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                 <span style="line-height: 1.2; font-size: 15px;">PO Retraso CL</span>
-                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Retraso > 7 días en carga lista</span>
+                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Carga lista real posterior a la planificada.</span>
               </button>
               <button type="button" class="filter-button" id="btn-po-adelanto-cl" data-filter="po_adelanto_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                 <span style="line-height: 1.2; font-size: 15px;">PO Adelanto CL</span>
-                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Adelanto > 7 días en carga lista</span>
+                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Carga lista real previa a la planificada.</span>
               </button>
               <button type="button" class="filter-button" id="btn-indicador-capacidad" data-filter="indicador_capacidad" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                 <span style="line-height: 1.2; font-size: 15px;">Indicador Capacidad</span>
-                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">PO sin fecha ETD</span>
+                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Ordenes con fecha de salida confirmada.</span>
               </button>
             </div>
           </div>
