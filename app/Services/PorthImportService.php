@@ -394,7 +394,11 @@ class PorthImportService
             }
 
             // Construir payload con solo los datos actualizados (no toda la PO)
-            $updatedData = [];
+            // Siempre incluir id y order_number: son identificadores core para la plataforma
+            $updatedData = [
+                'id' => $po->id,
+                'order_number' => $po->order_number,
+            ];
             foreach ($businessChanges as $field => $changeData) {
                 $updatedData[$field] = $changeData['new'];
             }
