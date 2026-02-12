@@ -201,12 +201,17 @@ class PurchaseOrder extends Model implements HasMedia
     ];
 
     /**
-     * Campos crudos de Porth excluidos de toArray()/toJson() (webhook, API, etc.).
-     * Los campos de maestros (departure_port, arrival_port, shipping_line, mode, date_etd, date_eta, etc.) sí se envían.
+     * Campos excluidos de toArray()/toJson() (webhook, API, etc.).
+     * - Computados: arrival_status, delay_days, etd_dates_difference, eta_dates_difference (se calculan, no deben enviarse)
+     * - Porth: campos internos de sincronización con Porth
      *
      * @var array<int, string>
      */
     protected $hidden = [
+        'arrival_status',
+        'delay_days',
+        'etd_dates_difference',
+        'eta_dates_difference',
         'porth_id',
         'porth_shipment_number',
         'porth_carrier_code',

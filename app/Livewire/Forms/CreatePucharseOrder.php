@@ -2397,6 +2397,16 @@ class CreatePucharseOrder extends Component
         $vendors = Vendor::where('company_id', $companyId)
                           ->where('status', 'active')
                           ->get();
+
+        // Si estamos editando, incluir el vendor actual de la PO aunque sea de otra empresa
+        // (evita que el select muestre otro vendor cuando el actual no está en la lista)
+        if ($this->purchaseOrder && $this->vendor_id) {
+            $currentVendor = Vendor::find($this->vendor_id);
+            if ($currentVendor && !$vendors->contains('id', $this->vendor_id)) {
+                $vendors = $vendors->push($currentVendor);
+            }
+        }
+
         $this->vendorArray = $vendors->pluck('name', 'id')->toArray();
 
         // Obtener los ship tos y formatearlos para el selector
