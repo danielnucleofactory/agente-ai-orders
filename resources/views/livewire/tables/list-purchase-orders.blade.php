@@ -321,7 +321,7 @@
 
                             @if($visibleColumns['vendor'])
                             <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $order->vendor_id ?? 'N/A' }}
+                                {{ $order->vendor?->name ?? 'N/A' }}
                             </td>
                             @endif
 

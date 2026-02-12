@@ -17,7 +17,7 @@
         <div class="grid grid-cols-2 gap-4 mb-4">
             <div>
                 <p class="text-sm text-gray-500">Proveedor</p>
-                <p class="text-sm font-medium">{{ $order->vendor_id ?? 'N/A' }}</p>
+                <p class="text-sm font-medium">{{ $order->vendor?->name ?? 'N/A' }}</p>
             </div>
             <div>
                 <p class="text-sm text-gray-500">Fecha</p>
