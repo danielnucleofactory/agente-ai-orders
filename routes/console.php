@@ -8,9 +8,9 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote')->hourly();
 
-// Sincronizar embarques actualizados desde Porth cada hora
+// Sincronizar embarques actualizados desde Porth cada 5 minutos
 Schedule::command('porth:sync-recent --trigger=schedule')
-    ->hourly()
+    ->everyFiveMinutes()
     ->withoutOverlapping()
     ->runInBackground();
 

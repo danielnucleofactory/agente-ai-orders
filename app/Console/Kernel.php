@@ -12,9 +12,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Sincronizar embarques actualizados desde Porth cada hora
+        // Sincronizar embarques actualizados desde Porth cada 5 minutos
         $schedule->command('porth:sync-recent --trigger=schedule')
-            ->hourly()
+            ->everyFiveMinutes()
             ->withoutOverlapping()
             ->runInBackground();
 
