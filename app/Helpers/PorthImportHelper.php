@@ -186,12 +186,12 @@ class PorthImportHelper
     public function buildPurchaseOrderPayloadValues(array $data): array
     {
         $payloadValues = [];
+        // incoterm excluido: Porth no debe actualizar el incoterm de la PO
         $transformers = [
             'etd' => [$this, 'parseDateTime'],
             'atd' => [$this, 'parseDateTime'],
             'eta' => [$this, 'parseDateTime'],
             'ata' => [$this, 'parseDateTime'],
-            'incoterm' => [$this, 'normalize'],
         ];
 
         foreach ($transformers as $key => $transform) {
@@ -219,7 +219,7 @@ class PorthImportHelper
             'atd' => 'date_atd',
             'eta' => 'date_eta',
             'ata' => 'date_ata',
-            'incoterm' => 'incoterms',
+            // incoterm excluido: Porth no debe actualizar el incoterm de la PO
             'freightType' => 'mode', // Traducido a mode (MARITIMO, AEREO, TERRESTRE)
         ];
     }
