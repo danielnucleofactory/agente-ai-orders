@@ -1127,7 +1127,7 @@ class CreatePucharseOrder extends Component
     public function onVendorSelected()
     {
         if ($this->vendor_id) {
-            $vendor = Vendor::find($this->vendor_id);
+            $vendor = Vendor::where('vendo_code', $this->vendor_id)->first();
             if ($vendor) {
                 $this->vendor_direccion = $vendor->vendor_direccion ?? null;
                 $this->vendor_pais = $vendor->vendor_pais ?? null;
@@ -2400,14 +2400,16 @@ class CreatePucharseOrder extends Component
 
         // Si estamos editando, incluir el vendor actual de la PO aunque sea de otra empresa
         // (evita que el select muestre otro vendor cuando el actual no está en la lista)
+        // vendor_id almacena vendo_code, no vendors.id
         if ($this->purchaseOrder && $this->vendor_id) {
-            $currentVendor = Vendor::find($this->vendor_id);
-            if ($currentVendor && !$vendors->contains('id', $this->vendor_id)) {
+            $currentVendor = Vendor::where('vendo_code', $this->vendor_id)->first();
+            if ($currentVendor && !$vendors->contains('vendo_code', $this->vendor_id)) {
                 $vendors = $vendors->push($currentVendor);
             }
         }
 
-        $this->vendorArray = $vendors->pluck('name', 'id')->toArray();
+        // Opciones: vendo_code => name (vendor_id en PO = vendo_code)
+        $this->vendorArray = $vendors->filter(fn ($v) => $v->vendo_code !== null)->pluck('name', 'vendo_code')->toArray();
 
         // Obtener los ship tos y formatearlos para el selector
         $shipTos = ShipTo::where('company_id', $companyId)
