@@ -1159,8 +1159,13 @@ class KanbanBoard extends Component
                         'changes_keys' => array_keys($realChanges),
                     ]);
 
-                    // Construir payload con solo los datos actualizados (no toda la PO)
-                    $updatedData = [];
+                    // Construir payload con identificadores siempre incluidos + datos actualizados
+                    $updatedData = [
+                        'order_number' => $po->order_number,
+                        'trading_company' => $po->trading_company,
+                        'company_id' => $po->company_id,
+                        'current_timestamp' => function_exists('format_webhook_date') ? format_webhook_date(now()) : now()->utc()->format('Y-m-d\TH:i:s.v\Z'),
+                    ];
                     foreach ($realChanges as $field => $value) {
                         if ($field !== 'comments') {
                             $updatedData[$field] = $value;

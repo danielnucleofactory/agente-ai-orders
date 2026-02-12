@@ -394,10 +394,13 @@ class PorthImportService
             }
 
             // Construir payload con solo los datos actualizados (no toda la PO)
-            // Siempre incluir id y order_number: son identificadores core para la plataforma
+            // Siempre incluir identificadores core + current_timestamp para el endpoint
             $updatedData = [
                 'id' => $po->id,
                 'order_number' => $po->order_number,
+                'trading_company' => $po->trading_company,
+                'company_id' => $po->company_id,
+                'current_timestamp' => function_exists('format_webhook_date') ? format_webhook_date(now()) : now()->utc()->format('Y-m-d\TH:i:s.v\Z'),
             ];
             foreach ($businessChanges as $field => $changeData) {
                 $updatedData[$field] = $changeData['new'];
