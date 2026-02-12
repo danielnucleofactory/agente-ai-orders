@@ -58,7 +58,7 @@
             <div class="grid grid-cols-3 gap-4">
                 <div>
                     <p class="text-sm font-medium text-gray-500">Código de Proveedor</p>
-                    <p class="text-lg">{{ $purchaseOrder->vendor_number ?? $purchaseOrder->vendor?->vendo_code ?? 'N/A' }}</p>
+                    <p class="text-lg">{{ $purchaseOrder->vendor?->vendo_code ?? 'N/A' }}</p>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">Nombre del Proveedor</p>
