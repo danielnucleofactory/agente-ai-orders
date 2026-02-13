@@ -189,6 +189,9 @@ class PorthImportService
         }
         $fieldsToUpdate = array_merge($fieldsToUpdate, $porthFields);
 
+        // Reglas de booleanos según datos de Porth
+        $this->applyPorthBooleanRules($po, $data, $fieldsToUpdate, $originalValues);
+
         if (!empty($fieldsToUpdate)) {
             // Detectar cambios reales comparando valores originales con nuevos
             $actualChanges = [];
@@ -229,9 +232,9 @@ class PorthImportService
     }
 
     /**
-     * Automatización: transiciones de Kanban según estado Porth.
-     * - Si Porth indica "in transit" → pasar de Consolidador (4) a En tránsito (5)
-     * - Si Porth indica "at destination port" → pasar de En tránsito (5) a Puerto (6)
+     * Automatización: transiciones de Kanban según phase de Porth (solo phase, no fechas).
+     * - 40_in_transit → Consolidador a En tránsito
+     * - 50_at_destination_port → Consolidador o En tránsito a Puerto
      */
     protected function applyPorthKanbanTransitions(PurchaseOrder $po, array $data): void
     {
@@ -258,16 +261,13 @@ class PorthImportService
         }
 
         $currentName = $currentStatus->name ?? '';
+        $phase = strtolower(trim($data['phase'] ?? ''));
 
-        // Detectar si Porth indica "in transit" (fecha inTransit o phase in_transit/40_in_transit)
-        $hasInTransit = !empty($data['inTransit'])
-            || in_array(strtolower($data['phase'] ?? ''), ['in_transit', '40_in_transit'], true);
+        // Solo phase, no fechas: 40_in_transit y 50_at_destination_port
+        $hasInTransit = in_array($phase, ['in_transit', '40_in_transit'], true);
+        $hasAtDestinationPort = in_array($phase, ['at_destination_port', '50_at_destination_port'], true);
 
-        // Detectar si Porth indica "at destination port" (fecha atDestinationPort o phase at_destination_port/50_at_destination_port)
-        $hasAtDestinationPort = !empty($data['atDestinationPort'])
-            || in_array(strtolower($data['phase'] ?? ''), ['at_destination_port', '50_at_destination_port'], true);
-
-        // Prioridad 1: En tránsito O Consolidador → Puerto cuando Porth señala "at destination port"
+        // Prioridad 1: En tránsito O Consolidador → Puerto cuando phase = 50_at_destination_port
         if ($hasAtDestinationPort) {
             $inConsolidador = $this->statusMatchesNames($currentName, $stages['consolidador']);
             $inEnTransito = $this->statusMatchesNames($currentName, $stages['en_transito']);
@@ -280,14 +280,14 @@ class PorthImportService
                         'order_number' => $po->order_number,
                         'from' => $currentName,
                         'to' => $targetStatus->name,
-                        'trigger' => 'porth_at_destination_port',
+                        'trigger' => 'porth_phase_50_at_destination_port',
                     ]);
                 }
                 return;
             }
         }
 
-        // Prioridad 2: Consolidador → En tránsito cuando Porth señala "in transit"
+        // Prioridad 2: Consolidador → En tránsito cuando phase = 40_in_transit
         if ($hasInTransit && $this->statusMatchesNames($currentName, $stages['consolidador'])) {
             $targetStatus = $this->findStatusByName($board, $stages['en_transito']);
             if ($targetStatus) {
@@ -297,8 +297,35 @@ class PorthImportService
                     'order_number' => $po->order_number,
                     'from' => $currentName,
                     'to' => $targetStatus->name,
-                    'trigger' => 'porth_in_transit',
+                    'trigger' => 'porth_phase_40_in_transit',
                 ]);
+            }
+        }
+    }
+
+    /**
+     * Aplica reglas de booleanos según datos de Porth:
+     * - ATD recibido → etd_initial_validated = true
+     * - POL de Porth = POL de la PO → port_of_loading_validated = true
+     */
+    protected function applyPorthBooleanRules(PurchaseOrder $po, array $data, array &$fieldsToUpdate, array &$originalValues): void
+    {
+        // Si llega ATD (Actual Time of Departure), marcar ETD inicial validada
+        if (!empty($data['atd'])) {
+            $fieldsToUpdate['etd_initial_validated'] = true;
+            $originalValues['etd_initial_validated'] = $po->etd_initial_validated;
+        }
+
+        // Si el puerto de embarque de Porth coincide con el registrado en la PO, marcar validado
+        $maestrosFields = $this->helper->getMaestrosFields($data);
+        $porthDeparturePort = $maestrosFields['departure_port'] ?? null;
+        $poDeparturePort = $po->departure_port;
+        if ($porthDeparturePort && $poDeparturePort) {
+            $normalizedPorth = strtoupper(trim((string) $porthDeparturePort));
+            $normalizedPo = strtoupper(trim((string) $poDeparturePort));
+            if ($normalizedPorth === $normalizedPo) {
+                $fieldsToUpdate['port_of_loading_validated'] = true;
+                $originalValues['port_of_loading_validated'] = $po->port_of_loading_validated;
             }
         }
     }

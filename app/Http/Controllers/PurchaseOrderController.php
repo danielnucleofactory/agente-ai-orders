@@ -234,9 +234,8 @@ class PurchaseOrderController extends Controller
                 ];
 
                 // Asignar relación con vendor si se resolvió
-                // vendor_id almacena vendo_code para que la relación funcione correctamente
                 if ($vendor) {
-                    $poData['vendor_id'] = $vendor->vendo_code ?? $vendor->id;
+                    $poData['vendor_id'] = $vendor->id;
                     $poData['vendor_number'] = $vendor->vendo_code;
                 }
 
@@ -646,9 +645,8 @@ class PurchaseOrderController extends Controller
         }
 
         // Asignar relación con vendor si se resolvió
-        // vendor_id almacena vendo_code para que la relación funcione correctamente
         if ($vendor) {
-            $poData['vendor_id'] = $vendor->vendo_code ?? $vendor->id;
+            $poData['vendor_id'] = $vendor->id;
             // Solo usar el código del vendor si no viene vendor_number en el JSON
             if (!array_key_exists('vendor_number', $general)) {
                 $poData['vendor_number'] = $vendor->vendo_code;

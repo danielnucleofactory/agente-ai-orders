@@ -1469,6 +1469,20 @@ class CreatePucharseOrder extends Component
                 // Usar transacción para asegurar integridad
                 \DB::beginTransaction();
 
+                // Resolver o crear vendor (vendor_id en form = vendo_code; DB espera vendors.id)
+                $vendor = null;
+                if ($this->vendor_id) {
+                    $vendor = Vendor::where('vendo_code', $this->vendor_id)->first();
+                    if (!$vendor) {
+                        $vendor = Vendor::create([
+                            'company_id' => $companyId,
+                            'vendo_code' => (string) $this->vendor_id,
+                            'name' => 'Proveedor ' . $this->vendor_id,
+                            'status' => 'active',
+                        ]);
+                    }
+                }
+
                 // Preparar los datos para la orden de compra
                 $poData = [
                     'company_id' => $companyId,
@@ -1476,7 +1490,7 @@ class CreatePucharseOrder extends Component
                     'status' => $this->id ? $this->status : 'draft',
                     'kanban_status_id' => $this->id ? $this->kanban_status_id : 2,
                     'notes' => $this->notes,
-                    'vendor_id' => $this->vendor_id,
+                    'vendor_id' => $vendor?->id,
                     'ship_to_id' => $this->ship_to_id,
                     'bill_to_id' => $this->bill_to_id,
                     'order_date' => $this->order_date,

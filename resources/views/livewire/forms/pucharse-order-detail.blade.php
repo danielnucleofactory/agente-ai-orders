@@ -303,9 +303,7 @@
                                {{ $purchaseOrder->port_of_loading_validated ? 'checked' : '' }}
                                disabled
                                class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
-                        <label for="port_of_loading_validated" class="block ml-2 text-sm text-gray-700">
-                            {{ $purchaseOrder->port_of_loading_validated ? 'Validado' : 'No validado' }}
-                        </label>
+                        <label for="port_of_loading_validated" class="block ml-2 text-sm text-gray-700">Validado</label>
                     </div>
                 </div>
                 <div>
@@ -476,9 +474,7 @@
                                {{ $purchaseOrder->etd_initial_validated ? 'checked' : '' }}
                                disabled
                                class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
-                        <label for="etd_initial_validated" class="block ml-2 text-sm text-gray-700">
-                            {{ $purchaseOrder->etd_initial_validated ? 'Validada' : 'No validada' }}
-                        </label>
+                        <label for="etd_initial_validated" class="block ml-2 text-sm text-gray-700">Validada</label>
                     </div>
                 </div>
                 <div>

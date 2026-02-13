@@ -164,9 +164,9 @@ class PorthSyncService
                     'response_status' => $response->status(),
                     'response_data' => $data,
                     'has_master_bl' => isset($data['masterBl']),
-                    'has_container' => isset($data['container']),
+                    'has_container' => isset($data['containerNumber']) || isset($data['container']),
                     'master_bl_value' => $data['masterBl'] ?? null,
-                    'container_value' => $data['container'] ?? null
+                    'container_value' => $data['containerNumber'] ?? $data['container'] ?? null
                 ]);
                 return $data;
             } else {
@@ -231,71 +231,28 @@ class PorthSyncService
 
     /**
      * Construir payload para creación.
-     * Incluye container/BL/booking cuando existan y carrierCode (desde porth_carrier_code o nombre de naviera)
-     * para que Porth traiga la información correcta.
+     * Solo incluye: name (OLO-{order_number}-{timestamp}) y el identificador de seguimiento
+     * (containerNumber, masterBl o bookingNumber).
      */
     private function buildCreatePayload($identifier, $document)
     {
+        $orderNumber = $document instanceof PurchaseOrder
+            ? $document->order_number
+            : ($document->document_number ?? (string) $document->id);
+
         $basePayload = [
-            'name' => 'GLF-' . $identifier['type'] . '-' . $identifier['value'] . '-' . time(),
-            'freightType' => 'ocean',
-            'incoterm' => 'FCA',
-            'manualTracking' => false,
-            'trackCargo' => true,
-            'priority' => 'normal',
-            'tags' => ['GLF', 'AUTO-CREATED', $identifier['type'] . ':' . $identifier['value']],
-            'meta' => [
-                'source' => 'GLF-auto-sync',
-                'created_at' => now()->toISOString(),
-                'document_id' => $document->id,
-                'document_type' => get_class($document)
-            ]
+            'name' => 'OLO-' . $orderNumber . '-' . time(),
         ];
 
-        // Identificador usado: container, BL o booking (según tipo)
+        // Solo identificadores de seguimiento
         if (!empty($identifier['value'])) {
             if ($identifier['type'] === 'container_number') {
-                $basePayload['container'] = $identifier['value'];
-                $basePayload['cargo'] = [['type' => 'container', 'number' => $identifier['value'], 'name' => $identifier['value']]];
+                $basePayload['containerNumber'] = $identifier['value'];
             } elseif ($identifier['type'] === 'mbl_number') {
                 $basePayload['masterBl'] = $identifier['value'];
             } elseif ($identifier['type'] === 'booking_code') {
                 $basePayload['bookingNumber'] = $identifier['value'];
             }
-        }
-
-        // Enriquecer con datos del documento (sobrescriben si ya se puso por identifier)
-        if ($document instanceof ShippingDocument) {
-            $basePayload['masterBl'] = $document->mbl_number ?? $basePayload['masterBl'] ?? null;
-            $basePayload['houseBl'] = $document->hbl_number;
-            $basePayload['bookingNumber'] = $document->booking_code ?? $basePayload['bookingNumber'] ?? null;
-            $basePayload['etd'] = $document->estimated_departure_date?->toISOString();
-            $basePayload['eta'] = $document->estimated_arrival_date?->toISOString();
-            $basePayload['notes'] = $document->notes;
-            if ($document->container_number && empty($basePayload['cargo'])) {
-                $basePayload['container'] = $document->container_number;
-                $basePayload['cargo'] = [['type' => 'container', 'number' => $document->container_number, 'name' => $document->container_number]];
-            }
-        }
-
-        if ($document instanceof PurchaseOrder) {
-            $basePayload['masterBl'] = $document->mbl_number ?? $basePayload['masterBl'] ?? null;
-            $basePayload['etd'] = $document->date_etd?->toISOString();
-            $basePayload['eta'] = $document->date_eta?->toISOString();
-            $basePayload['notes'] = $document->notes;
-            if ($document->container_number && empty($basePayload['cargo'])) {
-                $basePayload['container'] = $document->container_number;
-                $basePayload['cargo'] = [['type' => 'container', 'number' => $document->container_number, 'name' => $document->container_number]];
-            }
-        }
-
-        // carrierCode: si ya está guardado (porth_carrier_code) o se resuelve desde shipping_line (nombre Maestros)
-        $carrierCode = $document->porth_carrier_code ?? null;
-        if (empty($carrierCode) && !empty($document->shipping_line)) {
-            $carrierCode = $this->translationService->getCarrierCodeFromShippingLineName($document->shipping_line);
-        }
-        if (!empty($carrierCode)) {
-            $basePayload['carrierCode'] = $carrierCode;
         }
 
         return array_filter($basePayload, fn ($v) => $v !== null && $v !== '');
@@ -346,12 +303,13 @@ class PorthSyncService
                     // NO sobrescribir el mbl_number local
                 }
                 
-                if (isset($result['data']['container']) && $result['data']['container'] !== $originalContainer) {
+                $porthContainer = $result['data']['containerNumber'] ?? $result['data']['container'] ?? null;
+                if ($porthContainer !== null && $porthContainer !== $originalContainer) {
                     Log::warning('Porth returned different container number', [
                         'document_id' => $document->id,
                         'document_type' => get_class($document),
                         'local_container' => $originalContainer,
-                        'porth_container' => $result['data']['container'],
+                        'porth_container' => $porthContainer,
                         'action' => 'keeping_local_value'
                     ]);
                     // NO sobrescribir el container_number local
