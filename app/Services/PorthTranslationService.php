@@ -61,13 +61,20 @@ class PorthTranslationService
     ];
 
     /**
-     * Mapeo de tipo de transporte Porth → Maestros
+     * Mapeo de tipo de transporte Porth → Maestros.
+     * Valores Maestros: TERRESTRE, MARITIMO, AÉREO.
+     * Incluye variaciones (con/sin acento) que Porth puede enviar.
      */
     const FREIGHT_TYPE_MAP = [
         'ocean' => 'MARITIMO',
-        'air' => 'AEREO',
+        'maritimo' => 'MARITIMO',
+        'marítimo' => 'MARITIMO',
+        'air' => 'AÉREO',
+        'aereo' => 'AÉREO',
+        'aéreo' => 'AÉREO',
         'road' => 'TERRESTRE',
         'ground' => 'TERRESTRE',
+        'terrestre' => 'TERRESTRE',
     ];
 
     /**
@@ -196,10 +203,11 @@ class PorthTranslationService
     }
 
     /**
-     * Traduce tipo de transporte Porth a formato Maestros
-     * 
-     * @param string|null $freightType Tipo de transporte de Porth (ocean, air, road, ground)
-     * @return string|null Formato Maestros (MARITIMO, AEREO, TERRESTRE)
+     * Traduce tipo de transporte Porth a formato Maestros.
+     * Valores Maestros: TERRESTRE, MARITIMO, AÉREO.
+     *
+     * @param string|null $freightType Tipo de transporte de Porth (ocean, air, maritimo, MARÍTIMO, etc.)
+     * @return string|null Formato Maestros (MARITIMO, AÉREO, TERRESTRE)
      */
     public function translateFreightType(?string $freightType): ?string
     {
@@ -208,8 +216,31 @@ class PorthTranslationService
         }
 
         $normalized = strtolower(trim($freightType));
-        
-        return self::FREIGHT_TYPE_MAP[$normalized] ?? null;
+        $result = self::FREIGHT_TYPE_MAP[$normalized] ?? null;
+
+        // Fallback: intentar sin acentos por si Porth envía variaciones
+        if ($result === null) {
+            $withoutAccents = $this->removeAccents($normalized);
+            foreach (self::FREIGHT_TYPE_MAP as $key => $value) {
+                if ($this->removeAccents($key) === $withoutAccents) {
+                    return $value;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Quita acentos de un string para comparación
+     */
+    protected function removeAccents(string $value): string
+    {
+        $map = [
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n',
+            'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u', 'Ñ' => 'n',
+        ];
+        return strtr(mb_strtolower($value, 'UTF-8'), $map);
     }
 
     /**
