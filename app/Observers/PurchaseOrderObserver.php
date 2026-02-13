@@ -131,10 +131,16 @@ class PurchaseOrderObserver
             $trackedChanges = array_intersect_key($changes, array_flip($this->trackedFields));
 
             // Si no hay cambios en campos trackeados pero el usuario es el sync de Porth,
-            // registrar igual una entrada en el histórico (p. ej. actualizaciones de porth_*, last_porth_sync_at)
+            // registrar entrada solo si hay cambios de negocio (excluir last_porth_sync_at y porth_*)
             if (empty($trackedChanges)) {
                 if ($this->isPorthSyncUser() && !empty($changes)) {
-                    $this->registerPorthSyncAudit($purchaseOrder, $changes);
+                    $meaningfulChanges = array_filter(array_keys($changes), function ($field) {
+                        return $field !== 'last_porth_sync_at' && !str_starts_with($field, 'porth_');
+                    });
+                    if (!empty($meaningfulChanges)) {
+                        $filteredChanges = array_intersect_key($changes, array_flip($meaningfulChanges));
+                        $this->registerPorthSyncAudit($purchaseOrder, $filteredChanges);
+                    }
                 }
                 return;
             }
