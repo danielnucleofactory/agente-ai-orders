@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\HistoricalDataImportService;
+use App\Services\PurchaseOrderCsvImportService;
 use Illuminate\Console\Command;
 
 class ImportHistoricalPOCsv extends Command
@@ -13,31 +14,39 @@ class ImportHistoricalPOCsv extends Command
      * @var string
      */
     protected $signature = 'po:import-historical-csv 
-                            {file? : Ruta al archivo CSV (por defecto: datahistorica2025.csv en la raíz del proyecto)}';
+                            {file? : Ruta al archivo CSV (por defecto: datahistorica2025.csv en la raíz del proyecto)}
+                            {--target=po : Destino: "po" (purchase_orders) o "historical" (historical_purchase_orders)}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Carga un archivo CSV de datos históricos a la tabla historical_purchase_orders (PO históricos)';
+    protected $description = 'Carga un archivo CSV a la tabla purchase_orders (PO) o historical_purchase_orders';
 
     /**
      * Execute the console command.
      */
-    public function handle(HistoricalDataImportService $importService): int
-    {
+    public function handle(
+        PurchaseOrderCsvImportService $poImportService,
+        HistoricalDataImportService $historicalImportService
+    ): int {
         $file = $this->argument('file') ?? base_path('datahistorica2025.csv');
+        $target = $this->option('target') ?? 'po';
 
         if (!file_exists($file)) {
             $this->error("El archivo no existe: {$file}");
             return self::FAILURE;
         }
 
+        $targetLabel = $target === 'historical' ? 'historical_purchase_orders' : 'purchase_orders';
         $this->info("Importando desde: {$file}");
+        $this->info("Destino: {$targetLabel}");
         $this->info('Procesando...');
 
-        $result = $importService->importFromCsv($file);
+        $result = $target === 'historical'
+            ? $historicalImportService->importFromCsv($file)
+            : $poImportService->importFromCsv($file);
 
         $this->newLine();
         $this->info('Resultado de la importación:');

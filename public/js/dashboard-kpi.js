@@ -215,6 +215,19 @@ class DashboardKPIManager {
         });
     }
 
+    /**
+     * Obtiene el valor de un input de fecha (compatible con Flatpickr altInput).
+     * Con altInput, el valor real puede estar en input.value o en fp.selectedDates.
+     */
+    getDateInputValue(input) {
+        if (!input) return null;
+        if (input.value) return input.value;
+        if (input._flatpickr?.selectedDates?.length) {
+            return input._flatpickr.formatDate(input._flatpickr.selectedDates[0], 'Y-m-d');
+        }
+        return null;
+    }
+
     collectFilters() {
         const filters = {};
         
@@ -230,8 +243,10 @@ class DashboardKPIManager {
         const routeLabel = document.getElementById('filter-route-label');
         const orderNumber = document.getElementById('filter-order-number');
 
-        if (dateFrom && dateFrom.value) filters.date_from = dateFrom.value;
-        if (dateTo && dateTo.value) filters.date_to = dateTo.value;
+        const dateFromVal = this.getDateInputValue(dateFrom);
+        const dateToVal = this.getDateInputValue(dateTo);
+        if (dateFromVal) filters.date_from = dateFromVal;
+        if (dateToVal) filters.date_to = dateToVal;
         if (tradingCompany && tradingCompany.value) filters.trading_company = tradingCompany.value;
         if (stage && stage.value) filters.stage = stage.value;
         if (vendorId && vendorId.value) filters.vendor_id = vendorId.value;
@@ -917,11 +932,11 @@ class DashboardKPIManager {
 
         tableTitle.textContent = filterTitles[filterId] || 'Comparación entre Períodos';
 
-        // Obtener períodos de comparación
-        const periodAFrom = document.getElementById('comp-period-a-from')?.value;
-        const periodATo = document.getElementById('comp-period-a-to')?.value;
-        const periodBFrom = document.getElementById('comp-period-b-from')?.value;
-        const periodBTo = document.getElementById('comp-period-b-to')?.value;
+        // Obtener períodos de comparación (compatible con Flatpickr altInput)
+        const periodAFrom = this.getDateInputValue(document.getElementById('comp-period-a-from'));
+        const periodATo = this.getDateInputValue(document.getElementById('comp-period-a-to'));
+        const periodBFrom = this.getDateInputValue(document.getElementById('comp-period-b-from'));
+        const periodBTo = this.getDateInputValue(document.getElementById('comp-period-b-to'));
 
         // Validar que todos los períodos estén completos
         if (!periodAFrom || !periodATo || !periodBFrom || !periodBTo) {

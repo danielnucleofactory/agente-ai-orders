@@ -306,7 +306,7 @@ class PorthImportService
     /**
      * Aplica reglas de booleanos según datos de Porth:
      * - ATD recibido → etd_initial_validated = true
-     * - POL de Porth = POL de la PO → port_of_loading_validated = true
+     * - Puerto recibido desde Porth → port_of_loading_validated = true (sin importar si coincide con la PO)
      */
     protected function applyPorthBooleanRules(PurchaseOrder $po, array $data, array &$fieldsToUpdate, array &$originalValues): void
     {
@@ -316,17 +316,11 @@ class PorthImportService
             $originalValues['etd_initial_validated'] = $po->etd_initial_validated;
         }
 
-        // Si el puerto de embarque de Porth coincide con el registrado en la PO, marcar validado
-        $maestrosFields = $this->helper->getMaestrosFields($data);
-        $porthDeparturePort = $maestrosFields['departure_port'] ?? null;
-        $poDeparturePort = $po->departure_port;
-        if ($porthDeparturePort && $poDeparturePort) {
-            $normalizedPorth = strtoupper(trim((string) $porthDeparturePort));
-            $normalizedPo = strtoupper(trim((string) $poDeparturePort));
-            if ($normalizedPorth === $normalizedPo) {
-                $fieldsToUpdate['port_of_loading_validated'] = true;
-                $originalValues['port_of_loading_validated'] = $po->port_of_loading_validated;
-            }
+        // Si recibimos puerto de embarque desde Porth, marcar validado (sin importar si coincide con la PO)
+        $hasPortFromPorth = !empty($data['pol']) || !empty($data['polName']);
+        if ($hasPortFromPorth) {
+            $fieldsToUpdate['port_of_loading_validated'] = true;
+            $originalValues['port_of_loading_validated'] = $po->port_of_loading_validated;
         }
     }
 
@@ -486,7 +480,7 @@ class PorthImportService
             'porth_free_time_at_destination' => $data['freeTimeAtDestination'] ?? null,
             'porth_manual_tracking' => isset($data['manualTracking']) ? (bool) $data['manualTracking'] : false,
             'last_porth_sync_at' => now(),
-            'freight_type' => !empty($data['freightType']) ? strtolower(trim($data['freightType'])) : null,
+            'freight_type' => $this->helper->getTranslatedFreightType($data['freightType'] ?? null),
         ];
     }
 

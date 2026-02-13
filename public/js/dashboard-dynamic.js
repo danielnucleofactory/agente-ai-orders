@@ -203,32 +203,48 @@ class DashboardManager {
         }
     }
 
+    /**
+     * Obtiene el valor de un input de fecha (compatible con Flatpickr altInput).
+     */
+    getDateInputValue(input) {
+        if (!input) return null;
+        if (input.value) return input.value;
+        if (input._flatpickr?.selectedDates?.length) {
+            return input._flatpickr.formatDate(input._flatpickr.selectedDates[0], 'Y-m-d');
+        }
+        return null;
+    }
+
     collectPanelFilters(searchParams) {
         // ========== FILTROS DEL DASHBOARD ORIGINAL ==========
         
         // Recopilar fechas (dashboard original)
         const startDate = document.getElementById('startDate');
-        if (startDate && startDate.value) {
-            searchParams.append('date_from', startDate.value);
+        const startDateVal = this.getDateInputValue(startDate);
+        if (startDateVal) {
+            searchParams.append('date_from', startDateVal);
         }
 
         const endDate = document.getElementById('endDate');
-        if (endDate && endDate.value) {
-            searchParams.append('date_to', endDate.value);
+        const endDateVal = this.getDateInputValue(endDate);
+        if (endDateVal) {
+            searchParams.append('date_to', endDateVal);
         }
 
         // ========== FILTROS DEL DASHBOARD-KPI ==========
         
         // Fecha inicio (dashboard-kpi)
         const filterDateFrom = document.getElementById('filter-date-from');
-        if (filterDateFrom && filterDateFrom.value && !startDate?.value) {
-            searchParams.append('date_from', filterDateFrom.value);
+        const filterDateFromVal = this.getDateInputValue(filterDateFrom);
+        if (filterDateFromVal && !startDateVal) {
+            searchParams.append('date_from', filterDateFromVal);
         }
 
         // Fecha fin (dashboard-kpi)
         const filterDateTo = document.getElementById('filter-date-to');
-        if (filterDateTo && filterDateTo.value && !endDate?.value) {
-            searchParams.append('date_to', filterDateTo.value);
+        const filterDateToVal = this.getDateInputValue(filterDateTo);
+        if (filterDateToVal && !endDateVal) {
+            searchParams.append('date_to', filterDateToVal);
         }
 
         // Cliente / Trading Company (dashboard-kpi)

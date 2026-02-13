@@ -181,6 +181,14 @@ class PorthImportHelper
     }
 
     /**
+     * Traduce freightType de Porth (ocean, air, road) a formato Maestros (MARITIMO, AÉREO, TERRESTRE)
+     */
+    public function getTranslatedFreightType(?string $freightType): ?string
+    {
+        return $this->translationService->translateFreightType($freightType);
+    }
+
+    /**
      * Construye valores para Purchase Orders desde el payload de Porth
      */
     public function buildPurchaseOrderPayloadValues(array $data): array
@@ -192,6 +200,8 @@ class PorthImportHelper
             'atd' => [$this, 'parseDateTime'],
             'eta' => [$this, 'parseDateTime'],
             'ata' => [$this, 'parseDateTime'],
+            'firstEta' => [$this, 'parseDateTime'],
+            'firstEtd' => [$this, 'parseDateTime'],
         ];
 
         foreach ($transformers as $key => $transform) {
@@ -219,8 +229,10 @@ class PorthImportHelper
             'atd' => 'date_atd',
             'eta' => 'date_eta',
             'ata' => 'date_ata',
+            'firstEta' => 'date_eta_initial',
+            'firstEtd' => 'date_etd_initial',
             // incoterm excluido: Porth no debe actualizar el incoterm de la PO
-            'freightType' => 'mode', // Traducido a mode (MARITIMO, AEREO, TERRESTRE)
+            'freightType' => 'mode', // Traducido a mode (MARITIMO, AÉREO, TERRESTRE)
         ];
     }
 

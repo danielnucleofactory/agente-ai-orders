@@ -103,7 +103,7 @@
         <div class="tabs-container">
             <div class="tabs">
                 <button class="tab active" data-view="tendencia">Tiempo real</button>
-                <button class="tab" data-view="po-vs-teus">PO vs TEUs</button>
+                <button class="tab" data-view="po-vs-teus">PO / TEUs</button>
                 <button class="tab" data-view="comparativo">Comparación por Períodos</button>
                 <button class="tab" data-view="proyeccion">Proyección</button>
             </div>
@@ -311,7 +311,7 @@
                 <div class="table-section">
                     <div class="table-header">
                         <div>
-                            <div class="table-title">PO vs TEUs por Etapa</div>
+                            <div class="table-title">PO / TEUs por Etapa</div>
                             <div class="table-description">
                                 Comparación de cantidad de órdenes y volumen en cada etapa logística
                             </div>
@@ -364,7 +364,7 @@
                 <div class="table-section">
                     <div class="table-header">
                         <div>
-                            <div class="table-title">PO vs TEUs por Período</div>
+                            <div class="table-title">PO / TEUs por Período</div>
                             <div class="table-description">
                                 Comparación de volumen entre períodos de tiempo para evaluación de tendencias
                             </div>
@@ -418,7 +418,7 @@
                 <div class="table-section">
                     <div class="table-header">
                         <div>
-                            <div class="table-title">PO vs TEUs por Proveedor de Mercancía</div>
+                            <div class="table-title">PO / TEUs por Proveedor de Mercancía</div>
                             <div class="table-description">
                                 Análisis de contribución de cada proveedor al volumen total de operaciones
                             </div>
@@ -474,11 +474,11 @@
                     </table>
                 </div>
 
-                <!-- Tabla 4: PO vs TEUs por Naviera -->
+                <!-- Tabla 4: PO / TEUs por Naviera -->
                 <div class="table-section">
                     <div class="table-header">
                         <div>
-                            <div class="table-title">PO vs TEUs por Naviera</div>
+                            <div class="table-title">PO / TEUs por Naviera</div>
                             <div class="table-description">
                                 Participación y relevancia de cada operador marítimo en el volumen gestionado
                             </div>
