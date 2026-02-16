@@ -27,7 +27,7 @@ KMTU	Korea Marine Transport
 KOSU	King Ocean
 KUEH	Kuehne Nagel - K&N
 LMCU	Linea Messina
-MAEU	Maersk Line
+MAEU	Maersk
 MATS	Matson
 MEDU	MSC
 MFTU	Marfret

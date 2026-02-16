@@ -198,9 +198,9 @@ class PorthImportService
             foreach ($fieldsToUpdate as $field => $newValue) {
                 $oldValue = $originalValues[$field] ?? null;
                 
-                // Normalizar valores para comparación
-                $normalizedOld = $this->normalizeValueForComparison($oldValue);
-                $normalizedNew = $this->normalizeValueForComparison($newValue);
+                // Normalizar valores para comparación (puertos: sin acentos para evitar falsos cambios)
+                $normalizedOld = $this->normalizeValueForComparison($oldValue, $field);
+                $normalizedNew = $this->normalizeValueForComparison($newValue, $field);
                 
                 // Solo incluir si realmente cambió
                 if ($normalizedOld !== $normalizedNew) {
@@ -350,9 +350,11 @@ class PorthImportService
     }
 
     /**
-     * Normaliza un valor para comparación
+     * Normaliza un valor para comparación.
+     * Para departure_port y arrival_port: quita acentos y unifica mayúsculas
+     * para que "MOÍN, COSTA RICA" y "MOIN, COSTA RICA" se consideren iguales.
      */
-    private function normalizeValueForComparison($value)
+    private function normalizeValueForComparison($value, ?string $field = null)
     {
         if ($value === null) {
             return '';
@@ -371,10 +373,30 @@ class PorthImportService
         }
 
         if (is_string($value)) {
-            return trim($value);
+            $value = trim($value);
+            if ($field && in_array($field, ['departure_port', 'arrival_port'], true)) {
+                return $this->normalizePortForComparison($value);
+            }
+            return $value;
         }
 
         return $value;
+    }
+
+    /**
+     * Normaliza nombre de puerto para comparación: quita acentos y unifica mayúsculas.
+     * Evita falsos positivos cuando "MOÍN, COSTA RICA" vs "MOIN, COSTA RICA".
+     */
+    private function normalizePortForComparison(string $value): string
+    {
+        if ($value === '') {
+            return '';
+        }
+        $map = [
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n',
+            'Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U', 'Ñ' => 'N',
+        ];
+        return strtoupper(strtr($value, $map));
     }
 
     /**
