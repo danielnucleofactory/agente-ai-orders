@@ -178,7 +178,7 @@
                                 </span>
                             @elseif($comment['action_type'] === 'porth_sync')
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-800">
-                                    Actualización Porth
+                                    Actualización embarque
                                 </span>
                             @else
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">

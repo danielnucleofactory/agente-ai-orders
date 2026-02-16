@@ -158,8 +158,8 @@
             </div>
         @else
             <div class="py-8 text-center text-gray-500">
-                <p>No hay datos de tracking disponibles en Porth</p>
-                <p class="text-sm mt-2">El contenedor, Documento de tránsito o booking no tiene información en Porth</p>
+                <p>No hay datos de tracking disponibles</p>
+                <p class="text-sm mt-2">El contenedor, Documento de tránsito o booking no tiene información</p>
             </div>
         @endif
     </div>
@@ -882,7 +882,7 @@
                                             </span>
                                         @elseif($comment['action_type'] === 'porth_sync')
                                             <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-sky-800 bg-sky-100 rounded-full">
-                                                Actualización Porth
+                                                Actualización embarque
                                             </span>
                                         @else
                                             <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-gray-800 bg-gray-100 rounded-full">
