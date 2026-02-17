@@ -148,32 +148,26 @@ class PurchaseOrderController extends Controller
                 }
 
                 // 4) Relaciones (se buscan por nombre/código y se crean si no existen)
-                $vendorId = data_get($general, 'vendor_id');
-                $vendorName = data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
+                $vendorId = data_get($general, 'vendor_id') ?? data_get($general, 'vendor.id') ?? data_get($general, 'vendor.vendo_code');
+                $vendorName = data_get($general, 'vendor_name') ?? data_get($general, 'vendor.name');
+                if (!$vendorName && ($v = data_get($general, 'vendor'))) {
+                    $vendorName = is_string($v) ? $v : data_get($v, 'name');
+                }
+                $vendorCompanyId = data_get($general, 'company_id', 1);
+                $vendorCompanyId = ($vendorCompanyId !== null && $vendorCompanyId !== '' && is_numeric($vendorCompanyId)) ? (int) $vendorCompanyId : 1;
 
-                // Buscar o crear vendor
+                // Buscar o crear vendor (vendor_id del JSON = vendo_code, nunca vendors.id)
                 $vendor = null;
-                if ($vendorId) {
-                    // Tratar vendor_id del JSON como vendo_code
-                    $vendor = Vendor::where('vendo_code', $vendorId)->first();
-                    if (!$vendor) {
-                        $vendor = Vendor::create([
-                            'company_id' => 1,
-                            'vendo_code' => (string) $vendorId,
-                            'name' => $vendorName ?: ('Proveedor ' . $vendorId),
-                            'status' => 'active',
-                        ]);
-                    }
+                if ($vendorId !== null && $vendorId !== '') {
+                    $vendor = Vendor::firstOrCreate(
+                        ['vendo_code' => (string) $vendorId, 'company_id' => $vendorCompanyId],
+                        ['name' => $vendorName ?: ('Proveedor ' . $vendorId), 'status' => 'active']
+                    );
                 } elseif ($vendorName) {
-                    $vendor = Vendor::where('name', $vendorName)->first();
-                    if (!$vendor) {
-                        $vendor = Vendor::create([
-                            'company_id' => 1,
-                            'name' => $vendorName,
-                            'vendo_code' => 'VENDOR_' . time(),
-                            'status' => 'active',
-                        ]);
-                    }
+                    $vendor = Vendor::firstOrCreate(
+                        ['name' => $vendorName, 'company_id' => $vendorCompanyId],
+                        ['vendo_code' => 'VENDOR_' . time(), 'status' => 'active']
+                    );
                 }
 
                 // 5) Totales
@@ -540,34 +534,39 @@ class PurchaseOrderController extends Controller
         }
 
         // Relaciones (se buscan por nombre/código y se crean si no existen)
-        $vendorId = data_get($general, 'vendor_id');
-        $vendorName = data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
+        $vendorId = data_get($general, 'vendor_id') ?? data_get($general, 'vendor.id') ?? data_get($general, 'vendor.vendo_code');
+        $vendorName = data_get($general, 'vendor_name') ?? data_get($general, 'vendor.name');
+        if (!$vendorName && ($v = data_get($general, 'vendor'))) {
+            $vendorName = is_string($v) ? $v : data_get($v, 'name');
+        }
         $vendorCompanyId = data_get($general, 'company_id', 1);
-        $vendorCompanyId = is_numeric($vendorCompanyId) ? (int) $vendorCompanyId : 1;
+        $vendorCompanyId = ($vendorCompanyId !== null && $vendorCompanyId !== '' && is_numeric($vendorCompanyId)) ? (int) $vendorCompanyId : 1;
 
         // Buscar o crear vendor
         // vendor_id del JSON es siempre código externo (vendo_code), nunca vendors.id
         $vendor = null;
-        if ($vendorId) {
-            $vendor = Vendor::where('vendo_code', (string) $vendorId)->first();
-            if (!$vendor) {
-                $vendor = Vendor::create([
-                    'company_id' => $vendorCompanyId,
+        if ($vendorId !== null && $vendorId !== '') {
+            $vendor = Vendor::firstOrCreate(
+                [
                     'vendo_code' => (string) $vendorId,
+                    'company_id' => $vendorCompanyId,
+                ],
+                [
                     'name' => $vendorName ?: ('Proveedor ' . $vendorId),
                     'status' => 'active',
-                ]);
-            }
+                ]
+            );
         } elseif ($vendorName) {
-            $vendor = Vendor::where('name', $vendorName)->first();
-            if (!$vendor) {
-                $vendor = Vendor::create([
-                    'company_id' => $vendorCompanyId,
+            $vendor = Vendor::firstOrCreate(
+                [
                     'name' => $vendorName,
+                    'company_id' => $vendorCompanyId,
+                ],
+                [
                     'vendo_code' => 'VENDOR_' . time(),
                     'status' => 'active',
-                ]);
-            }
+                ]
+            );
         }
 
         // Totales
