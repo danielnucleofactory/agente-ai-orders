@@ -41,6 +41,14 @@ class ListPurchaseOrders extends Component
     public ?int $confirmId = null;
     public ?string $confirmOrderNumber = null;
 
+    /** Filtros del Kanban (currency, incoterms, search_text, etc.) compartidos con la pestaña Etapas */
+    public array $kanbanFilters = [];
+
+    protected $listeners = [
+        'kanbanFiltersChanged' => 'applyKanbanFilters',
+        'clearKanbanFilters' => 'clearKanbanFilters',
+    ];
+
     protected $queryString = [
         'search' => ['except' => ''],
         'sortField' => ['except' => 'created_at', 'updated_at'],
@@ -86,6 +94,80 @@ class ListPurchaseOrders extends Component
         $this->sortField = 'created_at';
         $this->sortDirection = 'desc';
         $this->resetPage();
+    }
+
+    public function applyKanbanFilters(array $filters): void
+    {
+        $this->kanbanFilters = $filters;
+        $this->resetPage();
+    }
+
+    public function clearKanbanFilters(): void
+    {
+        $this->kanbanFilters = [];
+        $this->resetPage();
+    }
+
+    protected function applyKanbanFiltersToQuery($query): void
+    {
+        if (empty($this->kanbanFilters)) {
+            return;
+        }
+
+        if (isset($this->kanbanFilters['currency'])) {
+            $query->whereRaw('LOWER(currency) = LOWER(?)', [$this->kanbanFilters['currency']]);
+        }
+
+        if (isset($this->kanbanFilters['incoterms'])) {
+            $query->whereRaw('LOWER(incoterms) = LOWER(?)', [$this->kanbanFilters['incoterms']]);
+        }
+
+        if (isset($this->kanbanFilters['planned_hub_id'])) {
+            $query->where('planned_hub_id', $this->kanbanFilters['planned_hub_id']);
+        }
+
+        if (isset($this->kanbanFilters['actual_hub_id'])) {
+            $query->where('actual_hub_id', $this->kanbanFilters['actual_hub_id']);
+        }
+
+        if (isset($this->kanbanFilters['material_type'])) {
+            $materialType = $this->kanbanFilters['material_type'];
+            $query->where(function ($q) use ($materialType) {
+                $searchPatterns = [
+                    $materialType,
+                    strtolower($materialType),
+                    strtoupper($materialType),
+                    ucfirst(strtolower($materialType)),
+                ];
+                foreach ($searchPatterns as $pattern) {
+                    $q->orWhereRaw('material_type::text LIKE ?', ['%' . $pattern . '%']);
+                }
+            });
+        }
+
+        if (isset($this->kanbanFilters['search_text'])) {
+            $searchText = $this->kanbanFilters['search_text'];
+            $query->where(function ($q) use ($searchText) {
+                $q->whereRaw('LOWER(order_number) LIKE LOWER(?)', ["%{$searchText}%"])
+                    ->orWhereRaw('LOWER(currency) LIKE LOWER(?)', ["%{$searchText}%"])
+                    ->orWhereRaw('LOWER(incoterms) LIKE LOWER(?)', ["%{$searchText}%"])
+                    ->orWhereRaw('LOWER(CAST(total AS CHAR)) LIKE LOWER(?)', ["%{$searchText}%"])
+                    ->orWhereRaw('LOWER(tracking_id) LIKE LOWER(?)', ["%{$searchText}%"])
+                    ->orWhereRaw('LOWER(material_type::text) LIKE LOWER(?)', ["%{$searchText}%"])
+                    ->orWhereHas('company', function ($companyQuery) use ($searchText) {
+                        $companyQuery->whereRaw('LOWER(name) LIKE LOWER(?)', ["%{$searchText}%"]);
+                    })
+                    ->orWhereExists(function ($subQuery) use ($searchText) {
+                        $subQuery->select(DB::raw(1))
+                            ->from('vendors')
+                            ->whereColumn('purchase_orders.vendor_id', 'vendors.id')
+                            ->where(function ($vq) use ($searchText) {
+                                $vq->whereRaw('LOWER(vendors.name) LIKE LOWER(?)', ["%{$searchText}%"])
+                                    ->orWhereRaw('LOWER(vendors.vendo_code) LIKE LOWER(?)', ["%{$searchText}%"]);
+                            });
+                    });
+            });
+        }
     }
     public function updatingStatusFilter(){ $this->resetPage(); }
     public function updatingPerPage()     { $this->resetPage(); }
@@ -152,9 +234,10 @@ class ListPurchaseOrders extends Component
 
     public function render()
     {
-        $purchaseOrders = \App\Models\PurchaseOrder::query()
+        $query = \App\Models\PurchaseOrder::query()
             ->withTrashed() // incluye activas + anuladas
-            ->with(['kanbanStatus', 'billTo']) // cargar relación kanban status y billTo para cliente
+            ->with(['kanbanStatus', 'billTo', 'company']) // company para filtro search_text
+            ->when(auth()->user()?->company_id, fn ($q) => $q->where('company_id', auth()->user()->company_id))
             ->when($this->search, function ($query) {
                 $searchTerm = strtolower($this->search);
                 $query->where(function ($query) use ($searchTerm) {
@@ -177,7 +260,11 @@ class ListPurchaseOrders extends Component
                 if ($kanbanStatusId > 0) {
                     $q->whereNull('deleted_at')->where('kanban_status_id', $kanbanStatusId);
                 }
-            })
+            });
+
+        $this->applyKanbanFiltersToQuery($query);
+
+        $purchaseOrders = $query
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
 
