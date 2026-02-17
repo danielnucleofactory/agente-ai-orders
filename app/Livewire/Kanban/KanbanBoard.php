@@ -375,8 +375,14 @@ class KanbanBoard extends Component
                     ->orWhereHas('company', function ($companyQuery) use ($searchText) {
                         $companyQuery->whereRaw('LOWER(name) LIKE LOWER(?)', ["%{$searchText}%"]);
                     })
-                    ->orWhereHas('vendor', function ($vendorQuery) use ($searchText) {
-                        $vendorQuery->whereRaw('LOWER(name) LIKE LOWER(?)', ["%{$searchText}%"]);
+                    ->orWhereExists(function ($subQuery) use ($searchText) {
+                        $subQuery->select(\DB::raw(1))
+                            ->from('vendors')
+                            ->whereColumn('purchase_orders.vendor_id', 'vendors.id')
+                            ->where(function ($vq) use ($searchText) {
+                                $vq->whereRaw('LOWER(vendors.name) LIKE LOWER(?)', ["%{$searchText}%"])
+                                    ->orWhereRaw('LOWER(vendors.vendo_code) LIKE LOWER(?)', ["%{$searchText}%"]);
+                            });
                     });
             });
         }
