@@ -546,16 +546,10 @@ class PurchaseOrderController extends Controller
         $vendorCompanyId = is_numeric($vendorCompanyId) ? (int) $vendorCompanyId : 1;
 
         // Buscar o crear vendor
+        // vendor_id del JSON es siempre código externo (vendo_code), nunca vendors.id
         $vendor = null;
         if ($vendorId) {
-            // Primero intentar buscar por ID si es numérico
-            if (is_numeric($vendorId)) {
-                $vendor = Vendor::find($vendorId);
-            }
-            // Si no se encuentra, buscar por código
-            if (!$vendor) {
-                $vendor = Vendor::where('vendo_code', $vendorId)->first();
-            }
+            $vendor = Vendor::where('vendo_code', (string) $vendorId)->first();
             if (!$vendor) {
                 $vendor = Vendor::create([
                     'company_id' => $vendorCompanyId,
