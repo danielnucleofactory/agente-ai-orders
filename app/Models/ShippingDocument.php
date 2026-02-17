@@ -94,6 +94,15 @@ class ShippingDocument extends Model implements HasMedia
         'porth_raw',
     ];
 
+    /**
+     * Campos excluidos de toArray()/toJson().
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'company_id',
+    ];
+
     protected $casts = [
         // existentes
         'creation_date' => 'date',

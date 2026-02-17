@@ -208,6 +208,7 @@ class PurchaseOrder extends Model implements HasMedia
      * @var array<int, string>
      */
     protected $hidden = [
+        'company_id',
         'arrival_status',
         'delay_days',
         'etd_dates_difference',

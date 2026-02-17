@@ -44,6 +44,7 @@ class User extends Authenticatable implements HasMedia, CanResetPassword
     protected $hidden = [
         'password',
         'remember_token',
+        'company_id',
     ];
 
     /**
