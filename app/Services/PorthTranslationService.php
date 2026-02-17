@@ -170,8 +170,26 @@ class PorthTranslationService
     }
 
     /**
+     * Alias comunes de navieras que el usuario puede escribir (ej: "MAERSK") pero que
+     * en el CSV aparecen como "Maersk Line". Garantiza que variaciones cortas funcionen.
+     */
+    private const CARRIER_ALIASES = [
+        'MAERSK' => 'MAEU',
+        'MSC' => 'MEDU',
+        'CMA CGM' => 'CMDU',
+        'HAPAG LLOYD' => 'HLCU',
+        'EVERGREEN' => 'EGLV',
+        'COSCO' => 'COSU',
+        'ONE' => 'ONEY',
+        'HMM' => 'HDMU',
+        'YANG MING' => 'YMLU',
+        'ZIM' => 'ZIMU',
+    ];
+
+    /**
      * Obtiene el carrierCode (SCAC) a partir del nombre de la naviera en Maestros.
      * Para usar al crear embarques en Porth; si no se envía carrierCode, Porth puede no traer la información correcta.
+     * Busca: 1) alias explícitos (MAERSK→MAEU), 2) match exacto en CSV, 3) match parcial (MAERSK en "Maersk Line").
      *
      * @param string|null $shippingLineName Nombre de la línea (ej: "MAERSK", "CMA CGM", "MSC")
      * @return string|null Código SCAC (ej: MAEU, CMDU, MEDU) o null si no hay match
@@ -183,6 +201,11 @@ class PorthTranslationService
         }
 
         $normalized = strtoupper(trim($shippingLineName));
+
+        // 1) Alias explícitos para variaciones comunes (ej: "MAERSK" → MAEU)
+        if (isset(self::CARRIER_ALIASES[$normalized])) {
+            return self::CARRIER_ALIASES[$normalized];
+        }
         $lines = $this->getShippingLinesCache();
 
         $exact = $lines->first(function ($line) use ($normalized) {

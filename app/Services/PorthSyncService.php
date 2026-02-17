@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\ShippingDocument;
 use App\Models\PurchaseOrder;
 use App\Models\User;
+use App\Services\PorthApiService;
 
 class PorthSyncService
 {
@@ -255,6 +256,15 @@ class PorthSyncService
             }
         }
 
+        // Incluir carrierCode si el documento tiene shipping_line (ej: "MAERSK" → MAEU)
+        $shippingLine = $document->shipping_line ?? null;
+        if (!empty($shippingLine)) {
+            $carrierCode = $this->translationService->getCarrierCodeFromShippingLineName($shippingLine);
+            if ($carrierCode) {
+                $basePayload['carrierCode'] = $carrierCode;
+            }
+        }
+
         return array_filter($basePayload, fn ($v) => $v !== null && $v !== '');
     }
 
@@ -324,6 +334,20 @@ class PorthSyncService
                     'final_mbl_number' => $document->mbl_number ?? null,
                     'final_container_number' => $document->container_number ?? null
                 ]);
+
+                // Push naviera a Porth si el documento la tiene (caso: modal de cambio de etapa
+                // guardó container+shipping_line pero el push se saltó porque aún no había porth_id)
+                if ($document instanceof PurchaseOrder && !empty($document->shipping_line) && !empty($document->porth_id)) {
+                    try {
+                        $porthApi = app(PorthApiService::class);
+                        $porthApi->pushChangesToPorth($document->fresh(), ['shipping_line' => $document->shipping_line]);
+                    } catch (\Throwable $e) {
+                        Log::error('PorthSyncService: failed to push shipping_line after link', [
+                            'document_id' => $document->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
 
                 // Nota: La importación de datos completos se hace mediante el cronjob
                 // 'porth:import-pending' que se ejecuta cada 5 minutos.
