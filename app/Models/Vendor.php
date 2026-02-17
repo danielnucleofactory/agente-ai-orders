@@ -59,11 +59,11 @@ class Vendor extends Model
 
     /**
      * Get the purchase orders for the vendor.
-     * La relación usa purchase_orders.vendor_id = vendors.vendo_code.
+     * purchase_orders.vendor_id = vendors.id
      */
     public function purchaseOrders(): HasMany
     {
-        return $this->hasMany(PurchaseOrder::class, 'vendor_id', 'vendo_code');
+        return $this->hasMany(PurchaseOrder::class, 'vendor_id', 'id');
     }
 
     /**

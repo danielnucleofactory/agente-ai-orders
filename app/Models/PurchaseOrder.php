@@ -370,12 +370,11 @@ class PurchaseOrder extends Model implements HasMedia
 
     /**
      * Get the vendor that owns the purchase order.
-     * La relación usa vendors.vendo_code = purchase_orders.vendor_id
-     * (vendor_id almacena el código de proveedor, no vendors.id).
+     * vendor_id es FK a vendors.id (no vendo_code).
      */
     public function vendor(): BelongsTo
     {
-        return $this->belongsTo(Vendor::class, 'vendor_id', 'vendo_code');
+        return $this->belongsTo(Vendor::class, 'vendor_id', 'id');
     }
 
     /**
