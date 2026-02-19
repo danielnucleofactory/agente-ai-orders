@@ -1861,6 +1861,14 @@ class CreatePucharseOrder extends Component
 
     public function updatePurchaseOrder($id) {
         try {
+            // Red de seguridad: si estamos editando y date_theorical_load está vacío pero existe en BD, recargar desde la PO
+            if ($this->id && empty($this->date_theorical_load)) {
+                $po = $this->purchaseOrder ?? \App\Models\PurchaseOrder::find($id);
+                if ($po?->date_theorical_load) {
+                    $this->date_theorical_load = $po->date_theorical_load->format('Y-m-d');
+                }
+            }
+
             // #region agent log
             \Log::info('[DEBUG H1] updatePurchaseOrder entry - date_variable_date value check', [
                 'id' => $id,
@@ -1924,11 +1932,26 @@ class CreatePucharseOrder extends Component
 
         $this->computeDateDiffs();
 
+            // Resolver vendor_id: el form usa vendo_code, la BD espera vendors.id
+            $vendor = null;
+            if ($this->vendor_id) {
+                $vendor = Vendor::where('vendo_code', $this->vendor_id)->first();
+                if (!$vendor) {
+                    $companyId = auth()->user()->company_id ?? 1;
+                    $vendor = Vendor::create([
+                        'company_id' => $companyId,
+                        'vendo_code' => (string) $this->vendor_id,
+                        'name' => 'Proveedor ' . $this->vendor_id,
+                        'status' => 'active',
+                    ]);
+                }
+            }
+
             $poData = [
                 'order_number' => $this->order_number,
                 'status' => $this->id ? $this->status : 'draft',
                 'notes' => $this->notes,
-                'vendor_id' => $this->vendor_id,
+                'vendor_id' => $vendor?->id,
                 'ship_to_id' => $this->ship_to_id,
                 'bill_to_id' => $this->bill_to_id,
                 'order_date' => $this->order_date,
