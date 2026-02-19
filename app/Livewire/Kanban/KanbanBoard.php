@@ -556,8 +556,9 @@ class KanbanBoard extends Component
         $this->comment = '';
         $this->attachment = null;
 
-        // 5) Cerrar el modal unificado
+        // 5) Cerrar el modal unificado y mostrar modal de éxito
         $this->dispatch('close-modal', 'modal-po-stage-change');
+        $this->dispatch('open-modal', 'success-modal');
 
         return ['success' => true, 'message' => 'PO movida correctamente.'];
     }
