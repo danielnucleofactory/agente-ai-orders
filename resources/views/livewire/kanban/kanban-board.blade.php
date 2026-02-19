@@ -112,12 +112,22 @@
         @endif
     </div>
 
-    <x-modal-success name="success-modal" show="true">
-        <div>
+    <x-modal-success name="success-modal">
+        <x-slot:title>
+            Datos guardados exitosamente
+        </x-slot:title>
+
+        <x-slot:description>
             @if ($currentTask)
-                <p>PO: {{ $currentTask['po'] }}</p>
+                La orden de compra {{ $currentTask['po'] }} ha sido movida correctamente a la nueva etapa.
+            @else
+                La orden de compra ha sido movida correctamente a la nueva etapa.
             @endif
-        </div>
+        </x-slot:description>
+
+        <x-primary-button wire:click="$dispatch('close-modal', 'success-modal')" class="w-full">
+            Cerrar
+        </x-primary-button>
     </x-modal-success>
 
         <x-modal name="modal-po-stage-change" maxWidth="lg">
