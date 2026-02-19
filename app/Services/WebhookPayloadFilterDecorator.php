@@ -34,7 +34,7 @@ class WebhookPayloadFilterDecorator extends WebhookService
         unset($transformed['freight_type']);
 
         // Campos que no deben enviarse al webhook (según especificación)
-        foreach (['variable_calculare_weight', 'Invoice_amount', 'freight_amount', 'vendor_number'] as $key) {
+        foreach (['variable_calculare_weight', 'Invoice_amount', 'freight_amount', 'vendor_number', 'tracking_id'] as $key) {
             unset($transformed[$key]);
         }
 

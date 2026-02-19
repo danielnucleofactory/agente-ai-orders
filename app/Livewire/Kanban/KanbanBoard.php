@@ -1166,16 +1166,31 @@ class KanbanBoard extends Component
                         'changes_keys' => array_keys($realChanges),
                     ]);
 
-                    // Construir payload con identificadores siempre incluidos + datos actualizados
-                    $updatedData = [
-                        'order_number' => $po->order_number,
-                        'trading_company' => $po->trading_company,
-                        'company_id' => $po->company_id,
-                        'current_timestamp' => function_exists('format_webhook_date') ? format_webhook_date(now()) : now()->utc()->format('Y-m-d\TH:i:s.v\Z'),
-                    ];
-                    foreach ($realChanges as $field => $value) {
-                        if ($field !== 'comments') {
-                            $updatedData[$field] = $value;
+                    // Si hay comentario, enviar la PO completa con comments para que el webhook los incluya
+                    if ($hasComment) {
+                        $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $poData = $freshPo->toArray();
+                        $poData = json_decode(json_encode($poData), true);
+                        // Aplicar cambios recientes sobre la PO completa
+                        foreach ($realChanges as $field => $value) {
+                            if ($field !== 'comments') {
+                                $poData[$field] = $value;
+                            }
+                        }
+                        $updatedData = $poData;
+                    } else {
+                        // Sin comentario: enviar solo identificadores + campos actualizados
+                        $updatedData = [
+                            'order_number' => $po->order_number,
+                            'trading_company' => $po->trading_company,
+                            'company_id' => $po->company_id,
+                            'current_timestamp' => function_exists('format_webhook_date') ? format_webhook_date(now()) : now()->utc()->format('Y-m-d\TH:i:s.v\Z'),
+                        ];
+                        foreach ($realChanges as $field => $value) {
+                            if ($field !== 'comments') {
+                                $updatedData[$field] = $value;
+                            }
                         }
                     }
 
