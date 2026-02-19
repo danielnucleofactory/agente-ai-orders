@@ -41,7 +41,7 @@
 
         @if ($showPerPage)
             <div>
-                <select wire:model="perPage"
+                <select wire:model.live="perPage"
                     class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="10">10 por página</option>
                     <option value="25">25 por página</option>

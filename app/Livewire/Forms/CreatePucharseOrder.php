@@ -673,19 +673,12 @@ class CreatePucharseOrder extends Component
                 $this->notes = $this->purchaseOrder->notes;
                 $this->company_id = $this->purchaseOrder->company_id;
 
-                // Vendor information
-                $this->vendor_id = $this->purchaseOrder->vendor_id;
+                // Vendor information: el select usa vendo_code (código canónico), no vendors.id
+                $this->vendor_number = $this->purchaseOrder->vendor_number ?? $this->purchaseOrder->vendor?->vendo_code ?? '';
+                $this->vendor_id = $this->vendor_number;
                 $this->vendor_direccion = $this->purchaseOrder->vendor_direccion;
                 $this->vendor_pais = $this->purchaseOrder->vendor_pais;
                 $this->vendor_telefono = $this->purchaseOrder->vendor_telefono;
-
-                // Obtener vendor_number del vendor directamente para asegurar que siempre esté disponible
-                if ($this->vendor_id) {
-                    $vendor = $this->purchaseOrder->vendor;
-                    if ($vendor) {
-                        $this->vendor_number = $vendor->vendo_code ?? '';
-                    }
-                }
 
                 // Ship to information
                 $this->ship_to_id = $this->purchaseOrder->ship_to_id;

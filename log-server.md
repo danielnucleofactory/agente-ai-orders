@@ -20,3 +20,32 @@ ploi@olo-raga-postgres:~/olo.orders.raga-x.ai$ cd ~/olo.orders.raga-x.ai && grep
 [2026-02-17 16:15:04] local.INFO: Después de crear PO - Verificando fechas especiales guardadas {"po_id":17983,"order_number":"4107513","date_etd_initial":"NULL","date_eta_initial":"NULL"} 
 [2026-02-17 16:15:04] local.INFO: Dispatching webhook for bulk created PO {"po_id":17983,"order_number":"4107513"} 
 ploi@olo-raga-postgres:~/olo.orders.raga-x.ai$ 
+
+ploi@olo-raga-postgres:~/olo.orders.raga-x.ai$ # 1. Ver la PO 17982 (o 17983) y su vendor
+cd ~/olo.orders.raga-x.ai && php artisan tinker --execute="
+\$po = App\Models\PurchaseOrder::find(17982);
+echo 'PO vendor_id: ' . \$po->vendor_id . PHP_EOL;
+\$v = \$po->vendor;
+echo 'Vendor: ' . (\$v ? \$v->name . ' (vendo_code: ' . \$v->vendo_code . ')' : 'NULL');
+"
+
+# 2. Ver si existe un vendor con vendo_code "32"
+php artisan tinker --execute="
+\$v = App\Models\Vendor::where('vendo_code', '32')->first();
+echo \$v ? 'Existe: ' . \$v->name . ' (id: ' . \$v->id . ')' : 'NO existe vendor con vendo_code 32';
+"
+
+  <warning> WARNING </warning> Attempt to read property "vendor_id" on null in /home/ploi/olo.orders.raga-x.aieval()'d code on line 2.
+
+PO vendor_id: 
+
+  <warning> WARNING </warning> Attempt to read property "vendor" on null in /home/ploi/olo.orders.raga-x.aieval()'d code on line 3.
+
+Vendor: NULL
+Existe: MURESCO S.A (id: 311)
+ploi@olo-raga-postgres:~/olo.orders.raga-x.ai$ php artisan tinker --execute="
+\$v = App\Models\Vendor::where('vendo_code', '32')->first();
+echo \$v ? 'Existe: ' . \$v->name . ' (id: ' . \$v->id . ')' : 'NO existe vendor con vendo_code 32';
+"
+Existe: MURESCO S.A (id: 311)
+ploi@olo-raga-postgres:~/olo.orders.raga-x.ai$ 
