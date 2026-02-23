@@ -427,25 +427,33 @@ class PorthImportService
                 'filtered_out_porth_fields' => count($changes) - count($businessChanges),
             ]);
 
-            // Si no hay cambios de negocio, no enviar webhook
-            if (empty($businessChanges)) {
+            // Filtrar campos que están en $hidden (no deben enviarse al webhook)
+            $hidden = $po->getHidden();
+            $visibleBusinessChanges = [];
+            foreach ($businessChanges as $field => $changeData) {
+                if (!in_array($field, $hidden, true)) {
+                    $visibleBusinessChanges[$field] = $changeData;
+                }
+            }
+
+            // Si no hay cambios de negocio visibles, no enviar webhook
+            if (empty($visibleBusinessChanges)) {
                 Log::info('porth_import:webhook_skipped_no_business_changes', [
                     'purchase_order_id' => $po->id,
                     'order_number' => $po->order_number,
+                    'reason' => empty($businessChanges) ? 'no_changes' : 'all_changes_hidden',
                 ]);
                 return;
             }
 
-            // Construir payload con solo los datos actualizados (no toda la PO)
-            // Siempre incluir identificadores core + current_timestamp para el endpoint
+            // Construir payload respetando $hidden (no incluir company_id ni campos ocultos)
             $updatedData = [
                 'id' => $po->id,
                 'order_number' => $po->order_number,
                 'trading_company' => $po->trading_company,
-                'company_id' => $po->company_id,
                 'current_timestamp' => function_exists('format_webhook_date') ? format_webhook_date(now()) : now()->utc()->format('Y-m-d\TH:i:s.v\Z'),
             ];
-            foreach ($businessChanges as $field => $changeData) {
+            foreach ($visibleBusinessChanges as $field => $changeData) {
                 $updatedData[$field] = $changeData['new'];
             }
 
@@ -453,13 +461,13 @@ class PorthImportService
                 'purchase_order_id' => $po->id,
                 'order_number' => $po->order_number,
                 'source' => 'porth_sync',
-                'changes' => $businessChanges,
+                'changes' => $visibleBusinessChanges,
                 'data' => $updatedData,
             ]);
 
             Log::info('porth_import:webhook_dispatched', [
                 'purchase_order_id' => $po->id,
-                'changes_keys' => array_keys($businessChanges),
+                'changes_keys' => array_keys($visibleBusinessChanges),
             ]);
         } catch (\Throwable $e) {
             Log::error('porth_import:webhook_error', [
