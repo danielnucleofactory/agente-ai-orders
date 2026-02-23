@@ -27,6 +27,13 @@ class WebhookPayloadFilterDecorator extends WebhookService
     {
         $transformed = $this->inner->transformPurchaseOrderPayload($payload);
 
+        // Filtrar campos $hidden del modelo PurchaseOrder (evita que la Translation API
+        // enriquezca el payload con campos que no deben enviarse a Intelix)
+        $hiddenFields = (new \App\Models\PurchaseOrder())->getHidden();
+        foreach ($hiddenFields as $field) {
+            unset($transformed[$field]);
+        }
+
         // Ocultar date_variable_date (el valor ya está en date_carga_po)
         unset($transformed['date_variable_date']);
 
