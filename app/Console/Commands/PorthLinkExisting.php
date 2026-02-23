@@ -163,16 +163,9 @@ class PorthLinkExisting extends Command
     {
         $identifiers = [];
 
-        if (!empty($po->mbl_number)) {
-            $identifiers['mbl'] = $po->mbl_number;
-        }
-
+        // Solo container_number activa vinculación en Porth (mbl_number y tracking_id son solo datos de la PO)
         if (!empty($po->container_number)) {
             $identifiers['container'] = $po->container_number;
-        }
-
-        if (!empty($po->tracking_id)) {
-            $identifiers['tracking_id'] = $po->tracking_id;
         }
 
         return $identifiers;
@@ -180,8 +173,8 @@ class PorthLinkExisting extends Command
 
     protected function findInPorth(array $identifiers): ?array
     {
-        // Prioridad: tracking_id > mbl > container > booking
-        $searchOrder = ['tracking_id', 'mbl', 'container', 'booking'];
+        // Solo container_number se usa para buscar en Porth
+        $searchOrder = ['container'];
 
         foreach ($searchOrder as $type) {
             if (!isset($identifiers[$type])) {

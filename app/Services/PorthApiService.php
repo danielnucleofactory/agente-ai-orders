@@ -300,7 +300,8 @@ class PorthApiService
     public function pushChangesToPorth(\App\Models\PurchaseOrder $po, array $changedFields): void
     {
         // Campos que implican un cambio de embarque → nuevo porth_id
-        $shipmentIdentifiers = ['mbl_number', 'container_number', 'tracking_id'];
+        // Solo container_number activa re-vinculación (mbl_number y tracking_id son solo datos de la PO)
+        $shipmentIdentifiers = ['container_number'];
         $identifierChanges = array_intersect_key($changedFields, array_flip($shipmentIdentifiers));
 
         // Campos que son correcciones al embarque actual → update en Porth

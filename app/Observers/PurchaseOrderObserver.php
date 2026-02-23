@@ -228,9 +228,9 @@ class PurchaseOrderObserver
                     // NOTE: purchase_order.updated is NOT dispatched here to avoid duplicate webhooks
                     // Controllers and Livewire components handle purchase_order.updated events
 
-                    // Push cambios relevantes a Porth (MBL, container, booking, naviera)
+                    // Push cambios relevantes a Porth (solo container_number y shipping_line)
                     // Solo si la PO tiene porth_id y los campos relevantes cambiaron
-                    $porthRelevantFields = ['mbl_number', 'container_number', 'tracking_id', 'shipping_line'];
+                    $porthRelevantFields = ['container_number', 'shipping_line'];
                     $porthChanges = array_intersect_key($trackedChanges, array_flip($porthRelevantFields));
                     if (!empty($porthChanges) && !empty($purchaseOrder->porth_id)) {
                         try {

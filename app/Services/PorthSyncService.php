@@ -101,14 +101,9 @@ class PorthSyncService
             }
         }
 
-        // Para PurchaseOrder
+        // Para PurchaseOrder: solo container_number activa creación/vinculación en Porth
+        // (mbl_number y tracking_id son solo datos de la PO, no se envían a Porth)
         if ($document instanceof PurchaseOrder) {
-            if ($document->tracking_id) {
-                $identifiers[] = ['type' => 'tracking_id', 'value' => $document->tracking_id];
-            }
-            if ($document->mbl_number) {
-                $identifiers[] = ['type' => 'mbl_number', 'value' => $document->mbl_number];
-            }
             if ($document->container_number) {
                 $identifiers[] = ['type' => 'container_number', 'value' => $document->container_number];
             }

@@ -766,7 +766,8 @@ class PurchaseOrder extends Model implements HasMedia
         }
 
         // Verificar si hay campos que requieren sincronización
-        $syncFields = ['tracking_id', 'mbl_number', 'container_number'];
+        // Solo container_number activa creación/vinculación en Porth (mbl_number y tracking_id son solo datos de la PO)
+        $syncFields = ['container_number'];
         $hasChanges = false;
         $hasValidIdentifier = false;
 

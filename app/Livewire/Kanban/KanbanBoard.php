@@ -1140,9 +1140,9 @@ class KanbanBoard extends Component
                 DB::commit();
             }
 
-            // Push cambios relevantes a Porth (MBL, container, booking, naviera)
+            // Push cambios relevantes a Porth (solo container_number y shipping_line)
             if ($po && !empty($po->porth_id) && !empty($dbChanges)) {
-                $porthRelevantFields = ['mbl_number', 'container_number', 'tracking_id', 'shipping_line'];
+                $porthRelevantFields = ['container_number', 'shipping_line'];
                 $porthChanges = array_intersect_key($dbChanges, array_flip($porthRelevantFields));
                 if (!empty($porthChanges)) {
                     try {
