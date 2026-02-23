@@ -28,6 +28,7 @@
             @php
                 $headers = [
                     'name' => 'Nombre',
+                    'vendo_code' => 'Código',
                     'email' => 'Email',
                     'contact_person' => 'Contacto',
                     'address' => 'Dirección',
@@ -37,8 +38,8 @@
                     'actions_html' => '',
                 ];
 
-                $sortable = ['name', 'email', 'phone', 'status'];
-                $searchable = ['name', 'email', 'phone', 'status'];
+                $sortable = ['name', 'email', 'phone', 'status', 'vendo_code'];
+                $searchable = ['name', 'email', 'phone', 'status', 'vendo_code'];
                 $filterable = ['name', 'email', 'phone', 'status'];
                 $filterOptions = ['name', 'email', 'phone', 'status'];
             @endphp

@@ -375,8 +375,14 @@ class KanbanBoard extends Component
                     ->orWhereHas('company', function ($companyQuery) use ($searchText) {
                         $companyQuery->whereRaw('LOWER(name) LIKE LOWER(?)', ["%{$searchText}%"]);
                     })
-                    ->orWhereHas('vendor', function ($vendorQuery) use ($searchText) {
-                        $vendorQuery->whereRaw('LOWER(name) LIKE LOWER(?)', ["%{$searchText}%"]);
+                    ->orWhereExists(function ($subQuery) use ($searchText) {
+                        $subQuery->select(\DB::raw(1))
+                            ->from('vendors')
+                            ->whereColumn('purchase_orders.vendor_id', 'vendors.id')
+                            ->where(function ($vq) use ($searchText) {
+                                $vq->whereRaw('LOWER(vendors.name) LIKE LOWER(?)', ["%{$searchText}%"])
+                                    ->orWhereRaw('LOWER(vendors.vendo_code) LIKE LOWER(?)', ["%{$searchText}%"]);
+                            });
                     });
             });
         }
@@ -528,8 +534,8 @@ class KanbanBoard extends Component
             $this->setComments($poId, (string)($this->comment ?? ''), false);
         }
 
-        // 2) Guardar campos del formulario de la etapa
-        $saveResult = $this->saveDataByModal(); // ya maneja transacción y payload por etapa
+        // 2) Guardar campos del formulario de la etapa (y consolidar webhook con comentario si aplica)
+        $saveResult = $this->saveDataByModal($hasComment); // ya maneja transacción y payload por etapa
 
         if (!$saveResult['ok']) {
             session()->flash('message', $saveResult['message'] ?? 'No se pudo guardar los datos de la etapa.');
@@ -550,8 +556,9 @@ class KanbanBoard extends Component
         $this->comment = '';
         $this->attachment = null;
 
-        // 5) Cerrar el modal unificado
+        // 5) Cerrar el modal unificado y mostrar modal de éxito
         $this->dispatch('close-modal', 'modal-po-stage-change');
+        $this->dispatch('open-modal', 'success-modal');
 
         return ['success' => true, 'message' => 'PO movida correctamente.'];
     }
@@ -645,10 +652,12 @@ class KanbanBoard extends Component
                 $this->loadServiceProviders($po->trading_company, $po->service_provider);
             }
 
-            // Cargar transport types si estamos en la etapa "Booking"
+            // Cargar transport types y shipping lines si estamos en la etapa "Booking"
             if ($newColumnId == 3 && $po->trading_company) {
                 $this->mode = $po->mode;
+                $this->shipping_line = $po->shipping_line;
                 $this->loadTransportTypes($po->trading_company, $po->mode);
+                $this->loadShippingLines($po->trading_company, $po->shipping_line);
             }
 
             // Cargar shipping lines, puertos y container types si estamos en la etapa "En Tránsito"
@@ -748,10 +757,12 @@ class KanbanBoard extends Component
             $this->loadServiceProviders($po->trading_company, $po->service_provider);
         }
 
-        // Etapa 3 (Booking): transport_types
+        // Etapa 3 (Booking): transport_types y shipping_line
         if ($newStage == 3) {
             $this->mode = $po->mode;
+            $this->shipping_line = $po->shipping_line;
             $this->loadTransportTypes($po->trading_company, $po->mode);
+            $this->loadShippingLines($po->trading_company, $po->shipping_line);
         }
 
         // Etapa 5 (En Tránsito): shipping_line, puertos, container_type
@@ -913,7 +924,7 @@ class KanbanBoard extends Component
                     'created_at' => formatDateTime($comment->created_at),
                     'attachment' => $comment->getAttachment() ? [
                         'name' => $comment->getAttachment()->name,
-                        'url' => $comment->getAttachment()->getUrl()
+                        'url' => route('media.download', $comment->getAttachment()->id)
                     ] : null
                 ];
             });
@@ -978,16 +989,15 @@ class KanbanBoard extends Component
     private function fieldsByStage(): array
     {
         return [
-            2 => ['date_variable_date', 'date_theorical_load', 'service_provider', 'forwarder_name'], // Producción
-            3 => ['date_variable_date', 'date_theorical_load', 'service_provider',
-                  'container_number', 'mbl_number', 'tracking_id'], // Booking (mismos campos que Producción + tracking)
+            2 => ['date_variable_date', 'service_provider'], // Producción (removidos: date_theorical_load readonly, forwarder_name hidden)
+            3 => ['date_variable_date', 'service_provider',
+                  'container_number', 'mbl_number', 'tracking_id', 'shipping_line'], // Booking (removido: date_theorical_load readonly)
             4 => [], // Consolidador (sin campos específicos)
             5 => [
                 'date_atd', 'date_eta', 'date_eta_initial', 'container_type',
-                'container_number', 'mbl_number',
                 'freight_amount', 'shipping_line', 'factura_merca',
-                'tracking_id', 'departure_port', 'arrival_port',
-            ], // En transito (arrival_status es solo lectura, no se guarda aquí)
+                'departure_port', 'arrival_port',
+            ], // En transito (removidos: container_number, mbl_number, tracking_id hidden - ya capturados en Booking)
             6 => ['date_ata'], // Puerto
             7 => ['bonded_warehouse_enter', 'bonded_warehouse_exit', 'date_ata'], // Alm. Fiscal
             9 => ['estimated_dc_availability_date'], // Recibiendo CDI
@@ -995,7 +1005,63 @@ class KanbanBoard extends Component
         ];
     }
 
-    public function saveDataByModal(): array
+    /**
+     * Normaliza un valor para comparación, manejando diferentes tipos de datos.
+     * Similar a normalizeValueForComparison en CreatePucharseOrder.php pero más conservador
+     * para evitar falsos positivos con strings que parecen fechas pero no lo son.
+     *
+     * @param mixed $value El valor a normalizar
+     * @return mixed El valor normalizado para comparación
+     */
+    private function normalizeForComparison($value)
+    {
+        if ($value === null || $value === '' || $value === false) {
+            return null;
+        }
+
+        if ($value instanceof \Carbon\Carbon) {
+            return $value->format('Y-m-d');
+        }
+
+        if ($value instanceof \DateTime) {
+            return $value->format('Y-m-d');
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+            if ($trimmed === '') {
+                return null;
+            }
+
+            // Intentar parsear como fecha solo si tiene formato YYYY-MM-DD...
+            if (preg_match('/^\d{4}-\d{2}-\d{2}/', $trimmed)) {
+                try {
+                    return \Carbon\Carbon::parse($trimmed)->format('Y-m-d');
+                } catch (\Exception $e) {
+                    // Si falla el parseo, continuar con el string original
+                }
+            }
+
+            // Si es numérico, convertir a float con 2 decimales
+            if (is_numeric($trimmed)) {
+                return round((float) $trimmed, 2);
+            }
+
+            return $trimmed;
+        }
+
+        if (is_numeric($value)) {
+            return round((float) $value, 2);
+        }
+
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+
+        return $value;
+    }
+
+    public function saveDataByModal(bool $hasComment = false): array
     {
         $poId = (int)($this->currentTaskId ?? 0);
         $stage = (int)($this->newColumnId ?? 0);
@@ -1005,10 +1071,6 @@ class KanbanBoard extends Component
         }
 
         $fields = $this->fieldsByStage()[$stage] ?? [];
-        if (empty($fields)) {
-            // Esta etapa no tiene campos a persistir
-            return ['ok' => true, 'updated' => 0];
-        }
 
         // Armar payload solo con props existentes y con valor
         $payload = [];
@@ -1022,33 +1084,78 @@ class KanbanBoard extends Component
             }
         }
 
-        if (empty($payload)) {
+        // Comparar con valores actuales para detectar cambios reales
+        $po = PurchaseOrder::find($poId);
+        if (!$po) {
+            return ['ok' => false, 'message' => 'PO no encontrada.'];
+        }
+
+        $realChanges = [];
+        foreach ($payload as $field => $newValue) {
+            $oldValue = $po->$field;
+            if ($this->normalizeForComparison($oldValue) !== $this->normalizeForComparison($newValue)) {
+                $realChanges[$field] = $newValue;
+            }
+        }
+
+        // Incluir comentario en los cambios para el webhook si se agregó uno
+        // (el comentario ya fue guardado por setComments(), aquí solo se marca para el webhook)
+        if ($hasComment) {
+            $realChanges['comments'] = 'new_comment_added';
+        }
+
+        // Si no hay cambios reales ni comentarios, no actualizar ni enviar webhook
+        if (empty($realChanges)) {
             return ['ok' => true, 'updated' => 0];
         }
 
+        // Separar cambios de BD (columnas reales) de cambios informativos (comments)
+        $dbChanges = $realChanges;
+        unset($dbChanges['comments']); // 'comments' no es columna de purchase_orders
+
         try {
-            DB::beginTransaction();
+            // Solo ejecutar update en BD si hay cambios de columnas reales
+            $updated = 0;
+            if (!empty($dbChanges)) {
+                DB::beginTransaction();
 
-            // Verificar que la PO exista ANTES del update
-            $poExists = DB::table('purchase_orders')->where('id', $poId)->exists();
-            if (!$poExists) {
-                throw new \RuntimeException('PO no encontrada');
+                // Verificar que la PO exista ANTES del update
+                $poExists = DB::table('purchase_orders')->where('id', $poId)->exists();
+                if (!$poExists) {
+                    throw new \RuntimeException('PO no encontrada');
+                }
+
+                $updated = DB::table('purchase_orders')
+                    ->where('id', $poId)
+                    ->update($dbChanges);
+
+                // Nota: $updated === 0 es válido si los datos ya tenían los mismos valores
+                // No es un error, simplemente no hubo cambios que hacer
+
+                // Actualizar automáticamente arrival_status y delay_days si se actualizó la ETA
+                if ($po && (isset($dbChanges['date_eta']) || isset($dbChanges['date_eta_initial']))) {
+                    $po->updateArrivalStatus();
+                }
+
+                DB::commit();
             }
 
-            $updated = DB::table('purchase_orders')
-                ->where('id', $poId)
-                ->update($payload);
-
-            // Nota: $updated === 0 es válido si los datos ya tenían los mismos valores
-            // No es un error, simplemente no hubo cambios que hacer
-
-            // NUEVO: Actualizar automáticamente arrival_status y delay_days si se actualizó la ETA
-            $po = PurchaseOrder::find($poId);
-            if ($po && (isset($payload['date_eta']) || isset($payload['date_eta_initial']))) {
-                $po->updateArrivalStatus();
+            // Push cambios relevantes a Porth (solo container_number y shipping_line)
+            if ($po && !empty($po->porth_id) && !empty($dbChanges)) {
+                $porthRelevantFields = ['container_number', 'shipping_line'];
+                $porthChanges = array_intersect_key($dbChanges, array_flip($porthRelevantFields));
+                if (!empty($porthChanges)) {
+                    try {
+                        $porthApi = app(\App\Services\PorthApiService::class);
+                        $porthApi->pushChangesToPorth($po, $porthChanges);
+                    } catch (\Throwable $e) {
+                        \Log::error('kanban:porth_push_error', [
+                            'purchase_order_id' => $po->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
             }
-
-            DB::commit();
 
             // Dispatch webhook event for updated purchase order
             if ($po && function_exists('dispatch_webhook')) {
@@ -1056,20 +1163,42 @@ class KanbanBoard extends Component
                     \Log::info('About to dispatch webhook for PO update from KanbanBoard', [
                         'po_id' => $po->id,
                         'order_number' => $po->order_number,
+                        'changes_keys' => array_keys($realChanges),
                     ]);
 
-                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
-                    $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
-
-                    // Convertir a array y asegurar que sea JSON serializable
-                    $poData = $freshPo->toArray();
-                    $poData = json_decode(json_encode($poData), true);
+                    // Si hay comentario, enviar la PO completa con comments para que el webhook los incluya
+                    if ($hasComment) {
+                        $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $poData = $freshPo->toArray();
+                        $poData = json_decode(json_encode($poData), true);
+                        // Aplicar cambios recientes sobre la PO completa
+                        foreach ($realChanges as $field => $value) {
+                            if ($field !== 'comments') {
+                                $poData[$field] = $value;
+                            }
+                        }
+                        $updatedData = $poData;
+                    } else {
+                        // Sin comentario: enviar solo identificadores + campos actualizados
+                        $updatedData = [
+                            'order_number' => $po->order_number,
+                            'trading_company' => $po->trading_company,
+                            'company_id' => $po->company_id,
+                            'current_timestamp' => function_exists('format_webhook_date') ? format_webhook_date(now()) : now()->utc()->format('Y-m-d\TH:i:s.v\Z'),
+                        ];
+                        foreach ($realChanges as $field => $value) {
+                            if ($field !== 'comments') {
+                                $updatedData[$field] = $value;
+                            }
+                        }
+                    }
 
                     dispatch_webhook('purchase_order.updated', [
                         'purchase_order_id' => $po->id,
                         'order_number' => $po->order_number,
-                        'changes' => $payload,
-                        'data' => $poData,
+                        'changes' => $realChanges,
+                        'data' => $updatedData,
                     ]);
 
                     \Log::info('dispatch_webhook completed from KanbanBoard', [
@@ -1177,7 +1306,7 @@ class KanbanBoard extends Component
             'date_eta'               => 'ETA Variable',
             'container_number'       => 'Contenedor',
             'container_type'         => 'Tipo de contenedor',
-            'mbl_number'             => 'MBL',
+            'mbl_number'             => 'Documento de tránsito',
             'bill_of_lading'         => 'BL',
             'shipping_line'          => 'Naviera',
             'tracking_id'            => 'Tracking',
@@ -1211,7 +1340,7 @@ class KanbanBoard extends Component
 
         $messages = [
             'required' => 'El campo :attribute es requerido.',
-            'required_without_all' => 'Debe proporcionar al menos uno: Número de Booking, MBL o Número de Contenedor.',
+            'required_without_all' => 'Debe proporcionar al menos uno: Número de Booking, Documento de tránsito o Número de Contenedor.',
             'date'     => 'El campo :attribute debe ser una fecha válida.',
             'string'   => 'El campo :attribute debe ser texto.',
             'numeric'  => 'El campo :attribute debe ser numérico.',

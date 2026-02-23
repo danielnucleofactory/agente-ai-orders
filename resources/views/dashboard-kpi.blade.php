@@ -3,9 +3,7 @@
         <link rel="stylesheet" href="{{ asset('css/dashboard-kpi.css') }}">
         <style>
             /* Estilos específicos para inputs de períodos de comparación - sobrescribir Flatpickr */
-            .comparison-period-filters input.flatpickr-alt-input,
-            .comparison-period-filters input[type="date"].flatpickr-alt-input,
-            .comparison-period-filters input.flatpickr-input.flatpickr-initialized {
+            .comparison-period-filters input.flatpickr-alt-input {
                 width: 150px !important;
                 height: 40px !important;
                 padding: 8px 14px !important;
@@ -32,13 +30,13 @@
     <div class="dashboard-kpi-container">
         <!-- Filtros Globales -->
         <div class="filters-section" id="filtersSection" style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; font-family: 'Lato', sans-serif; margin-bottom: 24px; background: transparent; border: none; padding: 0;">
-            <div class="filter-group">
+            <div class="filter-group" x-data="datePicker('')">
                 <label class="filter-label">Fecha inicio</label>
-                <input type="date" id="filter-date-from" class="date-input filter-input" value="">
+                <input x-ref="picker" type="text" id="filter-date-from" class="date-input filter-input" value="">
             </div>
-            <div class="filter-group">
+            <div class="filter-group" x-data="datePicker('')">
                 <label class="filter-label">Fecha fin</label>
-                <input type="date" id="filter-date-to" class="date-input filter-input" value="">
+                <input x-ref="picker" type="text" id="filter-date-to" class="date-input filter-input" value="">
             </div>
             <div class="filter-group">
                 <label class="filter-label">Cliente</label>
@@ -104,14 +102,14 @@
         <!-- Tabs de Vistas -->
         <div class="tabs-container">
             <div class="tabs">
-                <button class="tab active" data-view="tendencia">Tendencia</button>
-                <button class="tab" data-view="po-vs-teus">PO vs TEUs</button>
+                <button class="tab active" data-view="tendencia">Tiempo real</button>
+                <button class="tab" data-view="po-vs-teus">PO / TEUs</button>
                 <button class="tab" data-view="comparativo">Comparación por Períodos</button>
                 <button class="tab" data-view="proyeccion">Proyección</button>
             </div>
         </div>
 
-        <!-- Sub-tabs para Tendencia -->
+        <!-- Sub-tabs para Tiempo real -->
         <div class="subtabs-container active" id="subtabs-tendencia">
             <div class="subtabs">
                 <button class="subtab active" data-subtab="tendencia-po">PO</button>
@@ -180,23 +178,23 @@
                                 <div class="additional-filters-buttons" style="display: flex; flex-direction: column; gap: 12px;">
                                     <button type="button" class="filter-button" id="btn-kpi-po-retraso-cl" data-filter="po_retraso_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">PO Retraso CL</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Retraso > 7 días en carga lista</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Carga lista real posterior a la planificada.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-po-adelanto-cl" data-filter="po_adelanto_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">PO Adelanto CL</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Adelanto > 7 días en carga lista</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Carga lista real previa a la planificada.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-indicador-capacidad" data-filter="indicador_capacidad" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">Indicador Capacidad</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">PO sin fecha ETD</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Ordenes con fecha de salida confirmada.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-pos-transbordo" data-filter="pos_transbordo" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">POs en Puerto de Transbordo</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Órdenes en tránsito intermedio</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Ordenes en puerto intermedio.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-pos-ata" data-filter="pos_ata" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">POs con ATA</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Arribos confirmados en puerto final</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Ordenes con fecha de llegada confirmada.</span>
                                     </button>
                                 </div>
                             </div>
@@ -264,23 +262,23 @@
                                 <div class="additional-filters-buttons" style="display: flex; flex-direction: column; gap: 12px;">
                                     <button type="button" class="filter-button" id="btn-kpi-teus-retraso-cl" data-filter="teus_retraso_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">TEUs con Retraso CL</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Retraso > 7 días en carga lista</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Carga lista real posterior a la planificada.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-teus-adelanto-cl" data-filter="teus_adelanto_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">TEUs con Adelanto CL</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Adelanto > 7 días en carga lista</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Carga lista real previa a la planificada.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-teus-capacidad" data-filter="teus_capacidad" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">Capacidad (Allocation) - TEUs</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Volumen con ETD Real dentro del período</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Ordenes con fecha de salida confirmada.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-teus-transbordo" data-filter="teus_transbordo" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">TEUs en Puerto de Transbordo</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Volumen en tránsito intermedio</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Ordenes en puerto intermedio.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-teus-ata" data-filter="teus_ata" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">TEUs con ATA</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Arribos confirmados en puerto final</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Ordenes con fecha de llegada confirmada.</span>
                                     </button>
                                 </div>
                             </div>
@@ -313,7 +311,7 @@
                 <div class="table-section">
                     <div class="table-header">
                         <div>
-                            <div class="table-title">PO vs TEUs por Etapa</div>
+                            <div class="table-title">PO / TEUs por Etapa</div>
                             <div class="table-description">
                                 Comparación de cantidad de órdenes y volumen en cada etapa logística
                             </div>
@@ -366,7 +364,7 @@
                 <div class="table-section">
                     <div class="table-header">
                         <div>
-                            <div class="table-title">PO vs TEUs por Período</div>
+                            <div class="table-title">PO / TEUs por Período</div>
                             <div class="table-description">
                                 Comparación de volumen entre períodos de tiempo para evaluación de tendencias
                             </div>
@@ -420,7 +418,7 @@
                 <div class="table-section">
                     <div class="table-header">
                         <div>
-                            <div class="table-title">PO vs TEUs por Proveedor de Mercancía</div>
+                            <div class="table-title">PO / TEUs por Proveedor de Mercancía</div>
                             <div class="table-description">
                                 Análisis de contribución de cada proveedor al volumen total de operaciones
                             </div>
@@ -476,11 +474,11 @@
                     </table>
                 </div>
 
-                <!-- Tabla 4: PO vs TEUs por Naviera -->
+                <!-- Tabla 4: PO / TEUs por Naviera -->
                 <div class="table-section">
                     <div class="table-header">
                         <div>
-                            <div class="table-title">PO vs TEUs por Naviera</div>
+                            <div class="table-title">PO / TEUs por Naviera</div>
                             <div class="table-description">
                                 Participación y relevancia de cada operador marítimo en el volumen gestionado
                             </div>
@@ -570,31 +568,31 @@
                         <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
                             <!-- Período A -->
                             <div style="display: flex; align-items: flex-end; gap: 8px;">
-                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; flex-direction: column; gap: 4px;" x-data="datePicker('')">
                                     <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Inicio</label>
-                                    <input type="date" id="comp-period-a-from" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                    <input x-ref="picker" type="text" id="comp-period-a-from" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
                                 </div>
-                                <div style="display: flex; flex-direction: column; gap: 4px; position: relative;">
+                                <div style="display: flex; flex-direction: column; gap: 4px; position: relative;" x-data="datePicker('')">
                                     <div style="display: flex; align-items: center; width: 150px; position: relative;">
                                         <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Fin</label>
                                         <span style="font-size: 14px; font-weight: 700; color: #1AAD8A; white-space: nowrap; position: absolute; right: 0;">Período A</span>
                                     </div>
-                                    <input type="date" id="comp-period-a-to" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                    <input x-ref="picker" type="text" id="comp-period-a-to" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
                                 </div>
                             </div>
                             
                             <!-- Período B -->
                             <div style="display: flex; align-items: flex-end; gap: 8px;">
-                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; flex-direction: column; gap: 4px;" x-data="datePicker('')">
                                     <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Inicio</label>
-                                    <input type="date" id="comp-period-b-from" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                    <input x-ref="picker" type="text" id="comp-period-b-from" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
                                 </div>
-                                <div style="display: flex; flex-direction: column; gap: 4px; position: relative;">
+                                <div style="display: flex; flex-direction: column; gap: 4px; position: relative;" x-data="datePicker('')">
                                     <div style="display: flex; align-items: center; width: 150px; position: relative;">
                                         <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Fin</label>
                                         <span style="font-size: 14px; font-weight: 700; color: #1AAD8A; white-space: nowrap; position: absolute; right: 0;">Período B</span>
                                     </div>
-                                    <input type="date" id="comp-period-b-to" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                    <input x-ref="picker" type="text" id="comp-period-b-to" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
                                 </div>
                             </div>
                         </div>

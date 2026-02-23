@@ -57,9 +57,7 @@
             }
             
             /* Inputs de fecha - altura exacta de 40px (incluyendo border) */
-            .historical-filters-section .filter-group input[type="date"],
             .historical-filters-section .filter-group input.flatpickr-alt-input,
-            .historical-filters-section input[type="date"],
             .historical-filters-section input.flatpickr-alt-input {
                 width: 150px !important;
                 max-width: 150px !important;
@@ -111,7 +109,6 @@
             }
             
             .historical-filters-section select:focus,
-            .historical-filters-section input[type="date"]:focus,
             .historical-filters-section input.flatpickr-alt-input:focus {
                 outline: none;
                 border-color: #1AAD8A !important;
@@ -152,21 +149,11 @@
 
             <!-- Filtros -->
             <div class="filter-group">
-                <label class="filter-label">Fecha desde</label>
-                <input 
-                    type="date" 
-                    wire:model.live="filters.date_from" 
-                    placeholder="Fecha desde"
-                />
+                <x-date-picker wire:model.live="filters.date_from" label="Fecha desde" />
             </div>
 
             <div class="filter-group">
-                <label class="filter-label">Fecha hasta</label>
-                <input 
-                    type="date" 
-                    wire:model.live="filters.date_to" 
-                    placeholder="Fecha hasta"
-                />
+                <x-date-picker wire:model.live="filters.date_to" label="Fecha hasta" />
             </div>
 
             <div class="filter-group">

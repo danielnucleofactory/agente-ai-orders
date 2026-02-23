@@ -158,8 +158,8 @@
             </div>
         @else
             <div class="py-8 text-center text-gray-500">
-                <p>No hay datos de tracking disponibles en Porth</p>
-                <p class="text-sm mt-2">El contenedor, MBL o booking no tiene información en Porth</p>
+                <p>No hay datos de tracking disponibles</p>
+                <p class="text-sm mt-2">El contenedor, Documento de tránsito o booking no tiene información</p>
             </div>
         @endif
     </div>
@@ -303,9 +303,7 @@
                                {{ $purchaseOrder->port_of_loading_validated ? 'checked' : '' }}
                                disabled
                                class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
-                        <label for="port_of_loading_validated" class="block ml-2 text-sm text-gray-700">
-                            {{ $purchaseOrder->port_of_loading_validated ? 'Validado' : 'No validado' }}
-                        </label>
+                        <label for="port_of_loading_validated" class="block ml-2 text-sm text-gray-700">Validado</label>
                     </div>
                 </div>
                 <div>
@@ -335,7 +333,7 @@
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Identificadores de embarque</h4>
             <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                 <div>
-                    <p class="mb-1 text-gray-500">MBL Number</p>
+                    <p class="mb-1 text-gray-500">Documento de tránsito</p>
                     <p class="font-semibold">{{ $purchaseOrder->mbl_number ?? '-' }}</p>
                 </div>
                 <div>
@@ -362,7 +360,7 @@
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Código de Proveedor</p>
-                    <p class="font-semibold">{{ $purchaseOrder->vendor_number ?? $purchaseOrder->vendor->vendo_code ?? '-' }}</p>
+                    <p class="font-semibold">{{ $purchaseOrder->vendor?->vendo_code ?? '-' }}</p>
                 </div>
             </div>
             </div>
@@ -476,9 +474,7 @@
                                {{ $purchaseOrder->etd_initial_validated ? 'checked' : '' }}
                                disabled
                                class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
-                        <label for="etd_initial_validated" class="block ml-2 text-sm text-gray-700">
-                            {{ $purchaseOrder->etd_initial_validated ? 'Validada' : 'No validada' }}
-                        </label>
+                        <label for="etd_initial_validated" class="block ml-2 text-sm text-gray-700">Validada</label>
                     </div>
                 </div>
                 <div>
@@ -815,11 +811,46 @@
                     <table class="w-full">
                         <thead class="bg-[#D4F5ED]">
                             <tr>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Fecha</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Usuario</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Tipo</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Comentario</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Archivos</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('created_at')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Fecha
+                                        @if($commentSortField === 'created_at')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('user_name')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Usuario
+                                        @if($commentSortField === 'user_name')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('action_type')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Tipo
+                                        @if($commentSortField === 'action_type')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('comment')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Comentario
+                                        @if($commentSortField === 'comment')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('attachment_name')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Archivos
+                                        @if($commentSortField === 'attachment_name')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
                                 <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Acciones</th>
                             </tr>
                         </thead>
@@ -848,6 +879,10 @@
                                         @elseif($comment['action_type'] === 'record_create')
                                             <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-green-800 bg-green-100 rounded-full">
                                                 Creación
+                                            </span>
+                                        @elseif($comment['action_type'] === 'porth_sync')
+                                            <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-sky-800 bg-sky-100 rounded-full">
+                                                Actualización embarque
                                             </span>
                                         @else
                                             <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-gray-800 bg-gray-100 rounded-full">

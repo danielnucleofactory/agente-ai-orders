@@ -3,7 +3,7 @@
         <div class="flex items-start gap-[3.75rem]">
             <x-view-title>
                 <x-slot:title>
-                    {{ $shippingDocument->document_number ?? 'Documento de embarque' }}
+                    {{ $shippingDocument->document_number ?? 'Documento de tránsito' }}
                 </x-slot:title>
 
                 <x-slot:content>
@@ -104,7 +104,7 @@
     <div class="mb-8 flex max-w-[600px] justify-between gap-5 rounded-[0.625rem] bg-white p-4 text-xs">
         <div class="flex flex-col justify-between space-y-[0.875rem]">
             <x-label class="bg-warning">
-                <span>Documento de embarque</span>
+                <span>Documento de tránsito</span>
 
                 <x-slot:icon>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="16" viewBox="0 0 18 16"
@@ -162,7 +162,7 @@
 
             <div>
                 <p>Carga total: <span>{{ number_format($totalWeight, 0) }} kg</span></p>
-                <p>Master BL: <span>{{ $shippingDocument->mbl_number ?? 'N/A' }}</span></p>
+                <p>Documento de tránsito: <span>{{ $shippingDocument->mbl_number ?? 'N/A' }}</span></p>
                 <p>Container: <span>{{ $shippingDocument->container_number ?? 'N/A' }}</span></p>
             </div>
         </div>
@@ -284,8 +284,8 @@
             </div>
         @else
             <div class="py-8 text-center text-gray-500">
-                <p>No hay datos de tracking disponibles en Porth</p>
-                <p class="text-sm mt-2">El contenedor, MBL o booking no tiene información en Porth</p>
+                <p>No hay datos de tracking disponibles</p>
+                <p class="text-sm mt-2">El contenedor, Documento de tránsito o booking no tiene información</p>
             </div>
         @endif
     </div>
@@ -553,7 +553,7 @@
                             @empty
                                 <tr>
                                     <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                                        No se encontraron órdenes de compra relacionadas con este documento de embarque
+                                        No se encontraron órdenes de compra relacionadas con este Documento de tránsito
                                     </td>
                                 </tr>
                             @endforelse
@@ -653,7 +653,7 @@
                         @empty
                             <tr>
                                 <td colspan="5" class="px-6 py-4 text-center text-gray-500">
-                                    No se encontraron órdenes de compra para este documento de embarque
+                                    No se encontraron órdenes de compra para este Documento de tránsito
                                 </td>
                             </tr>
                         @endforelse
@@ -793,6 +793,10 @@
                                         @elseif($comment['action_type'] === 'record_create')
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                                 Creación
+                                            </span>
+                                        @elseif($comment['action_type'] === 'porth_sync')
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-800">
+                                                Actualización embarque
                                             </span>
                                         @else
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">

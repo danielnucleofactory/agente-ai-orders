@@ -195,17 +195,7 @@
         </h3>
 
         <div class="mb-4">
-            <x-form-input>
-                <x-slot:label>
-                    Fecha de release
-                </x-slot:label>
-
-                <x-slot:input name="release_date" type="date" placeholder="Ingrese fecha de release" wire:model="release_date" class="pr-10"></x-slot:input>
-
-                <x-slot:error>
-                    {{ $errors->first('order_number') }}
-                </x-slot:error>
-            </x-form-input>
+            <x-date-picker wire:model="release_date" label="Fecha de release" :error="$errors->first('release_date')" />
         </div>
 
         <div class="mb-4">

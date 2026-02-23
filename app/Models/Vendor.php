@@ -32,6 +32,15 @@ class Vendor extends Model
     ];
 
     /**
+     * Campos excluidos de toArray()/toJson().
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'company_id',
+    ];
+
+    /**
      * The attributes that should be cast.
      *
      * @var array<string, string>
@@ -50,10 +59,11 @@ class Vendor extends Model
 
     /**
      * Get the purchase orders for the vendor.
+     * purchase_orders.vendor_id = vendors.id
      */
     public function purchaseOrders(): HasMany
     {
-        return $this->hasMany(PurchaseOrder::class);
+        return $this->hasMany(PurchaseOrder::class, 'vendor_id', 'id');
     }
 
     /**

@@ -201,6 +201,144 @@ class PurchaseOrder extends Model implements HasMedia
     ];
 
     /**
+     * Campos excluidos de toArray()/toJson() (webhook, API, etc.).
+     * - Computados: arrival_status, delay_days, etd_dates_difference, eta_dates_difference (se calculan, no deben enviarse)
+     * - Porth: campos internos de sincronización con Porth
+     * - No Intelix: campos del payload que no están en mapeo_definitivo_intelix.md ni son maestros (xxx)
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'company_id',
+        'arrival_status',
+        'delay_days',
+        'etd_dates_difference',
+        'eta_dates_difference',
+        'variable_calculare_weight',
+        'Invoice_amount',
+        'freight_amount',
+        'vendor_number',
+        // No Intelix ni maestros (del payload enviado)
+        'kanban_status_id',
+        'weight_kg',
+        'weight_lb',
+        'saving_pickup',
+        'saving_executed',
+        'saving_not_executed',
+        'category',
+        'invoice',
+        'status',
+        'notes',
+        'vendor_id',
+        'ship_to_id',
+        'bill_to_id',
+        'order_date',
+        'currency',
+        'incoterms',
+        'payment_terms',
+        'order_place',
+        'email_agent',
+        'net_total',
+        'additional_cost',
+        'total',
+        'length',
+        'width',
+        'height',
+        'volume',
+        'date_required_in_destination',
+        'date_planned_pickup',
+        'date_actual_pickup',
+        'date_estimated_hub_arrival',
+        'date_actual_hub_arrival',
+        'date_consolidation',
+        'insurance_cost',
+        'ground_transport_cost_1',
+        'ground_transport_cost_2',
+        'cost_nationalization',
+        'cost_ofr_estimated',
+        'cost_ofr_real',
+        'estimated_pallet_cost',
+        'real_cost_estimated_po',
+        'real_cost_real_po',
+        'other_costs',
+        'other_expenses',
+        'savings_ofr_fcl',
+        'planned_hub_id',
+        'actual_hub_id',
+        'material_type',
+        'ensurence_type',
+        'insurance_type',
+        'tracking_id',
+        'pallet_quantity',
+        'pallet_quantity_real',
+        'bill_of_lading',
+        'pallets',
+        'length_cm',
+        'width_cm',
+        'height_cm',
+        'confirmation_hash',
+        'hash_expires_at',
+        'confirmation_email_sent',
+        'confirmation_email_sent_at',
+        'last_email_type_sent',
+        'last_email_sent_at',
+        'email_sent_history',
+        'update_date_po',
+        'confirm_update_date_po',
+        'factory_proforma_number',
+        'is_dropship',
+        'applies_tlc',
+        'applies_af',
+        'date_received',
+        'reason',
+        'forwarder_name',
+        'route_label',
+        'date_eta_updated',
+        'date_etd_updated',
+        'used_rate_ok',
+        'apply_technical_note',
+        'balance_payment_date',
+        'receipt_note_date',
+        'estimated_dc_availability_date',
+        'retail_group',
+        'customer_type',
+        'customs_dua',
+        'case_number_file',
+        'receipt_note',
+        'total_amount',
+        'date_vendor_document_received',
+        'dif_load_date',
+        'emision_date_po',
+        'consolidator_name',
+        'freight_type',
+        'porth_id',
+        'porth_shipment_number',
+        'porth_carrier_code',
+        'porth_pol',
+        'porth_pod',
+        'porth_pol_name',
+        'porth_pod_name',
+        'porth_phase',
+        'porth_priority',
+        'porth_modality',
+        'porth_vessel_voyage',
+        'porth_origin',
+        'porth_final_destination',
+        'porth_first_eta',
+        'porth_first_etd',
+        'porth_ready',
+        'porth_to_origin_port',
+        'porth_at_origin_port',
+        'porth_in_transit',
+        'porth_at_destination_port',
+        'porth_to_final_destination',
+        'porth_delivered',
+        'porth_free_time_at_destination',
+        'porth_manual_tracking',
+        'last_porth_sync_at',
+    ];
+
+    /**
      * The attributes that should be cast.
      *
      * @var array<string, string>
@@ -326,10 +464,11 @@ class PurchaseOrder extends Model implements HasMedia
 
     /**
      * Get the vendor that owns the purchase order.
+     * vendor_id es FK a vendors.id (no vendo_code).
      */
     public function vendor(): BelongsTo
     {
-        return $this->belongsTo(Vendor::class);
+        return $this->belongsTo(Vendor::class, 'vendor_id', 'id');
     }
 
     /**
@@ -627,7 +766,8 @@ class PurchaseOrder extends Model implements HasMedia
         }
 
         // Verificar si hay campos que requieren sincronización
-        $syncFields = ['tracking_id', 'mbl_number', 'container_number'];
+        // Solo container_number activa creación/vinculación en Porth (mbl_number y tracking_id son solo datos de la PO)
+        $syncFields = ['container_number'];
         $hasChanges = false;
         $hasValidIdentifier = false;
 

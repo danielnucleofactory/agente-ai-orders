@@ -673,19 +673,12 @@ class CreatePucharseOrder extends Component
                 $this->notes = $this->purchaseOrder->notes;
                 $this->company_id = $this->purchaseOrder->company_id;
 
-                // Vendor information
-                $this->vendor_id = $this->purchaseOrder->vendor_id;
+                // Vendor information: el select usa vendo_code (código canónico), no vendors.id
+                $this->vendor_number = $this->purchaseOrder->vendor_number ?? $this->purchaseOrder->vendor?->vendo_code ?? '';
+                $this->vendor_id = $this->vendor_number;
                 $this->vendor_direccion = $this->purchaseOrder->vendor_direccion;
                 $this->vendor_pais = $this->purchaseOrder->vendor_pais;
                 $this->vendor_telefono = $this->purchaseOrder->vendor_telefono;
-
-                // Obtener vendor_number del vendor directamente para asegurar que siempre esté disponible
-                if ($this->vendor_id) {
-                    $vendor = $this->purchaseOrder->vendor;
-                    if ($vendor) {
-                        $this->vendor_number = $vendor->vendo_code ?? '';
-                    }
-                }
 
                 // Ship to information
                 $this->ship_to_id = $this->purchaseOrder->ship_to_id;
@@ -1127,7 +1120,7 @@ class CreatePucharseOrder extends Component
     public function onVendorSelected()
     {
         if ($this->vendor_id) {
-            $vendor = Vendor::find($this->vendor_id);
+            $vendor = Vendor::where('vendo_code', $this->vendor_id)->first();
             if ($vendor) {
                 $this->vendor_direccion = $vendor->vendor_direccion ?? null;
                 $this->vendor_pais = $vendor->vendor_pais ?? null;
@@ -1469,13 +1462,28 @@ class CreatePucharseOrder extends Component
                 // Usar transacción para asegurar integridad
                 \DB::beginTransaction();
 
+                // Resolver o crear vendor (vendor_id en form = vendo_code; DB espera vendors.id)
+                $vendor = null;
+                if ($this->vendor_id) {
+                    $vendor = Vendor::where('vendo_code', $this->vendor_id)->first();
+                    if (!$vendor) {
+                        $vendor = Vendor::create([
+                            'company_id' => $companyId,
+                            'vendo_code' => (string) $this->vendor_id,
+                            'name' => 'Proveedor ' . $this->vendor_id,
+                            'status' => 'active',
+                        ]);
+                    }
+                }
+
                 // Preparar los datos para la orden de compra
                 $poData = [
                     'company_id' => $companyId,
                     'order_number' => $this->order_number,
                     'status' => $this->id ? $this->status : 'draft',
+                    'kanban_status_id' => $this->id ? $this->kanban_status_id : 2,
                     'notes' => $this->notes,
-                    'vendor_id' => $this->vendor_id,
+                    'vendor_id' => $vendor?->id,
                     'ship_to_id' => $this->ship_to_id,
                     'bill_to_id' => $this->bill_to_id,
                     'order_date' => $this->order_date,
@@ -1615,6 +1623,8 @@ class CreatePucharseOrder extends Component
                     'forwader_date'     => $this->forwader_date,
 
                 ];
+                // po_amount no está en PurchaseOrder::$fillable ni en la tabla; no enviarlo a create()
+                unset($poData['po_amount']);
 
                 // Filtrar valores nulos o vacíos para evitar errores
                 // Mantener valores 0, 0.0, false, y strings vacíos que puedan ser necesarios
@@ -1775,7 +1785,7 @@ class CreatePucharseOrder extends Component
                 ]);
 
                 // Check if it's a duplicate key error
-                if (strpos($e->getMessage(), 'duplicate key value violates unique constraint') !== false || 
+                if (strpos($e->getMessage(), 'duplicate key value violates unique constraint') !== false ||
                     strpos($e->getMessage(), 'SQLSTATE[23505]') !== false) {
                     $this->addError('order_number', 'Este número de orden ya existe. Por favor, use un número diferente.');
                     $this->dispatch('show-error', 'Este número de orden ya existe. Por favor, use un número diferente.');
@@ -1784,7 +1794,7 @@ class CreatePucharseOrder extends Component
                     session()->flash('error', $errorMessage);
                     $this->dispatch('show-error', $errorMessage);
                 }
-                
+
                 // No re-lanzar aquí, ya se manejó el error
                 return;
             }
@@ -1802,7 +1812,7 @@ class CreatePucharseOrder extends Component
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
-            
+
             $errorMessage = 'Error inesperado al crear la orden: ' . $e->getMessage();
             session()->flash('error', $errorMessage);
             $this->dispatch('show-error', $errorMessage);
@@ -1850,12 +1860,39 @@ class CreatePucharseOrder extends Component
     }
 
     public function updatePurchaseOrder($id) {
+        // #region agent log
+        $logPath = base_path('.cursor/debug.log');
+        $dbg = function (string $msg, array $data, string $hyp) use ($logPath) {
+            file_put_contents($logPath, json_encode(['id'=>'log_'.uniqid(),'timestamp'=>round(microtime(true)*1000),'location'=>'CreatePucharseOrder.php:updatePurchaseOrder','message'=>$msg,'data'=>$data,'hypothesisId'=>$hyp])."\n", FILE_APPEND | LOCK_EX);
+        };
+        $dbg('updatePurchaseOrder called', ['id'=>$id,'order_number'=>$this->order_number ?? null], 'B');
+        // #endregion
         try {
+            // Red de seguridad: si estamos editando y date_theorical_load está vacío pero existe en BD, recargar desde la PO
+            if ($this->id && empty($this->date_theorical_load)) {
+                $po = $this->purchaseOrder ?? \App\Models\PurchaseOrder::find($id);
+                if ($po?->date_theorical_load) {
+                    $this->date_theorical_load = $po->date_theorical_load->format('Y-m-d');
+                }
+            }
+
+            // #region agent log
+            \Log::info('[DEBUG H1] updatePurchaseOrder entry - date_variable_date value check', [
+                'id' => $id,
+                'date_variable_date' => $this->date_variable_date,
+                'date_variable_date_type' => gettype($this->date_variable_date),
+                'date_variable_date_empty' => empty($this->date_variable_date),
+                'date_variable_date_is_null' => is_null($this->date_variable_date),
+            ]);
+            // #endregion
+
             \Log::info('=== INICIO updatePurchaseOrder ===', [
                 'id' => $id,
                 'order_number' => $this->order_number,
                 'date_theorical_load' => $this->date_theorical_load,
                 'date_variable_date' => $this->date_variable_date,
+                'date_variable_date_type' => gettype($this->date_variable_date),
+                'date_variable_date_empty' => empty($this->date_variable_date),
                 'carga_lista_validada' => $this->carga_lista_validada,
                 'emision_date_po' => $this->emision_date_po,
                 'forwader_date' => $this->forwader_date,
@@ -1899,14 +1936,32 @@ class CreatePucharseOrder extends Component
         ], [
             'date_theorical_load.required' => 'La fecha de Carga Lista Teorica es requerida',
         ]);
+            // #region agent log
+            $dbg('validation passed', [], 'C');
+            // #endregion
 
         $this->computeDateDiffs();
-            
+
+            // Resolver vendor_id: el form usa vendo_code, la BD espera vendors.id
+            $vendor = null;
+            if ($this->vendor_id) {
+                $vendor = Vendor::where('vendo_code', $this->vendor_id)->first();
+                if (!$vendor) {
+                    $companyId = auth()->user()->company_id ?? 1;
+                    $vendor = Vendor::create([
+                        'company_id' => $companyId,
+                        'vendo_code' => (string) $this->vendor_id,
+                        'name' => 'Proveedor ' . $this->vendor_id,
+                        'status' => 'active',
+                    ]);
+                }
+            }
+
             $poData = [
                 'order_number' => $this->order_number,
                 'status' => $this->id ? $this->status : 'draft',
                 'notes' => $this->notes,
-                'vendor_id' => $this->vendor_id,
+                'vendor_id' => $vendor?->id,
                 'ship_to_id' => $this->ship_to_id,
                 'bill_to_id' => $this->bill_to_id,
                 'order_date' => $this->order_date,
@@ -1977,12 +2032,12 @@ class CreatePucharseOrder extends Component
                 'applies_tlc'  => (bool) ($this->applies_tlc ?? false),
                 'applies_af'   => (bool) ($this->applies_af ?? false),
 
-                'date_booking_request' => $this->date_booking_request,
-                'date_booking_authorized' => $this->date_booking_authorized,
-                'date_theorical_load' => $this->date_theorical_load,
-                'date_variable_date' => $this->date_variable_date,
+                'date_booking_request' => !empty($this->date_booking_request) ? $this->date_booking_request : null,
+                'date_booking_authorized' => !empty($this->date_booking_authorized) ? $this->date_booking_authorized : null,
+                'date_theorical_load' => !empty($this->date_theorical_load) ? $this->date_theorical_load : null,
+                'date_variable_date' => !empty($this->date_variable_date) ? $this->date_variable_date : null,
                 'carga_lista_validada' => $this->carga_lista_validada ?? false,
-                'date_received' => $this->date_received,
+                'date_received' => !empty($this->date_received) ? $this->date_received : null,
 
                 'logistics_incoterm' => $this->logistics_incoterm,
                 'price_incoterm' => $this->price_incoterm,
@@ -1999,10 +2054,10 @@ class CreatePucharseOrder extends Component
                 'arrival_status' => $this->arrival_status,
                 'delay_days' => $this->delay_days,
 
-                'date_eta_initial' => $this->date_eta_initial,
+                'date_eta_initial' => !empty($this->date_eta_initial) ? $this->date_eta_initial : null,
                 // ETA Variable se guarda en date_eta, no en date_eta_updated
                 // Si date_eta_updated tiene valor, se usa para date_eta
-                'date_eta' => $this->date_eta_updated ?: $this->date_eta,
+                'date_eta' => !empty($this->date_eta_updated) ? $this->date_eta_updated : (!empty($this->date_eta) ? $this->date_eta : null),
 
                 'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
                 'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
@@ -2010,15 +2065,15 @@ class CreatePucharseOrder extends Component
                 'uses_bonded_warehouse'     => (bool) ($this->uses_bonded_warehouse ?? false),
                 'apply_technical_note'      => (bool) ($this->apply_technical_note ?? false),
                 'etd_initial_validated'     => (bool) ($this->etd_initial_validated ?? false),
-                'date_etd_initial'             => $this->date_etd_initial,
-                'inspection_date'              => $this->inspection_date,
-                'vgm_cut_date'                 => $this->vgm_cut_date,
-                'balance_payment_date'         => $this->balance_payment_date,
-                'local_charges_payment_date'   => $this->local_charges_payment_date,
-                'bonded_warehouse_enter'       => $this->bonded_warehouse_enter,
-                'bonded_warehouse_exit'        => $this->bonded_warehouse_exit,
-                'receipt_note_date'            => $this->receipt_note_date,
-                'estimated_dc_availability_date'=> $this->estimated_dc_availability_date,
+                'date_etd_initial'             => !empty($this->date_etd_initial) ? $this->date_etd_initial : null,
+                'inspection_date'              => !empty($this->inspection_date) ? $this->inspection_date : null,
+                'vgm_cut_date'                 => !empty($this->vgm_cut_date) ? $this->vgm_cut_date : null,
+                'balance_payment_date'         => !empty($this->balance_payment_date) ? $this->balance_payment_date : null,
+                'local_charges_payment_date'   => !empty($this->local_charges_payment_date) ? $this->local_charges_payment_date : null,
+                'bonded_warehouse_enter'       => !empty($this->bonded_warehouse_enter) ? $this->bonded_warehouse_enter : null,
+                'bonded_warehouse_exit'        => !empty($this->bonded_warehouse_exit) ? $this->bonded_warehouse_exit : null,
+                'receipt_note_date'            => !empty($this->receipt_note_date) ? $this->receipt_note_date : null,
+                'estimated_dc_availability_date'=> !empty($this->estimated_dc_availability_date) ? $this->estimated_dc_availability_date : null,
                 'retail_group'                 => $this->retail_group,
                 'customer_type'                => $this->customer_type,
                 'trading_company'              => $this->trading_company,
@@ -2037,15 +2092,25 @@ class CreatePucharseOrder extends Component
                 'etd_dates_difference'         => $this->etd_dates_difference,
                 'eta_dates_difference'         => $this->eta_dates_difference,
 
-                'date_invoice_received'            => $this->date_invoice_received,
-                'date_vendor_document_received'    => $this->date_vendor_document_received,
+                'date_invoice_received'            => !empty($this->date_invoice_received) ? $this->date_invoice_received : null,
+                'date_vendor_document_received'    => !empty($this->date_vendor_document_received) ? $this->date_vendor_document_received : null,
                 'cbm'               => $this->cbm,
                 'consolidator_name' => $this->consolidator_name,
                 'vendor_number'     => $this->vendor_number,
-                'dif_load_date'     => $this->dif_load_date,
-                'emision_date_po'   => $this->emision_date_po,
-                'forwader_date'     => $this->forwader_date,
+                'dif_load_date'     => !empty($this->dif_load_date) ? $this->dif_load_date : null,
+                'emision_date_po'   => !empty($this->emision_date_po) ? $this->emision_date_po : null,
+                'forwader_date'     => !empty($this->forwader_date) ? $this->forwader_date : null,
             ];
+
+            // #region agent log
+            \Log::info('[DEBUG H2] After building poData - date_variable_date in array check', [
+                'date_variable_date_in_poData' => $poData['date_variable_date'] ?? 'NOT_IN_ARRAY',
+                'date_variable_date_in_poData_type' => isset($poData['date_variable_date']) ? gettype($poData['date_variable_date']) : 'NOT_SET',
+            ]);
+            // #endregion
+
+            // Evitar overflow numérico en PostgreSQL (decimal 10,2 = max 99.999.999,99)
+            $poData = $this->clampDecimalFieldsForDb($poData);
 
             try {
                 // Usar transacción para asegurar integridad
@@ -2053,16 +2118,126 @@ class CreatePucharseOrder extends Component
 
                 $purchaseOrder = \App\Models\PurchaseOrder::findOrFail($id);
 
+                // Log antes de fill para ver el valor original
+                \Log::info('Antes de fill - date_variable_date', [
+                    'po_id' => $id,
+                    'valor_original_bd' => $purchaseOrder->date_variable_date,
+                    'valor_original_tipo' => gettype($purchaseOrder->date_variable_date),
+                    'valor_en_poData' => $poData['date_variable_date'] ?? 'NO ESTÁ EN poData',
+                    'valor_formulario' => $this->date_variable_date,
+                ]);
+
                 // Usar getDirty() para obtener solo campos que realmente cambiaron
                 // Asignar valores primero sin guardar para que Eloquent detecte cambios
+                // #region agent log
+                \Log::info('[DEBUG H3] Before fill - original date_variable_date value', [
+                    'po_id' => $id,
+                    'original_date_variable_date' => $purchaseOrder->date_variable_date,
+                    'original_date_variable_date_type' => gettype($purchaseOrder->date_variable_date),
+                    'new_date_variable_date' => $poData['date_variable_date'] ?? null,
+                ]);
+                // #endregion
+
                 $purchaseOrder->fill($poData);
                 $dirtyFields = $purchaseOrder->getDirty();
+                // #region agent log
+                $dbg('after fill', ['dirty_count'=>count($dirtyFields),'dirty_keys'=>array_slice(array_keys($dirtyFields),0,10),'poData_keys_count'=>count($poData)], 'A');
+                // #endregion
+
+                // #region agent log
+                \Log::info('[DEBUG H3] After fill - getDirty check for date_variable_date', [
+                    'po_id' => $id,
+                    'en_dirtyFields' => isset($dirtyFields['date_variable_date']),
+                    'valor_en_dirtyFields' => $dirtyFields['date_variable_date'] ?? null,
+                    'todos_dirtyFields' => array_keys($dirtyFields),
+                ]);
+                // #endregion
+
+                \Log::info('Después de fill - date_variable_date', [
+                    'po_id' => $id,
+                    'en_dirtyFields' => isset($dirtyFields['date_variable_date']),
+                    'valor_en_dirtyFields' => $dirtyFields['date_variable_date'] ?? null,
+                    'todos_dirtyFields' => array_keys($dirtyFields),
+                ]);
+
+                // Campos computados automáticamente que no deben enviarse como cambios del usuario
+                // (se guardan en la BD pero no se reportan en el webhook como cambios del usuario)
+                $computedFields = [
+                    'arrival_status',
+                    'delay_days',
+                    'etd_dates_difference',
+                    'eta_dates_difference',
+                ];
 
                 // Construir array de cambios solo con campos que realmente cambiaron
+                // Filtrar campos donde el valor nuevo es igual al valor original (para evitar falsos positivos)
                 $changes = [];
+                $filteredOut = [];
                 foreach ($dirtyFields as $field => $newValue) {
-                    $changes[$field] = $newValue;
+                    // Excluir campos computados del webhook
+                    if (in_array($field, $computedFields)) {
+                        $filteredOut[$field] = [
+                            'old' => $purchaseOrder->getOriginal($field),
+                            'new' => $newValue,
+                            'reason' => 'computed_field',
+                        ];
+                        continue;
+                    }
+
+                    $oldValue = $purchaseOrder->getOriginal($field);
+
+                    // Normalizar valores para comparación
+                    $normalizedOld = $this->normalizeValueForComparison($oldValue);
+                    $normalizedNew = $this->normalizeValueForComparison($newValue);
+
+                    // Solo incluir si realmente cambió
+                    if ($normalizedOld !== $normalizedNew) {
+                        $changes[$field] = $newValue;
+                    } else {
+                        // Log campos que fueron filtrados (no cambiaron realmente)
+                        $filteredOut[$field] = [
+                            'old' => $oldValue,
+                            'new' => $newValue,
+                            'normalized_old' => $normalizedOld,
+                            'normalized_new' => $normalizedNew,
+                        ];
+                    }
                 }
+
+                // IMPORTANTE: Si después del filtrado no hay cambios reales, no guardar ni disparar webhook
+                if (empty($changes)) {
+                    // #region agent log
+                    $sampleFiltered = array_slice($filteredOut, 0, 3, true);
+                    $dbg('EMPTY CHANGES early return', ['dirty_count'=>count($dirtyFields),'filtered_count'=>count($filteredOut),'sample_filtered'=>$sampleFiltered], 'A');
+                    // #endregion
+                    \DB::rollBack();
+                    \Log::info('No hay cambios reales después del filtrado, cancelando actualización', [
+                        'po_id' => $id,
+                        'dirty_fields_count' => count($dirtyFields),
+                        'filtered_out_count' => count($filteredOut),
+                    ]);
+                    return [
+                        'success' => true,
+                        'message' => 'No se detectaron cambios reales',
+                        'no_changes' => true,
+                    ];
+                }
+
+                \Log::info('Filtrado de cambios en updatePurchaseOrder', [
+                    'po_id' => $id,
+                    'order_number' => $this->order_number,
+                    'dirty_fields_count' => count($dirtyFields),
+                    'dirty_fields' => array_keys($dirtyFields),
+                    'real_changes_count' => count($changes),
+                    'real_changes' => array_keys($changes),
+                    'real_changes_values' => $changes,
+                    'filtered_out_count' => count($filteredOut),
+                    'filtered_out_fields' => array_keys($filteredOut),
+                    'date_variable_date_dirty' => isset($dirtyFields['date_variable_date']),
+                    'date_variable_date_in_changes' => isset($changes['date_variable_date']),
+                    'date_variable_date_form_value' => $this->date_variable_date,
+                    'date_variable_date_po_value' => $purchaseOrder->getOriginal('date_variable_date'),
+                ]);
 
                 \Log::info('Actualizando PO', [
                     'id' => $id,
@@ -2078,18 +2253,50 @@ class CreatePucharseOrder extends Component
                     'date_ata_in_changes' => isset($changes['date_ata']),
                 ]);
 
+                // #region agent log
+                $dbg('before save', ['changes_count'=>count($changes),'changes_keys'=>array_keys($changes)], 'A');
+                \Log::info('[DEBUG H5] Before save - date_variable_date in changes check', [
+                    'po_id' => $id,
+                    'date_variable_date_in_changes' => isset($changes['date_variable_date']),
+                    'date_variable_date_value' => $changes['date_variable_date'] ?? null,
+                    'all_changes_keys' => array_keys($changes),
+                ]);
+                // #endregion
+
                 try {
                     $purchaseOrder->save();
+                    // #region agent log
+                    $dbg('save() completed', ['po_id'=>$purchaseOrder->id], 'A');
+                    // #endregion
+
+                    // #region agent log
+                    \Log::info('[DEBUG H5] After save - date_variable_date saved value check', [
+                        'po_id' => $id,
+                        'saved_date_variable_date' => $purchaseOrder->fresh()->date_variable_date,
+                        'saved_date_variable_date_formatted' => $purchaseOrder->fresh()->date_variable_date ? $purchaseOrder->fresh()->date_variable_date->format('Y-m-d') : null,
+                    ]);
+                    // #endregion
                 } catch (\Exception $saveException) {
+                    // #region agent log
+                    \Log::error('[DEBUG H5] Save exception - date_variable_date', [
+                        'po_id' => $id,
+                        'error' => $saveException->getMessage(),
+                    ]);
+                    // #endregion
                     throw $saveException;
                 }
 
+                $freshPo = $purchaseOrder->fresh();
                 \Log::info('PO actualizada exitosamente', [
                     'id' => $purchaseOrder->id,
                     'forwader_date_guardado' => $purchaseOrder->forwader_date?->format('Y-m-d'),
-                    'date_eta_guardado' => $purchaseOrder->fresh()->date_eta?->format('Y-m-d'),
-                    'date_ata_guardado' => $purchaseOrder->fresh()->date_ata?->format('Y-m-d'),
-                    'date_eta_initial_guardado' => $purchaseOrder->fresh()->date_eta_initial?->format('Y-m-d')
+                    'date_eta_guardado' => $freshPo->date_eta?->format('Y-m-d'),
+                    'date_ata_guardado' => $freshPo->date_ata?->format('Y-m-d'),
+                    'date_eta_initial_guardado' => $freshPo->date_eta_initial?->format('Y-m-d'),
+                    'date_variable_date_guardado' => $freshPo->date_variable_date?->format('Y-m-d'),
+                    'date_variable_date_en_cambios' => isset($changes['date_variable_date']),
+                    'date_variable_date_valor_en_cambios' => $changes['date_variable_date'] ?? null,
+                    'date_variable_date_valor_formulario' => $this->date_variable_date,
                 ]);
 
                 // Eliminar productos existentes
@@ -2104,6 +2311,9 @@ class CreatePucharseOrder extends Component
                 }
 
                 \DB::commit();
+                // #region agent log
+                $dbg('DB::commit completed, full success path', ['po_id'=>$purchaseOrder->id], 'A');
+                // #endregion
 
                 // Dispatch webhook event for updated purchase order
                 if (function_exists('dispatch_webhook')) {
@@ -2130,13 +2340,16 @@ class CreatePucharseOrder extends Component
 
                         \Log::info('Calling dispatch_webhook from Livewire', [
                             'po_id' => $purchaseOrder->id,
-                            'has_data' => isset($poData['id']),
+                            'has_data' => isset($poDataForWebhook['id']),
+                            'changes_count' => count($changes),
+                            'changes_keys' => array_keys($changes),
+                            'changes' => $changes,
                         ]);
 
                         dispatch_webhook('purchase_order.updated', [
                             'purchase_order_id' => $purchaseOrder->id,
                             'order_number' => $purchaseOrder->order_number,
-                            'changes' => $changes,
+                            'changes' => $changes, // Array de cambios filtrados
                             'data' => $poDataForWebhook,
                         ]);
 
@@ -2182,6 +2395,9 @@ class CreatePucharseOrder extends Component
                 return ['success' => true, 'message' => 'Orden actualizada exitosamente', 'id' => $purchaseOrder->id];
 
             } catch (\Illuminate\Validation\ValidationException $e) {
+                // #region agent log
+                if (isset($dbg)) $dbg('ValidationException caught', ['errors'=>$e->errors()], 'C');
+                // #endregion
                 \DB::rollBack();
                 \Log::error('Error de validación en updatePurchaseOrder', [
                     'errors' => $e->errors(),
@@ -2189,6 +2405,9 @@ class CreatePucharseOrder extends Component
                 ]);
                 throw $e; // Re-lanzar para que Livewire muestre los errores
             } catch (\Exception $e) {
+                // #region agent log
+                if (isset($dbg)) $dbg('Exception caught in inner catch', ['error'=>$e->getMessage(),'class'=>get_class($e)], 'A');
+                // #endregion
                 \DB::rollBack();
                 \Log::error('Error en updatePurchaseOrder: ' . $e->getMessage(), [
                     'trace' => $e->getTraceAsString(),
@@ -2199,7 +2418,7 @@ class CreatePucharseOrder extends Component
                 // Mostrar error al usuario
                 $this->dispatch('show-error', 'Error al actualizar la orden: ' . $e->getMessage());
                 session()->flash('error', 'Error al actualizar la orden: ' . $e->getMessage());
-                
+
                 // RETORNAR UN VALOR PARA INDICAR ERROR
                 return ['success' => false, 'message' => $e->getMessage()];
             }
@@ -2213,7 +2432,7 @@ class CreatePucharseOrder extends Component
             // Mostrar error al usuario
             $this->dispatch('show-error', 'Error al actualizar la orden: ' . $e->getMessage());
             session()->flash('error', 'Error al actualizar la orden: ' . $e->getMessage());
-            
+
             // RETORNAR UN VALOR PARA INDICAR ERROR
             return ['success' => false, 'message' => $e->getMessage()];
         }
@@ -2226,8 +2445,10 @@ class CreatePucharseOrder extends Component
         if ($this->id) {
             return redirect()->route('purchase-orders.detail', $this->id);
         } else {
-            // Si no hay ID, redirigir al listado de POs
-            return redirect()->route('purchase-orders.index');
+            // Si no hay ID, redirigir al listado de POs sin parámetros de query
+            // Esto evita que los filtros anteriores queden "pegados"
+            // Usamos to() para construir una URL limpia sin parámetros de query
+            return redirect()->to(route('purchase-orders.index'));
         }
     }
 
@@ -2239,7 +2460,19 @@ class CreatePucharseOrder extends Component
         $vendors = Vendor::where('company_id', $companyId)
                           ->where('status', 'active')
                           ->get();
-        $this->vendorArray = $vendors->pluck('name', 'id')->toArray();
+
+        // Si estamos editando, incluir el vendor actual de la PO aunque sea de otra empresa
+        // (evita que el select muestre otro vendor cuando el actual no está en la lista)
+        // vendor_id almacena vendo_code, no vendors.id
+        if ($this->purchaseOrder && $this->vendor_id) {
+            $currentVendor = Vendor::where('vendo_code', $this->vendor_id)->first();
+            if ($currentVendor && !$vendors->contains('vendo_code', $this->vendor_id)) {
+                $vendors = $vendors->push($currentVendor);
+            }
+        }
+
+        // Opciones: vendo_code => name (vendor_id en PO = vendo_code)
+        $this->vendorArray = $vendors->filter(fn ($v) => $v->vendo_code !== null)->pluck('name', 'vendo_code')->toArray();
 
         // Obtener los ship tos y formatearlos para el selector
         $shipTos = ShipTo::where('company_id', $companyId)
@@ -2355,29 +2588,29 @@ class CreatePucharseOrder extends Component
     protected function calculateArrivalStatus(): void
     {
         $transitService = app(\App\Services\TransitTimeService::class);
-        
+
         // Obtener país de origen (del vendor) y destino (de company)
         $originCountry = $this->vendor_pais;
         $destinationCountry = null;
-        
+
         if ($this->company_id) {
             $company = \App\Models\Company::find($this->company_id);
             $destinationCountry = $company?->country;
         }
-        
+
         // Obtener tiempo de tránsito esperado
         $expectedTransitDays = $transitService->getTransitDays($originCountry, $destinationCountry);
-        
+
         // Fecha de salida real (ATD)
         $atd = $this->date_atd ?? null;
-        
+
         // Si tenemos ATD y tiempos esperados, calcular basándose en la matriz
         if ($atd && $expectedTransitDays !== null) {
             $expectedArrival = \Carbon\Carbon::parse($atd)->addDays($expectedTransitDays);
-            
+
             // Usar ATA si existe, si no usar la fecha actual
             $compareDate = $this->date_ata ? \Carbon\Carbon::parse($this->date_ata) : now();
-            
+
             if ($compareDate->startOfDay()->gt($expectedArrival->startOfDay())) {
                 // Atrasado respecto al tiempo esperado
                 $delayDays = $expectedArrival->diffInDays($compareDate);
@@ -2385,12 +2618,12 @@ class CreatePucharseOrder extends Component
                 $this->delay_days = (int) $delayDays;
                 return;
             }
-            
+
             $this->arrival_status = 'A tiempo';
             $this->delay_days = 0;
             return;
         }
-        
+
         // Fallback: usar ETA si no hay ATD o tiempos esperados
         $eta = $this->date_eta_initial ?? $this->date_eta ?? null;
 
@@ -2454,10 +2687,19 @@ class CreatePucharseOrder extends Component
             if ($trimmed === '') {
                 return null;
             }
-            // Try to parse as number if it looks like one
+            // Check numeric FIRST to avoid Carbon::parse("0.00") returning "1970-01-01"
             if (is_numeric($trimmed)) {
                 $floatValue = (float) $trimmed;
                 return round($floatValue, 2);
+            }
+            // Try to parse as date only if it looks like a date (starts with YYYY-MM-DD pattern)
+            if (preg_match('/^\d{4}-\d{2}-\d{2}/', $trimmed)) {
+                try {
+                    $parsedDate = \Carbon\Carbon::parse($trimmed);
+                    return $parsedDate->format('Y-m-d');
+                } catch (\Exception $e) {
+                    // Not a date, continue
+                }
             }
             return $trimmed;
         }
@@ -2484,6 +2726,64 @@ class CreatePucharseOrder extends Component
         }
 
         return $value;
+    }
+
+    /**
+     * Clamp numeric fields to avoid PostgreSQL overflow (decimal precision).
+     * decimal(10,2) max = 99.999.999,99 | decimal(12,2) max = 9.999.999.999,99 | decimal(8,2) max = 99.999,99
+     */
+    protected function clampDecimalFieldsForDb(array $poData): array
+    {
+        $max10_2 = 99999999.99;
+        $max12_2 = 9999999999.99;
+        $max8_2 = 999999.99;
+
+        $decimal10_2 = [
+            'cost_ofr_estimated', 'cost_ofr_real', 'estimated_pallet_cost', 'real_cost_estimated_po',
+            'real_cost_real_po', 'other_costs', 'other_expenses', 'variable_calculare_weight',
+            'savings_ofr_fcl', 'saving_pickup', 'saving_executed', 'saving_not_executed',
+            'insurance_cost', 'ground_transport_cost_1', 'ground_transport_cost_2', 'cost_nationalization',
+            'Invoice_amount', 'freight_amount', 'cbm', 'length_cm', 'width_cm', 'height_cm',
+        ];
+        $decimal12_2 = ['net_total', 'additional_cost', 'total', 'total_amount'];
+        $decimal8_2 = ['length', 'width', 'height', 'weight_kg', 'weight_lb'];
+        $decimal10_3 = ['volume'];
+
+        foreach ($decimal10_2 as $field) {
+            if (isset($poData[$field]) && is_numeric($poData[$field])) {
+                $v = (float) $poData[$field];
+                if (abs($v) > $max10_2) {
+                    $poData[$field] = $v < 0 ? -$max10_2 : $max10_2;
+                }
+            }
+        }
+        foreach ($decimal12_2 as $field) {
+            if (isset($poData[$field]) && is_numeric($poData[$field])) {
+                $v = (float) $poData[$field];
+                if (abs($v) > $max12_2) {
+                    $poData[$field] = $v < 0 ? -$max12_2 : $max12_2;
+                }
+            }
+        }
+        foreach ($decimal8_2 as $field) {
+            if (isset($poData[$field]) && is_numeric($poData[$field])) {
+                $v = (float) $poData[$field];
+                if (abs($v) > $max8_2) {
+                    $poData[$field] = $v < 0 ? -$max8_2 : $max8_2;
+                }
+            }
+        }
+        $max10_3 = 9999999.999;
+        foreach ($decimal10_3 as $field) {
+            if (isset($poData[$field]) && is_numeric($poData[$field])) {
+                $v = (float) $poData[$field];
+                if (abs($v) > $max10_3) {
+                    $poData[$field] = $v < 0 ? -$max10_3 : $max10_3;
+                }
+            }
+        }
+
+        return $poData;
     }
 
 }

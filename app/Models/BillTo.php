@@ -35,6 +35,15 @@ class BillTo extends Model
     ];
 
     /**
+     * Campos excluidos de toArray()/toJson().
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'company_id',
+    ];
+
+    /**
      * Get the company that owns the bill to.
      */
     public function company()

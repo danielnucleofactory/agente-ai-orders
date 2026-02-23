@@ -148,32 +148,29 @@ class PurchaseOrderController extends Controller
                 }
 
                 // 4) Relaciones (se buscan por nombre/código y se crean si no existen)
-                $vendorId = data_get($general, 'vendor_id');
-                $vendorName = data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
+                $vendorId = data_get($general, 'vendor_id') ?? data_get($general, 'vendor.id') ?? data_get($general, 'vendor.vendo_code');
+                $vendorName = data_get($general, 'vendor_name') ?? data_get($general, 'vendor.name');
+                if (!$vendorName && ($v = data_get($general, 'vendor'))) {
+                    $vendorName = is_string($v) ? $v : data_get($v, 'name');
+                }
+                $vendorCompanyId = data_get($general, 'company_id', 1);
+                $vendorCompanyId = ($vendorCompanyId !== null && $vendorCompanyId !== '' && is_numeric($vendorCompanyId)) ? (int) $vendorCompanyId : 1;
+                $tradingCompany = data_get($general, 'trading_company', '');
 
-                // Buscar o crear vendor
+                // Buscar o crear vendor: código canónico = trading_company + "-" + vendor_id (ID único por comercializadora)
                 $vendor = null;
-                if ($vendorId) {
-                    // Tratar vendor_id del JSON como vendo_code
-                    $vendor = Vendor::where('vendo_code', $vendorId)->first();
-                    if (!$vendor) {
-                        $vendor = Vendor::create([
-                            'company_id' => 1,
-                            'vendo_code' => (string) $vendorId,
-                            'name' => $vendorName ?: ('Proveedor ' . $vendorId),
-                            'status' => 'active',
-                        ]);
-                    }
+                if ($vendorId !== null && $vendorId !== '') {
+                    $vendoCode = $tradingCompany ? ($tradingCompany . '-' . $vendorId) : (string) $vendorId;
+                    $vendor = Vendor::firstOrCreate(
+                        ['vendo_code' => $vendoCode, 'company_id' => $vendorCompanyId],
+                        ['name' => $vendorName ?: ('Proveedor ' . $vendorId), 'status' => 'active']
+                    );
                 } elseif ($vendorName) {
-                    $vendor = Vendor::where('name', $vendorName)->first();
-                    if (!$vendor) {
-                        $vendor = Vendor::create([
-                            'company_id' => 1,
-                            'name' => $vendorName,
-                            'vendo_code' => 'VENDOR_' . time(),
-                            'status' => 'active',
-                        ]);
-                    }
+                    $vendoCode = $tradingCompany ? ($tradingCompany . '-VENDOR_' . time()) : ('VENDOR_' . time());
+                    $vendor = Vendor::firstOrCreate(
+                        ['name' => $vendorName, 'company_id' => $vendorCompanyId],
+                        ['vendo_code' => $vendoCode, 'status' => 'active']
+                    );
                 }
 
                 // 5) Totales
@@ -540,40 +537,41 @@ class PurchaseOrderController extends Controller
         }
 
         // Relaciones (se buscan por nombre/código y se crean si no existen)
-        $vendorId = data_get($general, 'vendor_id');
-        $vendorName = data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
+        $vendorId = data_get($general, 'vendor_id') ?? data_get($general, 'vendor.id') ?? data_get($general, 'vendor.vendo_code');
+        $vendorName = data_get($general, 'vendor_name') ?? data_get($general, 'vendor.name');
+        if (!$vendorName && ($v = data_get($general, 'vendor'))) {
+            $vendorName = is_string($v) ? $v : data_get($v, 'name');
+        }
         $vendorCompanyId = data_get($general, 'company_id', 1);
-        $vendorCompanyId = is_numeric($vendorCompanyId) ? (int) $vendorCompanyId : 1;
+        $vendorCompanyId = ($vendorCompanyId !== null && $vendorCompanyId !== '' && is_numeric($vendorCompanyId)) ? (int) $vendorCompanyId : 1;
+        $tradingCompany = data_get($general, 'trading_company', '');
 
-        // Buscar o crear vendor
+        // Buscar o crear vendor: código canónico = trading_company + "-" + vendor_id (ID único por comercializadora)
         $vendor = null;
-        if ($vendorId) {
-            // Primero intentar buscar por ID si es numérico
-            if (is_numeric($vendorId)) {
-                $vendor = Vendor::find($vendorId);
-            }
-            // Si no se encuentra, buscar por código
-            if (!$vendor) {
-                $vendor = Vendor::where('vendo_code', $vendorId)->first();
-            }
-            if (!$vendor) {
-                $vendor = Vendor::create([
+        if ($vendorId !== null && $vendorId !== '') {
+            $vendoCode = $tradingCompany ? ($tradingCompany . '-' . $vendorId) : (string) $vendorId;
+            $vendor = Vendor::firstOrCreate(
+                [
+                    'vendo_code' => $vendoCode,
                     'company_id' => $vendorCompanyId,
-                    'vendo_code' => (string) $vendorId,
+                ],
+                [
                     'name' => $vendorName ?: ('Proveedor ' . $vendorId),
                     'status' => 'active',
-                ]);
-            }
+                ]
+            );
         } elseif ($vendorName) {
-            $vendor = Vendor::where('name', $vendorName)->first();
-            if (!$vendor) {
-                $vendor = Vendor::create([
-                    'company_id' => $vendorCompanyId,
+            $vendoCode = $tradingCompany ? ($tradingCompany . '-VENDOR_' . time()) : ('VENDOR_' . time());
+            $vendor = Vendor::firstOrCreate(
+                [
                     'name' => $vendorName,
-                    'vendo_code' => 'VENDOR_' . time(),
+                    'company_id' => $vendorCompanyId,
+                ],
+                [
+                    'vendo_code' => $vendoCode,
                     'status' => 'active',
-                ]);
-            }
+                ]
+            );
         }
 
         // Totales
@@ -1276,23 +1274,18 @@ class PurchaseOrderController extends Controller
 
             switch ($apiField) {
                 case 'vendor_id': {
-                    // Si viene como ID numérico, buscar directamente
-                    if (is_numeric($value)) {
-                        $vendor = \App\Models\Vendor::find($value);
-                        if (!$vendor) {
-                            throw new \Exception("Vendor not found with ID: {$value}");
-                        }
-                        $po->vendor_id = $vendor->id;
-                        $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->id];
-                    } else {
-                        // Si viene como código, buscar por código
-                        $vendor = \App\Models\Vendor::where('vendo_code', $value)->first();
-                        if (!$vendor) {
-                            throw new \Exception("Vendor not found with code: {$value}");
-                        }
-                        $po->vendor_id = $vendor->id;
-                        $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->id];
-                    }
+                    // Código canónico = trading_company + "-" + vendor_id (cliente siempre envía vendor_id raw)
+                    $tradingCompany = $po->trading_company ?? '';
+                    $vendoCode = $tradingCompany ? ($tradingCompany . '-' . $value) : (string) $value;
+                    $vendorName = data_get($payload, 'vendor_name');
+                    $companyId = $po->company_id ?? 1;
+                    $vendor = \App\Models\Vendor::firstOrCreate(
+                        ['vendo_code' => $vendoCode, 'company_id' => $companyId],
+                        ['name' => $vendorName ?: ('Proveedor ' . $value), 'status' => 'active']
+                    );
+                    $po->vendor_id = $vendor->id;
+                    $po->vendor_number = $vendor->vendo_code;
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->id];
                     break;
                 }
                 case 'vendor_name': {
@@ -1305,10 +1298,15 @@ class PurchaseOrderController extends Controller
                     break;
                 }
                 case 'vendor_number': {
-                    $vendor = \App\Models\Vendor::where('vendo_code', $value)->first();
-                    if (!$vendor) {
-                        throw new \Exception("Vendor not found with code: {$value}");
-                    }
+                    // Código canónico = trading_company + "-" + vendor_number (cliente envía vendor_id raw)
+                    $tradingCompany = $po->trading_company ?? '';
+                    $vendoCode = $tradingCompany ? ($tradingCompany . '-' . $value) : (string) $value;
+                    $vendorName = data_get($payload, 'vendor_name');
+                    $companyId = $po->company_id ?? 1;
+                    $vendor = \App\Models\Vendor::firstOrCreate(
+                        ['vendo_code' => $vendoCode, 'company_id' => $companyId],
+                        ['name' => $vendorName ?: ('Proveedor ' . $value), 'status' => 'active']
+                    );
                     $po->vendor_id = $vendor->id;
                     $po->vendor_number = $vendor->vendo_code;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->vendo_code];

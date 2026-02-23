@@ -286,6 +286,10 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth'])->group(function () {
+    // Ruta para descargar archivos de media con autenticación
+    Route::get('media/{mediaId}/download', [\App\Http\Controllers\MediaController::class, 'download'])
+        ->name('media.download');
+
     Route::get('support/contact', \App\Livewire\Support\ContactForm::class)
         ->name('support.contact');
 

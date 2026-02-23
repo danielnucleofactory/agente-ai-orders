@@ -19,13 +19,13 @@
                 <div class="filter-group">
                     <label class="filter-label">Fecha</label>
                     <div class="date-range">
-                        <div class="date-input-wrapper">
-                            <input type="date" name="date_from" value="{{ request('date_from') }}"
+                        <div class="date-input-wrapper" x-data="datePicker('{{ request('date_from') ?? '' }}')">
+                            <input x-ref="picker" type="text" name="date_from"
                                    class="date-input !border-2 !border-[#28C7A1] !rounded-xl">
                         </div>
                         <span class="date-separator">→</span>
-                        <div class="date-input-wrapper">
-                            <input type="date" name="date_to" value="{{ request('date_to') }}"
+                        <div class="date-input-wrapper" x-data="datePicker('{{ request('date_to') ?? '' }}')">
+                            <input x-ref="picker" type="text" name="date_to"
                                    class="date-input !border-2 !border-[#28C7A1] !rounded-xl">
                         </div>
 

@@ -40,6 +40,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Decorar WebhookService para ocultar date_variable_date y current_timestamp en el payload
+        // (sin modificar internal_modules)
+        if (class_exists(\RagaOrders\Webhook\Services\WebhookService::class)) {
+            $this->app->extend(\RagaOrders\Webhook\Services\WebhookService::class, function ($service) {
+                return new \App\Services\WebhookPayloadFilterDecorator($service);
+            });
+        }
+
         // Registrar observers para auditoría
         PurchaseOrder::observe(PurchaseOrderObserver::class);
         ShippingDocument::observe(ShippingDocumentObserver::class);

@@ -202,6 +202,52 @@ trait HasPOConfirmationWrapper
                     'hash_expires_at' => null,
                 ]);
 
+                // Dispatch webhook event for confirmed purchase order (solo campos modificados)
+                if (function_exists('dispatch_webhook')) {
+                    try {
+                        $changes = [
+                            'confirm_update_date_po' => true,
+                            'confirmation_hash' => null,
+                            'hash_expires_at' => null,
+                        ];
+                        $updatedData = [
+                            'id' => $this->id,
+                            'order_number' => $this->order_number,
+                            'trading_company' => $this->trading_company,
+                            'company_id' => $this->company_id,
+                            'kanban_status_id' => $this->kanban_status_id,
+                            'confirm_update_date_po' => true,
+                            'confirmation_hash' => null,
+                            'hash_expires_at' => null,
+                        ];
+
+                        \Log::info('po_confirmation:dispatching_webhook', [
+                            'purchase_order_id' => $this->id,
+                            'order_number' => $this->order_number,
+                            'new_delivery_date' => $newDeliveryDate,
+                        ]);
+
+                        dispatch_webhook('purchase_order.updated', [
+                            'purchase_order_id' => $this->id,
+                            'order_number' => $this->order_number,
+                            'action' => 'po_confirmed_by_vendor',
+                            'confirmed_date' => $newDeliveryDate,
+                            'changes' => $changes,
+                            'data' => $updatedData,
+                        ]);
+
+                        \Log::info('po_confirmation:webhook_dispatched', [
+                            'purchase_order_id' => $this->id,
+                            'order_number' => $this->order_number,
+                        ]);
+                    } catch (\Exception $e) {
+                        \Log::error('po_confirmation:webhook_error', [
+                            'purchase_order_id' => $this->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
                 return true;
             } catch (\Exception $e) {
                 \Log::error("Error confirming PO {$this->id}: " . $e->getMessage());
@@ -222,9 +268,56 @@ trait HasPOConfirmationWrapper
         if (config('po-confirmation.enabled', false)) {
             try {
                 $this->update([
-                    'date_theorical_load' => $newDate,
+                    'date_variable_date' => $newDate,       // Fecha validada (confirmada por proveedor)
+                    'carga_lista_validada' => true,         // Marcar como validada
                     'update_date_po' => $newDate,
                 ]);
+
+                // Dispatch webhook event for delivery date update (solo campos modificados)
+                if (function_exists('dispatch_webhook')) {
+                    try {
+                        $changes = [
+                            'date_variable_date' => $newDate,
+                            'carga_lista_validada' => true,
+                            'update_date_po' => $newDate,
+                        ];
+                        $updatedData = [
+                            'id' => $this->id,
+                            'order_number' => $this->order_number,
+                            'trading_company' => $this->trading_company,
+                            'company_id' => $this->company_id,
+                            'kanban_status_id' => $this->kanban_status_id,
+                            'date_variable_date' => $newDate,
+                            'carga_lista_validada' => true,
+                            'update_date_po' => $newDate,
+                        ];
+
+                        \Log::info('po_confirmation:dispatching_webhook_date_update', [
+                            'purchase_order_id' => $this->id,
+                            'order_number' => $this->order_number,
+                            'new_date' => $newDate,
+                        ]);
+
+                        dispatch_webhook('purchase_order.updated', [
+                            'purchase_order_id' => $this->id,
+                            'order_number' => $this->order_number,
+                            'action' => 'delivery_date_updated_by_vendor',
+                            'new_delivery_date' => $newDate,
+                            'changes' => $changes,
+                            'data' => $updatedData,
+                        ]);
+
+                        \Log::info('po_confirmation:webhook_dispatched_date_update', [
+                            'purchase_order_id' => $this->id,
+                            'order_number' => $this->order_number,
+                        ]);
+                    } catch (\Exception $e) {
+                        \Log::error('po_confirmation:webhook_error_date_update', [
+                            'purchase_order_id' => $this->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
 
                 return true;
             } catch (\Exception $e) {

@@ -97,7 +97,7 @@ class ChangeDescriptionHelper
         'tracking_id' => 'ID de Rastreo',
         'container_number' => 'Número de Contenedor',
         'container_type' => 'Tipo de Contenedor',
-        'mbl_number' => 'Número MBL',
+        'mbl_number' => 'Documento de tránsito',
         'shipping_line' => 'Línea de Envío',
         'arrival_port' => 'Puerto de Llegada',
         'departure_port' => 'Puerto de Salida',
@@ -148,7 +148,7 @@ class ChangeDescriptionHelper
         'tracking_id' => 'ID de Rastreo',
         'container_number' => 'Número de Contenedor',
         'container_type' => 'Tipo de Contenedor',
-        'mbl_number' => 'Número MBL',
+        'mbl_number' => 'Documento de tránsito',
         'hbl_number' => 'Número HBL',
         'booking_code' => 'Código de Booking',
         'shipping_line' => 'Línea de Envío',
@@ -264,7 +264,7 @@ class ChangeDescriptionHelper
         
         if ($field === 'kanban_status_id') {
             $status = KanbanStatus::find($value);
-            return $status ? $status->name : "ID: {$value}";
+            return $status ? ($status->slug ?? $status->name) : "ID: {$value}";
         }
         
         // Manejar estados
@@ -307,7 +307,7 @@ class ChangeDescriptionHelper
         // Manejar relaciones
         if ($field === 'kanban_status_id') {
             $status = KanbanStatus::find($value);
-            return $status ? $status->name : "ID: {$value}";
+            return $status ? ($status->slug ?? $status->name) : "ID: {$value}";
         }
         
         // Manejar estados

@@ -246,7 +246,7 @@ $schedule->command('porth:import-pending --limit=20')
 
 ## 🔗 Comandos Relacionados
 
-- `php artisan porth:sync-recent` - Sincroniza embarques actualizados (cada hora)
+- `Me r` - Sincroniza embarques actualizados (cada hora)
 - `php artisan porth:link-existing` - Vincula POs existentes con Porth
 - `php artisan porth:check-sync` - Verifica estado de sincronización
 

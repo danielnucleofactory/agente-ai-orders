@@ -63,11 +63,12 @@ class VendorsTable extends Component
         $query = Vendor::query()
             ->where('company_id', $user->company_id)
             ->when($this->search, function ($query) {
-                $query->where(function ($subQuery) {
-                    $subQuery->where('name', 'like', '%' . $this->search . '%')
-                        ->orWhere('email', 'like', '%' . $this->search . '%')
-                        ->orWhere('contact_person', 'like', '%' . $this->search . '%')
-                        ->orWhere('vendor_direccion', 'like', '%' . $this->search . '%');
+                $searchTerm = '%' . strtolower(trim($this->search)) . '%';
+                $query->where(function ($subQuery) use ($searchTerm) {
+                    $subQuery->whereRaw('LOWER(name) LIKE ?', [$searchTerm])
+                        ->orWhereRaw('LOWER(email) LIKE ?', [$searchTerm])
+                        ->orWhereRaw('LOWER(contact_person) LIKE ?', [$searchTerm])
+                        ->orWhereRaw('LOWER(vendor_direccion) LIKE ?', [$searchTerm]);
                 });
             })
             ->when($this->statusFilter, function ($query) {

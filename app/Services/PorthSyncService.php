@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\ShippingDocument;
 use App\Models\PurchaseOrder;
 use App\Models\User;
+use App\Services\PorthApiService;
 
 class PorthSyncService
 {
@@ -19,8 +20,9 @@ class PorthSyncService
     protected $porthApiKey;
     protected $porthBaseUrl;
 
-    public function __construct()
-    {
+    public function __construct(
+        protected PorthTranslationService $translationService
+    ) {
         $this->porthApiKey = config('services.porth.api_key');
         $this->porthBaseUrl = rtrim(config('services.porth.api_url', 'https://api.porth.app'), '/');
     }
@@ -99,14 +101,9 @@ class PorthSyncService
             }
         }
 
-        // Para PurchaseOrder
+        // Para PurchaseOrder: solo container_number activa creación/vinculación en Porth
+        // (mbl_number y tracking_id son solo datos de la PO, no se envían a Porth)
         if ($document instanceof PurchaseOrder) {
-            if ($document->tracking_id) {
-                $identifiers[] = ['type' => 'tracking_id', 'value' => $document->tracking_id];
-            }
-            if ($document->mbl_number) {
-                $identifiers[] = ['type' => 'mbl_number', 'value' => $document->mbl_number];
-            }
             if ($document->container_number) {
                 $identifiers[] = ['type' => 'container_number', 'value' => $document->container_number];
             }
@@ -163,9 +160,9 @@ class PorthSyncService
                     'response_status' => $response->status(),
                     'response_data' => $data,
                     'has_master_bl' => isset($data['masterBl']),
-                    'has_container' => isset($data['container']),
+                    'has_container' => isset($data['containerNumber']) || isset($data['container']),
                     'master_bl_value' => $data['masterBl'] ?? null,
-                    'container_value' => $data['container'] ?? null
+                    'container_value' => $data['containerNumber'] ?? $data['container'] ?? null
                 ]);
                 return $data;
             } else {
@@ -229,48 +226,41 @@ class PorthSyncService
     }
 
     /**
-     * Construir payload para creación
+     * Construir payload para creación.
+     * Solo incluye: name (OLO-{order_number}-{timestamp}) y el identificador de seguimiento
+     * (containerNumber, masterBl o bookingNumber).
      */
     private function buildCreatePayload($identifier, $document)
     {
+        $orderNumber = $document instanceof PurchaseOrder
+            ? $document->order_number
+            : ($document->document_number ?? (string) $document->id);
+
         $basePayload = [
-            'name' => 'GLF-' . $identifier['type'] . '-' . $identifier['value'] . '-' . time(),
-            'freightType' => 'ocean',
-            'incoterm' => 'FCA',
-            'manualTracking' => false,
-            'trackCargo' => true,
-            'priority' => 'normal',
-            'tags' => ['GLF', 'AUTO-CREATED', $identifier['type'] . ':' . $identifier['value']],
-            'meta' => [
-                'source' => 'GLF-auto-sync',
-                'created_at' => now()->toISOString(),
-                'document_id' => $document->id,
-                'document_type' => get_class($document)
-            ]
+            'name' => 'OLO-' . $orderNumber . '-' . time(),
         ];
 
-        // Enriquecer con datos del ShippingDocument
-        if ($document instanceof ShippingDocument) {
-            $basePayload = array_merge($basePayload, [
-                'masterBl' => $document->mbl_number,
-                'houseBl' => $document->hbl_number,
-                'etd' => $document->estimated_departure_date?->toISOString(),
-                'eta' => $document->estimated_arrival_date?->toISOString(),
-                'notes' => $document->notes,
-            ]);
+        // Solo identificadores de seguimiento
+        if (!empty($identifier['value'])) {
+            if ($identifier['type'] === 'container_number') {
+                $basePayload['containerNumber'] = $identifier['value'];
+            } elseif ($identifier['type'] === 'mbl_number') {
+                $basePayload['masterBl'] = $identifier['value'];
+            } elseif ($identifier['type'] === 'booking_code') {
+                $basePayload['bookingNumber'] = $identifier['value'];
+            }
         }
 
-        // Enriquecer con datos del PurchaseOrder
-        if ($document instanceof PurchaseOrder) {
-            $basePayload = array_merge($basePayload, [
-                'masterBl' => $document->mbl_number,
-                'etd' => $document->date_etd?->toISOString(),
-                'eta' => $document->date_eta?->toISOString(),
-                'notes' => $document->notes,
-            ]);
+        // Incluir carrierCode si el documento tiene shipping_line (ej: "MAERSK" → MAEU)
+        $shippingLine = $document->shipping_line ?? null;
+        if (!empty($shippingLine)) {
+            $carrierCode = $this->translationService->getCarrierCodeFromShippingLineName($shippingLine);
+            if ($carrierCode) {
+                $basePayload['carrierCode'] = $carrierCode;
+            }
         }
 
-        return $basePayload;
+        return array_filter($basePayload, fn ($v) => $v !== null && $v !== '');
     }
 
     /**
@@ -318,12 +308,13 @@ class PorthSyncService
                     // NO sobrescribir el mbl_number local
                 }
                 
-                if (isset($result['data']['container']) && $result['data']['container'] !== $originalContainer) {
+                $porthContainer = $result['data']['containerNumber'] ?? $result['data']['container'] ?? null;
+                if ($porthContainer !== null && $porthContainer !== $originalContainer) {
                     Log::warning('Porth returned different container number', [
                         'document_id' => $document->id,
                         'document_type' => get_class($document),
                         'local_container' => $originalContainer,
-                        'porth_container' => $result['data']['container'],
+                        'porth_container' => $porthContainer,
                         'action' => 'keeping_local_value'
                     ]);
                     // NO sobrescribir el container_number local
@@ -338,6 +329,20 @@ class PorthSyncService
                     'final_mbl_number' => $document->mbl_number ?? null,
                     'final_container_number' => $document->container_number ?? null
                 ]);
+
+                // Push naviera a Porth si el documento la tiene (caso: modal de cambio de etapa
+                // guardó container+shipping_line pero el push se saltó porque aún no había porth_id)
+                if ($document instanceof PurchaseOrder && !empty($document->shipping_line) && !empty($document->porth_id)) {
+                    try {
+                        $porthApi = app(PorthApiService::class);
+                        $porthApi->pushChangesToPorth($document->fresh(), ['shipping_line' => $document->shipping_line]);
+                    } catch (\Throwable $e) {
+                        Log::error('PorthSyncService: failed to push shipping_line after link', [
+                            'document_id' => $document->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
 
                 // Nota: La importación de datos completos se hace mediante el cronjob
                 // 'porth:import-pending' que se ejecuta cada 5 minutos.
