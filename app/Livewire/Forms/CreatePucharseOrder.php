@@ -1860,13 +1860,6 @@ class CreatePucharseOrder extends Component
     }
 
     public function updatePurchaseOrder($id) {
-        // #region agent log
-        $logPath = base_path('.cursor/debug.log');
-        $dbg = function (string $msg, array $data, string $hyp) use ($logPath) {
-            file_put_contents($logPath, json_encode(['id'=>'log_'.uniqid(),'timestamp'=>round(microtime(true)*1000),'location'=>'CreatePucharseOrder.php:updatePurchaseOrder','message'=>$msg,'data'=>$data,'hypothesisId'=>$hyp])."\n", FILE_APPEND | LOCK_EX);
-        };
-        $dbg('updatePurchaseOrder called', ['id'=>$id,'order_number'=>$this->order_number ?? null], 'B');
-        // #endregion
         try {
             // Red de seguridad: si estamos editando y date_theorical_load está vacío pero existe en BD, recargar desde la PO
             if ($this->id && empty($this->date_theorical_load)) {
@@ -1936,9 +1929,6 @@ class CreatePucharseOrder extends Component
         ], [
             'date_theorical_load.required' => 'La fecha de Carga Lista Teorica es requerida',
         ]);
-            // #region agent log
-            $dbg('validation passed', [], 'C');
-            // #endregion
 
         $this->computeDateDiffs();
 
@@ -2140,9 +2130,6 @@ class CreatePucharseOrder extends Component
 
                 $purchaseOrder->fill($poData);
                 $dirtyFields = $purchaseOrder->getDirty();
-                // #region agent log
-                $dbg('after fill', ['dirty_count'=>count($dirtyFields),'dirty_keys'=>array_slice(array_keys($dirtyFields),0,10),'poData_keys_count'=>count($poData)], 'A');
-                // #endregion
 
                 // #region agent log
                 \Log::info('[DEBUG H3] After fill - getDirty check for date_variable_date', [
@@ -2206,10 +2193,6 @@ class CreatePucharseOrder extends Component
 
                 // IMPORTANTE: Si después del filtrado no hay cambios reales, no guardar ni disparar webhook
                 if (empty($changes)) {
-                    // #region agent log
-                    $sampleFiltered = array_slice($filteredOut, 0, 3, true);
-                    $dbg('EMPTY CHANGES early return', ['dirty_count'=>count($dirtyFields),'filtered_count'=>count($filteredOut),'sample_filtered'=>$sampleFiltered], 'A');
-                    // #endregion
                     \DB::rollBack();
                     \Log::info('No hay cambios reales después del filtrado, cancelando actualización', [
                         'po_id' => $id,
@@ -2254,7 +2237,6 @@ class CreatePucharseOrder extends Component
                 ]);
 
                 // #region agent log
-                $dbg('before save', ['changes_count'=>count($changes),'changes_keys'=>array_keys($changes)], 'A');
                 \Log::info('[DEBUG H5] Before save - date_variable_date in changes check', [
                     'po_id' => $id,
                     'date_variable_date_in_changes' => isset($changes['date_variable_date']),
@@ -2265,9 +2247,6 @@ class CreatePucharseOrder extends Component
 
                 try {
                     $purchaseOrder->save();
-                    // #region agent log
-                    $dbg('save() completed', ['po_id'=>$purchaseOrder->id], 'A');
-                    // #endregion
 
                     // #region agent log
                     \Log::info('[DEBUG H5] After save - date_variable_date saved value check', [
@@ -2311,9 +2290,6 @@ class CreatePucharseOrder extends Component
                 }
 
                 \DB::commit();
-                // #region agent log
-                $dbg('DB::commit completed, full success path', ['po_id'=>$purchaseOrder->id], 'A');
-                // #endregion
 
                 // Dispatch webhook event for updated purchase order
                 if (function_exists('dispatch_webhook')) {
@@ -2395,9 +2371,6 @@ class CreatePucharseOrder extends Component
                 return ['success' => true, 'message' => 'Orden actualizada exitosamente', 'id' => $purchaseOrder->id];
 
             } catch (\Illuminate\Validation\ValidationException $e) {
-                // #region agent log
-                if (isset($dbg)) $dbg('ValidationException caught', ['errors'=>$e->errors()], 'C');
-                // #endregion
                 \DB::rollBack();
                 \Log::error('Error de validación en updatePurchaseOrder', [
                     'errors' => $e->errors(),
@@ -2405,9 +2378,6 @@ class CreatePucharseOrder extends Component
                 ]);
                 throw $e; // Re-lanzar para que Livewire muestre los errores
             } catch (\Exception $e) {
-                // #region agent log
-                if (isset($dbg)) $dbg('Exception caught in inner catch', ['error'=>$e->getMessage(),'class'=>get_class($e)], 'A');
-                // #endregion
                 \DB::rollBack();
                 \Log::error('Error en updatePurchaseOrder: ' . $e->getMessage(), [
                     'trace' => $e->getTraceAsString(),
