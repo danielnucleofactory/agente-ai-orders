@@ -336,17 +336,17 @@ class PurchaseOrderObserver
             return $value->format('Y-m-d H:i:s');
         }
 
-        // Si es string numérico o numérico, convertir a float para comparación
-        // Esto maneja casos como "0.00" vs 0 vs "0"
+        // Si es string numérico o numérico, convertir a float con 2 decimales para comparación
+        // Esto maneja casos como "0.00" vs 0 vs "0" y evita falsos positivos por precisión
         if (is_numeric($value)) {
-            return (float) $value;
+            return round((float) $value, 2);
         }
 
         if (is_string($value)) {
             $trimmed = trim($value);
-            // Si después de trim es numérico, convertir a float
+            // Si después de trim es numérico, convertir a float con 2 decimales
             if (is_numeric($trimmed)) {
-                return (float) $trimmed;
+                return round((float) $trimmed, 2);
             }
             // Si no, devolver el string trimmed
             return $trimmed;

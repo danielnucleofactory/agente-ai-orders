@@ -193,6 +193,10 @@ class ChangeDescriptionHelper
             if ($oldValue === $newValue) {
                 continue;
             }
+            // Para campos numéricos/montos, comparar valores normalizados (evita "12312.00" vs 12312)
+            if (self::valuesAreNumericEqual($oldValue, $newValue)) {
+                continue;
+            }
             
             $fieldLabel = self::$purchaseOrderFieldLabels[$field] ?? $field;
             
@@ -341,6 +345,27 @@ class ChangeDescriptionHelper
         
         // Valor por defecto
         return (string) $value;
+    }
+
+    /**
+     * Compara dos valores como numéricos para detectar igualdad real.
+     * Evita mostrar cambios falsos como "12312.00" vs 12312.
+     */
+    protected static function valuesAreNumericEqual($a, $b): bool
+    {
+        if ($a === $b) {
+            return true;
+        }
+        if (is_numeric($a) && is_numeric($b)) {
+            return round((float) $a, 2) === round((float) $b, 2);
+        }
+        if (is_string($a) && is_numeric(trim($a)) && is_numeric($b)) {
+            return round((float) trim($a), 2) === round((float) $b, 2);
+        }
+        if (is_numeric($a) && is_string($b) && is_numeric(trim($b))) {
+            return round((float) $a, 2) === round((float) trim($b), 2);
+        }
+        return false;
     }
 
     /**
