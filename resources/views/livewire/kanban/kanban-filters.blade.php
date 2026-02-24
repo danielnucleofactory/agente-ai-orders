@@ -88,8 +88,8 @@
                 </div>
             @endif
 
-            <!-- Filtro de Hub Planificado -->
-            @if(count($plannedHubs) > 0)
+            {{-- Filtro de Hub Planificado --}}
+            {{-- @if(count($plannedHubs) > 0)
                 <div>
                     <label for="planned-hub-filter" class="block text-sm font-medium text-gray-700">Hub Planificado</label>
                     <select id="planned-hub-filter" wire:model.live="selectedPlannedHub" class="block w-full py-2 pl-3 pr-10 mt-1 text-base border-gray-300 rounded-md focus:border-[#1AAD8A] focus:outline-none focus:ring-[#1AAD8A]">
@@ -99,7 +99,7 @@
                         @endforeach
                     </select>
                 </div>
-            @endif
+            @endif --}}
 
             <!-- Filtro de Hub Real -->
             @if(count($actualHubs) > 0)
@@ -114,8 +114,8 @@
                 </div>
             @endif
 
-            <!-- Filtro de Tipo de Material -->
-            @if(count($materialTypes) > 0)
+            {{-- Filtro de Tipo de Material --}}
+            {{-- @if(count($materialTypes) > 0)
                 <div>
                     <label for="material-type-filter" class="block text-sm font-medium text-gray-700">Tipo de Material</label>
                     <select id="material-type-filter" wire:model.live="selectedMaterialType" class="block w-full py-2 pl-3 pr-10 mt-1 text-base border-gray-300 rounded-md focus:border-[#1AAD8A] focus:outline-none focus:ring-[#1AAD8A]">
@@ -125,7 +125,7 @@
                         @endforeach
                     </select>
                 </div>
-            @endif
+            @endif --}}
         </div>
 
         <div class="flex justify-between pt-4 mt-5 border-t border-gray-200">
