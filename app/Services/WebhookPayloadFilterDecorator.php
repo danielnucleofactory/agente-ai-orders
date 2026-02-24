@@ -40,8 +40,12 @@ class WebhookPayloadFilterDecorator extends WebhookService
         // Ocultar freight_type (redundante con mode, que ya lleva "MARITIMO", "AÉREO", etc.)
         unset($transformed['freight_type']);
 
+        // Ocultar tariff_type (se envía solo tariff_type_id, igual que los demás maestros)
+        unset($transformed['tariff_type']);
+
         // Campos que no deben enviarse al webhook (según especificación Intelix)
-        foreach (['variable_calculare_weight', 'Invoice_amount', 'freight_amount', 'vendor_number', 'tracking_id', 'vendor_id'] as $key) {
+        // Nota: freight_amount SÍ se envía (Intelix lo requiere)
+        foreach (['variable_calculare_weight', 'Invoice_amount', 'vendor_number', 'tracking_id', 'vendor_id'] as $key) {
             unset($transformed[$key]);
         }
 

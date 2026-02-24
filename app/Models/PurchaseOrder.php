@@ -216,7 +216,6 @@ class PurchaseOrder extends Model implements HasMedia
         'eta_dates_difference',
         'variable_calculare_weight',
         'Invoice_amount',
-        'freight_amount',
         'vendor_number',
         // No Intelix ni maestros (del payload enviado)
         'kanban_status_id',
