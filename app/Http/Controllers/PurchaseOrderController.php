@@ -1445,6 +1445,11 @@ class PurchaseOrderController extends Controller
             $po->order_date = $po->emision_date_po;
         }
 
+        // Filtrar cambios ruidosos (null→0 en montos) para no reportarlos en respuesta, auditoría ni webhook
+        $changes = array_filter($changes, function ($change, $field) {
+            return !\App\Helpers\ChangeDescriptionHelper::isNoiseChange($field, $change['old'], $change['new']);
+        }, ARRAY_FILTER_USE_BOTH);
+
         return $changes;
     }
 

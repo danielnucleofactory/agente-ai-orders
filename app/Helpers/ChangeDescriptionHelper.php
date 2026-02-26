@@ -197,6 +197,10 @@ class ChangeDescriptionHelper
             if (self::valuesAreNumericEqual($oldValue, $newValue)) {
                 continue;
             }
+            // Omitir cambios ruidosos: null → 0 en montos (valores por defecto del formulario)
+            if (self::isNoiseChange($field, $oldValue, $newValue)) {
+                continue;
+            }
             
             $fieldLabel = self::$purchaseOrderFieldLabels[$field] ?? $field;
             
@@ -268,7 +272,8 @@ class ChangeDescriptionHelper
         
         if ($field === 'kanban_status_id') {
             $status = KanbanStatus::find($value);
-            return $status ? ($status->slug ?? $status->name) : "ID: {$value}";
+            // Usar name (ej. "Recibiendo CDI") en lugar de slug (ej. "de-recibiendo-cdi-1") para historial legible
+            return $status ? ($status->name ?? $status->slug) : "ID: {$value}";
         }
         
         // Manejar estados
@@ -311,7 +316,8 @@ class ChangeDescriptionHelper
         // Manejar relaciones
         if ($field === 'kanban_status_id') {
             $status = KanbanStatus::find($value);
-            return $status ? ($status->slug ?? $status->name) : "ID: {$value}";
+            // Usar name en lugar de slug para historial legible
+            return $status ? ($status->name ?? $status->slug) : "ID: {$value}";
         }
         
         // Manejar estados
@@ -345,6 +351,58 @@ class ChangeDescriptionHelper
         
         // Valor por defecto
         return (string) $value;
+    }
+
+    /**
+     * Detecta cambios "ruidosos": null/empty → 0 en campos numéricos/montos.
+     * No representan una modificación real del usuario, solo valores por defecto del formulario.
+     */
+    public static function isNoiseChange(string $field, $oldValue, $newValue): bool
+    {
+        $isEmpty = $oldValue === null || $oldValue === '' || $oldValue === false;
+        if (!$isEmpty) {
+            return false;
+        }
+        $isZero = $newValue === 0 || $newValue === 0.0 || $newValue === '0' || $newValue === '0.00';
+        if (!$isZero && is_numeric($newValue) && (float) $newValue === 0.0) {
+            $isZero = true;
+        }
+        if (!$isZero) {
+            return false;
+        }
+        $numericFields = [
+            'saving_pickup', 'saving_executed', 'saving_not_executed',
+            'Invoice_amount', 'freight_amount', 'net_total', 'total', 'additional_cost',
+            'insurance_cost', 'ground_transport_cost_1', 'ground_transport_cost_2',
+            'cost_nationalization', 'cost_ofr_estimated', 'cost_ofr_real',
+            'estimated_pallet_cost', 'real_cost_estimated_po', 'real_cost_real_po',
+            'other_costs', 'other_expenses', 'savings_ofr_fcl', 'total_amount',
+            'cbm', 'weight_kg', 'weight_lb',
+        ];
+
+        return in_array($field, $numericFields, true);
+    }
+
+    /**
+     * Filtra cambios ruidosos (null→0 en montos) de los arrays para almacenar en BD.
+     * Usado por el Observer para que el modal "Detalles de la Actividad" solo muestre cambios reales.
+     *
+     * @return array{0: array, 1: array} [oldValues filtrados, newValues filtrados]
+     */
+    public static function filterNoiseChangesForStorage(array $oldValues, array $newValues): array
+    {
+        $filteredOld = [];
+        $filteredNew = [];
+        foreach ($newValues as $field => $newValue) {
+            $oldValue = $oldValues[$field] ?? null;
+            if (self::isNoiseChange($field, $oldValue, $newValue)) {
+                continue;
+            }
+            $filteredOld[$field] = $oldValue;
+            $filteredNew[$field] = $newValue;
+        }
+
+        return [$filteredOld, $filteredNew];
     }
 
     /**

@@ -197,16 +197,19 @@ class PurchaseOrderObserver
             // (en contexto de PorthSync, Auth::logout() ocurre antes de que afterCommit se ejecute)
             $currentUserId = Auth::id();
 
+            // Filtrar cambios ruidosos (null→0) para que el modal "Detalles de la Actividad" solo muestre cambios reales
+            [$oldValuesForStorage, $newValuesForStorage] = ChangeDescriptionHelper::filterNoiseChangesForStorage($oldValues, $trackedChanges);
+
             // Crear comentario después del commit de la transacción
-            DB::afterCommit(function () use ($purchaseOrder, $actionType, $oldValues, $trackedChanges, $description, $isStatusChange, $currentUserId) {
+            DB::afterCommit(function () use ($purchaseOrder, $actionType, $oldValues, $trackedChanges, $oldValuesForStorage, $newValuesForStorage, $description, $isStatusChange, $currentUserId) {
                 try {
                     PurchaseOrderComment::create([
                         'purchase_order_id' => $purchaseOrder->id,
                         'user_id' => $currentUserId,
                         'comment' => $description,
                         'action_type' => $actionType,
-                        'old_values' => $oldValues,
-                        'new_values' => $trackedChanges,
+                        'old_values' => $oldValuesForStorage,
+                        'new_values' => $newValuesForStorage,
                         'ip_address' => request()->ip(),
                         'user_agent' => request()->userAgent(),
                     ]);
