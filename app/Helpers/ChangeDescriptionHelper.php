@@ -252,7 +252,7 @@ class ChangeDescriptionHelper
         // Manejar relaciones
         if ($field === 'vendor_id') {
             $vendor = Vendor::find($value);
-            return $vendor ? $vendor->name : "ID: {$value}";
+            return $vendor ? ($vendor->vendo_code ?? $vendor->name) : "ID: {$value}";
         }
         
         if ($field === 'ship_to_id') {

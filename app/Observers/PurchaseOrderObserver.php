@@ -107,6 +107,9 @@ class PurchaseOrderObserver
         'bill_of_lading',
         'consolidator_name',
 
+        // Proveedor (mostrar vendo_code en historial)
+        'vendor_id',
+
         // Otros campos importantes
         'reason',
         'category',
@@ -199,6 +202,11 @@ class PurchaseOrderObserver
 
             // Filtrar cambios ruidosos (null→0) para que el modal "Detalles de la Actividad" solo muestre cambios reales
             [$oldValuesForStorage, $newValuesForStorage] = ChangeDescriptionHelper::filterNoiseChangesForStorage($oldValues, $trackedChanges);
+
+            // No crear comentario si la descripción quedó vacía (todos los cambios eran ruido)
+            if ($description === '' || empty($newValuesForStorage)) {
+                return;
+            }
 
             // Crear comentario después del commit de la transacción
             DB::afterCommit(function () use ($purchaseOrder, $actionType, $oldValues, $trackedChanges, $oldValuesForStorage, $newValuesForStorage, $description, $isStatusChange, $currentUserId) {
