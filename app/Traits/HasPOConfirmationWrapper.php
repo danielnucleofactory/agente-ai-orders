@@ -224,14 +224,19 @@ trait HasPOConfirmationWrapper
         // Implementación directa si el módulo está activo
         if (config('po-confirmation.enabled', false)) {
             try {
+                $currentDate = $this->date_variable_date;
+                $currentDateStr = $currentDate ? ($currentDate instanceof \Carbon\Carbon ? $currentDate->format('Y-m-d') : (string) $currentDate) : null;
+                $newDateNormalized = \Carbon\Carbon::parse($newDate)->format('Y-m-d');
+                $dateActuallyChanged = ($currentDateStr !== $newDateNormalized);
+
                 $this->update([
                     'date_variable_date' => $newDate,       // Fecha validada (confirmada por proveedor)
                     'carga_lista_validada' => true,         // Marcar como validada
                     'update_date_po' => $newDate,
                 ]);
 
-                // Dispatch webhook event for delivery date update (solo campos modificados)
-                if (function_exists('dispatch_webhook')) {
+                // Solo disparar webhook si la fecha realmente cambió
+                if ($dateActuallyChanged && function_exists('dispatch_webhook')) {
                     try {
                         $changes = [
                             'date_variable_date' => $newDate,
