@@ -15,7 +15,9 @@ class PurchaseOrderObserver
     protected const PORTH_SYSTEM_USER_EMAIL = 'apps@raga-x.ai';
 
     /**
-     * Campos críticos que se deben trackear para auditoría
+     * Campos que se trackean para el histórico de auditoría (comentarios en purchase_order_comments).
+     * NOTA: Este array NO afecta el webhook. El payload del webhook se construye en los controladores
+     * y componentes Livewire, y usa $hidden del modelo + WebhookPayloadFilterDecorator.
      */
     protected array $trackedFields = [
         // Fechas
@@ -109,6 +111,36 @@ class PurchaseOrderObserver
 
         // Proveedor (mostrar vendo_code en historial)
         'vendor_id',
+
+        // Documentos y facturación (visibles en formulario)
+        'cargo_invoice_number',
+        'factura_merca',
+        'invoice',
+        'customs_dua',
+        'case_number_file',
+        'receipt_note',
+        'visibility_notes',
+
+        // Comercialización
+        'retail_group',
+        'customer_type',
+        'trading_company',
+        'service_provider',
+
+        // Dimensiones y cantidades (visibles)
+        'cbm',
+        'weight_kg',
+        'weight_lb',
+        'pallet_quantity',
+        'pallet_quantity_real',
+        'container_free_days',
+
+        // Flags / checkboxes (visibles)
+        'applies_tlc',
+        'has_facture_merca',
+        'used_rate_ok',
+        'uses_bonded_warehouse',
+        'apply_technical_note',
 
         // Otros campos importantes
         'reason',

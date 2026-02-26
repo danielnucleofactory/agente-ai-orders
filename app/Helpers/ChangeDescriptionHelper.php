@@ -112,6 +112,36 @@ class ChangeDescriptionHelper
         'category' => 'Categoría',
         'notes' => 'Notas',
         'total_amount' => 'Monto Total',
+
+        // Documentos y facturación
+        'cargo_invoice_number' => 'Factura Flete',
+        'factura_merca' => 'Factura Mercancía',
+        'invoice' => 'Factura',
+        'customs_dua' => 'DUA Internamiento',
+        'case_number_file' => 'Expediente',
+        'receipt_note' => 'Nota de Recibo',
+        'visibility_notes' => 'Notas de Visibilidad',
+
+        // Comercialización
+        'retail_group' => 'Grupo Repositor',
+        'customer_type' => 'Tipo de Cliente',
+        'trading_company' => 'Cliente',
+        'service_provider' => 'Proveedor de Servicio',
+
+        // Dimensiones y cantidades
+        'cbm' => 'CBM',
+        'weight_kg' => 'Peso (kg)',
+        'weight_lb' => 'Peso (lb)',
+        'pallet_quantity' => 'Cantidad estimada de pallets',
+        'pallet_quantity_real' => 'Cantidad Real de Pallets',
+        'container_free_days' => 'Días Libres de Contenedor',
+
+        // Flags
+        'applies_tlc' => 'Aplica TLC',
+        'has_facture_merca' => 'Tiene Factura Mercancía',
+        'used_rate_ok' => 'Tarifa Utilizada OK',
+        'uses_bonded_warehouse' => 'Usa Almacén Fiscal',
+        'apply_technical_note' => 'Aplica Nota Técnica',
     ];
 
     /**
@@ -298,6 +328,12 @@ class ChangeDescriptionHelper
             if (is_numeric($value)) {
                 return number_format((float) $value, 2, '.', ',') . ' USD';
             }
+        }
+
+        // Manejar booleanos (flags del formulario)
+        $booleanFields = ['applies_tlc', 'has_facture_merca', 'used_rate_ok', 'uses_bonded_warehouse', 'apply_technical_note', 'carga_lista_validada'];
+        if (in_array($field, $booleanFields, true)) {
+            return ($value === true || $value === 1 || $value === '1') ? 'Sí' : 'No';
         }
         
         // Valor por defecto
