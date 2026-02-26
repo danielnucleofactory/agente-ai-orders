@@ -305,7 +305,6 @@ class PurchaseOrder extends Model implements HasMedia
         'case_number_file',
         'receipt_note',
         'total_amount',
-        'cbm',
         'date_vendor_document_received',
         'dif_load_date',
         'emision_date_po',
