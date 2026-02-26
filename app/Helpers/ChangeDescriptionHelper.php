@@ -378,6 +378,7 @@ class ChangeDescriptionHelper
             'estimated_pallet_cost', 'real_cost_estimated_po', 'real_cost_real_po',
             'other_costs', 'other_expenses', 'savings_ofr_fcl', 'total_amount',
             'cbm', 'weight_kg', 'weight_lb',
+            'container_free_days',
         ];
 
         return in_array($field, $numericFields, true);
