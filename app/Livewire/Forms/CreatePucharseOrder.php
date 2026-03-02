@@ -2173,6 +2173,16 @@ class CreatePucharseOrder extends Component
 
                     $oldValue = $purchaseOrder->getOriginal($field);
 
+                    // Excluir cambios ruidosos (null→0 en montos/campos numéricos)
+                    if (\App\Helpers\ChangeDescriptionHelper::isNoiseChange($field, $oldValue, $newValue)) {
+                        $filteredOut[$field] = [
+                            'old' => $oldValue,
+                            'new' => $newValue,
+                            'reason' => 'noise_change',
+                        ];
+                        continue;
+                    }
+
                     // Normalizar valores para comparación
                     $normalizedOld = $this->normalizeValueForComparison($oldValue);
                     $normalizedNew = $this->normalizeValueForComparison($newValue);

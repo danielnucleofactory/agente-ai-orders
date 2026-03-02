@@ -15,7 +15,9 @@ class PurchaseOrderObserver
     protected const PORTH_SYSTEM_USER_EMAIL = 'apps@raga-x.ai';
 
     /**
-     * Campos críticos que se deben trackear para auditoría
+     * Campos que se trackean para el histórico de auditoría (comentarios en purchase_order_comments).
+     * NOTA: Este array NO afecta el webhook. El payload del webhook se construye en los controladores
+     * y componentes Livewire, y usa $hidden del modelo + WebhookPayloadFilterDecorator.
      */
     protected array $trackedFields = [
         // Fechas
@@ -107,6 +109,39 @@ class PurchaseOrderObserver
         'bill_of_lading',
         'consolidator_name',
 
+        // Proveedor (mostrar vendo_code en historial)
+        'vendor_id',
+
+        // Documentos y facturación (visibles en formulario)
+        'cargo_invoice_number',
+        'factura_merca',
+        'invoice',
+        'customs_dua',
+        'case_number_file',
+        'receipt_note',
+        'visibility_notes',
+
+        // Comercialización
+        'retail_group',
+        'customer_type',
+        'trading_company',
+        'service_provider',
+
+        // Dimensiones y cantidades (visibles)
+        'cbm',
+        'weight_kg',
+        'weight_lb',
+        'pallet_quantity',
+        'pallet_quantity_real',
+        'container_free_days',
+
+        // Flags / checkboxes (visibles)
+        'applies_tlc',
+        'has_facture_merca',
+        'used_rate_ok',
+        'uses_bonded_warehouse',
+        'apply_technical_note',
+
         // Otros campos importantes
         'reason',
         'category',
@@ -197,16 +232,24 @@ class PurchaseOrderObserver
             // (en contexto de PorthSync, Auth::logout() ocurre antes de que afterCommit se ejecute)
             $currentUserId = Auth::id();
 
+            // Filtrar cambios ruidosos (null→0) para que el modal "Detalles de la Actividad" solo muestre cambios reales
+            [$oldValuesForStorage, $newValuesForStorage] = ChangeDescriptionHelper::filterNoiseChangesForStorage($oldValues, $trackedChanges);
+
+            // No crear comentario si la descripción quedó vacía (todos los cambios eran ruido)
+            if ($description === '' || empty($newValuesForStorage)) {
+                return;
+            }
+
             // Crear comentario después del commit de la transacción
-            DB::afterCommit(function () use ($purchaseOrder, $actionType, $oldValues, $trackedChanges, $description, $isStatusChange, $currentUserId) {
+            DB::afterCommit(function () use ($purchaseOrder, $actionType, $oldValues, $trackedChanges, $oldValuesForStorage, $newValuesForStorage, $description, $isStatusChange, $currentUserId) {
                 try {
                     PurchaseOrderComment::create([
                         'purchase_order_id' => $purchaseOrder->id,
                         'user_id' => $currentUserId,
                         'comment' => $description,
                         'action_type' => $actionType,
-                        'old_values' => $oldValues,
-                        'new_values' => $trackedChanges,
+                        'old_values' => $oldValuesForStorage,
+                        'new_values' => $newValuesForStorage,
                         'ip_address' => request()->ip(),
                         'user_agent' => request()->userAgent(),
                     ]);
