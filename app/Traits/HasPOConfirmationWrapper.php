@@ -267,6 +267,11 @@ trait HasPOConfirmationWrapper
         // Implementación directa si el módulo está activo
         if (config('po-confirmation.enabled', false)) {
             try {
+                // Capturar valor anterior antes del update (para regla webhook: omitir date_carga_po si no hay cambio real)
+                $previousDateVariableDate = $this->date_variable_date
+                    ? (\Carbon\Carbon::parse($this->date_variable_date)->format('Y-m-d'))
+                    : null;
+
                 $this->update([
                     'date_variable_date' => $newDate,       // Fecha validada (confirmada por proveedor)
                     'carga_lista_validada' => true,         // Marcar como validada
@@ -305,6 +310,7 @@ trait HasPOConfirmationWrapper
                             'new_delivery_date' => $newDate,
                             'changes' => $changes,
                             'data' => $updatedData,
+                            'previous_date_variable_date' => $previousDateVariableDate,
                         ]);
 
                         \Log::info('po_confirmation:webhook_dispatched_date_update', [
