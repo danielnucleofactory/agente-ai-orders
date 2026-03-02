@@ -229,6 +229,9 @@ trait HasPOConfirmationWrapper
                     ? (\Carbon\Carbon::parse($this->date_variable_date)->format('Y-m-d'))
                     : null;
 
+                $newDateNormalized = \Carbon\Carbon::parse($newDate)->format('Y-m-d');
+                $dateActuallyChanged = $previousDateVariableDate !== $newDateNormalized;
+
                 $this->update([
                     'date_variable_date' => $newDate,       // Fecha validada (confirmada por proveedor)
                     'carga_lista_validada' => true,         // Marcar como validada
