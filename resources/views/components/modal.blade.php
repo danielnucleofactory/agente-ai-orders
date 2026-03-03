@@ -33,9 +33,12 @@
     prevFocusableIndex() { return Math.max(0, this.focusables().indexOf(document.activeElement)) - 1 },
 }" x-init="$watch('show', value => {
     if (value) {
+        const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+        document.body.style.paddingRight = scrollbarWidth + 'px';
         document.body.classList.add('overflow-y-hidden');
         {{ $attributes->has("focusable") ? "setTimeout(() => firstFocusable().focus(), 100)" : "" }}
     } else {
+        document.body.style.paddingRight = '';
         document.body.classList.remove('overflow-y-hidden');
     }
 })"
