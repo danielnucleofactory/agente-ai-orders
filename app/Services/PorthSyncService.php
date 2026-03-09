@@ -227,17 +227,13 @@ class PorthSyncService
 
     /**
      * Construir payload para creación.
-     * Solo incluye: name (OLO-{order_number}-{timestamp}) y el identificador de seguimiento
+     * Solo incluye: name (OROL-{identificador}) y el identificador de seguimiento
      * (containerNumber, masterBl o bookingNumber).
      */
     private function buildCreatePayload($identifier, $document)
     {
-        $orderNumber = $document instanceof PurchaseOrder
-            ? $document->order_number
-            : ($document->document_number ?? (string) $document->id);
-
         $basePayload = [
-            'name' => 'OLO-' . $orderNumber . '-' . time(),
+            'name' => 'OROL-' . $identifier['value'],
         ];
 
         // Solo identificadores de seguimiento

@@ -39,6 +39,11 @@ return [
         'api_key' => env('SHIP24_API_KEY'),
     ],
 
+    'po_bulk_update' => [
+        'api_url' => env('PO_BULK_UPDATE_API_URL', 'https://olo.md.orders.raga-x.ai/api/v1/po/bulk-orders'),
+        'api_token' => env('PO_BULK_UPDATE_API_TOKEN'),
+    ],
+
     'porth' => [
         'api_key' => env('PORTH_API_KEY'),
         'api_url' => env('PORTH_API_URL', 'https://api.porth.app'),

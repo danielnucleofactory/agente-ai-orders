@@ -29,7 +29,7 @@ El payload es **mínimo**: solo incluye el nombre y el identificador de seguimie
 
 | Campo | Tipo | Obligatorio | Descripción |
 |-------|------|-------------|-------------|
-| `name` | string | Sí | Formato: `OLO-{order_number}-{timestamp}` |
+| `name` | string | Sí | Formato: `OROL-{identificador}` (ej: contenedor, MBL o booking) |
 | `containerNumber` | string | Condicional | Número de contenedor (si el identificador es container) |
 | `masterBl` | string | Condicional | Número MBL (si el identificador es mbl_number) |
 | `bookingNumber` | string | Condicional | Código de booking (si el identificador es booking_code) |
@@ -41,7 +41,7 @@ El payload es **mínimo**: solo incluye el nombre y el identificador de seguimie
 
 ```json
 {
-  "name": "OLO-4107513-1739962202",
+  "name": "OROL-CONT1234567",
   "containerNumber": "CONT1234567",
   "carrierCode": "MAEU"
 }
@@ -51,7 +51,7 @@ El payload es **mínimo**: solo incluye el nombre y el identificador de seguimie
 
 ```json
 {
-  "name": "OLO-SD-001-1739962202",
+  "name": "OROL-MAEU1234567890",
   "masterBl": "MAEU1234567890",
   "carrierCode": "MAEU"
 }
@@ -61,7 +61,7 @@ El payload es **mínimo**: solo incluye el nombre y el identificador de seguimie
 
 ```json
 {
-  "name": "OLO-4107519-1739962202",
+  "name": "OROL-BK001234",
   "bookingNumber": "BK001234"
 }
 ```
