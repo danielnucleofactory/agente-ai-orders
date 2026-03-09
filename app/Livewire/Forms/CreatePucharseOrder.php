@@ -1869,16 +1869,6 @@ class CreatePucharseOrder extends Component
                 }
             }
 
-            // #region agent log
-            \Log::info('[DEBUG H1] updatePurchaseOrder entry - date_variable_date value check', [
-                'id' => $id,
-                'date_variable_date' => $this->date_variable_date,
-                'date_variable_date_type' => gettype($this->date_variable_date),
-                'date_variable_date_empty' => empty($this->date_variable_date),
-                'date_variable_date_is_null' => is_null($this->date_variable_date),
-            ]);
-            // #endregion
-
             \Log::info('=== INICIO updatePurchaseOrder ===', [
                 'id' => $id,
                 'order_number' => $this->order_number,
@@ -2092,13 +2082,6 @@ class CreatePucharseOrder extends Component
                 'forwader_date'     => !empty($this->forwader_date) ? $this->forwader_date : null,
             ];
 
-            // #region agent log
-            \Log::info('[DEBUG H2] After building poData - date_variable_date in array check', [
-                'date_variable_date_in_poData' => $poData['date_variable_date'] ?? 'NOT_IN_ARRAY',
-                'date_variable_date_in_poData_type' => isset($poData['date_variable_date']) ? gettype($poData['date_variable_date']) : 'NOT_SET',
-            ]);
-            // #endregion
-
             // Evitar overflow numérico en PostgreSQL (decimal 10,2 = max 99.999.999,99)
             $poData = $this->clampDecimalFieldsForDb($poData);
 
@@ -2119,26 +2102,8 @@ class CreatePucharseOrder extends Component
 
                 // Usar getDirty() para obtener solo campos que realmente cambiaron
                 // Asignar valores primero sin guardar para que Eloquent detecte cambios
-                // #region agent log
-                \Log::info('[DEBUG H3] Before fill - original date_variable_date value', [
-                    'po_id' => $id,
-                    'original_date_variable_date' => $purchaseOrder->date_variable_date,
-                    'original_date_variable_date_type' => gettype($purchaseOrder->date_variable_date),
-                    'new_date_variable_date' => $poData['date_variable_date'] ?? null,
-                ]);
-                // #endregion
-
                 $purchaseOrder->fill($poData);
                 $dirtyFields = $purchaseOrder->getDirty();
-
-                // #region agent log
-                \Log::info('[DEBUG H3] After fill - getDirty check for date_variable_date', [
-                    'po_id' => $id,
-                    'en_dirtyFields' => isset($dirtyFields['date_variable_date']),
-                    'valor_en_dirtyFields' => $dirtyFields['date_variable_date'] ?? null,
-                    'todos_dirtyFields' => array_keys($dirtyFields),
-                ]);
-                // #endregion
 
                 \Log::info('Después de fill - date_variable_date', [
                     'po_id' => $id,
@@ -2246,32 +2211,9 @@ class CreatePucharseOrder extends Component
                     'date_ata_in_changes' => isset($changes['date_ata']),
                 ]);
 
-                // #region agent log
-                \Log::info('[DEBUG H5] Before save - date_variable_date in changes check', [
-                    'po_id' => $id,
-                    'date_variable_date_in_changes' => isset($changes['date_variable_date']),
-                    'date_variable_date_value' => $changes['date_variable_date'] ?? null,
-                    'all_changes_keys' => array_keys($changes),
-                ]);
-                // #endregion
-
                 try {
                     $purchaseOrder->save();
-
-                    // #region agent log
-                    \Log::info('[DEBUG H5] After save - date_variable_date saved value check', [
-                        'po_id' => $id,
-                        'saved_date_variable_date' => $purchaseOrder->fresh()->date_variable_date,
-                        'saved_date_variable_date_formatted' => $purchaseOrder->fresh()->date_variable_date ? $purchaseOrder->fresh()->date_variable_date->format('Y-m-d') : null,
-                    ]);
-                    // #endregion
                 } catch (\Exception $saveException) {
-                    // #region agent log
-                    \Log::error('[DEBUG H5] Save exception - date_variable_date', [
-                        'po_id' => $id,
-                        'error' => $saveException->getMessage(),
-                    ]);
-                    // #endregion
                     throw $saveException;
                 }
 
