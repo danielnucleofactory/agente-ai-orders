@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Kanban;
 
+use App\Helpers\ChangeDescriptionHelper;
 use App\Models\KanbanBoard as KanbanBoardModel;
 use App\Models\KanbanStatus;
 use App\Models\PurchaseOrder;
@@ -802,9 +803,40 @@ class KanbanBoard extends Component
     {
         \Log::info("Actual Hub ID updated: " . $this->actual_hub_id);
 
+        $po = PurchaseOrder::find($taskId);
+        $oldHubId = $po?->actual_hub_id;
+        $newHubId = $this->actual_hub_id;
+
         DB::table('purchase_orders')
             ->where('id', $taskId)
-            ->update(['actual_hub_id' => $this->actual_hub_id]);
+            ->update(['actual_hub_id' => $newHubId]);
+
+        if ($po && $oldHubId != $newHubId) {
+            try {
+                $description = ChangeDescriptionHelper::generateForPurchaseOrder(
+                    $po,
+                    ['actual_hub_id' => $oldHubId],
+                    ['actual_hub_id' => $newHubId]
+                );
+                if ($description !== '') {
+                    PurchaseOrderComment::create([
+                        'purchase_order_id' => $taskId,
+                        'user_id' => auth()->id(),
+                        'comment' => $description,
+                        'action_type' => 'field_change',
+                        'old_values' => ['actual_hub_id' => $oldHubId],
+                        'new_values' => ['actual_hub_id' => $newHubId],
+                        'ip_address' => request()->ip(),
+                        'user_agent' => request()->userAgent(),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                \Log::error('[KanbanBoard] setActualHubId audit error', [
+                    'po' => $taskId,
+                    'msg' => $e->getMessage(),
+                ]);
+            }
+        }
 
         // Recargar los datos
         $this->loadData();
@@ -935,9 +967,39 @@ class KanbanBoard extends Component
         \Log::info("Setting pickup date for task $taskId: " . $pickupDate);
 
         try {
+            $po = PurchaseOrder::find($taskId);
+            $oldDate = $po?->date_actual_pickup;
+
             DB::table('purchase_orders')
                 ->where('id', $taskId)
                 ->update(['date_actual_pickup' => $pickupDate]);
+
+            if ($po && $oldDate != $pickupDate) {
+                try {
+                    $description = ChangeDescriptionHelper::generateForPurchaseOrder(
+                        $po,
+                        ['date_actual_pickup' => $oldDate],
+                        ['date_actual_pickup' => $pickupDate]
+                    );
+                    if ($description !== '') {
+                        PurchaseOrderComment::create([
+                            'purchase_order_id' => $taskId,
+                            'user_id' => auth()->id(),
+                            'comment' => $description,
+                            'action_type' => 'field_change',
+                            'old_values' => ['date_actual_pickup' => $oldDate],
+                            'new_values' => ['date_actual_pickup' => $pickupDate],
+                            'ip_address' => request()->ip(),
+                            'user_agent' => request()->userAgent(),
+                        ]);
+                    }
+                } catch (\Throwable $auditException) {
+                    \Log::error('[KanbanBoard] setPickupDate audit error', [
+                        'po' => $taskId,
+                        'msg' => $auditException->getMessage(),
+                    ]);
+                }
+            }
         } catch (\Exception $e) {
             \Log::error("Error setting pickup date: " . $e->getMessage());
         }
@@ -948,9 +1010,39 @@ class KanbanBoard extends Component
         \Log::info("Setting tracking ID for task $taskId: " . $trackingId);
 
         try {
+            $po = PurchaseOrder::find($taskId);
+            $oldTrackingId = $po?->tracking_id;
+
             DB::table('purchase_orders')
                 ->where('id', $taskId)
                 ->update(['tracking_id' => $trackingId]);
+
+            if ($po && $oldTrackingId != $trackingId) {
+                try {
+                    $description = ChangeDescriptionHelper::generateForPurchaseOrder(
+                        $po,
+                        ['tracking_id' => $oldTrackingId],
+                        ['tracking_id' => $trackingId]
+                    );
+                    if ($description !== '') {
+                        PurchaseOrderComment::create([
+                            'purchase_order_id' => $taskId,
+                            'user_id' => auth()->id(),
+                            'comment' => $description,
+                            'action_type' => 'field_change',
+                            'old_values' => ['tracking_id' => $oldTrackingId],
+                            'new_values' => ['tracking_id' => $trackingId],
+                            'ip_address' => request()->ip(),
+                            'user_agent' => request()->userAgent(),
+                        ]);
+                    }
+                } catch (\Throwable $auditException) {
+                    \Log::error('[KanbanBoard] setTrackingId audit error', [
+                        'po' => $taskId,
+                        'msg' => $auditException->getMessage(),
+                    ]);
+                }
+            }
         } catch (\Exception $e) {
             \Log::error("Error setting tracking ID: " . $e->getMessage());
         }
@@ -1091,10 +1183,12 @@ class KanbanBoard extends Component
         }
 
         $realChanges = [];
+        $oldValues = [];
         foreach ($payload as $field => $newValue) {
             $oldValue = $po->$field;
             if ($this->normalizeForComparison($oldValue) !== $this->normalizeForComparison($newValue)) {
                 $realChanges[$field] = $newValue;
+                $oldValues[$field] = $oldValue;
             }
         }
 
@@ -1138,6 +1232,32 @@ class KanbanBoard extends Component
                 }
 
                 DB::commit();
+
+                // Registrar auditoría de los cambios guardados desde el modal de etapa
+                try {
+                    $auditOldValues = array_intersect_key($oldValues, $dbChanges);
+                    [$oldForStorage, $newForStorage] = ChangeDescriptionHelper::filterNoiseChangesForStorage($auditOldValues, $dbChanges);
+                    if (!empty($newForStorage)) {
+                        $description = ChangeDescriptionHelper::generateForPurchaseOrder($po, $auditOldValues, $dbChanges);
+                        if ($description !== '') {
+                            PurchaseOrderComment::create([
+                                'purchase_order_id' => $poId,
+                                'user_id' => auth()->id(),
+                                'comment' => $description,
+                                'action_type' => 'field_change',
+                                'old_values' => $oldForStorage,
+                                'new_values' => $newForStorage,
+                                'ip_address' => request()->ip(),
+                                'user_agent' => request()->userAgent(),
+                            ]);
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    \Log::error('[KanbanBoard] saveDataByModal audit error', [
+                        'po' => $poId,
+                        'msg' => $e->getMessage(),
+                    ]);
+                }
             }
 
             // Push cambios relevantes a Porth (solo container_number y shipping_line)

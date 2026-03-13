@@ -239,7 +239,7 @@
                     {{-- Campos de tracking para habilitar seguimiento --}}
                     <div class="mb-4">
                         <div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm">
-                            <p><strong>Nota:</strong> Debe proporcionar al menos uno de los siguientes: Número de Booking, Documento de tránsito o Número de Contenedor.</p>
+                            <p><strong>Nota:</strong> Debe proporcionar el número de contenedor para avanzar.</p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
                             <div>

@@ -499,6 +499,10 @@
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_eta_initial) }}</p>
                 </div>
                 <div>
+                    <p class="mb-1 text-gray-500">ETA Variable</p>
+                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_eta_updated) }}</p>
+                </div>
+                <div>
                     <p class="mb-1 text-gray-500">ATA</p>
                     <p class="font-semibold">{{ formatDate($purchaseOrder->date_ata) }}</p>
                 </div>
@@ -685,7 +689,7 @@
                     <p class="mb-1 text-gray-500">Agente de Carga</p>
                     <p class="font-semibold">{{ $purchaseOrder->forwarder_name ?? '-' }}</p>
                 </div>
-                <div class="hidden">
+                <div>
                     <p class="mb-1 text-gray-500">Proveedor de Servicio</p>
                     <p class="font-semibold">{{ $purchaseOrder->service_provider ?? '-' }}</p>
                 </div>
