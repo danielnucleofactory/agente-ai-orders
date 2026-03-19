@@ -22,7 +22,7 @@ class UpdatePOsFromCsv extends Command
         'Contenedor'                        => 'container_number',
         'Naviera'                           => 'shipping_line',
         'Tipo de contenedor'                 => 'container_type',
-        'Documento de transito'              => 'bill_of_lading',
+        'Documento de transito'              => 'mbl_number',
         'Solicitud de booking'               => 'date_booking_request',
         'Autorizacion de booking'            => 'date_booking_authorized',
         'Fecha de asignacion de agente de carga' => 'forwader_date',
