@@ -10,14 +10,21 @@ class UpdatePOsFromCsv extends Command
     protected $signature = 'po:update-from-csv
                             {file : Ruta al archivo CSV (ej: actualización 50 primeras.csv)}
                             {--dry-run : Mostrar payload sin enviar a la API}
-                            {--api-url= : URL del endpoint (sobrescribe config)}';
+                            {--api-url= : URL del endpoint (sobrescribe config)}
+                            {--batch-size=50 : Máximo de POs por request al endpoint bulk}
+                            {--offset=0 : Omitir los primeros N ítems del payload (tras construir desde el CSV)}
+                            {--first-batch-only : Enviar solo el primer lote y salir (para revisar antes del resto)}
+                            {--delay-seconds=0 : Segundos de espera entre un lote y el siguiente (mismo comando)}
+                            {--no-table : No imprimir la tabla fila por fila (útil en CSV muy grandes)}';
 
-    protected $description = 'Actualiza Purchase Orders en producción vía API bulk (trading_company=OLO1)';
+    protected $description = 'Actualiza POs vía API bulk (trading_company por columna TRADING_COMPANY). Lotes: --batch-size, --first-batch-only, --offset + --delay-seconds';
 
-    private const TRADING_COMPANY = 'OLO1';
+    /** Si la columna TRADING_COMPANY viene vacía o no existe en el CSV. */
+    private const DEFAULT_TRADING_COMPANY = 'OLO1';
 
     private const CSV_TO_DB = [
         'ORDER_NUMBER'                      => null,
+        'TRADING_COMPANY'                   => null,
         'Estado o Etapa'                    => 'kanban_status_id',
         'Contenedor'                        => 'container_number',
         'Naviera'                           => 'shipping_line',
@@ -53,6 +60,11 @@ class UpdatePOsFromCsv extends Command
     {
         $file = $this->argument('file');
         $dryRun = $this->option('dry-run');
+        $batchSize = max(1, (int) $this->option('batch-size'));
+        $offset = max(0, (int) $this->option('offset'));
+        $firstBatchOnly = (bool) $this->option('first-batch-only');
+        $delaySeconds = max(0, (int) $this->option('delay-seconds'));
+        $noTable = (bool) $this->option('no-table');
         $apiUrl = $this->option('api-url') ?: config('services.po_bulk_update.api_url');
         $apiToken = config('services.po_bulk_update.api_token');
 
@@ -69,7 +81,17 @@ class UpdatePOsFromCsv extends Command
 
         $this->info($dryRun ? '🔍 Modo DRY-RUN: No se enviará nada a la API.' : '⚠️  Modo EJECUCIÓN: Se enviará a la API.');
         $this->info('Endpoint: ' . $apiUrl);
-        $this->info('Trading company: ' . self::TRADING_COMPANY);
+        $this->info('Trading company: columna TRADING_COMPANY del CSV (vacío o ausente → ' . self::DEFAULT_TRADING_COMPANY . ').');
+        $this->info('Tamaño de lote: ' . $batchSize);
+        if ($offset > 0) {
+            $this->info('Offset (ítems omitidos al inicio del payload): ' . $offset);
+        }
+        if ($firstBatchOnly) {
+            $this->info('Modo: solo el primer lote (--first-batch-only)');
+        }
+        if ($delaySeconds > 0) {
+            $this->info('Pausa entre lotes: ' . $delaySeconds . ' s');
+        }
         $this->newLine();
 
         $bulkPayload = [];
@@ -84,30 +106,59 @@ class UpdatePOsFromCsv extends Command
                 continue;
             }
 
+            $tradingCompany = $this->resolveTradingCompany($row);
+
             $payload = $this->buildPayload($row);
             if (empty($payload)) {
                 $stats['skipped']++;
-                $tableData[] = [$orderNumber, 'Sin cambios', '-'];
+                $tableData[] = [$orderNumber, $tradingCompany, 'Sin cambios', '-'];
                 continue;
             }
 
             $item = array_merge(
-                ['order_number' => $orderNumber, 'trading_company' => self::TRADING_COMPANY],
+                ['order_number' => $orderNumber, 'trading_company' => $tradingCompany],
                 $payload
             );
             $bulkPayload[] = $item;
             $stats['included']++;
-            $tableData[] = [$orderNumber, 'OK', implode(', ', array_keys($payload))];
+            $tableData[] = [$orderNumber, $tradingCompany, 'OK', implode(', ', array_keys($payload))];
         }
 
-        $this->table(['Order Number', 'Estado', 'Campos'], $tableData);
-        $this->newLine();
+        if (!$noTable) {
+            $this->table(['Order Number', 'Trading', 'Estado', 'Campos'], $tableData);
+            $this->newLine();
+        } else {
+            $this->info('Tabla omitida (--no-table). Resumen numérico abajo.');
+            $this->newLine();
+        }
+
+        $includedBeforeSlice = count($bulkPayload);
+        if ($offset > 0) {
+            if ($offset >= $includedBeforeSlice) {
+                $this->error("El offset ({$offset}) es mayor o igual al número de ítems en el payload ({$includedBeforeSlice}). Nada que enviar.");
+
+                return self::FAILURE;
+            }
+            $bulkPayload = array_slice($bulkPayload, $offset);
+            $this->info("Payload tras offset: " . count($bulkPayload) . " POs (se omitieron {$offset} del total construido).");
+            $this->newLine();
+        }
 
         if ($dryRun) {
-            $this->info("Resumen: {$stats['total']} filas | Incluidas en payload: {$stats['included']} | Omitidas: {$stats['skipped']}");
+            $this->info("Resumen CSV: {$stats['total']} filas | Incluidas en payload: {$stats['included']} | Omitidas: {$stats['skipped']}");
+            $chunks = array_chunk($bulkPayload, $batchSize);
+            if ($firstBatchOnly) {
+                $chunks = array_slice($chunks, 0, 1);
+            }
+            $this->info('Lotes que se enviarían en esta ejecución: ' . count($chunks) . ' (hasta ' . $batchSize . ' POs por lote)');
+            if ($delaySeconds > 0 && count($chunks) > 1) {
+                $this->info("Entre cada lote habría una pausa de {$delaySeconds} s (excepto antes del primero).");
+            }
             $this->newLine();
-            $this->line('Payload que se enviaría (primeros 2 items):');
-            $this->line(json_encode(array_slice($bulkPayload, 0, 2), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            $first = $chunks[0] ?? [];
+            $this->line('Muestra: primeros 2 ítems del primer lote de esta ejecución:');
+            $this->line(json_encode(array_slice($first, 0, 2), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
             return self::SUCCESS;
         }
 
@@ -116,8 +167,17 @@ class UpdatePOsFromCsv extends Command
             return self::SUCCESS;
         }
 
+        $chunks = array_chunk($bulkPayload, $batchSize);
+        if ($firstBatchOnly) {
+            $chunks = array_slice($chunks, 0, 1);
+        }
+
+        $totalChunks = count($chunks);
+        $this->info('Enviando ' . array_sum(array_map('count', $chunks)) . " POs en {$totalChunks} lote(s)...");
+        $this->newLine();
+
         try {
-            $request = Http::timeout(120)
+            $request = Http::timeout(300) // 5 minutos hacia olo.md
                 ->withHeaders([
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
@@ -127,22 +187,57 @@ class UpdatePOsFromCsv extends Command
                 $request = $request->withToken($apiToken);
             }
 
-            $response = $request->put($apiUrl, $bulkPayload);
-
-            if ($response->successful()) {
-                $this->info('✓ Actualización enviada correctamente. ' . count($bulkPayload) . ' POs.');
-                $body = $response->json();
-                if (!empty($body)) {
-                    $this->line(json_encode($body, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            foreach ($chunks as $index => $chunk) {
+                if ($index > 0 && $delaySeconds > 0) {
+                    $this->info("Esperando {$delaySeconds} s antes del lote " . ($index + 1) . "/{$totalChunks}...");
+                    sleep($delaySeconds);
                 }
-                return self::SUCCESS;
+
+                $batchNum = $index + 1;
+                $this->line("→ Lote {$batchNum}/{$totalChunks} (" . count($chunk) . ' POs)...');
+
+                $response = $request->put($apiUrl, $chunk);
+
+                if (!$response->successful()) {
+                    $this->error("Error API en lote {$batchNum}/{$totalChunks}: " . $response->status());
+                    $this->line($response->body());
+                    if ($index === 0) {
+                        $this->warn('Ningún lote se aplicó con éxito en esta ejecución. Reintenta el mismo comando más tarde (502 = servidor o servicio externo caído).');
+                    } else {
+                        $this->warn('Los lotes anteriores de esta ejecución ya se enviaron. Ajusta --offset si debes reanudar.');
+                    }
+
+                    return self::FAILURE;
+                }
+
+                $body = $response->json();
+                if (is_array($body) && !empty($body)) {
+                    if (!empty($body['summary'])) {
+                        $this->line('  Resumen API: ' . json_encode($body['summary'], JSON_UNESCAPED_UNICODE));
+                    } else {
+                        $this->line('  Respuesta: ' . json_encode($body, JSON_UNESCAPED_UNICODE));
+                    }
+                }
             }
 
-            $this->error('Error API: ' . $response->status());
-            $this->line($response->body());
-            return self::FAILURE;
+            $sent = array_sum(array_map('count', $chunks));
+            $this->info("✓ Listo. Enviados {$sent} POs en {$totalChunks} lote(s).");
+
+            if ($firstBatchOnly && !$dryRun) {
+                $nextOffset = $offset + $sent;
+                $quotedFile = escapeshellarg($file);
+                $this->newLine();
+                $this->info('Siguiente lote (solo ' . $batchSize . ' POs, revisar antes de seguir):');
+                $this->line('php artisan po:update-from-csv ' . $quotedFile . ' --offset=' . $nextOffset . ' --batch-size=' . $batchSize . ' --first-batch-only --no-table');
+                $this->newLine();
+                $this->info('O continuar el resto automático (2 min entre lotes):');
+                $this->line('php artisan po:update-from-csv ' . $quotedFile . ' --offset=' . $nextOffset . ' --batch-size=' . $batchSize . ' --delay-seconds=120 --no-table');
+            }
+
+            return self::SUCCESS;
         } catch (\Throwable $e) {
             $this->error('Error: ' . $e->getMessage());
+
             return self::FAILURE;
         }
     }
@@ -158,22 +253,45 @@ class UpdatePOsFromCsv extends Command
         }
 
         $lines = explode("\n", $content);
-        $header = str_getcsv(array_shift($lines), ';');
+        $headerLine = array_shift($lines);
+        if ($headerLine === null) {
+            return [];
+        }
+        $delimiter = $this->detectCsvDelimiter($headerLine);
+        $header = str_getcsv($headerLine, $delimiter);
         $header = array_map(fn ($h) => trim($h), $header);
         $rows = [];
 
         foreach ($lines as $line) {
-            $line = trim($line);
-            if ($line === '') {
+            $line = rtrim($line, "\r");
+            if (trim($line) === '') {
                 continue;
             }
-            $values = str_getcsv($line, ';');
+            $values = str_getcsv($line, $delimiter);
             if (count($values) === count($header)) {
                 $rows[] = array_combine($header, $values);
             }
         }
 
         return $rows;
+    }
+
+    /**
+     * Detecta separador de columnas: tab (TSV) o punto y coma, según la línea de cabecera.
+     */
+    private function detectCsvDelimiter(string $headerLine): string
+    {
+        $tabs = substr_count($headerLine, "\t");
+        $semicolons = substr_count($headerLine, ';');
+
+        return $tabs >= $semicolons ? "\t" : ';';
+    }
+
+    private function resolveTradingCompany(array $row): string
+    {
+        $raw = trim((string) ($row['TRADING_COMPANY'] ?? ''));
+
+        return $raw !== '' ? $raw : self::DEFAULT_TRADING_COMPANY;
     }
 
     private function buildPayload(array $row): array
@@ -202,7 +320,7 @@ class UpdatePOsFromCsv extends Command
             }
 
             if ($csvCol === 'Tipo de contenedor') {
-                $payload[$dbField] = $this->normalizeContainerType($raw);
+                $payload[$dbField] = $raw;
                 continue;
             }
 
@@ -236,15 +354,6 @@ class UpdatePOsFromCsv extends Command
         }
 
         return $payload;
-    }
-
-    private function normalizeContainerType(string $value): string
-    {
-        $value = trim($value);
-        if (preg_match('/^Contenedor\s+(.+)$/i', $value, $m)) {
-            return trim($m[1]);
-        }
-        return $value;
     }
 
     private function toBoolean(string $value): bool

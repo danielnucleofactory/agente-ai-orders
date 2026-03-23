@@ -91,9 +91,9 @@ tail -f storage/logs/laravel.log | grep "porth:import-pending"
 # Verificar que el scheduler detecta el comando
 php artisan schedule:list
 
-# Debe mostrar:
+# Debe mostrar (según routes/console.php):
 # porth:import-pending --limit=20  ... Every Five Minutes
-# porth:sync-recent --trigger=schedule  ... Hourly
+# porth:sync-recent --trigger=schedule  ... Every Two Hours
 ```
 
 ### Paso 5: Monitorear la primera ejecución
@@ -240,13 +240,13 @@ $schedule->command('porth:import-pending --limit=20')
 
 2. **El comando es idempotente**: Puede ejecutarse múltiples veces sin problemas. Solo procesa POs con `last_porth_sync_at IS NULL`.
 
-3. **El cronjob existente (`porth:sync-recent`) sigue funcionando**: Se ejecuta cada hora para actualizar embarques que ya tienen datos importados.
+3. **El cronjob existente (`porth:sync-recent`) sigue funcionando**: Se ejecuta cada **2 horas** para actualizar embarques que ya tienen datos importados. Para ventanas manuales: `php artisan porth:sync-recent --trigger=manual --hours=N`.
 
 4. **Si hay muchas POs pendientes**: El comando procesa hasta el límite configurado (20 por defecto) en cada ejecución. Las restantes se procesarán en la siguiente ejecución (5 minutos después).
 
 ## 🔗 Comandos Relacionados
 
-- `Me r` - Sincroniza embarques actualizados (cada hora)
+- `php artisan porth:sync-recent` - Sincroniza embarques actualizados (programado cada 2 h; manual con `--hours=` / `--dry-run`)
 - `php artisan porth:link-existing` - Vincula POs existentes con Porth
 - `php artisan porth:check-sync` - Verifica estado de sincronización
 
