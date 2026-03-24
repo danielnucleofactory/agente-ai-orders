@@ -104,9 +104,10 @@ class UserCreate extends Component
             $this->dispatch('open-modal', 'modal-user-created');
         } else {
             $user = User::create([
-                'name' => $this->name,
-                'email' => $this->email,
-                'password' => bcrypt($this->password),
+                'name'      => $this->name,
+                'email'     => $this->email,
+                'password'  => bcrypt($this->password),
+                'time_zone' => 'America/Santiago',
             ]);
 
             if (!empty($this->role_id)) {
@@ -116,7 +117,7 @@ class UserCreate extends Component
 
             // Asociar empresas y establecer la primera como activa
             $user->companies()->attach($this->company_ids);
-            $user->setCurrentCompany((int) $this->company_ids[0]);
+            $user->setCurrentCompany((int) min($this->company_ids));
 
             $this->dispatch('open-modal', 'modal-user-created');
         }
