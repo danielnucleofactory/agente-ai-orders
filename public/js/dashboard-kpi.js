@@ -262,19 +262,40 @@ class DashboardKPIManager {
 
     async applyFilters() {
         this.currentFilters = this.collectFilters();
-        
-        // Recargar datos con los nuevos filtros
-        await this.loadDefaultTable();
-        await this.loadKPISummary();
-        
-        // Si hay un filtro activo, recargarlo también
-        if (this.activeFilter) {
-            const activeButton = document.querySelector(`#${this.activeFilter}`);
-            if (activeButton) {
-                const type = activeButton.closest('.filters-panel') ? 'po' : 'teus';
-                await this.updateTable(this.activeFilter, type);
+
+        // Detectar vista activa
+        const activeView = document.querySelector('.view-content.active')?.id
+            || document.querySelector('.subtabs-container.active .subtab.active')?.dataset?.subtab
+            || 'tendencia-po';
+
+        const reloads = [];
+
+        // Siempre recargar KPI cards
+        reloads.push(this.loadKPISummary());
+
+        // Recargar según la vista visible
+        if (activeView === 'tendencia-po' || activeView === 'tendencia-teus' || activeView === 'tendencia') {
+            reloads.push(this.loadDefaultTable());
+            reloads.push(this.loadDefaultTeusTable());
+
+            if (this.activeFilter) {
+                const activeButton = document.querySelector(`#${this.activeFilter}`);
+                if (activeButton) {
+                    const type = activeButton.closest('.filters-panel') ? 'po' : 'teus';
+                    reloads.push(this.updateTable(this.activeFilter, type));
+                }
+            }
+        } else if (activeView === 'po-vs-teus') {
+            reloads.push(this.loadPoVsTeus());
+        } else if (activeView === 'proyeccion') {
+            reloads.push(this.loadProyeccion());
+        } else if (activeView === 'comparativo') {
+            if (this.activeCompFilter) {
+                reloads.push(this.updateCompTable(this.activeCompFilter));
             }
         }
+
+        await Promise.all(reloads);
     }
 
     async loadKPISummary() {

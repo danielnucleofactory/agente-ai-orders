@@ -83,6 +83,9 @@ class DashboardKPIService
     {
         $stageNameLower = strtolower($stageName);
 
+        if (str_contains($stageNameLower, 'consolidador')) {
+            return 'Consolidador';
+        }
         if (str_contains($stageNameLower, 'producción') || str_contains($stageNameLower, 'produccion')) {
             return 'Producción';
         }
@@ -95,8 +98,17 @@ class DashboardKPIService
         if (str_contains($stageNameLower, 'transbordo')) {
             return 'Transbordo';
         }
+        if (str_contains($stageNameLower, 'alm') || str_contains($stageNameLower, 'fiscal') || str_contains($stageNameLower, 'almac')) {
+            return 'Alm. Fiscal';
+        }
+        if (str_contains($stageNameLower, 'otra zf') || str_contains($stageNameLower, 'otra zona')) {
+            return 'En otra ZF';
+        }
+        if (str_contains($stageNameLower, 'recibiendo') || str_contains($stageNameLower, 'cdi')) {
+            return 'Recibiendo CDI';
+        }
         if (str_contains($stageNameLower, 'puerto') || str_contains($stageNameLower, 'arribo')) {
-            return 'Arribo';
+            return 'Puerto';
         }
         if (str_contains($stageNameLower, 'ingresada')) {
             return 'Ingresada';
@@ -253,11 +265,15 @@ class DashboardKPIService
             ]);
 
             $stages = [
-                'Producción' => ['count' => 0, 'teus' => 0],
-                'Booking' => ['count' => 0, 'teus' => 0],
-                'Tránsito' => ['count' => 0, 'teus' => 0],
-                'Transbordo' => ['count' => 0, 'teus' => 0],
-                'Arribo' => ['count' => 0, 'teus' => 0],
+                'Consolidador'  => ['count' => 0, 'teus' => 0],
+                'Producción'    => ['count' => 0, 'teus' => 0],
+                'Booking'       => ['count' => 0, 'teus' => 0],
+                'Tránsito'      => ['count' => 0, 'teus' => 0],
+                'Transbordo'    => ['count' => 0, 'teus' => 0],
+                'Puerto'        => ['count' => 0, 'teus' => 0],
+                'Alm. Fiscal'   => ['count' => 0, 'teus' => 0],
+                'En otra ZF'    => ['count' => 0, 'teus' => 0],
+                'Recibiendo CDI'=> ['count' => 0, 'teus' => 0],
             ];
 
             $totalPOs = 0;

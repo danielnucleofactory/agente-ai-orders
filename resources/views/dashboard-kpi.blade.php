@@ -625,11 +625,13 @@
 
                         // Cargar proyección al activar esa vista
                         if (viewId === 'proyeccion' && window.dashboardKPIManager) {
+                            window.dashboardKPIManager.currentFilters = window.dashboardKPIManager.collectFilters();
                             window.dashboardKPIManager.loadProyeccion();
                         }
 
                         // Cargar PO vs TEUs al activar esa vista
                         if (viewId === 'po-vs-teus' && window.dashboardKPIManager) {
+                            window.dashboardKPIManager.currentFilters = window.dashboardKPIManager.collectFilters();
                             window.dashboardKPIManager.loadPoVsTeus();
                         }
                     }
