@@ -101,6 +101,11 @@ class UserCreate extends Component
             // Sincronizar empresas
             $user->companies()->sync($this->company_ids);
 
+            // Actualizar company_id si el actual ya no está entre las empresas asignadas
+            if (!in_array((int) $user->company_id, array_map('intval', $this->company_ids))) {
+                $user->update(['company_id' => (int) min($this->company_ids)]);
+            }
+
             $this->dispatch('open-modal', 'modal-user-created');
         } else {
             $user = User::create([
