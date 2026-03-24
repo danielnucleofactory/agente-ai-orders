@@ -289,21 +289,29 @@
             </div>
 
             <!-- VISTA: PO vs TEUs -->
-
-            <!-- VISTA: PO vs TEUs -->
             <div class="view-content" id="po-vs-teus">
-                
+
                 <!-- KPI Cards -->
                 <div class="kpi-cards">
                     <div class="kpi-card">
-                        <div class="kpi-card-title">Proveedor Principal</div>
-                        <div class="kpi-card-value">38.5%</div>
-                        <div class="kpi-card-subtitle">Asia Manufacturing</div>
+                        <div class="kpi-card-title">Total POs</div>
+                        <div class="kpi-card-value" id="povsteus-total-pos">-</div>
+                        <div class="kpi-card-subtitle">Órdenes activas</div>
                     </div>
                     <div class="kpi-card">
-                        <div class="kpi-card-title">Naviera Principal</div>
-                        <div class="kpi-card-value">35.2%</div>
-                        <div class="kpi-card-subtitle">Maersk Line</div>
+                        <div class="kpi-card-title">Total TEUs</div>
+                        <div class="kpi-card-value" id="povsteus-total-teus">-</div>
+                        <div class="kpi-card-subtitle">Contenedores equivalentes</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-card-title">Variación Semana</div>
+                        <div class="kpi-card-value" id="povsteus-week-variation">-</div>
+                        <div class="kpi-card-subtitle">vs semana anterior</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-card-title">Variación Mes</div>
+                        <div class="kpi-card-value" id="povsteus-month-variation">-</div>
+                        <div class="kpi-card-subtitle">vs mes anterior</div>
                     </div>
                 </div>
 
@@ -312,51 +320,12 @@
                     <div class="table-header">
                         <div>
                             <div class="table-title">PO / TEUs por Etapa</div>
-                            <div class="table-description">
-                                Comparación de cantidad de órdenes y volumen en cada etapa logística
-                            </div>
+                            <div class="table-description">Comparación de cantidad de órdenes y volumen en cada etapa logística</div>
                         </div>
                     </div>
                     <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Etapa</th>
-                                <th class="align-right">Cantidad de PO</th>
-                                <th class="align-right">Cantidad de TEUs</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><span class="badge badge-info">Producción</span></td>
-                                <td class="align-right number">342</td>
-                                <td class="align-right number">782</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-info">Booking</span></td>
-                                <td class="align-right number">189</td>
-                                <td class="align-right number">426</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-info">Tránsito</span></td>
-                                <td class="align-right number">425</td>
-                                <td class="align-right number">971</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-info">Transbordo</span></td>
-                                <td class="align-right number">98</td>
-                                <td class="align-right number">226</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-success">Arribo</span></td>
-                                <td class="align-right number">194</td>
-                                <td class="align-right number">442</td>
-                            </tr>
-                            <tr style="background-color: #f8faf9; font-weight: 700;">
-                                <td style="color: #374151;">Total</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">1,248</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">2,847</td>
-                            </tr>
-                        </tbody>
+                        <thead id="povsteus-stage-head"><tr><th>Cargando...</th></tr></thead>
+                        <tbody id="povsteus-stage-body"><tr><td style="text-align:center;padding:20px;color:#6b7280;">Cargando datos...</td></tr></tbody>
                     </table>
                 </div>
 
@@ -365,52 +334,12 @@
                     <div class="table-header">
                         <div>
                             <div class="table-title">PO / TEUs por Período</div>
-                            <div class="table-description">
-                                Comparación de volumen entre períodos de tiempo para evaluación de tendencias
-                            </div>
+                            <div class="table-description">Comparación de volumen entre períodos de tiempo para evaluación de tendencias</div>
                         </div>
                     </div>
                     <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Período</th>
-                                <th class="align-right">Cantidad de PO</th>
-                                <th class="align-right">Cantidad de TEUs</th>
-                                <th class="align-right">Variación PO</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><span class="badge badge-success">Semana Actual</span></td>
-                                <td class="align-right number">287</td>
-                                <td class="align-right number">658</td>
-                                <td class="align-right percentage">+8.5%</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-info">Semana Anterior</span></td>
-                                <td class="align-right number">264</td>
-                                <td class="align-right number">602</td>
-                                <td class="align-right">-</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-success">Mes Actual</span></td>
-                                <td class="align-right number">1,248</td>
-                                <td class="align-right number">2,847</td>
-                                <td class="align-right percentage">+12.3%</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-info">Mes Anterior</span></td>
-                                <td class="align-right number">1,112</td>
-                                <td class="align-right number">2,534</td>
-                                <td class="align-right">-</td>
-                            </tr>
-                            <tr style="background-color: #f8faf9; font-weight: 700;">
-                                <td style="color: #374151;">Total</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">2,911</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">6,641</td>
-                                <td class="align-right">-</td>
-                            </tr>
-                        </tbody>
+                        <thead id="povsteus-period-head"><tr><th>Cargando...</th></tr></thead>
+                        <tbody id="povsteus-period-body"><tr><td style="text-align:center;padding:20px;color:#6b7280;">Cargando datos...</td></tr></tbody>
                     </table>
                 </div>
 
@@ -419,58 +348,12 @@
                     <div class="table-header">
                         <div>
                             <div class="table-title">PO / TEUs por Proveedor de Mercancía</div>
-                            <div class="table-description">
-                                Análisis de contribución de cada proveedor al volumen total de operaciones
-                            </div>
+                            <div class="table-description">Análisis de contribución de cada proveedor al volumen total de operaciones</div>
                         </div>
                     </div>
                     <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Proveedor de Mercancía</th>
-                                <th class="align-right">Cantidad de PO</th>
-                                <th class="align-right">Cantidad de TEUs</th>
-                                <th class="align-right">% Participación</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Asia Manufacturing</td>
-                                <td class="align-right number">481</td>
-                                <td class="align-right number">1,096</td>
-                                <td class="align-right percentage">38.5%</td>
-                            </tr>
-                            <tr>
-                                <td>Global Textiles</td>
-                                <td class="align-right number">394</td>
-                                <td class="align-right number">898</td>
-                                <td class="align-right percentage">31.6%</td>
-                            </tr>
-                            <tr>
-                                <td>Electronics Corp</td>
-                                <td class="align-right number">248</td>
-                                <td class="align-right number">566</td>
-                                <td class="align-right percentage">19.9%</td>
-                            </tr>
-                            <tr>
-                                <td>Premium Goods</td>
-                                <td class="align-right number">85</td>
-                                <td class="align-right number">193</td>
-                                <td class="align-right percentage">6.8%</td>
-                            </tr>
-                            <tr>
-                                <td>Fast Logistics</td>
-                                <td class="align-right number">40</td>
-                                <td class="align-right number">94</td>
-                                <td class="align-right percentage">3.2%</td>
-                            </tr>
-                            <tr style="background-color: #f8faf9; font-weight: 700;">
-                                <td style="color: #374151;">Total</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">1,248</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">2,847</td>
-                                <td class="align-right percentage" style="font-weight: 700; color: #0984e3;">100.0%</td>
-                            </tr>
-                        </tbody>
+                        <thead id="povsteus-vendor-head"><tr><th>Cargando...</th></tr></thead>
+                        <tbody id="povsteus-vendor-body"><tr><td style="text-align:center;padding:20px;color:#6b7280;">Cargando datos...</td></tr></tbody>
                     </table>
                 </div>
 
@@ -479,58 +362,12 @@
                     <div class="table-header">
                         <div>
                             <div class="table-title">PO / TEUs por Naviera</div>
-                            <div class="table-description">
-                                Participación y relevancia de cada operador marítimo en el volumen gestionado
-                            </div>
+                            <div class="table-description">Participación y relevancia de cada operador marítimo en el volumen gestionado</div>
                         </div>
                     </div>
                     <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Naviera</th>
-                                <th class="align-right">Cantidad de PO</th>
-                                <th class="align-right">Cantidad de TEUs</th>
-                                <th class="align-right">% Participación</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Maersk Line</td>
-                                <td class="align-right number">439</td>
-                                <td class="align-right number">1,002</td>
-                                <td class="align-right percentage">35.2%</td>
-                            </tr>
-                            <tr>
-                                <td>MSC</td>
-                                <td class="align-right number">362</td>
-                                <td class="align-right number">826</td>
-                                <td class="align-right percentage">29.0%</td>
-                            </tr>
-                            <tr>
-                                <td>CMA CGM</td>
-                                <td class="align-right number">287</td>
-                                <td class="align-right number">655</td>
-                                <td class="align-right percentage">23.0%</td>
-                            </tr>
-                            <tr>
-                                <td>Hapag-Lloyd</td>
-                                <td class="align-right number">112</td>
-                                <td class="align-right number">256</td>
-                                <td class="align-right percentage">9.0%</td>
-                            </tr>
-                            <tr>
-                                <td>ONE</td>
-                                <td class="align-right number">48</td>
-                                <td class="align-right number">108</td>
-                                <td class="align-right percentage">3.8%</td>
-                            </tr>
-                            <tr style="background-color: #f8faf9; font-weight: 700;">
-                                <td style="color: #374151;">Total</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">1,248</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">2,847</td>
-                                <td class="align-right percentage" style="font-weight: 700; color: #0984e3;">100.0%</td>
-                            </tr>
-                        </tbody>
+                        <thead id="povsteus-line-head"><tr><th>Cargando...</th></tr></thead>
+                        <tbody id="povsteus-line-body"><tr><td style="text-align:center;padding:20px;color:#6b7280;">Cargando datos...</td></tr></tbody>
                     </table>
                 </div>
 
@@ -789,6 +626,11 @@
                         // Cargar proyección al activar esa vista
                         if (viewId === 'proyeccion' && window.dashboardKPIManager) {
                             window.dashboardKPIManager.loadProyeccion();
+                        }
+
+                        // Cargar PO vs TEUs al activar esa vista
+                        if (viewId === 'po-vs-teus' && window.dashboardKPIManager) {
+                            window.dashboardKPIManager.loadPoVsTeus();
                         }
                     }
                 });

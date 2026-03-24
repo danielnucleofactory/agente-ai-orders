@@ -923,20 +923,20 @@ class DashboardKPIManager {
         };
 
         const filterEndpoints = {
-            'btn-comp-retraso-cl': '/comparison/delay-cl',
-            'btn-comp-adelanto-cl': '/comparison/advance-cl',
-            'btn-comp-capacidad': '/comparison/capacity',
-            'btn-comp-atd': '/comparison/atd',
-            'btn-comp-ata': '/comparison/ata',
+            'btn-comp-retraso-cl': '/compare-delay-cl',
+            'btn-comp-adelanto-cl': '/compare-advance-cl',
+            'btn-comp-capacidad': '/compare-atd',
+            'btn-comp-atd': '/compare-atd',
+            'btn-comp-ata': '/compare-ata',
         };
 
         tableTitle.textContent = filterTitles[filterId] || 'Comparación entre Períodos';
 
         // Obtener períodos de comparación (compatible con Flatpickr altInput)
         const periodAFrom = this.getDateInputValue(document.getElementById('comp-period-a-from'));
-        const periodATo = this.getDateInputValue(document.getElementById('comp-period-a-to'));
+        const periodATo   = this.getDateInputValue(document.getElementById('comp-period-a-to'));
         const periodBFrom = this.getDateInputValue(document.getElementById('comp-period-b-from'));
-        const periodBTo = this.getDateInputValue(document.getElementById('comp-period-b-to'));
+        const periodBTo   = this.getDateInputValue(document.getElementById('comp-period-b-to'));
 
         // Validar que todos los períodos estén completos
         if (!periodAFrom || !periodATo || !periodBFrom || !periodBTo) {
@@ -995,8 +995,8 @@ class DashboardKPIManager {
     async fetchComparisonData(endpoint, periodAFrom, periodATo, periodBFrom, periodBTo) {
         try {
             const url = new URL(`${this.apiBaseUrl}${endpoint}`, window.location.origin);
-            
-            // Agregar filtros globales
+
+            // Filtros globales como query params
             Object.keys(this.currentFilters).forEach(key => {
                 const value = this.currentFilters[key];
                 if (value !== null && value !== undefined && value !== '') {
@@ -1008,19 +1008,19 @@ class DashboardKPIManager {
                 }
             });
 
-            // Agregar períodos de comparación
-            url.searchParams.append('period_a_from', periodAFrom);
-            url.searchParams.append('period_a_to', periodATo);
-            url.searchParams.append('period_b_from', periodBFrom);
-            url.searchParams.append('period_b_to', periodBTo);
-
             const response = await fetch(url.toString(), {
-                method: 'GET',
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': this.csrfToken,
                 },
+                body: JSON.stringify({
+                    period1_start: periodAFrom,
+                    period1_end:   periodATo,
+                    period2_start: periodBFrom,
+                    period2_end:   periodBTo,
+                }),
             });
 
             if (!response.ok) {
@@ -1035,49 +1035,61 @@ class DashboardKPIManager {
     }
 
     renderComparisonTable(filterId, data, tableHead, tableBody) {
-        const periodA = data.period_a_label || 'Período A';
-        const periodB = data.period_b_label || 'Período B';
-        
+        // Backend returns { period1: {start, end, total}, period2: {start, end, total}, by_vendor: [...] }
+        const formatLabel = (p) => {
+            if (!p || !p.start) return 'Período';
+            const from = new Date(p.start + 'T00:00:00');
+            const to   = new Date(p.end   + 'T00:00:00');
+            const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+            if (from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear()) {
+                return `${months[from.getMonth()]} ${from.getFullYear()}`;
+            }
+            return `${from.getDate()}/${from.getMonth()+1} - ${to.getDate()}/${to.getMonth()+1}`;
+        };
+
+        const periodA = formatLabel(data.period1);
+        const periodB = formatLabel(data.period2);
+        const totalA  = data.period1?.total ?? 0;
+        const totalB  = data.period2?.total ?? 0;
+
         tableHead.innerHTML = `
             <tr>
-                <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; color: #374151;">Proveedor de Mercancía</th>
-                <th class="align-right" style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600; color: #374151;">PO ${periodA}</th>
-                <th class="align-right" style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600; color: #374151;">PO ${periodB}</th>
-                <th class="align-right" style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600; color: #374151;">% Variación</th>
+                <th style="padding:12px;text-align:left;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Proveedor de Mercancía</th>
+                <th style="padding:12px;text-align:right;border:1px solid #e5e7eb;font-weight:600;color:#1AAD8A;">PO ${periodA}<br><small style="font-weight:400;color:#6b7280;">Período A</small></th>
+                <th style="padding:12px;text-align:right;border:1px solid #e5e7eb;font-weight:600;color:#0984e3;">PO ${periodB}<br><small style="font-weight:400;color:#6b7280;">Período B</small></th>
+                <th style="padding:12px;text-align:right;border:1px solid #e5e7eb;font-weight:600;color:#374151;">% Variación</th>
             </tr>
         `;
 
         const vendors = data.by_vendor || [];
-        const summary = data.summary || {};
+        const isDelay = filterId.includes('retraso');
 
         let rows = '';
-        vendors.forEach(vendor => {
-            const variation = vendor.variation || 0;
-            const variationClass = variation > 0 ? 'percentage' : (variation < 0 ? 'percentage negative' : '');
-            const variationSign = variation > 0 ? '+' : '';
-            
-            rows += `
-                <tr>
-                    <td style="padding: 12px; border: 1px solid #e5e7eb;">${vendor.vendor}</td>
-                    <td class="align-right number" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right;">${vendor.period_a.toLocaleString()}</td>
-                    <td class="align-right number" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right;">${vendor.period_b.toLocaleString()}</td>
-                    <td class="align-right ${variationClass}" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; color: ${variation >= 0 ? '#27ae60' : '#e17055'};">${variationSign}${variation.toFixed(1)}%</td>
-                </tr>
-            `;
+        vendors.forEach(v => {
+            const p1  = v.period1_count ?? 0;
+            const p2  = v.period2_count ?? 0;
+            const pct = v.variation_percentage ?? 0;
+            const sign  = pct > 0 ? '+' : '';
+            const color = (isDelay ? pct < 0 : pct > 0) ? '#27ae60' : '#e17055';
+
+            rows += `<tr>
+                <td style="padding:12px;border:1px solid #e5e7eb;">${v.vendor}</td>
+                <td style="padding:12px;border:1px solid #e5e7eb;text-align:right;" class="number">${p1.toLocaleString()}</td>
+                <td style="padding:12px;border:1px solid #e5e7eb;text-align:right;" class="number">${p2.toLocaleString()}</td>
+                <td style="padding:12px;border:1px solid #e5e7eb;text-align:right;color:${color};">${sign}${pct.toFixed(1)}%</td>
+            </tr>`;
         });
 
-        // Fila total
-        const totalVariation = summary.total_variation || 0;
-        const totalVariationSign = totalVariation > 0 ? '+' : '';
-        
-        rows += `
-            <tr style="background-color: #f8faf9; font-weight: 700;">
-                <td style="padding: 12px; border: 1px solid #e5e7eb; color: #374151;">Total</td>
-                <td class="align-right number" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; color: #1AAD8A;">${(summary.total_period_a || 0).toLocaleString()}</td>
-                <td class="align-right number" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; color: #1AAD8A;">${(summary.total_period_b || 0).toLocaleString()}</td>
-                <td class="align-right" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; color: #0984e3;">${totalVariationSign}${totalVariation.toFixed(1)}%</td>
-            </tr>
-        `;
+        const totalPct   = totalA > 0 ? (((totalB - totalA) / totalA) * 100).toFixed(1) : '0.0';
+        const totalSign  = parseFloat(totalPct) > 0 ? '+' : '';
+        const totalColor = (isDelay ? parseFloat(totalPct) < 0 : parseFloat(totalPct) > 0) ? '#27ae60' : '#e17055';
+
+        rows += `<tr style="background-color:#f8faf9;font-weight:700;">
+            <td style="padding:12px;border:1px solid #e5e7eb;color:#374151;">Total</td>
+            <td style="padding:12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#1AAD8A;" class="number">${totalA.toLocaleString()}</td>
+            <td style="padding:12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#1AAD8A;" class="number">${totalB.toLocaleString()}</td>
+            <td style="padding:12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:${totalColor};">${totalSign}${totalPct}%</td>
+        </tr>`;
 
         tableBody.innerHTML = rows;
     }
@@ -1331,6 +1343,154 @@ class DashboardKPIManager {
             </tr>`;
 
         tableBody.innerHTML = rows;
+    }
+    async loadPoVsTeus() {
+        const ids = ['stage', 'period', 'vendor', 'line'];
+        ids.forEach(id => {
+            const body = document.getElementById(`povsteus-${id}-body`);
+            if (body) body.innerHTML = '<tr><td style="text-align:center;padding:20px;color:#6b7280;">Cargando datos...</td></tr>';
+        });
+
+        try {
+            const [stageRes, periodRes, vendorRes, lineRes] = await Promise.all([
+                this.fetchData('/po-vs-teus/stage'),
+                this.fetchData('/po-vs-teus/period'),
+                this.fetchData('/po-vs-teus/vendor'),
+                this.fetchData('/po-vs-teus/shipping-line'),
+            ]);
+
+            // KPI cards desde etapas (total_pos / total_teus)
+            const totalPos  = stageRes?.data?.total_pos  ?? 0;
+            const totalTeus = stageRes?.data?.total_teus ?? 0;
+            this._setText('povsteus-total-pos',  totalPos.toLocaleString());
+            this._setText('povsteus-total-teus', totalTeus.toLocaleString());
+
+            // Variaciones desde períodos
+            const weekVar  = periodRes?.data?.week_variation;
+            const monthVar = periodRes?.data?.month_variation;
+            this._setText('povsteus-week-variation',  weekVar  != null ? (weekVar  >= 0 ? '+' : '') + weekVar  + '%' : '-');
+            this._setText('povsteus-month-variation', monthVar != null ? (monthVar >= 0 ? '+' : '') + monthVar + '%' : '-');
+
+            this.renderPoVsTeusByStage(stageRes?.data,   'povsteus-stage-head',  'povsteus-stage-body');
+            this.renderPoVsTeusByPeriod(periodRes?.data, 'povsteus-period-head', 'povsteus-period-body');
+            this.renderPoVsTeusByGroup(vendorRes?.data,  'vendor', 'Proveedor de Mercancía', 'povsteus-vendor-head', 'povsteus-vendor-body');
+            this.renderPoVsTeusByGroup(lineRes?.data,    'shipping_line', 'Naviera', 'povsteus-line-head', 'povsteus-line-body');
+
+        } catch (error) {
+            console.error('Error loading PO vs TEUs:', error);
+            ids.forEach(id => {
+                const head = document.getElementById(`povsteus-${id}-head`);
+                const body = document.getElementById(`povsteus-${id}-body`);
+                if (head) head.innerHTML = '<tr><th style="padding:12px;border:1px solid #e5e7eb;">Error</th></tr>';
+                if (body) body.innerHTML = '<tr><td style="text-align:center;padding:20px;color:#e17055;">Error al cargar los datos.</td></tr>';
+            });
+        }
+    }
+
+    _setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    }
+
+    renderPoVsTeusByStage(data, headId, bodyId) {
+        const head = document.getElementById(headId);
+        const body = document.getElementById(bodyId);
+        if (!head || !body) return;
+
+        const rows = data?.data ?? [];
+        if (rows.length === 0) {
+            head.innerHTML = '<tr><th style="padding:12px;border:1px solid #e5e7eb;">Etapa</th></tr>';
+            body.innerHTML = '<tr><td style="text-align:center;padding:20px;color:#6b7280;">Sin datos disponibles.</td></tr>';
+            return;
+        }
+
+        head.innerHTML = `<tr>
+            <th style="padding:12px;border:1px solid #e5e7eb;text-align:left;">Etapa</th>
+            <th style="padding:12px;border:1px solid #e5e7eb;text-align:right;">Cantidad de PO</th>
+            <th style="padding:12px;border:1px solid #e5e7eb;text-align:right;">Cantidad de TEUs</th>
+            <th style="padding:12px;border:1px solid #e5e7eb;text-align:right;">% POs</th>
+        </tr>`;
+
+        const rowsHtml = rows.map(r => `<tr>
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;">${r.stage}</td>
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;" class="number">${r.po_count.toLocaleString()}</td>
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;" class="number">${(r.teus ?? 0).toLocaleString()}</td>
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;" class="percentage">${r.percentage}%</td>
+        </tr>`).join('');
+
+        const total = data.total_pos ?? 0;
+        const totalTeus = data.total_teus ?? 0;
+        body.innerHTML = rowsHtml + `<tr style="background-color:#f8faf9;font-weight:700;">
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;color:#374151;">Total</td>
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;color:#1AAD8A;">${total.toLocaleString()}</td>
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;color:#1AAD8A;">${(+totalTeus).toLocaleString()}</td>
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;color:#0984e3;">100%</td>
+        </tr>`;
+    }
+
+    renderPoVsTeusByPeriod(data, headId, bodyId) {
+        const head = document.getElementById(headId);
+        const body = document.getElementById(bodyId);
+        if (!head || !body) return;
+
+        const periods = data?.periods ?? [];
+        if (periods.length === 0) {
+            head.innerHTML = '<tr><th style="padding:12px;border:1px solid #e5e7eb;">Período</th></tr>';
+            body.innerHTML = '<tr><td style="text-align:center;padding:20px;color:#6b7280;">Sin datos disponibles.</td></tr>';
+            return;
+        }
+
+        head.innerHTML = `<tr>
+            <th style="padding:12px;border:1px solid #e5e7eb;text-align:left;">Período</th>
+            <th style="padding:12px;border:1px solid #e5e7eb;text-align:right;">Cantidad de PO</th>
+            <th style="padding:12px;border:1px solid #e5e7eb;text-align:right;">Cantidad de TEUs</th>
+        </tr>`;
+
+        body.innerHTML = periods.map(p => `<tr>
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;">${p.period}</td>
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;" class="number">${(p.po_count ?? 0).toLocaleString()}</td>
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;" class="number">${(p.teus ?? 0).toLocaleString()}</td>
+        </tr>`).join('');
+    }
+
+    renderPoVsTeusByGroup(data, key, label, headId, bodyId) {
+        const head = document.getElementById(headId);
+        const body = document.getElementById(bodyId);
+        if (!head || !body) return;
+
+        const rows = data?.data ?? [];
+        if (rows.length === 0) {
+            head.innerHTML = `<tr><th style="padding:12px;border:1px solid #e5e7eb;">${label}</th></tr>`;
+            body.innerHTML = '<tr><td style="text-align:center;padding:20px;color:#6b7280;">Sin datos disponibles.</td></tr>';
+            return;
+        }
+
+        head.innerHTML = `<tr>
+            <th style="padding:12px;border:1px solid #e5e7eb;text-align:left;">${label}</th>
+            <th style="padding:12px;border:1px solid #e5e7eb;text-align:right;">Cantidad de PO</th>
+            <th style="padding:12px;border:1px solid #e5e7eb;text-align:right;">Cantidad de TEUs</th>
+            <th style="padding:12px;border:1px solid #e5e7eb;text-align:right;">% Participación</th>
+        </tr>`;
+
+        const total = data.total_pos ?? 0;
+        const totalTeus = data.total_teus ?? 0;
+
+        const rowsHtml = rows.map(r => {
+            const pct = total > 0 ? ((r.po_count / total) * 100).toFixed(1) : '0.0';
+            return `<tr>
+                <td style="padding:10px 12px;border:1px solid #e5e7eb;">${r[key] ?? '-'}</td>
+                <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;" class="number">${r.po_count.toLocaleString()}</td>
+                <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;" class="number">${(r.teus ?? 0).toLocaleString()}</td>
+                <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;" class="percentage">${pct}%</td>
+            </tr>`;
+        }).join('');
+
+        body.innerHTML = rowsHtml + `<tr style="background-color:#f8faf9;font-weight:700;">
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;color:#374151;">Total</td>
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;color:#1AAD8A;">${total.toLocaleString()}</td>
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;color:#1AAD8A;">${(+totalTeus).toLocaleString()}</td>
+            <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;color:#0984e3;">100%</td>
+        </tr>`;
     }
 }
 
