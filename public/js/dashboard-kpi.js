@@ -1242,20 +1242,32 @@ class DashboardKPIManager {
             const result = await this.fetchData('/future-arrivals');
 
             if (!result || !result.success || !result.data) {
-                tableBody.innerHTML = '<tr><td style="text-align:center; padding: 20px; color: #6b7280;">No hay datos disponibles</td></tr>';
+                tableHead.innerHTML = '<tr><th style="padding: 12px; border: 1px solid #e5e7eb;">Etapa</th></tr>';
+                tableBody.innerHTML = '<tr><td style="text-align:center; padding: 20px; color: #6b7280;">No hay datos de proyección disponibles.</td></tr>';
                 return;
             }
 
             this.renderProyeccion(result.data, tableHead, tableBody);
         } catch (error) {
             console.error('Error loading proyeccion:', error);
-            tableBody.innerHTML = '<tr><td style="text-align:center; padding: 20px; color: #e17055;">Error cargando datos</td></tr>';
+            tableHead.innerHTML = '<tr><th style="padding: 12px; border: 1px solid #e5e7eb;">Etapa</th></tr>';
+            tableBody.innerHTML = '<tr><td style="text-align:center; padding: 20px; color: #e17055;">Error al cargar los datos de proyección.</td></tr>';
         }
     }
 
     renderProyeccion(data, tableHead, tableBody) {
         const weeks = data.weeks || [];
         const stages = data.data || [];
+
+        if (weeks.length === 0 || stages.length === 0) {
+            tableHead.innerHTML = '<tr><th style="padding: 12px; border: 1px solid #e5e7eb;">Etapa</th></tr>';
+            tableBody.innerHTML = '<tr><td style="text-align:center; padding: 20px; color: #6b7280;">No hay datos de proyección disponibles para el período seleccionado.</td></tr>';
+            ['proy-total-pos', 'proy-produccion-pos', 'proy-booking-pos', 'proy-transito-pos'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = '0';
+            });
+            return;
+        }
 
         // Actualizar KPI cards
         const stageColors = { 'Producción': '#565AFF', 'Booking': '#28C7A1', 'Tránsito': '#1AAD8A' };
