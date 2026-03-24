@@ -279,19 +279,27 @@ class DashboardKPIManager {
 
     async loadKPISummary() {
         try {
-            const result = await this.fetchData('/kpi-summary');
-            
-            if (result && result.success && result.data) {
-                const data = result.data;
-                
-                // Actualizar KPI cards
-                document.getElementById('kpi-total-pos').textContent = (data.total_pos || 0).toLocaleString();
-                document.getElementById('kpi-delay-count').textContent = (data.delay_count || 0).toLocaleString();
-                document.getElementById('kpi-delay-percentage').textContent = `${data.delay_percentage || 0}% del total`;
-                document.getElementById('kpi-advance-count').textContent = (data.advance_count || 0).toLocaleString();
-                document.getElementById('kpi-advance-percentage').textContent = `${data.advance_percentage || 0}% del total`;
-                document.getElementById('kpi-ata-count').textContent = (data.ata_count || 0).toLocaleString();
-            }
+            const [stageRes, delayRes, advanceRes, ataRes] = await Promise.all([
+                this.fetchData('/pos-by-stage'),
+                this.fetchData('/pos-delay-cl'),
+                this.fetchData('/pos-advance-cl'),
+                this.fetchData('/pos-with-ata'),
+            ]);
+
+            const totalPOs     = stageRes?.data?.total_pos ?? 0;
+            const delayCount   = delayRes?.data?.summary?.total_pos ?? 0;
+            const advanceCount = advanceRes?.data?.summary?.total_pos ?? 0;
+            const ataCount     = ataRes?.data?.summary?.total_pos ?? 0;
+
+            const delayPct   = totalPOs > 0 ? ((delayCount   / totalPOs) * 100).toFixed(1) : 0;
+            const advancePct = totalPOs > 0 ? ((advanceCount / totalPOs) * 100).toFixed(1) : 0;
+
+            document.getElementById('kpi-total-pos').textContent          = totalPOs.toLocaleString();
+            document.getElementById('kpi-delay-count').textContent        = delayCount.toLocaleString();
+            document.getElementById('kpi-delay-percentage').textContent   = `${delayPct}% del total`;
+            document.getElementById('kpi-advance-count').textContent      = advanceCount.toLocaleString();
+            document.getElementById('kpi-advance-percentage').textContent = `${advancePct}% del total`;
+            document.getElementById('kpi-ata-count').textContent          = ataCount.toLocaleString();
         } catch (error) {
             console.error('Error loading KPI summary:', error);
         }
