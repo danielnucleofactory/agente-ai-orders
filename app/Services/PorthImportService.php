@@ -501,6 +501,7 @@ class PorthImportService
             'porth_delivered' => $this->parseDateTime($data['delivered'] ?? null),
             'porth_free_time_at_destination' => $data['freeTimeAtDestination'] ?? null,
             'porth_manual_tracking' => isset($data['manualTracking']) ? (bool) $data['manualTracking'] : false,
+            'porth_itinerary' => $data['itinerary'] ?? null,
             'last_porth_sync_at' => now(),
             'freight_type' => $this->helper->getTranslatedFreightType($data['freightType'] ?? null),
         ];

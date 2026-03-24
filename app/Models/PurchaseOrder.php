@@ -196,6 +196,7 @@ class PurchaseOrder extends Model implements HasMedia
         'porth_priority',
         'porth_manual_tracking',
         'porth_free_time_at_destination',
+        'porth_itinerary',
         'porth_id',
         'last_porth_sync_at',
     ];
@@ -334,6 +335,7 @@ class PurchaseOrder extends Model implements HasMedia
         'porth_delivered',
         'porth_free_time_at_destination',
         'porth_manual_tracking',
+        'porth_itinerary',
         'last_porth_sync_at',
     ];
 
@@ -442,6 +444,7 @@ class PurchaseOrder extends Model implements HasMedia
         'porth_at_destination_port' => 'datetime',
         'porth_to_final_destination' => 'datetime',
         'porth_delivered' => 'datetime',
+        'porth_itinerary' => 'array',
         'last_porth_sync_at' => 'datetime',
     ];
 

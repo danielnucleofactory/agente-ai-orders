@@ -575,15 +575,116 @@ class DashboardKPIService
      */
     public function getPOsInTransshipment(array $filters = []): array
     {
-        // Por ahora retornar estructura vacía - pendiente integración Porth
-        return [
-            'summary' => [
-                'total_pos' => 0,
-                'total_teus' => 0,
-            ],
-            'by_port' => [],
-            'details' => [],
-        ];
+        try {
+            $pos = $this->getBaseQuery($filters)
+                ->whereNotNull('porth_itinerary')
+                ->whereNotNull('porth_pod')
+                ->with(['vendor', 'company'])
+                ->get();
+
+            $totalPOs = 0;
+            $totalTEUs = 0;
+            $byPort = [];
+            $details = [];
+
+            foreach ($pos as $po) {
+                $itinerary = $po->porth_itinerary;
+                if (!is_array($itinerary) || empty($itinerary)) {
+                    continue;
+                }
+
+                $pod = strtoupper(trim($po->porth_pod ?? ''));
+
+                // Determinar si la PO está actualmente en un puerto de transbordo:
+                // Buscar el último evento "Full Transshipment Discharged" con done=true
+                // cuyo place sea distinto al POD (destino final).
+                $transshipmentPort = null;
+                foreach ($itinerary as $event) {
+                    $name = strtoupper(trim($event['name'] ?? ''));
+                    $place = strtoupper(trim($event['place'] ?? ''));
+                    $done = (bool) ($event['done'] ?? false);
+
+                    if (
+                        $done &&
+                        str_contains($name, 'TRANSSHIPMENT DISCHARGED') &&
+                        $place !== '' &&
+                        $place !== $pod
+                    ) {
+                        // Verificar que aún no haya embarcado desde ese puerto de transbordo
+                        // (si ya hay "Full Transshipment Loaded" con done=true en el mismo puerto
+                        // y con fecha posterior, ya salió → no está en transbordo allí)
+                        $loadedFromSamePort = false;
+                        foreach ($itinerary as $loadEvent) {
+                            $loadName = strtoupper(trim($loadEvent['name'] ?? ''));
+                            $loadPlace = strtoupper(trim($loadEvent['place'] ?? ''));
+                            $loadDone = (bool) ($loadEvent['done'] ?? false);
+                            if (
+                                $loadDone &&
+                                str_contains($loadName, 'TRANSSHIPMENT LOADED') &&
+                                $loadPlace === $place
+                            ) {
+                                $loadedFromSamePort = true;
+                                break;
+                            }
+                        }
+
+                        if (!$loadedFromSamePort) {
+                            $transshipmentPort = $place;
+                            break;
+                        }
+                    }
+                }
+
+                if ($transshipmentPort === null) {
+                    continue;
+                }
+
+                $teus = $this->calculateTEUs($po->container_type);
+                $totalPOs++;
+                $totalTEUs += $teus;
+
+                if (!isset($byPort[$transshipmentPort])) {
+                    $byPort[$transshipmentPort] = ['count' => 0, 'teus' => 0];
+                }
+                $byPort[$transshipmentPort]['count']++;
+                $byPort[$transshipmentPort]['teus'] += $teus;
+
+                $details[] = [
+                    'order_number' => $po->order_number,
+                    'vendor'       => $po->vendor->name ?? 'N/A',
+                    'shipping_line' => $po->shipping_line ?? 'N/A',
+                    'transshipment_port' => $transshipmentPort,
+                    'destination_port'   => $pod,
+                    'teus' => round($teus, 2),
+                ];
+            }
+
+            $portData = [];
+            foreach ($byPort as $port => $data) {
+                $portData[] = [
+                    'port'     => $port,
+                    'po_count' => $data['count'],
+                    'teus'     => round($data['teus'], 2),
+                ];
+            }
+            usort($portData, fn($a, $b) => $b['po_count'] <=> $a['po_count']);
+
+            return [
+                'summary' => [
+                    'total_pos'  => $totalPOs,
+                    'total_teus' => round($totalTEUs, 2),
+                ],
+                'by_port' => $portData,
+                'details' => $details,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error in getPOsInTransshipment', ['error' => $e->getMessage()]);
+            return [
+                'summary' => ['total_pos' => 0, 'total_teus' => 0],
+                'by_port' => [],
+                'details' => [],
+            ];
+        }
     }
 
     /**
