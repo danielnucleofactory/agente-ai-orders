@@ -1,6 +1,10 @@
 @php
     $languagesArray = ['en_US' => 'Inglés', 'es_CL' => 'Español (Chile)'];
-    $timeZonesArray = ['op1' => 'San José, Costa Rica (GMT-3)', 'op2' => 'Santiago, Chile (GMT -4)'];
+    $timeZonesArray = [
+        'America/Santiago'   => 'Santiago, Chile (GMT-4/-3)',
+        'America/Costa_Rica' => 'San José, Costa Rica (GMT-6)',
+        'America/Caracas'    => 'Caracas, Venezuela (GMT-4)',
+    ];
     $dateFormatArray = [
         'DD/MM/YYYY' => 'DD/MM/YYYY',
         'MM/DD/YYYY' => 'MM/DD/YYYY',

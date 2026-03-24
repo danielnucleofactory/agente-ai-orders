@@ -13,7 +13,7 @@ class Index extends Component
 
     public function mount() {
         $this->language = auth()->user()->language ?? 'es_CL';
-        $this->timeZone = auth()->user()->time_zone ?? 'op2'; // Santiago por defecto
+        $this->timeZone = auth()->user()->time_zone ?? 'America/Santiago';
         $this->dateFormat = auth()->user()->date_format ?? 'DD/MM/YYYY';
         $this->timeFormat = auth()->user()->time_format ?? '24hrs';
     }

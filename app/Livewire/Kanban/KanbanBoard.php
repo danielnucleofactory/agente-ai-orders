@@ -1394,7 +1394,7 @@ class KanbanBoard extends Component
 
             7 => [
                 'bonded_warehouse_enter' => 'required|date',
-                'bonded_warehouse_exit'  => 'required|date',
+                'bonded_warehouse_exit'  => 'nullable|date',
                 'date_ata'               => 'required|date',
             ],
 

@@ -114,8 +114,9 @@ class UserCreate extends Component
                 $user->assignRole($role->name);
             }
 
-            // Asociar empresas
+            // Asociar empresas y establecer la primera como activa
             $user->companies()->attach($this->company_ids);
+            $user->setCurrentCompany((int) $this->company_ids[0]);
 
             $this->dispatch('open-modal', 'modal-user-created');
         }

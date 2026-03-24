@@ -424,7 +424,7 @@
                         <x-date-picker wire:model="bonded_warehouse_enter" label="Ingreso Almacén Fiscal <span class='text-red-500'>*</span>" :error="$errors->first('bonded_warehouse_enter')" />
                     </div>
                     <div class="mb-8">
-                        <x-date-picker wire:model="bonded_warehouse_exit" label="Salida Almacén Fiscal <span class='text-red-500'>*</span>" :error="$errors->first('bonded_warehouse_exit')" />
+                        <x-date-picker wire:model="bonded_warehouse_exit" label="Salida Almacén Fiscal" :error="$errors->first('bonded_warehouse_exit')" />
                     </div>
                     <div class="mb-8">
                         <x-date-picker wire:model="date_ata" label="ETA Real (ATA) <span class='text-red-500'>*</span>" :error="$errors->first('date_ata')" />

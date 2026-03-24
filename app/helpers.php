@@ -56,7 +56,8 @@ if (!function_exists('formatDate')) {
     {
         if (!$date) return '-';
         $format = $format ?? getUserDateFormat();
-        return Carbon::parse($date)->format($format);
+        $userTz = auth()->check() ? (auth()->user()->time_zone ?? 'UTC') : 'UTC';
+        return Carbon::parse($date)->setTimezone($userTz)->format($format);
     }
 }
 
@@ -73,7 +74,8 @@ if (!function_exists('formatDateTime')) {
     {
         if (!$date) return '-';
         $format = $format ?? getUserDateTimeFormat();
-        return Carbon::parse($date)->format($format);
+        $userTz = auth()->check() ? (auth()->user()->time_zone ?? 'UTC') : 'UTC';
+        return Carbon::parse($date)->setTimezone($userTz)->format($format);
     }
 }
 
