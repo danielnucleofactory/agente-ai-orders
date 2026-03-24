@@ -1332,7 +1332,7 @@ class DashboardKPIService
                 $weeks[] = [
                     'week_number' => $weekStart->weekOfYear,
                     'year' => $weekStart->year,
-                    'label' => 'S' . str_pad($weekStart->weekOfYear, 2, '0', STR_PAD_LEFT) . '-' . $weekStart->year,
+                    'label' => 'S' . str_pad((string) $weekStart->weekOfYear, 2, '0', STR_PAD_LEFT) . '-' . $weekStart->year,
                     'start' => $weekStart,
                     'end' => $weekStart->copy()->endOfWeek(),
                 ];
