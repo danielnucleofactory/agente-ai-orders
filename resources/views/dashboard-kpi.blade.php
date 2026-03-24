@@ -658,23 +658,28 @@
 
             <!-- VISTA: PROYECCIÓN -->
             <div class="view-content" id="proyeccion">
-                
+
                 <!-- KPI Cards -->
                 <div class="kpi-cards">
                     <div class="kpi-card">
                         <div class="kpi-card-title">Llegadas Proyectadas</div>
-                        <div class="kpi-card-value">1,842</div>
-                        <div class="kpi-card-subtitle">Próximas 4 semanas</div>
+                        <div class="kpi-card-value" id="proy-total-pos">-</div>
+                        <div class="kpi-card-subtitle">Próximas 12 semanas</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-card-title">En Producción</div>
-                        <div class="kpi-card-value">568</div>
-                        <div class="kpi-card-subtitle">Llegada estimada Q1 2026</div>
+                        <div class="kpi-card-value" id="proy-produccion-pos">-</div>
+                        <div class="kpi-card-subtitle">CL Teórica estimada</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-card-title">En Booking</div>
-                        <div class="kpi-card-value">342</div>
-                        <div class="kpi-card-subtitle">Próximo embarque</div>
+                        <div class="kpi-card-value" id="proy-booking-pos">-</div>
+                        <div class="kpi-card-subtitle">ETD proyectado</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-card-title">En Tránsito</div>
+                        <div class="kpi-card-value" id="proy-transito-pos">-</div>
+                        <div class="kpi-card-subtitle">ETA confirmado</div>
                     </div>
                 </div>
 
@@ -684,76 +689,24 @@
                         <div>
                             <div class="table-title">Proyección de Llegadas Futuras por Semana</div>
                             <div class="table-description">
-                                Distribución semanal de órdenes por etapa del proceso logístico - horizonte de planificación
+                                Distribución semanal de órdenes por etapa del proceso logístico - próximas 12 semanas
                             </div>
                         </div>
                     </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Etapa</th>
-                                <th class="align-right">Semana<br>51-2025</th>
-                                <th class="align-right">Semana<br>52-2025</th>
-                                <th class="align-right">Semana<br>01-2026</th>
-                                <th class="align-right">Semana<br>02-2026</th>
-                                <th class="align-right">Semana<br>03-2026</th>
-                                <th class="align-right">Semana<br>04-2026</th>
-                                <th class="align-right">Semana<br>05-2026</th>
-                                <th class="align-right">Semana<br>06-2026</th>
-                                <th class="align-right">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><span class="badge badge-info">Producción</span><br><small>CL Teórica</small></td>
-                                <td class="align-right number">68</td>
-                                <td class="align-right number">72</td>
-                                <td class="align-right number">85</td>
-                                <td class="align-right number">78</td>
-                                <td class="align-right number">82</td>
-                                <td class="align-right number">76</td>
-                                <td class="align-right number">88</td>
-                                <td class="align-right number">94</td>
-                                <td class="align-right number total-cell">643</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-info">Booking</span><br><small>Autorización</small></td>
-                                <td class="align-right number">42</td>
-                                <td class="align-right number">38</td>
-                                <td class="align-right number">52</td>
-                                <td class="align-right number">48</td>
-                                <td class="align-right number">45</td>
-                                <td class="align-right number">51</td>
-                                <td class="align-right number">56</td>
-                                <td class="align-right number">62</td>
-                                <td class="align-right number total-cell">394</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-info">Tránsito</span><br><small>ETA Estimado</small></td>
-                                <td class="align-right number">156</td>
-                                <td class="align-right number">148</td>
-                                <td class="align-right number">142</td>
-                                <td class="align-right number">138</td>
-                                <td class="align-right number">135</td>
-                                <td class="align-right number">128</td>
-                                <td class="align-right number">132</td>
-                                <td class="align-right number">125</td>
-                                <td class="align-right number total-cell">1,104</td>
-                            </tr>
-                            <tr class="total-row">
-                                <td><strong>Total por Semana</strong></td>
-                                <td class="align-right number">266</td>
-                                <td class="align-right number">258</td>
-                                <td class="align-right number">279</td>
-                                <td class="align-right number">264</td>
-                                <td class="align-right number">262</td>
-                                <td class="align-right number">255</td>
-                                <td class="align-right number">276</td>
-                                <td class="align-right number">281</td>
-                                <td class="align-right number total-cell-final">2,141</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" id="proy-table">
+                            <thead id="proy-table-head">
+                                <tr>
+                                    <th>Cargando...</th>
+                                </tr>
+                            </thead>
+                            <tbody id="proy-table-body">
+                                <tr>
+                                    <td style="text-align:center; padding: 20px; color: #6b7280;">Cargando datos...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
             </div>
@@ -831,6 +784,11 @@
                             setTimeout(() => {
                                 window.dashboardKPIManager.setDefaultComparisonPeriods();
                             }, 300);
+                        }
+
+                        // Cargar proyección al activar esa vista
+                        if (viewId === 'proyeccion' && window.dashboardKPIManager) {
+                            window.dashboardKPIManager.loadProyeccion();
                         }
                     }
                 });

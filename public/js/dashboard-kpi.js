@@ -1229,6 +1229,97 @@ class DashboardKPIManager {
             `;
         }
     }
+
+    async loadProyeccion() {
+        const tableHead = document.getElementById('proy-table-head');
+        const tableBody = document.getElementById('proy-table-body');
+
+        if (!tableHead || !tableBody) return;
+
+        tableBody.innerHTML = '<tr><td style="text-align:center; padding: 20px; color: #6b7280;">Cargando datos...</td></tr>';
+
+        try {
+            const result = await this.fetchData('/future-arrivals');
+
+            if (!result || !result.success || !result.data) {
+                tableBody.innerHTML = '<tr><td style="text-align:center; padding: 20px; color: #6b7280;">No hay datos disponibles</td></tr>';
+                return;
+            }
+
+            this.renderProyeccion(result.data, tableHead, tableBody);
+        } catch (error) {
+            console.error('Error loading proyeccion:', error);
+            tableBody.innerHTML = '<tr><td style="text-align:center; padding: 20px; color: #e17055;">Error cargando datos</td></tr>';
+        }
+    }
+
+    renderProyeccion(data, tableHead, tableBody) {
+        const weeks = data.weeks || [];
+        const stages = data.data || [];
+
+        // Actualizar KPI cards
+        const stageColors = { 'Producción': '#565AFF', 'Booking': '#28C7A1', 'Tránsito': '#1AAD8A' };
+        const stageSubtitles = { 'Producción': 'CL Teórica estimada', 'Booking': 'ETD proyectado', 'Tránsito': 'ETA confirmado' };
+        const cardIds = { 'Producción': 'proy-produccion-pos', 'Booking': 'proy-booking-pos', 'Tránsito': 'proy-transito-pos' };
+
+        let grandTotal = 0;
+        stages.forEach(stage => {
+            const total = stage.weeks.reduce((sum, w) => sum + (w.po_count || 0), 0);
+            grandTotal += total;
+            const el = document.getElementById(cardIds[stage.stage]);
+            if (el) el.textContent = total.toLocaleString();
+        });
+        const totalEl = document.getElementById('proy-total-pos');
+        if (totalEl) totalEl.textContent = grandTotal.toLocaleString();
+
+        // Cabecera de la tabla
+        let headRow = '<tr><th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; min-width: 120px;">Etapa</th>';
+        weeks.forEach(week => {
+            headRow += `<th class="align-right" style="padding: 10px 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; white-space: nowrap;">${week.replace('-', '<br>')}</th>`;
+        });
+        headRow += '<th class="align-right" style="padding: 10px 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600; color: #374151;">Total</th></tr>';
+        tableHead.innerHTML = headRow;
+
+        // Filas por etapa
+        const weeklyTotals = new Array(weeks.length).fill(0);
+        let rows = '';
+
+        const stageLabels = { 'Producción': 'CL Teórica', 'Booking': 'ETD', 'Tránsito': 'ETA' };
+        stages.forEach(stage => {
+            const color = stageColors[stage.stage] || '#374151';
+            const sublabel = stageLabels[stage.stage] || '';
+            let rowTotal = 0;
+            let cells = '';
+
+            stage.weeks.forEach((w, i) => {
+                const count = w.po_count || 0;
+                rowTotal += count;
+                weeklyTotals[i] += count;
+                cells += `<td class="align-right number" style="padding: 10px 12px; border: 1px solid #e5e7eb; text-align: right; color: #374151;">${count.toLocaleString()}</td>`;
+            });
+
+            rows += `
+                <tr>
+                    <td style="padding: 10px 12px; border: 1px solid #e5e7eb;">
+                        <span style="display:inline-block; padding: 2px 8px; border-radius: 4px; background: ${color}20; color: ${color}; font-weight: 600; font-size: 12px;">${stage.stage}</span>
+                        <br><small style="color: #6b7280; font-size: 11px;">${sublabel}</small>
+                    </td>
+                    ${cells}
+                    <td class="align-right number" style="padding: 10px 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; color: ${color};">${rowTotal.toLocaleString()}</td>
+                </tr>`;
+        });
+
+        // Fila total
+        let totalCells = weeklyTotals.map(t => `<td class="align-right number" style="padding: 10px 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; color: #1AAD8A;">${t.toLocaleString()}</td>`).join('');
+        rows += `
+            <tr style="background-color: #f8faf9;">
+                <td style="padding: 10px 12px; border: 1px solid #e5e7eb; font-weight: 700; color: #374151;">Total por Semana</td>
+                ${totalCells}
+                <td class="align-right number" style="padding: 10px 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; color: #1AAD8A;">${grandTotal.toLocaleString()}</td>
+            </tr>`;
+
+        tableBody.innerHTML = rows;
+    }
 }
 
 // Expandable rows function

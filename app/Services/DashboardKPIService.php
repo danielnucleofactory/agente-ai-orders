@@ -379,7 +379,7 @@ class DashboardKPIService
 
     /**
      * POs con adelanto según Carga Lista (CL)
-     * WHERE date_variable_date <= date_theorical_load
+     * WHERE date_variable_date < date_theorical_load
      */
     public function getPOsWithAdvanceCL(array $filters = []): array
     {
@@ -387,7 +387,7 @@ class DashboardKPIService
             $query = $this->getBaseQuery($filters)
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
-                ->whereRaw('date_variable_date <= date_theorical_load')
+                ->whereRaw('date_variable_date < date_theorical_load')
                 ->with(['vendor', 'kanbanStatus'])
                 ->get();
 
@@ -1045,7 +1045,7 @@ class DashboardKPIService
             $query1 = PurchaseOrder::query()
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
-                ->whereRaw('date_variable_date <= date_theorical_load')
+                ->whereRaw('date_variable_date < date_theorical_load')
                 ->whereBetween('date_variable_date', [$period1Start, $period1End]);
             if ($companyId) {
                 $query1->where('company_id', $companyId);
@@ -1056,7 +1056,7 @@ class DashboardKPIService
             $query2 = PurchaseOrder::query()
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
-                ->whereRaw('date_variable_date <= date_theorical_load')
+                ->whereRaw('date_variable_date < date_theorical_load')
                 ->whereBetween('date_variable_date', [$period2Start, $period2End]);
             if ($companyId) {
                 $query2->where('company_id', $companyId);
