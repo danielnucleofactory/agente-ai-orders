@@ -725,21 +725,81 @@ class DashboardKPIManager {
     }
 
     renderTransshipmentTable(data, tableHead, tableBody, isTeus) {
+        const valueLabel = isTeus ? 'TEUs' : 'POs';
+        const valueField = isTeus ? 'teus' : 'po_count';
+
         tableHead.innerHTML = `
             <tr>
-                <th style="padding: 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600; color: #374151;" colspan="2">
-                    Información no disponible
-                </th>
+                <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; color: #374151;">Puerto de Transbordo</th>
+                <th class="align-right" style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600; color: #374151;">Cantidad de ${valueLabel}</th>
             </tr>
         `;
 
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="2" style="text-align: center; padding: 20px; color: #6b7280;">
-                    No hay datos disponibles
-                </td>
-            </tr>
-        `;
+        const ports = data.by_port || [];
+        const details = data.details || [];
+
+        if (ports.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="2" style="text-align: center; padding: 20px; color: #6b7280;">
+                        No hay POs en puerto de transbordo actualmente
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        let rows = '';
+        ports.forEach(port => {
+            const value = port[valueField];
+            const portDetails = details.filter(d => d.transshipment_port === port.port);
+            const hasDetails = portDetails.length > 0;
+
+            rows += `
+                <tr class="${hasDetails ? 'expandable-row' : ''}" ${hasDetails ? 'onclick="toggleSubTable(this)"' : ''}>
+                    <td style="padding: 12px; border: 1px solid #e5e7eb;">
+                        ${hasDetails ? '<span class="expand-icon">▶</span>' : ''}${port.port}
+                    </td>
+                    <td class="align-right number" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #1AAD8A;">
+                        ${value.toLocaleString()}
+                    </td>
+                </tr>
+            `;
+
+            if (hasDetails) {
+                const subColspan = isTeus ? 2 : 2;
+                rows += `
+                    <tr class="sub-table-row">
+                        <td colspan="2" class="sub-table-cell" style="padding: 0;">
+                            <table class="sub-table" style="width: 100%; margin: 12px 0; border: 1px solid #e8edec; border-radius: 6px; overflow: hidden;">
+                                <thead style="background: #f0f3f2;">
+                                    <tr>
+                                        <th style="padding: 10px 12px; color: #2d3436; font-size: 12px;">Número de PO</th>
+                                        <th style="padding: 10px 12px; color: #2d3436; font-size: 12px;">Proveedor</th>
+                                        <th style="padding: 10px 12px; color: #2d3436; font-size: 12px;">Naviera</th>
+                                        <th style="padding: 10px 12px; color: #2d3436; font-size: 12px;">Puerto Destino</th>
+                                        ${isTeus ? '<th style="padding: 10px 12px; color: #2d3436; font-size: 12px; text-align: right;">TEUs</th>' : ''}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${portDetails.map(d => `
+                                        <tr style="background: white;">
+                                            <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.order_number}</td>
+                                            <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.vendor}</td>
+                                            <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.shipping_line}</td>
+                                            <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.destination_port}</td>
+                                            ${isTeus ? `<td style="padding: 10px 12px; font-size: 12px; color: #636e72; text-align: right;">${d.teus}</td>` : ''}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                `;
+            }
+        });
+
+        tableBody.innerHTML = rows;
     }
 
     renderATATable(data, tableHead, tableBody, isTeus) {
