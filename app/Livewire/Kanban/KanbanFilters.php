@@ -2,10 +2,13 @@
 
 namespace App\Livewire\Kanban;
 
+use App\Exports\ActivePurchaseOrdersExport;
 use App\Models\Hub;
 use App\Models\PurchaseOrder;
 use Livewire\Component;
 use Illuminate\Support\Facades\Session;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class KanbanFilters extends Component
 {
@@ -229,6 +232,17 @@ class KanbanFilters extends Component
                 $this->dispatch('kanbanFiltersChanged', $this->getActiveFilters());
             }
         }
+    }
+
+    public function downloadActivePOs(): BinaryFileResponse
+    {
+        $companyId = auth()->user()->company_id ?? 0;
+        $filters   = $this->getActiveFilters();
+
+        return Excel::download(
+            new ActivePurchaseOrdersExport($companyId, $filters),
+            'pos_activas_' . now()->format('Ymd_His') . '.xlsx'
+        );
     }
 
     public function render()

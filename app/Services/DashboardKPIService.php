@@ -95,9 +95,6 @@ class DashboardKPIService
         if (str_contains($stageNameLower, 'tránsito') || str_contains($stageNameLower, 'transito')) {
             return 'Tránsito';
         }
-        if (str_contains($stageNameLower, 'transbordo')) {
-            return 'Transbordo';
-        }
         if (str_contains($stageNameLower, 'alm') || str_contains($stageNameLower, 'fiscal') || str_contains($stageNameLower, 'almac')) {
             return 'Alm. Fiscal';
         }
@@ -265,15 +262,14 @@ class DashboardKPIService
             ]);
 
             $stages = [
-                'Consolidador'  => ['count' => 0, 'teus' => 0],
-                'Producción'    => ['count' => 0, 'teus' => 0],
-                'Booking'       => ['count' => 0, 'teus' => 0],
-                'Tránsito'      => ['count' => 0, 'teus' => 0],
-                'Transbordo'    => ['count' => 0, 'teus' => 0],
-                'Puerto'        => ['count' => 0, 'teus' => 0],
-                'Alm. Fiscal'   => ['count' => 0, 'teus' => 0],
-                'En otra ZF'    => ['count' => 0, 'teus' => 0],
-                'Recibiendo CDI'=> ['count' => 0, 'teus' => 0],
+                'Producción'    => ['count' => 0, 'teus' => 0],  // ID 2
+                'Booking'       => ['count' => 0, 'teus' => 0],  // ID 3
+                'Consolidador'  => ['count' => 0, 'teus' => 0],  // ID 4
+                'Tránsito'      => ['count' => 0, 'teus' => 0],  // ID 5
+                'Puerto'        => ['count' => 0, 'teus' => 0],  // ID 6
+                'Alm. Fiscal'   => ['count' => 0, 'teus' => 0],  // ID 7
+                'En otra ZF'    => ['count' => 0, 'teus' => 0],  // ID 8
+                'Recibiendo CDI'=> ['count' => 0, 'teus' => 0],  // ID 9
             ];
 
             $totalPOs = 0;
