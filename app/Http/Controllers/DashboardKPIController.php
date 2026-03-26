@@ -468,6 +468,8 @@ class DashboardKPIController extends Controller
             'route_label' => $request->input('route_label'),
             'stage' => $request->input('stage'),
             'order_number' => $request->input('order_number'),
+            'projection_week' => $request->input('projection_week'),
+            'week_count' => $request->input('week_count'),
         ];
     }
 }

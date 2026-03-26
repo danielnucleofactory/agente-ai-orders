@@ -1429,6 +1429,22 @@ class DashboardKPIService
     // ============================================
 
     /**
+     * Primer día (lunes) de la semana ISO indicada en formato YYYY-Www; si no es válido, semana calendario actual (lunes).
+     */
+    private function resolveProjectionWeekStart(?string $projectionWeek): Carbon
+    {
+        if (is_string($projectionWeek) && preg_match('/^(\d{4})-W(\d{1,2})$/', trim($projectionWeek), $m)) {
+            $year = (int) $m[1];
+            $week = (int) $m[2];
+            if ($week >= 1 && $week <= 53) {
+                return Carbon::now()->setISODate($year, $week)->startOfDay();
+            }
+        }
+
+        return Carbon::now()->startOfWeek(Carbon::MONDAY)->startOfDay();
+    }
+
+    /**
      * Llegadas futuras por etapa y semana
      */
     public function getFutureArrivals(array $filters = []): array
@@ -1437,11 +1453,13 @@ class DashboardKPIService
             $companyId = auth()->user()->company_id ?? null;
             $stageMapping = $this->getStageMapping($companyId);
 
-            // Obtener el rango de semanas (próximas 12 semanas)
-            $now = Carbon::now();
+            // Rango: N semanas (por defecto 12) a partir de la semana ISO elegida (projection_week: YYYY-Www)
+            $weekCount = max(1, min(52, (int) ($filters['week_count'] ?? 12)));
+            $startPoint = $this->resolveProjectionWeekStart($filters['projection_week'] ?? null);
+
             $weeks = [];
-            for ($i = 0; $i < 12; $i++) {
-                $weekStart = $now->copy()->addWeeks($i)->startOfWeek();
+            for ($i = 0; $i < $weekCount; $i++) {
+                $weekStart = $startPoint->copy()->addWeeks($i);
                 $weeks[] = [
                     'week_number' => $weekStart->weekOfYear,
                     'year' => $weekStart->year,
@@ -1462,12 +1480,9 @@ class DashboardKPIService
             }
 
             // Obtener POs con vendor y company para calcular tiempos de tránsito
-            $query = PurchaseOrder::query()
-                ->with(['kanbanStatus', 'vendor', 'company']);
-            if ($companyId) {
-                $query->where('company_id', $companyId);
-            }
-            $pos = $query->get();
+            $pos = $this->getBaseQuery($filters)
+                ->with(['kanbanStatus', 'vendor', 'company'])
+                ->get();
 
             foreach ($pos as $po) {
                 if (!$po->kanban_status_id || !isset($stageMapping[$po->kanban_status_id])) {

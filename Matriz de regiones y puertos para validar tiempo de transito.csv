@@ -1,11 +1,9 @@
-﻿Region;Paises;Destino;Dias de tiempo de transito
+Region;Paises;Destino;Dias de tiempo de transito
 Asia;CHINA;CR;65
 Asia;VIETNAM;SV;65
 Asia;KOREA;GT;53
 Asia;INDIA;VZLA;65
 Asia;PHILIPPINES;Colombia;28
-Asia;TAIWAN;Colombia;28
-Asia;UNITED ARAB EMIRATES;Colombia;28
 America;MÉXICO;CR;14
 America;MÉXICO;SV;12
 America;MÉXICO;GT;12
@@ -62,15 +60,10 @@ America;VENEZUELA;SV;30
 America;VENEZUELA;GT;30
 America;VENEZUELA;VZLA;0
 America;PERU;Colombia;18
-America;PANAMÁ;CR;22
-America;ECUADOR;SV;25
-America;ECUADOR;GT;25
-America;ECUADOR;VZLA;27
-America;PANAMÁ;Colombia;7
-America;PANAMÁ;CR;7
-America;PANAMÁ;SV;12
-America;PANAMÁ;GT;12
-America;PANAMÁ;VZLA;7
+America;PERU;CR;22
+America;PERU;SV;25
+America;PERU;GT;25
+America;PERU;VZLA;27
 America;ECUADOR;Colombia;15
 America;ECUADOR;CR;30
 America;ECUADOR;SV;32
@@ -81,7 +74,3 @@ Europa;GERMANY;CR;28
 Europa;BELGIUM;SV;30
 Europa;ISRAEL;GT;30
 Europa;NEDERLAND;VZLA;35
-Europa;HUNGARY;VZLA;35
-Europa;SPAIN;VZLA;35
-Europa;PORTUGAL;VZLA;35
-Europa;CZECH REPUBLIC;VZLA;35

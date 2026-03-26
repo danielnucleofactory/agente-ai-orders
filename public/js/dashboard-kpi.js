@@ -118,7 +118,7 @@ class DashboardKPIManager {
         return `${year}-${month}-${day}`;
     }
 
-    async fetchData(endpoint, method = 'GET', body = null) {
+    async fetchData(endpoint, method = 'GET', body = null, extraParams = {}) {
         try {
             // Agregar filtros actuales como query params
             const url = new URL(`${this.apiBaseUrl}${endpoint}`, window.location.origin);
@@ -130,6 +130,13 @@ class DashboardKPIManager {
                     } else {
                         url.searchParams.append(key, value);
                     }
+                }
+            });
+            // Agregar parámetros extra (específicos por endpoint)
+            Object.keys(extraParams).forEach(key => {
+                const value = extraParams[key];
+                if (value !== null && value !== undefined && value !== '') {
+                    url.searchParams.append(key, value);
                 }
             });
 
@@ -420,6 +427,28 @@ class DashboardKPIManager {
         if (applyBtn) {
             applyBtn.addEventListener('click', () => {
                 this.applyFilters();
+            });
+        }
+
+        // Proyección: delegación en body (el botón existe en el DOM; evita fallos si el init corre tarde
+        // o el nodo se reemplaza; type="button" en la vista evita submit accidental).
+        document.body.addEventListener('click', (e) => {
+            const applyProyBtn = e.target.closest('#btn-proy-apply');
+            if (!applyProyBtn) {
+                return;
+            }
+            e.preventDefault();
+            const mgr = window.dashboardKPIManager;
+            if (mgr && typeof mgr.loadProyeccion === 'function') {
+                mgr.loadProyeccion();
+            }
+        });
+
+        // Aplicar con Enter en el selector de semana de proyección
+        const proyWeekStart = document.getElementById('proy-week-start');
+        if (proyWeekStart) {
+            proyWeekStart.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.loadProyeccion();
             });
         }
 
@@ -1331,6 +1360,19 @@ class DashboardKPIManager {
         }
     }
 
+    /** Formato YYYY-Www, alineado con input type="week" y el backend ISO. */
+    static getCurrentIsoWeekString() {
+        const dt = new Date();
+        dt.setHours(0, 0, 0, 0);
+        dt.setDate(dt.getDate() + 3 - ((dt.getDay() + 6) % 7));
+        const isoYear = dt.getFullYear();
+        const week1 = new Date(isoYear, 0, 4);
+        const week = 1 + Math.round(
+            ((dt.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7
+        );
+        return `${isoYear}-W${String(week).padStart(2, '0')}`;
+    }
+
     async loadProyeccion() {
         const tableHead = document.getElementById('proy-table-head');
         const tableBody = document.getElementById('proy-table-body');
@@ -1339,8 +1381,31 @@ class DashboardKPIManager {
 
         tableBody.innerHTML = '<tr><td style="text-align:center; padding: 20px; color: #6b7280;">Cargando datos...</td></tr>';
 
+        const PROY_WEEK_COUNT = 12;
+        const weekInput = document.getElementById('proy-week-start');
+        let projectionWeek = weekInput?.value?.trim() || '';
+        if (!projectionWeek || !/^\d{4}-W\d{1,2}$/.test(projectionWeek)) {
+            projectionWeek = DashboardKPIManager.getCurrentIsoWeekString();
+            if (weekInput) weekInput.value = projectionWeek;
+        }
+
+        const weekLabel = projectionWeek.replace('-W', ' · S');
+
+        // Actualizar descripción y subtítulo KPI (12 semanas desde la semana elegida)
+        const desc = document.getElementById('proy-table-description');
+        if (desc) {
+            desc.textContent = `Distribución semanal por etapa — ${PROY_WEEK_COUNT} semanas desde la semana ${weekLabel}`;
+        }
+        const kpiSubtitle = document.querySelector('#proy-total-pos')?.closest('.kpi-card')?.querySelector('.kpi-card-subtitle');
+        if (kpiSubtitle) {
+            kpiSubtitle.textContent = `${PROY_WEEK_COUNT} semanas desde ${weekLabel}`;
+        }
+
         try {
-            const result = await this.fetchData('/future-arrivals');
+            const result = await this.fetchData('/future-arrivals', 'GET', null, {
+                projection_week: projectionWeek,
+                week_count: PROY_WEEK_COUNT,
+            });
 
             if (!result || !result.success || !result.data) {
                 tableHead.innerHTML = '<tr><th style="padding: 12px; border: 1px solid #e5e7eb;">Etapa</th></tr>';
@@ -1599,7 +1664,16 @@ function toggleSubTable(row) {
     }
 }
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
+// Inicializar cuando el DOM esté listo (scripts tras </body> pueden dejar DOMContentLoaded ya disparado)
+function startDashboardKPI() {
+    if (window.dashboardKPIManager) {
+        return;
+    }
     window.dashboardKPIManager = new DashboardKPIManager();
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startDashboardKPI);
+} else {
+    startDashboardKPI();
+}

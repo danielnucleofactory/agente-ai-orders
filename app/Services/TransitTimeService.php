@@ -5,63 +5,23 @@ declare(strict_types=1);
 namespace App\Services;
 
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Servicio para calcular tiempos de tránsito marítimo esperados
- * basado en la matriz de regiones y puertos.
+ * a partir del CSV de matriz (región, país origen, destino, días).
  */
 class TransitTimeService
 {
     /**
-     * Matriz de tiempos de tránsito marítimo (días)
-     * Estructura: [país_origen][destino] => días
-     * 
-     * Destinos:
-     * - CR = Costa Rica
-     * - SV = El Salvador
-     * - GT = Guatemala
-     * - VZLA = Venezuela
-     * - Colombia = Colombia
+     * Cache en memoria por request / worker (se recarga al olvidar OPcache).
+     *
+     * @var array<string, array<string, int>>|null
      */
-    protected const TRANSIT_TIMES = [
-        // ========== ASIA ==========
-        'CHINA' => ['CR' => 65],
-        'VIETNAM' => ['SV' => 65],
-        'KOREA' => ['GT' => 53],
-        'INDIA' => ['VZLA' => 65],
-        'PHILIPPINES' => ['Colombia' => 28],
-        'TAIWAN' => ['Colombia' => 28],
-        'UNITED ARAB EMIRATES' => ['Colombia' => 28],
-        
-        // ========== AMERICA ==========
-        'MEXICO' => ['CR' => 14, 'SV' => 12, 'GT' => 12, 'VZLA' => 30, 'Colombia' => 25],
-        'PANAMA' => ['CR' => 2, 'SV' => 4, 'GT' => 5, 'VZLA' => 10, 'Colombia' => 2],
-        'GUATEMALA' => ['Colombia' => 18, 'CR' => 10, 'SV' => 2, 'GT' => 0, 'VZLA' => 25],
-        'COLOMBIA' => ['Colombia' => 0, 'CR' => 10, 'SV' => 15, 'GT' => 12, 'VZLA' => 5],
-        'BRAZIL' => ['Colombia' => 25, 'CR' => 25, 'SV' => 25, 'GT' => 25, 'VZLA' => 20],
-        'COSTA RICA' => ['Colombia' => 12, 'CR' => 0, 'SV' => 12, 'GT' => 12, 'VZLA' => 15],
-        'CANADA' => ['Colombia' => 25, 'CR' => 18, 'SV' => 28, 'GT' => 25, 'VZLA' => 25],
-        'UNITED STATES' => ['Colombia' => 5, 'CR' => 10, 'SV' => 10, 'GT' => 10, 'VZLA' => 12],
-        'CHILE' => ['Colombia' => 20, 'CR' => 25, 'SV' => 28, 'GT' => 28, 'VZLA' => 35],
-        'EL SALVADOR' => ['Colombia' => 15, 'CR' => 12, 'SV' => 0, 'GT' => 8, 'VZLA' => 32],
-        'VENEZUELA' => ['Colombia' => 10, 'CR' => 20, 'SV' => 30, 'GT' => 30, 'VZLA' => 0],
-        'PERU' => ['Colombia' => 18],
-        'ECUADOR' => ['SV' => 32, 'GT' => 32, 'VZLA' => 28, 'Colombia' => 15, 'CR' => 30],
-        
-        // ========== EUROPA ==========
-        'ITALY' => ['Colombia' => 28],
-        'GERMANY' => ['CR' => 28],
-        'BELGIUM' => ['SV' => 30],
-        'ISRAEL' => ['GT' => 30],
-        'NETHERLANDS' => ['VZLA' => 35],
-        'HUNGARY' => ['VZLA' => 35],
-        'SPAIN' => ['VZLA' => 35],
-        'PORTUGAL' => ['VZLA' => 35],
-        'CZECH REPUBLIC' => ['VZLA' => 35],
-    ];
+    private static ?array $transitTimesCache = null;
 
     /**
-     * Tiempos por defecto por región (fallback cuando no hay ruta específica)
+     * Tiempos por defecto por región (fallback cuando no hay ruta específica en el CSV)
      */
     protected const DEFAULT_BY_REGION = [
         'Asia' => 65,
@@ -81,7 +41,8 @@ class TransitTimeService
         'PHILIPPINES' => 'Asia',
         'TAIWAN' => 'Asia',
         'UNITED ARAB EMIRATES' => 'Asia',
-        
+        'SINGAPORE' => 'Asia',
+
         // America
         'MEXICO' => 'America',
         'PANAMA' => 'America',
@@ -96,7 +57,7 @@ class TransitTimeService
         'VENEZUELA' => 'America',
         'PERU' => 'America',
         'ECUADOR' => 'America',
-        
+
         // Europa
         'ITALY' => 'Europa',
         'GERMANY' => 'Europa',
@@ -125,7 +86,7 @@ class TransitTimeService
         'HUNGRÍA' => 'HUNGARY',
         'ITALIA' => 'ITALY',
         'BRASIL' => 'BRAZIL',
-        
+
         // Nombres en español
         'ESTADOS UNIDOS' => 'UNITED STATES',
         'EMIRATOS ARABES UNIDOS' => 'UNITED ARAB EMIRATES',
@@ -135,7 +96,7 @@ class TransitTimeService
         'COREA DEL SUR' => 'KOREA',
         'SOUTH KOREA' => 'KOREA',
         'SINGAPUR' => 'SINGAPORE',
-        
+
         // Variaciones comunes
         'USA' => 'UNITED STATES',
         'US' => 'UNITED STATES',
@@ -157,6 +118,83 @@ class TransitTimeService
     ];
 
     /**
+     * @return array<string, array<string, int>>
+     */
+    protected function getTransitTimes(): array
+    {
+        if (self::$transitTimesCache !== null) {
+            return self::$transitTimesCache;
+        }
+
+        return self::$transitTimesCache = $this->loadTransitTimesFromCsv();
+    }
+
+    /**
+     * @return array<string, array<string, int>>
+     */
+    protected function loadTransitTimesFromCsv(): array
+    {
+        $path = config('services.transit_matrix.csv_path');
+        if (!is_string($path) || $path === '' || !is_readable($path)) {
+            Log::warning('Transit matrix CSV no encontrado o ilegible', ['path' => $path]);
+
+            return [];
+        }
+
+        $matrix = [];
+        $handle = fopen($path, 'r');
+        if ($handle === false) {
+            Log::warning('No se pudo abrir el CSV de matriz de tránsito', ['path' => $path]);
+
+            return [];
+        }
+
+        try {
+            $header = $this->fgetCsvSemicolon($handle);
+            if ($header === false) {
+                return [];
+            }
+
+            while (($row = $this->fgetCsvSemicolon($handle)) !== false) {
+                if (count($row) < 4) {
+                    continue;
+                }
+
+                $destino = trim((string) $row[2]);
+                $diasRaw = trim((string) $row[3]);
+                if ($destino === '' || $diasRaw === '') {
+                    continue;
+                }
+
+                if (!is_numeric($diasRaw)) {
+                    continue;
+                }
+
+                $originKey = $this->normalizeCountry(trim((string) $row[1]));
+                $destKey = $this->normalizeDestination($destino);
+                $matrix[$originKey][$destKey] = (int) $diasRaw;
+            }
+        } finally {
+            fclose($handle);
+        }
+
+        return $matrix;
+    }
+
+    /**
+     * @param resource $handle
+     * @return array<int, string>|false
+     */
+    private function fgetCsvSemicolon($handle): array|false
+    {
+        if (\PHP_VERSION_ID >= 80400) {
+            return fgetcsv($handle, 0, ';', '"', '\\');
+        }
+
+        return fgetcsv($handle, 0, ';');
+    }
+
+    /**
      * Obtiene los días de tránsito esperados para una ruta origen-destino
      *
      * @param string|null $originCountry País de origen
@@ -172,12 +210,11 @@ class TransitTimeService
         $origin = $this->normalizeCountry($originCountry);
         $dest = $this->normalizeDestination($destination);
 
-        // Buscar en la matriz
-        if (isset(self::TRANSIT_TIMES[$origin][$dest])) {
-            return self::TRANSIT_TIMES[$origin][$dest];
+        $times = $this->getTransitTimes();
+        if (isset($times[$origin][$dest])) {
+            return $times[$origin][$dest];
         }
 
-        // Fallback por región
         return $this->getDefaultByRegion($origin);
     }
 
@@ -190,8 +227,8 @@ class TransitTimeService
     public function getDefaultByRegion(string $country): ?int
     {
         $region = $this->getRegion($country);
-        
-        return $region ? self::DEFAULT_BY_REGION[$region] : null;
+
+        return $region ? (self::DEFAULT_BY_REGION[$region] ?? null) : null;
     }
 
     /**
@@ -207,7 +244,7 @@ class TransitTimeService
         }
 
         $normalized = $this->normalizeCountry($country);
-        
+
         return self::COUNTRY_TO_REGION[$normalized] ?? null;
     }
 
@@ -280,7 +317,7 @@ class TransitTimeService
     protected function normalizeCountry(string $country): string
     {
         $normalized = strtoupper(trim($country));
-        
+
         return self::COUNTRY_ALIASES[$normalized] ?? $normalized;
     }
 
@@ -290,9 +327,9 @@ class TransitTimeService
     protected function normalizeDestination(string $destination): string
     {
         $normalized = strtoupper(trim($destination));
-        
+
         // Si ya es un código válido, retornarlo
-        if (in_array($normalized, ['CR', 'SV', 'GT', 'VZLA'])) {
+        if (in_array($normalized, ['CR', 'SV', 'GT', 'VZLA'], true)) {
             return $normalized;
         }
 
@@ -311,7 +348,7 @@ class TransitTimeService
      */
     public function getAvailableOrigins(): array
     {
-        return array_keys(self::TRANSIT_TIMES);
+        return array_keys($this->getTransitTimes());
     }
 
     /**
@@ -323,8 +360,8 @@ class TransitTimeService
     public function getAvailableDestinations(string $originCountry): array
     {
         $origin = $this->normalizeCountry($originCountry);
-        
-        return array_keys(self::TRANSIT_TIMES[$origin] ?? []);
+
+        return array_keys($this->getTransitTimes()[$origin] ?? []);
     }
 
     /**
@@ -332,13 +369,12 @@ class TransitTimeService
      *
      * @param string $originCountry País de origen
      * @param string $destination Destino
-     * @return bool
      */
     public function hasRoute(string $originCountry, string $destination): bool
     {
         $origin = $this->normalizeCountry($originCountry);
         $dest = $this->normalizeDestination($destination);
 
-        return isset(self::TRANSIT_TIMES[$origin][$dest]);
+        return isset($this->getTransitTimes()[$origin][$dest]);
     }
 }

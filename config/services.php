@@ -73,4 +73,11 @@ return [
         'base_url' => env('MAESTROS_API_BASE_URL', 'https://olo.md.orders.raga-x.ai'),
     ],
 
+    'transit_matrix' => [
+        'csv_path' => env(
+            'TRANSIT_MATRIX_CSV_PATH',
+            base_path('Matriz de regiones y puertos para validar tiempo de transito.csv')
+        ),
+    ],
+
 ];

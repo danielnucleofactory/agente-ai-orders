@@ -501,7 +501,7 @@
                     <div class="kpi-card">
                         <div class="kpi-card-title">Llegadas Proyectadas</div>
                         <div class="kpi-card-value" id="proy-total-pos">-</div>
-                        <div class="kpi-card-subtitle">Próximas 12 semanas</div>
+                        <div class="kpi-card-subtitle">12 semanas desde la semana elegida</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-card-title">En Producción</div>
@@ -525,9 +525,23 @@
                     <div class="table-header">
                         <div>
                             <div class="table-title">Proyección de Llegadas Futuras por Semana</div>
-                            <div class="table-description">
-                                Distribución semanal de órdenes por etapa del proceso logístico - próximas 12 semanas
+                            <div class="table-description" id="proy-table-description">
+                                Distribución semanal por etapa — 12 semanas a partir de la semana que elijas
                             </div>
+                        </div>
+                        <!-- Semana inicial de la proyección -->
+                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <label for="proy-week-start" style="font-size:13px; color:#374151; white-space:nowrap;">Semana desde:</label>
+                                <input type="week" id="proy-week-start" value="{{ now()->format('o-\WW') }}"
+                                    style="min-width:150px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; color:#374151;"
+                                    title="Se mostrarán 12 semanas consecutivas empezando en esta semana (ISO)">
+                            </div>
+                            <button type="button" id="btn-proy-apply"
+                                style="padding:5px 14px; background:#1AAD8A; color:#fff; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; transition:background 0.2s;"
+                                onmouseover="this.style.background='#159a7a'" onmouseout="this.style.background='#1AAD8A'">
+                                Aplicar
+                            </button>
                         </div>
                     </div>
                     <div style="overflow-x: auto;">
