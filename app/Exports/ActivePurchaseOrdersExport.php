@@ -185,7 +185,7 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
             $po->order_number ?? '',
             $po->vendor->name ?? '',
             $date($po->emision_date_po),
-            $date($po->order_date),
+            $date($po->created_at),
             $po->currency ?? '',
             $po->incoterms ?? '',
             $po->payment_terms ?? '',
