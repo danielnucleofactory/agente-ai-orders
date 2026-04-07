@@ -11,16 +11,18 @@
         </x-view-title>
 
         <div class="flex items-center gap-4">
-            <a href="{{ route('products.create') }}">
-                <x-secondary-button class="group flex items-center gap-[0.625rem]">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M8 1V15M1 8H15" stroke="#1AAD8A" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round"
-                            class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
-                    </svg>
-                    <span>Nuevo producto</span>
-                </x-secondary-button>
-            </a>
+            @can('has_create_products')
+                <a href="{{ route('products.create') }}">
+                    <x-secondary-button class="group flex items-center gap-[0.625rem]">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M8 1V15M1 8H15" stroke="#1AAD8A" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round"
+                                class="transition-colors duration-500 group-hover:stroke-dark-blue group-active:stroke-neutral-blue group-disabled:stroke-[#C2C2C2]" />
+                        </svg>
+                        <span>Nuevo producto</span>
+                    </x-secondary-button>
+                </a>
+            @endcan
         </div>
     </div>
 
@@ -70,6 +72,7 @@
 
             <livewire:components.reusable-table :headers="$headers" :sortable="$sortable" :searchable="$searchable" :filterable="$filterable"
                 :filterOptions="$filterOptions" :actions="true" :actionsView="false" :actionsEdit="true" :actionsDelete="true"
+                :editPermission="'has_edit_products'" :deletePermission="'has_delete_products'"
                 :baseRoute="'products'" :model="\App\Models\Product::class" :showPerPage="false" />
         </div>
     </div>

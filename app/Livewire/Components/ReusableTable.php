@@ -23,6 +23,7 @@ class ReusableTable extends Component
     public $filterable = [];
     public $filterOptions = [];
     public $relationColumns = [];
+    public $withCount = [];
 
     // Actions configuration
     public $showActions = false;
@@ -31,6 +32,9 @@ class ReusableTable extends Component
     public $actionsDelete = false;
     public $routeKeyName = 'id';
     public $baseRoute = '';
+    public $viewPermission = null;
+    public $editPermission = null;
+    public $deletePermission = null;
 
     // Deletion confirmation
     public $confirmingDelete = false;
@@ -85,6 +89,10 @@ class ReusableTable extends Component
             return;
         }
 
+        if ($this->deletePermission && !auth()->user()?->can($this->deletePermission)) {
+            abort(403, 'No tienes permisos para eliminar este registro');
+        }
+
         try {
             // Check if this is a Spatie Role model which uses find() instead of findOrFail()
             if ($this->model === 'Spatie\\Permission\\Models\\Role') {
@@ -127,6 +135,7 @@ class ReusableTable extends Component
         $searchable = [],
         $filterable = [],
         $filterOptions = [],
+        $withCount = [],
         $model = null,
         $rows = [],
         $relationColumns = [],
@@ -135,7 +144,10 @@ class ReusableTable extends Component
         $routeKeyName = 'id',
         $actionsView = true,
         $actionsEdit = true,
-        $actionsDelete = true
+        $actionsDelete = true,
+        $viewPermission = null,
+        $editPermission = null,
+        $deletePermission = null
     )
     {
         $this->headers = $headers;
@@ -144,14 +156,19 @@ class ReusableTable extends Component
         $this->filterable = $filterable;
         $this->filterOptions = $filterOptions;
         $this->relationColumns = $relationColumns;
+        $this->withCount = $withCount;
 
         // Configure actions
         $this->showActions = $actions;
         $this->baseRoute = $baseRoute;
         $this->routeKeyName = $routeKeyName;
-        $this->actionsView = $actionsView;
-        $this->actionsEdit = $actionsEdit;
-        $this->actionsDelete = $actionsDelete;
+        $this->viewPermission = $viewPermission;
+        $this->editPermission = $editPermission;
+        $this->deletePermission = $deletePermission;
+
+        $this->actionsView = $actionsView && (!$this->viewPermission || auth()->user()?->can($this->viewPermission));
+        $this->actionsEdit = $actionsEdit && (!$this->editPermission || auth()->user()?->can($this->editPermission));
+        $this->actionsDelete = $actionsDelete && (!$this->deletePermission || auth()->user()?->can($this->deletePermission));
 
         // If actions is true and headers don't include 'actions', add it
         if ($this->showActions && !isset($this->headers['actions'])) {
@@ -268,6 +285,11 @@ class ReusableTable extends Component
         // Load relationships if provided
         if (!empty($this->relationColumns)) {
             $query->with($this->relationColumns);
+        }
+
+        // Add relation counts if provided
+        if (!empty($this->withCount)) {
+            $query->withCount($this->withCount);
         }
 
         // Apply search if searchable fields are provided (case-insensitive)

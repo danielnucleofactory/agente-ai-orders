@@ -128,23 +128,28 @@ Route::middleware(['auth'])->group(function () {
 
     // Rutas para proveedores
     Route::view('vendors', 'vendors.index')
+        ->middleware('permission:has_view_vendors')
         ->name('vendors.index');
 
     Route::view('vendors/create', 'vendors.create')
+        ->middleware('permission:has_create_vendors')
         ->name('vendors.create');
 
     Route::get('vendors/{vendor}/edit', function ($vendor) {
         return view('vendors.edit', ['vendor' => \App\Models\Vendor::findOrFail($vendor)]);
-    })->name('vendors.edit');
+    })->middleware('permission:has_edit_vendors')->name('vendors.edit');
 
     // Rutas para direcciones de envío (ship-to)
     Route::view('ship-to', 'ship-to.index')
+        ->middleware('permission:has_view_ship_to')
         ->name('ship-to.index');
 
     Route::view('ship-to/create', 'ship-to.create')
+        ->middleware('permission:has_create_ship_to')
         ->name('ship-to.create');
 
     Route::view('ship-to/{id}/edit', 'ship-to.edit')
+        ->middleware('permission:has_edit_ship_to')
         ->name('ship-to.edit');
 
     // Route::view('shipping-documentation/requests', 'shipping-documentation.requests')
@@ -194,14 +199,16 @@ Route::middleware(['auth'])->group(function () {
 
     // Rutas para hubs
     Route::view('hub', 'hub.index')
+        ->middleware('permission:has_view_hubs')
         ->name('hub.index');
 
     Route::view('hub/create', 'hub.create')
+        ->middleware('permission:has_create_hubs')
         ->name('hub.create');
 
     Route::get('hub/{id}/edit', function ($id) {
         return view('hub.edit', ['hub' => \App\Models\Hub::findOrFail($id)]);
-    })->name('hub.edit');
+    })->middleware('permission:has_edit_hubs')->name('hub.edit');
 
 });
 
@@ -220,13 +227,15 @@ Route::middleware(['auth'])->group(function () {
         ->name('settings.history');
 
     Route::get('settings/roles', Roles::class)
+        ->middleware('permission:has_view_roles')
         ->name('settings.roles');
 
     Route::get('settings/roles/{roleId}/edit', RoleEdit::class)
+        ->middleware('permission:has_edit_roles')
         ->name('settings.roles.edit');
 
     Route::get('/settings/roles/create', App\Livewire\Settings\RoleCreate::class)
-        ->middleware(['auth'])
+        ->middleware('permission:has_create_roles')
         ->name('settings.roles.create');
 
     Route::get('settings/kanban', Kanban::class)
@@ -236,12 +245,15 @@ Route::middleware(['auth'])->group(function () {
         ->name('settings.stages');
 
     Route::get('settings/users', Users::class)
+        ->middleware('permission:has_view_users')
         ->name('settings.users');
 
     Route::get('settings/users/create', UserCreate::class)
+        ->middleware('permission:has_create_users')
         ->name('settings.users.create');
 
     Route::get('settings/users/{id}/edit', UserCreate::class)
+        ->middleware('permission:has_edit_users')
         ->name('settings.users.edit');
 
     Route::get('settings/active-sessions', ActiveSessions::class)
@@ -257,19 +269,28 @@ Route::middleware(['auth'])->group(function () {
     Route::get('settings/sessions', Sessions::class)
         ->name('settings.sessions');
 
-    // Companies
+    // Companies (permisos dedicados; asignación típica: Super Administrador)
     Route::get('settings/companies', \App\Livewire\Settings\Companies::class)
+        ->middleware('permission:has_view_companies')
         ->name('settings.companies');
 
     Route::get('settings/companies/create', \App\Livewire\Settings\CompanyCreate::class)
+        ->middleware('permission:has_create_companies')
         ->name('settings.companies.create');
 
     Route::get('settings/companies/{id}/edit', \App\Livewire\Settings\CompanyCreate::class)
+        ->middleware('permission:has_edit_companies')
         ->name('settings.companies.edit');
 
-    Route::get('/bill-to', [App\Http\Controllers\BillToController::class, 'index'])->name('bill-to.index');
-    Route::get('/bill-to/create', [App\Http\Controllers\BillToController::class, 'create'])->name('bill-to.create');
-    Route::get('/bill-to/{billTo}/edit', [App\Http\Controllers\BillToController::class, 'edit'])->name('bill-to.edit');
+    Route::get('/bill-to', [App\Http\Controllers\BillToController::class, 'index'])
+        ->middleware('permission:has_view_bill_to')
+        ->name('bill-to.index');
+    Route::get('/bill-to/create', [App\Http\Controllers\BillToController::class, 'create'])
+        ->middleware('permission:has_create_bill_to')
+        ->name('bill-to.create');
+    Route::get('/bill-to/{billTo}/edit', [App\Http\Controllers\BillToController::class, 'edit'])
+        ->middleware('permission:has_edit_bill_to')
+        ->name('bill-to.edit');
 
     // Rutas para autorizaciones
     Route::get('/authorizations', [AuthorizationController::class, 'index'])->name('authorizations.index');
@@ -303,21 +324,27 @@ Route::middleware(['auth'])->group(function () {
 
     // Rutas para Maestros
     Route::view('maestros/container-types', 'maestros.container-types.index')
+        ->middleware('permission:has_view_maestros')
         ->name('maestros.container-types.index');
 
     Route::view('maestros/ports', 'maestros.ports.index')
+        ->middleware('permission:has_view_maestros')
         ->name('maestros.ports.index');
 
     Route::view('maestros/transport-types', 'maestros.transport-types.index')
+        ->middleware('permission:has_view_maestros')
         ->name('maestros.transport-types.index');
 
     Route::view('maestros/shipping-lines', 'maestros.shipping-lines.index')
+        ->middleware('permission:has_view_maestros')
         ->name('maestros.shipping-lines.index');
 
     Route::view('maestros/service-providers', 'maestros.service-providers.index')
+        ->middleware('permission:has_view_maestros')
         ->name('maestros.service-providers.index');
 
     Route::view('maestros/rate-types', 'maestros.rate-types.index')
+        ->middleware('permission:has_view_maestros')
         ->name('maestros.rate-types.index');
 });
 

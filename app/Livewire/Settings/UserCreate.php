@@ -44,6 +44,12 @@ class UserCreate extends Component
 
     public function mount($id = null)
     {
+        if ($id) {
+            abort_unless(auth()->user()?->can('has_edit_users'), 403);
+        } else {
+            abort_unless(auth()->user()?->can('has_create_users'), 403);
+        }
+
         $this->roles = Role::all();
         $this->companies = Company::all();
 
@@ -64,6 +70,12 @@ class UserCreate extends Component
 
     public function save()
     {
+        if ($this->id) {
+            abort_unless(auth()->user()?->can('has_edit_users'), 403);
+        } else {
+            abort_unless(auth()->user()?->can('has_create_users'), 403);
+        }
+
         $this->validate($this->rules(), [
             'name.required' => 'El nombre es requerido',
             'name.min' => 'El nombre debe tener al menos 3 caracteres',

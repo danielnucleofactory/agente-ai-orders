@@ -10,11 +10,13 @@
             </x-slot:content>
         </x-view-title>
 
-        <a href="{{ route('settings.companies.create') }}">
-            <x-primary-button>
-                Nueva Empresa
-            </x-primary-button>
-        </a>
+        @can('has_create_companies')
+            <a href="{{ route('settings.companies.create') }}">
+                <x-primary-button>
+                    Nueva Empresa
+                </x-primary-button>
+            </a>
+        @endcan
     </div>
 
     @if (session()->has('message'))
@@ -58,8 +60,12 @@
             :actionsView="false"
             :actionsEdit="true"
             :actionsDelete="true"
+            :editPermission="'has_edit_companies'"
+            :deletePermission="'has_delete_companies'"
             :baseRoute="'settings.companies'"
             :model="\App\Models\Company::class"
+            :showSearch="auth()->user()?->can('filter') ?? false"
+            :showPerPage="auth()->user()?->can('filter') ?? false"
         />
     </div>
 </div>

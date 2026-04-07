@@ -27,6 +27,7 @@ class Users extends Component
 
     public function deleteUser($userId)
     {
+        abort_unless(auth()->user()?->can('has_delete_users'), 403);
         $user = User::find($userId);
 
         if ($user) {
@@ -38,6 +39,7 @@ class Users extends Component
     }
 
     public function openModal($id) {
+        abort_unless(auth()->user()?->can('has_delete_users'), 403);
         $this->id = $id;
         $this->userToDelete = User::find($id);
         $this->dispatch('open-modal', 'modal-delete-user');
@@ -51,6 +53,7 @@ class Users extends Component
 
     public function render()
     {
+        abort_unless(auth()->user()?->can('has_view_users'), 403);
         $searchTerm = '%' . strtolower(trim($this->search)) . '%';
         $users = User::with('roles')
             ->when($this->search, function ($query) use ($searchTerm) {

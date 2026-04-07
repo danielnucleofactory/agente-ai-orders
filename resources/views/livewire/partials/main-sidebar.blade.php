@@ -16,7 +16,8 @@
     </div>
 
     <nav class="flex w-full flex-col items-center space-y-2 p-6 text-[#898989]">
-        <a href="{{ route('settings.profile') }}" class="flex overflow-hidden items-center mb-10 profile-container">
+        @can('has_view_profile')
+            <a href="{{ route('settings.profile') }}" class="flex overflow-hidden items-center mb-10 profile-container">
             <div class="avatar-container h-[2.625rem] w-[2.625rem] overflow-hidden rounded-full bg-[#127A62] flex items-center justify-center text-white font-medium"
                  x-data="{
                      name: '{{ auth()->user()->name }}',
@@ -37,7 +38,8 @@
                 <div class="text-2xl" x-data="{{ json_encode(['name' => auth()->user()->name]) }}" x-text="name"
                     x-on:profile-updated.window="name = $event.detail.name"></div>
             </div>
-        </a>
+            </a>
+        @endcan
 
         <span class="text-[0.625rem] font-medium uppercase hidden">Main</span>
 
@@ -162,6 +164,20 @@
                 </x-sidebar-dropdown>
             </li>
             @endif
+            @if(
+                auth()->user()->can('has_view_settings')
+                || auth()->user()->can('has_view_notifications_settings')
+                || auth()->user()->can('has_change_password')
+                || auth()->user()->can('has_view_kanban_settings')
+                || auth()->user()->can('has_view_vendors')
+                || auth()->user()->can('has_view_ship_to')
+                || auth()->user()->can('has_view_hubs')
+                || auth()->user()->can('has_view_users')
+                || auth()->user()->can('has_view_roles')
+                || auth()->user()->can('has_view_sessions')
+                || auth()->user()->can('has_view_history')
+                || auth()->user()->can('has_view_companies')
+            )
             <li>
                 <x-sidebar-dropdown active="{{ request()->is('settings') || request()->is('settings/*') }}" route="{{ route('settings.index') }}">
                     <x-slot:icon>
@@ -180,36 +196,46 @@
 
                     <ul
                         class="{{ request()->is('settings') || request()->is('settings/*') ? 'border-[#1AAD8A]' : 'border-gray-200' }} ml-[0.625rem] mt-2 flex flex-col space-y-1 border-l-2 pl-2.5">
-                        <li>
-                            <x-sidebar-dropdown-item href="{{ route('settings.index') }}" :active="request()->routeIs('settings.index')">
-                                Generales
-                            </x-sidebar-dropdown-item>
-                        </li>
+                        @can('has_view_settings')
+                            <li>
+                                <x-sidebar-dropdown-item href="{{ route('settings.index') }}" :active="request()->routeIs('settings.index')">
+                                    Generales
+                                </x-sidebar-dropdown-item>
+                            </li>
+                        @endcan
 
-                        <li>
-                            <x-sidebar-dropdown-item href="{{ route('settings.notifications') }}" :active="request()->routeIs('settings.notifications')">
-                                Notificaciones
-                            </x-sidebar-dropdown-item>
-                        </li>
+                        @can('has_view_notifications_settings')
+                            <li>
+                                <x-sidebar-dropdown-item href="{{ route('settings.notifications') }}" :active="request()->routeIs('settings.notifications')">
+                                    Notificaciones
+                                </x-sidebar-dropdown-item>
+                            </li>
+                        @endcan
 
-                        <li>
-                            <x-sidebar-dropdown-item href="{{ route('settings.password') }}" :active="request()->routeIs('settings.password')">
-                                Cambiar Contraseña
-                            </x-sidebar-dropdown-item>
-                        </li>
+                        @can('has_change_password')
+                            <li>
+                                <x-sidebar-dropdown-item href="{{ route('settings.password') }}" :active="request()->routeIs('settings.password')">
+                                    Cambiar Contraseña
+                                </x-sidebar-dropdown-item>
+                            </li>
+                        @endcan
 
-                        <li>
-                            <x-sidebar-dropdown-item href="{{ route('settings.kanban') }}" :active="request()->routeIs('settings.kanban')">
-                                Etapas
-                            </x-sidebar-dropdown-item>
-                        </li>
+                        @can('has_view_kanban_settings')
+                            <li>
+                                <x-sidebar-dropdown-item href="{{ route('settings.kanban') }}" :active="request()->routeIs('settings.kanban')">
+                                    Etapas
+                                </x-sidebar-dropdown-item>
+                            </li>
+                        @endcan
 
-                        <li>
-                            <x-sidebar-dropdown-item href="{{ route('vendors.index') }}"
-                                :active="request()->routeIs('vendors.index')">
-                                Proveedores
-                            </x-sidebar-dropdown-item>
-                        </li>
+                        @can('has_view_vendors')
+                            <li>
+                                <x-sidebar-dropdown-item href="{{ route('vendors.index') }}"
+                                    :active="request()->routeIs('vendors.index')">
+                                    Proveedores
+                                </x-sidebar-dropdown-item>
+                            </li>
+                        @endcan
 
                         <li class="hidden">
                             <x-sidebar-dropdown-item href="{{ route('ship-to.index') }}"
@@ -225,41 +251,53 @@
                             </x-sidebar-dropdown-item>
                         </li>
 
-                        <li>
-                            <x-sidebar-dropdown-item href="{{ route('settings.users') }}" :active="request()->routeIs('settings.users')">
-                                Usuarios
-                            </x-sidebar-dropdown-item>
-                        </li>
+                        @can('has_view_users')
+                            <li>
+                                <x-sidebar-dropdown-item href="{{ route('settings.users') }}" :active="request()->routeIs('settings.users')">
+                                    Usuarios
+                                </x-sidebar-dropdown-item>
+                            </li>
+                        @endcan
 
-                        <li>
-                            <x-sidebar-dropdown-item href="{{ route('settings.companies') }}" :active="request()->routeIs('settings.companies*')">
-                                Empresas
-                            </x-sidebar-dropdown-item>
-                        </li>
+                        @can('has_view_companies')
+                            <li>
+                                <x-sidebar-dropdown-item href="{{ route('settings.companies') }}" :active="request()->routeIs('settings.companies*')">
+                                    Empresas
+                                </x-sidebar-dropdown-item>
+                            </li>
+                        @endcan
 
-                        <li>
-                            <x-sidebar-dropdown-item href="{{ route('settings.roles') }}" :active="request()->routeIs('settings.roles')">
-                                Roles
-                            </x-sidebar-dropdown-item>
-                        </li>
+                        @can('has_view_roles')
+                            <li>
+                                <x-sidebar-dropdown-item href="{{ route('settings.roles') }}" :active="request()->routeIs('settings.roles')">
+                                    Roles
+                                </x-sidebar-dropdown-item>
+                            </li>
+                        @endcan
 
-                        <li>
-                            <x-sidebar-dropdown-item href="{{ route('settings.sessions') }}" :active="request()->routeIs('settings.sessions')">
-                                Sesiones activas
-                            </x-sidebar-dropdown-item>
-                        </li>
+                        @can('has_view_sessions')
+                            <li>
+                                <x-sidebar-dropdown-item href="{{ route('settings.sessions') }}" :active="request()->routeIs('settings.sessions')">
+                                    Sesiones activas
+                                </x-sidebar-dropdown-item>
+                            </li>
+                        @endcan
 
-                        <li>
-                            <x-sidebar-dropdown-item href="{{ route('settings.history') }}" :active="request()->routeIs('settings.history')">
-                                Log Histórico
-                            </x-sidebar-dropdown-item>
-                        </li>
+                        @can('has_view_history')
+                            <li>
+                                <x-sidebar-dropdown-item href="{{ route('settings.history') }}" :active="request()->routeIs('settings.history')">
+                                    Log Histórico
+                                </x-sidebar-dropdown-item>
+                            </li>
+                        @endcan
 
-                        <li>
-                            <x-sidebar-dropdown-item href="{{ route('settings.api-tokens') }}" :active="request()->routeIs('settings.api-tokens')">
-                                Tokens API
-                            </x-sidebar-dropdown-item>
-                        </li>
+                        @can('has_view_settings')
+                            <li>
+                                <x-sidebar-dropdown-item href="{{ route('settings.api-tokens') }}" :active="request()->routeIs('settings.api-tokens')">
+                                    Tokens API
+                                </x-sidebar-dropdown-item>
+                            </li>
+                        @endcan
 
                         @if(config('po-confirmation.enabled', false))
                         <li>
@@ -279,7 +317,9 @@
                     </ul>
                 </x-sidebar-dropdown>
             </li>
+            @endif
 
+            @can('has_view_maestros')
             <li>
                 <x-sidebar-dropdown active="{{ request()->is('maestros') || request()->is('maestros/*') }}" route="{{ route('maestros.container-types.index') }}">
                     <x-slot:icon>
@@ -342,6 +382,7 @@
                     </ul>
                 </x-sidebar-dropdown>
             </li>
+            @endcan
 
             @can('has_view_support')
             <li>

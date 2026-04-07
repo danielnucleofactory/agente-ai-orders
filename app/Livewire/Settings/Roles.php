@@ -11,6 +11,7 @@ class Roles extends Component {
     public $permissions;
 
     public function mount() {
+        abort_unless(auth()->user()?->can('has_view_roles'), 403);
         $this->roles = Role::withCount(['permissions', 'users'])->get();
         $this->permissions = Permission::all();
     }

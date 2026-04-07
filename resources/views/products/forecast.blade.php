@@ -60,6 +60,7 @@
 
             <livewire:components.reusable-table :headers="$headers" :sortable="$sortable" :searchable="$searchable" :filterable="$filterable"
                 :filterOptions="$filterOptions" :actions="true" :actionsView="false" :actionsEdit="true" :actionsDelete="true"
+                :editPermission="'has_edit_forecast'"
                 :baseRoute="'products.forecast'" :model="\App\Models\Forecast::class" />
         </div>
     </div>

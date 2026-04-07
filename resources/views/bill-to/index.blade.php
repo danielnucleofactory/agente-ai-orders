@@ -14,11 +14,13 @@
             </x-slot:content>
         </x-view-title>
 
-        <a href="{{ route('bill-to.create') }}">
-            <x-primary-button>
-                Nueva Dirección de facturación
-            </x-primary-button>
-        </a>
+        @can('has_create_bill_to')
+            <a href="{{ route('bill-to.create') }}">
+                <x-primary-button>
+                    Nueva Dirección de facturación
+                </x-primary-button>
+            </a>
+        @endcan
     </div>
 
     <nav class="px-6 py-4 text-lg bg-white rounded-2xl">
@@ -65,6 +67,8 @@
                 :actionsView="false"
                 :actionsEdit="true"
                 :actionsDelete="true"
+                :editPermission="'has_edit_bill_to'"
+                :deletePermission="'has_delete_bill_to'"
                 :baseRoute="'bill-to'"
                 :model="\App\Models\BillTo::class"
             />

@@ -11,6 +11,7 @@
         </div>
     @endif
 
+    @can('filter')
     <div class="flex justify-between mb-4">
         <div class="flex items-center">
             <div class="relative">
@@ -47,6 +48,7 @@
             </select>
         </div>
     </div>
+    @endcan
 
     <div class="overflow-x-auto rounded-t-xl">
         <table class="min-w-full divide-y divide-[#D4F5ED]">

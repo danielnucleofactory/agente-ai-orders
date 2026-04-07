@@ -5,6 +5,7 @@ namespace App\Livewire\Settings;
 use Livewire\Component;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 class RoleCreate extends Component
 {
@@ -13,9 +14,13 @@ class RoleCreate extends Component
     public $permissions = [];
     public $permissionGroups = [];
     public $id;
+    public $allPermissionNames = [];
+
+    private const SUPER_ADMIN_NAME = 'Super Administrador';
 
     public function mount($id = null)
     {
+        abort_unless(auth()->user()?->can('has_create_roles'), 403);
         $this->id = $id;
         $this->loadPermissions();
     }
@@ -23,10 +28,16 @@ class RoleCreate extends Component
     private function loadPermissions()
     {
         // Obtener todos los permisos de la base de datos
-        $allPermissions = Permission::all();
+        $allPermissions = Permission::query()->orderBy('name')->get();
+        $this->allPermissionNames = $allPermissions->pluck('name')->values()->all();
 
         // Organizar permisos por grupos
         $this->permissionGroups = [
+            'Sistema' => [
+                'read' => 'Leer (read)',
+                'export' => 'Exportar (export)',
+                'filter' => 'Filtrar (filter)',
+            ],
             'Dashboard' => [
                 'has_view_dashboard' => 'Ver dashboard principal',
             ],
@@ -91,6 +102,18 @@ class RoleCreate extends Component
                 'has_edit_hubs' => 'Editar hubs',
                 'has_delete_hubs' => 'Eliminar hubs',
             ],
+            'Empresas' => [
+                'has_view_companies' => 'Ver gestión de empresas',
+                'has_create_companies' => 'Crear empresas',
+                'has_edit_companies' => 'Editar empresas',
+                'has_delete_companies' => 'Eliminar empresas',
+            ],
+            'Maestros' => [
+                'has_view_maestros' => 'Ver maestros del sistema',
+                'has_create_maestros' => 'Crear registros en maestros',
+                'has_edit_maestros' => 'Editar registros en maestros',
+                'has_delete_maestros' => 'Eliminar registros en maestros',
+            ],
             'Configuraciones' => [
                 'has_view_settings' => 'Ver configuraciones generales',
                 'has_edit_settings' => 'Editar configuraciones generales',
@@ -146,16 +169,40 @@ class RoleCreate extends Component
             );
         }
 
+        // Agregar permisos existentes no mapeados al final
+        $mappedKeys = [];
+        foreach ($this->permissionGroups as $permissions) {
+            $mappedKeys = array_merge($mappedKeys, array_keys($permissions));
+        }
+        $mappedKeys = array_unique($mappedKeys);
+
+        $unmapped = array_values(array_diff($existingPermissions, $mappedKeys));
+        if (!empty($unmapped)) {
+            $this->permissionGroups['Otros'] = [];
+            foreach ($unmapped as $permName) {
+                $this->permissionGroups['Otros'][$permName] = $permName;
+            }
+        }
+
         // Remover grupos vacíos
         $this->permissionGroups = array_filter($this->permissionGroups, function($permissions) {
             return !empty($permissions);
         });
     }
 
+    public function updatedName()
+    {
+        if ($this->isSuperAdminName($this->name)) {
+            $this->selectAllPermissions();
+        }
+    }
+
     public function createRole()
     {
+        abort_unless(auth()->user()?->can('has_create_roles'), 403);
         $this->validate([
-            'name' => 'required|min:3|unique:roles,name',
+            // Spatie roles are unique by (name, guard_name)
+            'name' => 'required|min:3|unique:roles,name,NULL,id,guard_name,web',
             'selectedPermissions' => 'required|array|min:1',
         ], [
             'name.required' => 'El nombre del rol es requerido',
@@ -166,14 +213,45 @@ class RoleCreate extends Component
         ]);
 
         // Crear el rol
-        $role = Role::create(['name' => $this->name]);
+        $role = Role::create(['name' => $this->name, 'guard_name' => 'web']);
 
         // Asignar permisos seleccionados
         $permissionsToAssign = array_keys(array_filter($this->selectedPermissions));
         $role->syncPermissions($permissionsToAssign);
 
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
         $this->reset(['name', 'selectedPermissions']);
         $this->dispatch('open-modal', 'modal-role-created');
+    }
+
+    public function selectAllPermissions()
+    {
+        $this->selectedPermissions = [];
+        foreach ($this->flattenPermissionKeys() as $perm) {
+            $this->selectedPermissions[$perm] = true;
+        }
+    }
+
+    public function clearAllPermissions()
+    {
+        $this->selectedPermissions = [];
+    }
+
+    public function selectPermissionsByGroup(string $groupName)
+    {
+        $perms = array_keys($this->permissionGroups[$groupName] ?? []);
+        foreach ($perms as $perm) {
+            $this->selectedPermissions[$perm] = true;
+        }
+    }
+
+    public function clearPermissionsByGroup(string $groupName)
+    {
+        $perms = array_keys($this->permissionGroups[$groupName] ?? []);
+        foreach ($perms as $perm) {
+            $this->selectedPermissions[$perm] = false;
+        }
     }
 
     public function togglePermission($permission)
@@ -183,6 +261,37 @@ class RoleCreate extends Component
         } else {
             $this->selectedPermissions[$permission] = !$this->selectedPermissions[$permission];
         }
+    }
+
+    public function selectedCountForGroup(string $groupName): int
+    {
+        $perms = array_keys($this->permissionGroups[$groupName] ?? []);
+        $count = 0;
+        foreach ($perms as $perm) {
+            if (($this->selectedPermissions[$perm] ?? false) === true) {
+                $count++;
+            }
+        }
+        return $count;
+    }
+
+    public function totalCountForGroup(string $groupName): int
+    {
+        return count($this->permissionGroups[$groupName] ?? []);
+    }
+
+    private function flattenPermissionKeys(): array
+    {
+        $keys = [];
+        foreach ($this->permissionGroups as $permissions) {
+            $keys = array_merge($keys, array_keys($permissions));
+        }
+        return array_values(array_unique($keys));
+    }
+
+    private function isSuperAdminName(?string $name): bool
+    {
+        return trim(mb_strtolower((string) $name)) === trim(mb_strtolower(self::SUPER_ADMIN_NAME));
     }
 
     public function closeModal()

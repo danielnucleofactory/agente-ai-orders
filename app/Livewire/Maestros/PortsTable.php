@@ -31,7 +31,7 @@ class PortsTable extends Component
 
     public function boot()
     {
-        //
+        abort_unless(auth()->user()?->can('has_view_maestros'), 403);
     }
 
     protected function getMaestrosApiService(): MaestrosApiService

@@ -3,15 +3,17 @@
         <h2 class="text-lg font-bold text-[#1AAD8A]">Lista de roles</h2>
 
         <div class="flex space-x-4">
-            <a href="{{ route('settings.roles.create') }}">
-                <x-primary-button class="flex items-center gap-[0.625rem]">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M8 1V15M1 8H15" stroke="#F7F7F7" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round" />
-                    </svg>
-                    <span>Crear nuevo rol</span>
-                </x-primary-button>
-            </a>
+            @can('has_create_roles')
+                <a href="{{ route('settings.roles.create') }}">
+                    <x-primary-button class="flex items-center gap-[0.625rem]">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M8 1V15M1 8H15" stroke="#F7F7F7" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        <span>Crear nuevo rol</span>
+                    </x-primary-button>
+                </a>
+            @endcan
         </div>
     </div>
 
@@ -42,7 +44,8 @@
             @endphp
 
             <livewire:components.reusable-table :headers="$headers" :sortable="$sortable" :searchable="$searchable" :filterable="$filterable"
-                :filterOptions="$filterOptions" :actions="true" :actionsView="false" :actionsEdit="true" :actionsDelete="true"
+                :filterOptions="$filterOptions" :withCount="['permissions','users']" :actions="true" :actionsView="false" :actionsEdit="true" :actionsDelete="true"
+                :editPermission="'has_edit_roles'" :deletePermission="'has_delete_roles'"
                 :rows="$roles" :baseRoute="'settings.roles'"  :model="\Spatie\Permission\Models\Role::class" />
         </div>
     </div>

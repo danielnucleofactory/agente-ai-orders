@@ -14,11 +14,13 @@
             </x-slot:content>
         </x-view-title>
 
-        <a href="{{ route('vendors.create') }}">
-            <x-primary-button>
-                Nuevo Proveedor
-            </x-primary-button>
-        </a>
+        @can('has_create_vendors')
+            <a href="{{ route('vendors.create') }}">
+                <x-primary-button>
+                    Nuevo Proveedor
+                </x-primary-button>
+            </a>
+        @endcan
     </div>
 
     <!-- Tabs for switching between views -->
@@ -55,6 +57,8 @@
                 :actionsView="false"
                 :actionsEdit="true"
                 :actionsDelete="true"
+                :editPermission="'has_edit_vendors'"
+                :deletePermission="'has_delete_vendors'"
                 :model="\App\Models\Vendor::class"
             />
         </div>
