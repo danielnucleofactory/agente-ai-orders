@@ -32,8 +32,8 @@ class PurchaseOrdersTable extends DataTableComponent
 
             Column::make('Fecha', 'order_date')
                 ->sortable()
-                ->format(function($value) {
-                    return $value ? formatDate($value) : 'N/A';
+                ->format(function ($value) {
+                    return $value ? formatDateOnly($value) : 'N/A';
                 }),
 
             Column::make('Estado', 'status')

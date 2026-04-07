@@ -225,7 +225,7 @@
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha emisión PO</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->emision_date_po) }}</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->emision_date_po) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha de creación en Next</p>

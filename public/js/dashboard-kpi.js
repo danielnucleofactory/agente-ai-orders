@@ -202,6 +202,18 @@ class DashboardKPIManager {
         }
     }
 
+    /**
+     * Orden alfabético para opciones de <select> (español, numérico natural).
+     */
+    sortFilterOptions(options) {
+        if (!Array.isArray(options)) return [];
+        return [...options].sort((a, b) => {
+            const la = String(a?.name ?? a?.id ?? a ?? '');
+            const lb = String(b?.name ?? b?.id ?? b ?? '');
+            return la.localeCompare(lb, 'es', { sensitivity: 'base', numeric: true });
+        });
+    }
+
     populateSelect(selectId, options) {
         const select = document.getElementById(selectId);
         if (!select) return;
@@ -214,7 +226,7 @@ class DashboardKPIManager {
         }
 
         // Agregar nuevas opciones
-        options.forEach(option => {
+        this.sortFilterOptions(options).forEach(option => {
             const opt = document.createElement('option');
             opt.value = option.id || option.name || option;
             opt.textContent = option.name || option;

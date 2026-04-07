@@ -168,8 +168,6 @@ class DashboardController extends Controller
                 'Transito',
                 'Puerto',
                 'Recibiendo CDI',
-                'Ingresada',
-                'Anulada'
             ];
             
             foreach ($categoryOrder as $category) {
@@ -329,8 +327,6 @@ class DashboardController extends Controller
                     'Transito' => array_fill_keys(range(1, 12), 0),
                     'Puerto' => array_fill_keys(range(1, 12), 0),
                     'Recibiendo CDI' => array_fill_keys(range(1, 12), 0),
-                    'Ingresada' => array_fill_keys(range(1, 12), 0),
-                    'Anulada' => array_fill_keys(range(1, 12), 0),
                 ],
                 'year' => now()->year,
             ],

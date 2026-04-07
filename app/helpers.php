@@ -79,6 +79,26 @@ if (!function_exists('formatDateTime')) {
     }
 }
 
+if (!function_exists('formatDateOnly')) {
+    /**
+     * Fecha de calendario (campos Eloquent casteados como `date`): sin cambio de zona horaria.
+     * Evita mostrar un día de menos/más respecto al valor guardado (p. ej. emision_date_po, order_date).
+     *
+     * @param mixed $date
+     * @param string|null $format
+     * @return string
+     */
+    function formatDateOnly($date, $format = null)
+    {
+        if (!$date) {
+            return '-';
+        }
+        $format = $format ?? getUserDateFormat();
+
+        return Carbon::parse($date)->format($format);
+    }
+}
+
 if (!function_exists('formatDateForInput')) {
     /**
      * Formatea una fecha para inputs HTML (YYYY-MM-DD)

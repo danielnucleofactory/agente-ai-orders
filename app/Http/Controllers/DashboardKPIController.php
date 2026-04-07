@@ -347,15 +347,20 @@ class DashboardKPIController extends Controller
                 $stagesQuery->where('kanban_board_id', 1);
             }
 
+            $stagesQuery
+                ->whereRaw("LOWER(COALESCE(slug, '')) NOT IN ('ingresada', 'anulada')")
+                ->whereRaw("LOWER(COALESCE(name, '')) NOT IN ('ingresada', 'anulada')");
+
             $stages = $stagesQuery->select('id', 'name')
-                ->orderBy('name')
+                ->orderByRaw('LOWER(name)')
                 ->get()
-                ->map(function($stage) {
+                ->map(function ($stage) {
                     return ['id' => $stage->id, 'name' => $stage->name];
                 });
 
             // Obtener rutas logísticas
             $routes = \App\Models\PurchaseOrder::query()
+                ->operationalForDashboard()
                 ->when($companyId, function ($q) use ($companyId) {
                     $q->where('company_id', $companyId);
                 })
@@ -366,10 +371,13 @@ class DashboardKPIController extends Controller
                 ->map(function ($route) {
                     return ['id' => $route, 'name' => $route];
                 })
+                ->values()
+                ->sort(fn ($a, $b) => strnatcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? '')))
                 ->values();
 
             // Obtener clientes desde las POs (trading_company en purchase_orders)
             $clients = \App\Models\PurchaseOrder::query()
+                ->operationalForDashboard()
                 ->when($companyId, function ($q) use ($companyId) {
                     $q->where('company_id', $companyId);
                 })
@@ -381,11 +389,11 @@ class DashboardKPIController extends Controller
                 ->map(function ($tradingCompany) {
                     return [
                         'id' => $tradingCompany,
-                        'name' => $tradingCompany
+                        'name' => $tradingCompany,
                     ];
                 })
                 ->values()
-                ->sortBy('name')
+                ->sort(fn ($a, $b) => strnatcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? '')))
                 ->values();
 
             return response()->json([

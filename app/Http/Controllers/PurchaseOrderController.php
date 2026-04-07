@@ -157,13 +157,13 @@ class PurchaseOrderController extends Controller
                 $vendorCompanyId = ($vendorCompanyId !== null && $vendorCompanyId !== '' && is_numeric($vendorCompanyId)) ? (int) $vendorCompanyId : 1;
                 $tradingCompany = data_get($general, 'trading_company', '');
 
-                // Buscar o crear vendor: código canónico = trading_company + "-" + vendor_id (ID único por comercializadora)
+                // Buscar o crear vendor (API): vendo_code global = vendor_id tal cual; sólo crear si no existe
                 $vendor = null;
                 if ($vendorId !== null && $vendorId !== '') {
-                    $vendoCode = $tradingCompany ? ($tradingCompany . '-' . $vendorId) : (string) $vendorId;
-                    $vendor = Vendor::firstOrCreate(
-                        ['vendo_code' => $vendoCode, 'company_id' => $vendorCompanyId],
-                        ['name' => $vendorName ?: ('Proveedor ' . $vendorId), 'status' => 'active']
+                    $vendor = Vendor::findOrCreateFromApiVendorIdentifier(
+                        $vendorId,
+                        $vendorCompanyId,
+                        $vendorName
                     );
                 } elseif ($vendorName) {
                     $vendoCode = $tradingCompany ? ($tradingCompany . '-VENDOR_' . time()) : ('VENDOR_' . time());
@@ -546,19 +546,13 @@ class PurchaseOrderController extends Controller
         $vendorCompanyId = ($vendorCompanyId !== null && $vendorCompanyId !== '' && is_numeric($vendorCompanyId)) ? (int) $vendorCompanyId : 1;
         $tradingCompany = data_get($general, 'trading_company', '');
 
-        // Buscar o crear vendor: código canónico = trading_company + "-" + vendor_id (ID único por comercializadora)
+        // Buscar o crear vendor (API): vendo_code global = vendor_id tal cual; sólo crear si no existe
         $vendor = null;
         if ($vendorId !== null && $vendorId !== '') {
-            $vendoCode = $tradingCompany ? ($tradingCompany . '-' . $vendorId) : (string) $vendorId;
-            $vendor = Vendor::firstOrCreate(
-                [
-                    'vendo_code' => $vendoCode,
-                    'company_id' => $vendorCompanyId,
-                ],
-                [
-                    'name' => $vendorName ?: ('Proveedor ' . $vendorId),
-                    'status' => 'active',
-                ]
+            $vendor = Vendor::findOrCreateFromApiVendorIdentifier(
+                $vendorId,
+                $vendorCompanyId,
+                $vendorName
             );
         } elseif ($vendorName) {
             $vendoCode = $tradingCompany ? ($tradingCompany . '-VENDOR_' . time()) : ('VENDOR_' . time());
@@ -1274,14 +1268,12 @@ class PurchaseOrderController extends Controller
 
             switch ($apiField) {
                 case 'vendor_id': {
-                    // Código canónico = trading_company + "-" + vendor_id (cliente siempre envía vendor_id raw)
-                    $tradingCompany = $po->trading_company ?? '';
-                    $vendoCode = $tradingCompany ? ($tradingCompany . '-' . $value) : (string) $value;
                     $vendorName = data_get($payload, 'vendor_name');
                     $companyId = $po->company_id ?? 1;
-                    $vendor = \App\Models\Vendor::firstOrCreate(
-                        ['vendo_code' => $vendoCode, 'company_id' => $companyId],
-                        ['name' => $vendorName ?: ('Proveedor ' . $value), 'status' => 'active']
+                    $vendor = \App\Models\Vendor::findOrCreateFromApiVendorIdentifier(
+                        $value,
+                        (int) $companyId,
+                        is_string($vendorName) ? $vendorName : null
                     );
                     $po->vendor_id = $vendor->id;
                     $po->vendor_number = $vendor->vendo_code;
@@ -1298,14 +1290,12 @@ class PurchaseOrderController extends Controller
                     break;
                 }
                 case 'vendor_number': {
-                    // Código canónico = trading_company + "-" + vendor_number (cliente envía vendor_id raw)
-                    $tradingCompany = $po->trading_company ?? '';
-                    $vendoCode = $tradingCompany ? ($tradingCompany . '-' . $value) : (string) $value;
                     $vendorName = data_get($payload, 'vendor_name');
                     $companyId = $po->company_id ?? 1;
-                    $vendor = \App\Models\Vendor::firstOrCreate(
-                        ['vendo_code' => $vendoCode, 'company_id' => $companyId],
-                        ['name' => $vendorName ?: ('Proveedor ' . $value), 'status' => 'active']
+                    $vendor = \App\Models\Vendor::findOrCreateFromApiVendorIdentifier(
+                        $value,
+                        (int) $companyId,
+                        is_string($vendorName) ? $vendorName : null
                     );
                     $po->vendor_id = $vendor->id;
                     $po->vendor_number = $vendor->vendo_code;

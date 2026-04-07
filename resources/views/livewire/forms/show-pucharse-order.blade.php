@@ -35,7 +35,7 @@
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">Fecha de Orden</p>
-                    <p class="text-lg">{{ $purchaseOrder->order_date ? formatDate($purchaseOrder->order_date) : 'N/A' }}</p>
+                    <p class="text-lg">{{ $purchaseOrder->order_date ? formatDateOnly($purchaseOrder->order_date) : 'N/A' }}</p>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">Moneda</p>

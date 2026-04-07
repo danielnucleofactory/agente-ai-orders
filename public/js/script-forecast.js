@@ -82,12 +82,17 @@ class ForecastManager {
 
         const filterOptions = window.forecastData.filterOptions;
 
+        const sortByLabelEs = (arr, labelFn) =>
+            [...arr].sort((a, b) =>
+                labelFn(a).localeCompare(labelFn(b), 'es', { sensitivity: 'base', numeric: true })
+            );
+
         // Vendor
         const vendorGroup = document.querySelector('.filter-group[data-filter="vendor"]');
         if (vendorGroup && filterOptions.vendors) {
             const optionsBox = vendorGroup.querySelector('.multi-select-options');
             while (optionsBox.firstChild) optionsBox.removeChild(optionsBox.firstChild);
-            filterOptions.vendors.forEach(vendor => {
+            sortByLabelEs(filterOptions.vendors, (v) => String(v.name ?? '')).forEach(vendor => {
                 const label = document.createElement('label');
                 label.className = 'multi-select-option';
                 label.innerHTML = `<input type="checkbox" value="${vendor.id}"> ${vendor.name}`;
@@ -100,7 +105,7 @@ class ForecastManager {
         if (productGroup && filterOptions.products) {
             const optionsBox = productGroup.querySelector('.multi-select-options');
             while (optionsBox.firstChild) optionsBox.removeChild(optionsBox.firstChild);
-            filterOptions.products.forEach(product => {
+            sortByLabelEs(filterOptions.products, (p) => String(p.name ?? '')).forEach(product => {
                 const label = document.createElement('label');
                 label.className = 'multi-select-option';
                 label.innerHTML = `<input type="checkbox" value="${product.id}"> ${product.name} (${product.material_id})`;
@@ -118,7 +123,7 @@ class ForecastManager {
                 materials = Object.values(materials);
             }
             if (materials && Array.isArray(materials)) {
-                materials.forEach(material => {
+                sortByLabelEs(materials, (m) => String(m ?? '')).forEach(material => {
                     const label = document.createElement('label');
                     label.className = 'multi-select-option';
                     label.innerHTML = `<input type="checkbox" value="${material}"> ${material}`;

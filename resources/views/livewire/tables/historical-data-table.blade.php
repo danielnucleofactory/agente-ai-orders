@@ -227,7 +227,7 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $record->emision_date_po ? formatDate($record->emision_date_po) : 'N/A' }}
+                                {{ $record->emision_date_po ? formatDateOnly($record->emision_date_po) : 'N/A' }}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                                 @if($record->net_total)

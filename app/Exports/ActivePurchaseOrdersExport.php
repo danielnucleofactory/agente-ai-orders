@@ -36,10 +36,7 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
             ->withoutTrashed()
             ->with(['vendor', 'kanbanStatus'])
             ->where('company_id', $this->companyId)
-            ->whereHas('kanbanStatus', function (Builder $q) {
-                $q->whereRaw("LOWER(slug) NOT IN ('ingresada', 'anulada')")
-                  ->whereRaw("LOWER(name) NOT IN ('ingresada', 'anulada')");
-            });
+            ->operationalForDashboard();
 
         $this->applyFilters($query);
 

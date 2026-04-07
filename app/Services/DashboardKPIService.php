@@ -130,19 +130,20 @@ class DashboardKPIService
             $query->where('company_id', $companyId);
         }
 
+        $query->operationalForDashboard();
+
         Log::info('DashboardKPIService::getBaseQuery', [
             'filters' => $filters,
             'company_id' => $companyId,
         ]);
 
-        // Filtros de fecha (usando created_at como fecha de período)
-        // Solo aplicar si se proporcionan explícitamente
+        // Filtros de fecha por fecha de orden (order_date), alineado con el dashboard principal
         if (!empty($filters['date_from']) && $filters['date_from'] !== 'null') {
-            $query->where('created_at', '>=', $filters['date_from']);
+            $query->where('order_date', '>=', $filters['date_from']);
         }
 
         if (!empty($filters['date_to']) && $filters['date_to'] !== 'null') {
-            $query->where('created_at', '<=', $filters['date_to']);
+            $query->where('order_date', '<=', $filters['date_to']);
         }
 
         // Filtro por proveedor de mercancía
@@ -566,8 +567,75 @@ class DashboardKPIService
     }
 
     /**
-     * POs en Puerto de Transbordo
-     * Por ahora retorna vacío - pendiente fix integración Porth
+     * Puerto de transbordo actual: recorre el itinerario en orden cronológico; cada descarga
+     * (distinta del POD) activa ese puerto; una carga en el mismo puerto la cierra.
+     *
+     * @param  array<int, array<string, mixed>>  $itinerary
+     */
+    protected function resolveCurrentTransshipmentPort(array $itinerary, string $pod): ?string
+    {
+        if ($pod === '') {
+            return null;
+        }
+
+        $indexed = [];
+        foreach ($itinerary as $idx => $event) {
+            $dateStr = $event['date'] ?? null;
+            $ts = $dateStr ? strtotime((string) $dateStr) : false;
+            $indexed[] = [
+                'i' => $idx,
+                'ts' => $ts !== false ? $ts : PHP_INT_MAX,
+                'event' => $event,
+            ];
+        }
+
+        usort($indexed, function ($a, $b) {
+            if ($a['ts'] === $b['ts']) {
+                return $a['i'] <=> $b['i'];
+            }
+
+            return $a['ts'] <=> $b['ts'];
+        });
+
+        $activePort = null;
+
+        foreach ($indexed as $row) {
+            $event = $row['event'];
+            $name = strtoupper(trim($event['name'] ?? ''));
+            $place = strtoupper(trim($event['place'] ?? ''));
+            $done = (bool) ($event['done'] ?? false);
+
+            if (!$done || $place === '' || $place === $pod) {
+                continue;
+            }
+
+            if (str_contains($name, 'TRANSSHIPMENT DISCHARGED')) {
+                $activePort = $place;
+
+                continue;
+            }
+
+            if (
+                $activePort !== null
+                && str_contains($name, 'TRANSSHIPMENT')
+                && str_contains($name, 'POSITIONED OUT')
+                && $place === $activePort
+            ) {
+                $activePort = null;
+
+                continue;
+            }
+
+            if (str_contains($name, 'TRANSSHIPMENT LOADED') && $activePort !== null && $place === $activePort) {
+                $activePort = null;
+            }
+        }
+
+        return $activePort;
+    }
+
+    /**
+     * POs en Puerto de Transbordo (último transbordo activo según itinerario Porth).
      */
     public function getPOsInTransshipment(array $filters = []): array
     {
@@ -590,46 +658,7 @@ class DashboardKPIService
                 }
 
                 $pod = strtoupper(trim($po->porth_pod ?? ''));
-
-                // Determinar si la PO está actualmente en un puerto de transbordo:
-                // Buscar el último evento "Full Transshipment Discharged" con done=true
-                // cuyo place sea distinto al POD (destino final).
-                $transshipmentPort = null;
-                foreach ($itinerary as $event) {
-                    $name = strtoupper(trim($event['name'] ?? ''));
-                    $place = strtoupper(trim($event['place'] ?? ''));
-                    $done = (bool) ($event['done'] ?? false);
-
-                    if (
-                        $done &&
-                        str_contains($name, 'TRANSSHIPMENT DISCHARGED') &&
-                        $place !== '' &&
-                        $place !== $pod
-                    ) {
-                        // Verificar que aún no haya embarcado desde ese puerto de transbordo
-                        // (si ya hay "Full Transshipment Loaded" con done=true en el mismo puerto
-                        // y con fecha posterior, ya salió → no está en transbordo allí)
-                        $loadedFromSamePort = false;
-                        foreach ($itinerary as $loadEvent) {
-                            $loadName = strtoupper(trim($loadEvent['name'] ?? ''));
-                            $loadPlace = strtoupper(trim($loadEvent['place'] ?? ''));
-                            $loadDone = (bool) ($loadEvent['done'] ?? false);
-                            if (
-                                $loadDone &&
-                                str_contains($loadName, 'TRANSSHIPMENT LOADED') &&
-                                $loadPlace === $place
-                            ) {
-                                $loadedFromSamePort = true;
-                                break;
-                            }
-                        }
-
-                        if (!$loadedFromSamePort) {
-                            $transshipmentPort = $place;
-                            break;
-                        }
-                    }
-                }
+                $transshipmentPort = $this->resolveCurrentTransshipmentPort($itinerary, $pod);
 
                 if ($transshipmentPort === null) {
                     continue;
@@ -918,6 +947,7 @@ class DashboardKPIService
 
             // Período 1
             $query1 = PurchaseOrder::query()
+                ->operationalForDashboard()
                 ->whereNotNull('date_atd')
                 ->whereBetween('date_atd', [$period1Start, $period1End]);
             if ($companyId) {
@@ -927,6 +957,7 @@ class DashboardKPIService
 
             // Período 2
             $query2 = PurchaseOrder::query()
+                ->operationalForDashboard()
                 ->whereNotNull('date_atd')
                 ->whereBetween('date_atd', [$period2Start, $period2End]);
             if ($companyId) {
@@ -996,6 +1027,7 @@ class DashboardKPIService
 
             // Período 1
             $query1 = PurchaseOrder::query()
+                ->operationalForDashboard()
                 ->whereNotNull('date_ata')
                 ->whereBetween('date_ata', [$period1Start, $period1End]);
             if ($companyId) {
@@ -1005,6 +1037,7 @@ class DashboardKPIService
 
             // Período 2
             $query2 = PurchaseOrder::query()
+                ->operationalForDashboard()
                 ->whereNotNull('date_ata')
                 ->whereBetween('date_ata', [$period2Start, $period2End]);
             if ($companyId) {
@@ -1074,6 +1107,7 @@ class DashboardKPIService
 
             // Período 1
             $query1 = PurchaseOrder::query()
+                ->operationalForDashboard()
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
                 ->whereRaw('date_variable_date > date_theorical_load')
@@ -1085,6 +1119,7 @@ class DashboardKPIService
 
             // Período 2
             $query2 = PurchaseOrder::query()
+                ->operationalForDashboard()
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
                 ->whereRaw('date_variable_date > date_theorical_load')
@@ -1156,6 +1191,7 @@ class DashboardKPIService
 
             // Período 1
             $query1 = PurchaseOrder::query()
+                ->operationalForDashboard()
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
                 ->whereRaw('date_variable_date < date_theorical_load')
@@ -1167,6 +1203,7 @@ class DashboardKPIService
 
             // Período 2
             $query2 = PurchaseOrder::query()
+                ->operationalForDashboard()
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
                 ->whereRaw('date_variable_date < date_theorical_load')
@@ -1275,7 +1312,11 @@ class DashboardKPIService
             $result = [];
             foreach ($periods as $key => $period) {
                 $query = PurchaseOrder::query()
-                    ->whereBetween('created_at', [$period['start'], $period['end']]);
+                    ->operationalForDashboard()
+                    ->whereBetween('order_date', [
+                        $period['start']->format('Y-m-d'),
+                        $period['end']->format('Y-m-d'),
+                    ]);
 
                 if ($companyId) {
                     $query->where('company_id', $companyId);

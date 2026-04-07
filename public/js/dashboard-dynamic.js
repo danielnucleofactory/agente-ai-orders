@@ -560,14 +560,33 @@ class DashboardManager {
         }
     }
 
+    sortFilterItems(items, valueKey, labelKey) {
+        const arr = Array.isArray(items) ? items : Object.values(items);
+        const label = (item) => {
+            if (valueKey == null && labelKey == null) {
+                return String(item ?? '');
+            }
+            return String(
+                (labelKey ? item[labelKey] : null) ??
+                    (valueKey ? item[valueKey] : null) ??
+                    item?.name ??
+                    item?.short_text ??
+                    item ??
+                    ''
+            );
+        };
+        return [...arr].sort((a, b) =>
+            label(a).localeCompare(label(b), 'es', { sensitivity: 'base', numeric: true })
+        );
+    }
+
     populateMultiSelect(container, items, valueKey, labelKey) {
         const optionsBox = container.querySelector('.multi-select-options');
         if (!optionsBox) return;
 
         optionsBox.innerHTML = '';
         
-        // Handle both arrays and objects (Laravel collections)
-        const itemsArray = Array.isArray(items) ? items : Object.values(items);
+        const itemsArray = this.sortFilterItems(items, valueKey, labelKey);
         
         itemsArray.forEach(item => {
             const value = item[valueKey] || item.id || item;
@@ -653,15 +672,12 @@ class DashboardManager {
                 }
             });
 
-            // Define category order - 7 etapas del Kanban
             const categoryOrder = [
                 'Producción',
                 'Booking',
                 'Transito',
                 'Puerto',
                 'Recibiendo CDI',
-                'Ingresada',
-                'Anulada'
             ];
 
             // Build table rows

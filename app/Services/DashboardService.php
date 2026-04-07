@@ -222,10 +222,11 @@ class DashboardService
                 $currentMonth->addMonth();
             }
             
-            // Construir query base
-            $query = PurchaseOrder::withTrashed()
+            // Construir query base (mismas PO operativas que el dashboard KPI; sin borradas ni ingresada/anulada)
+            $query = PurchaseOrder::query()
+                ->operationalForDashboard()
                 ->whereBetween('order_date', [$dateFrom->format('Y-m-d'), $dateTo->format('Y-m-d')]);
-            
+
             // Filtrar por company_id si el usuario tiene uno asignado
             if ($companyId) {
                 $query->where('company_id', $companyId);
@@ -345,8 +346,6 @@ class DashboardService
                 'Transito',
                 'Puerto',
                 'Recibiendo CDI',
-                'Ingresada',
-                'Anulada'
             ];
             
             $categories = [];
@@ -366,24 +365,19 @@ class DashboardService
                     return 'Puerto';
                 } elseif (stripos($stageName, 'recibiendo cdi') !== false) {
                     return 'Recibiendo CDI';
-                } elseif (stripos($stageName, 'ingresada') !== false) {
-                    return 'Ingresada';
-                } elseif (stripos($stageName, 'anulada') !== false) {
-                    return 'Anulada';
                 }
                 return null;
             };
 
             // Procesar cada PO
             foreach ($purchaseOrders as $po) {
-                // Determinar el mes: usar order_date para todas excepto Anulada que usa deleted_at
-                $dateToUse = $po->deleted_at ? $po->deleted_at : $po->order_date;
+                $dateToUse = $po->order_date;
                 if (!$dateToUse) {
                     continue;
                 }
-                
-                $monthKey = Carbon::parse($dateToUse)->format('Y-m'); // Formato: "2025-01"
-                
+
+                $monthKey = Carbon::parse($dateToUse)->format('Y-m');
+
                 // Verificar que el mes está en el rango
                 if (!in_array($monthKey, $monthKeys)) {
                     continue;
@@ -393,14 +387,9 @@ class DashboardService
                 if ($po->kanban_status_id && isset($kanbanStages[$po->kanban_status_id])) {
                     $stageName = $kanbanStages[$po->kanban_status_id];
                     $category = $mapStageToCategory($stageName);
-                    
+
                     if ($category && isset($categories[$category][$monthKey])) {
                         $categories[$category][$monthKey] += 1;
-                    }
-                } elseif ($po->deleted_at) {
-                    // PO anulada sin etapa asignada
-                    if (isset($categories['Anulada'][$monthKey])) {
-                        $categories['Anulada'][$monthKey] += 1;
                     }
                 }
             }
@@ -441,13 +430,11 @@ class DashboardService
                 'Transito',
                 'Puerto',
                 'Recibiendo CDI',
-                'Ingresada',
-                'Anulada'
             ];
             foreach ($categoryNames as $catName) {
                 $emptyCategories[$catName] = array_fill_keys($monthKeys, 0);
             }
-            
+
             return [
                 'categories' => $emptyCategories,
                 'month_keys' => $monthKeys,
@@ -484,15 +471,12 @@ class DashboardService
             }
             $rows[] = $header;
             
-            // Filas de datos - orden de las 7 etapas
             $categoryOrder = [
                 'Producción',
                 'Booking',
                 'Transito',
                 'Puerto',
                 'Recibiendo CDI',
-                'Ingresada',
-                'Anulada'
             ];
             
             foreach ($categoryOrder as $categoryName) {
@@ -533,8 +517,6 @@ class DashboardService
                 'Transito',
                 'Puerto',
                 'Recibiendo CDI',
-                'Ingresada',
-                'Anulada'
             ];
             foreach ($categoryOrder as $catName) {
                 $rows[] = array_merge([$catName], array_fill(0, 12, '-'));
@@ -657,6 +639,19 @@ class DashboardService
     }
 
     /**
+     * Orden alfabético insensible a mayúsculas (orden natural) para filas {id, name}.
+     *
+     * @param  Collection<int, array{id: mixed, name: string}>  $rows
+     * @return Collection<int, array{id: mixed, name: string}>
+     */
+    private function sortFilterRowsByName(Collection $rows): Collection
+    {
+        return $rows
+            ->sort(fn ($a, $b) => strnatcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? '')))
+            ->values();
+    }
+
+    /**
      * Get filter options
      *
      * @return array
@@ -670,21 +665,24 @@ class DashboardService
 
             Log::info('Getting products...');
             $products = Product::select('id', 'short_text as name', 'material_id')
-                ->orderBy('short_text')
+                ->orderByRaw('LOWER(short_text)')
                 ->get();
             Log::info('Products retrieved', ['count' => $products->count()]);
 
             Log::info('Getting hubs...');
             $hubs = Hub::select('id', 'name', 'code')
-                ->orderBy('name')
+                ->orderByRaw('LOWER(name)')
                 ->get();
 
-            // Agregar la opción "Sin Hub" al inicio de la colección
-            $hubs->prepend((object)[
+            // Agregar "Sin Hub" y ordenar todo alfabéticamente por nombre
+            $hubs->push((object) [
                 'id' => 0,
                 'name' => 'Sin Hub',
-                'code' => 'SIN_HUB'
+                'code' => 'SIN_HUB',
             ]);
+            $hubs = $hubs
+                ->sort(fn ($a, $b) => strnatcasecmp((string) ($a->name ?? ''), (string) ($b->name ?? '')))
+                ->values();
 
             Log::info('Hubs retrieved with Sin Hub option', ['count' => $hubs->count()]);
 
@@ -693,7 +691,7 @@ class DashboardService
                 ->when($companyId, function ($query) use ($companyId) {
                     return $query->where('company_id', $companyId);
                 })
-                ->orderBy('name')
+                ->orderByRaw('LOWER(name)')
                 ->get();
             Log::info('Vendors retrieved', ['count' => $vendors->count()]);
 
@@ -702,91 +700,115 @@ class DashboardService
             Log::info('Materials retrieved', ['count' => $materials->count()]);
 
             Log::info('Getting customer types...');
-            $customerTypes = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
-                    return $query->where('company_id', $companyId);
-                })
-                ->whereNotNull('customer_type')
-                ->distinct()
-                ->pluck('customer_type')
-                ->filter()
-                ->map(function ($type) {
-                    return ['id' => $type, 'name' => $type];
-                })
-                ->values();
+            $customerTypes = $this->sortFilterRowsByName(
+                PurchaseOrder::query()
+                    ->operationalForDashboard()
+                    ->when($companyId, function ($query) use ($companyId) {
+                        return $query->where('company_id', $companyId);
+                    })
+                    ->whereNotNull('customer_type')
+                    ->distinct()
+                    ->pluck('customer_type')
+                    ->filter()
+                    ->map(function ($type) {
+                        return ['id' => $type, 'name' => $type];
+                    })
+                    ->values()
+            );
             Log::info('Customer types retrieved', ['count' => $customerTypes->count()]);
 
             Log::info('Getting arrival statuses...');
-            $arrivalStatuses = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
-                    return $query->where('company_id', $companyId);
-                })
-                ->whereNotNull('arrival_status')
-                ->distinct()
-                ->pluck('arrival_status')
-                ->filter()
-                ->map(function ($status) {
-                    return ['id' => $status, 'name' => $status];
-                })
-                ->values();
+            $arrivalStatuses = $this->sortFilterRowsByName(
+                PurchaseOrder::query()
+                    ->operationalForDashboard()
+                    ->when($companyId, function ($query) use ($companyId) {
+                        return $query->where('company_id', $companyId);
+                    })
+                    ->whereNotNull('arrival_status')
+                    ->distinct()
+                    ->pluck('arrival_status')
+                    ->filter()
+                    ->map(function ($status) {
+                        return ['id' => $status, 'name' => $status];
+                    })
+                    ->values()
+            );
             Log::info('Arrival statuses retrieved', ['count' => $arrivalStatuses->count()]);
 
             Log::info('Getting departure ports...');
-            $departurePorts = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
-                    return $query->where('company_id', $companyId);
-                })
-                ->whereNotNull('departure_port')
-                ->distinct()
-                ->pluck('departure_port')
-                ->filter()
-                ->map(function ($port) {
-                    return ['id' => $port, 'name' => $port];
-                })
-                ->values();
+            $departurePorts = $this->sortFilterRowsByName(
+                PurchaseOrder::query()
+                    ->operationalForDashboard()
+                    ->when($companyId, function ($query) use ($companyId) {
+                        return $query->where('company_id', $companyId);
+                    })
+                    ->whereNotNull('departure_port')
+                    ->distinct()
+                    ->pluck('departure_port')
+                    ->filter()
+                    ->map(function ($port) {
+                        return ['id' => $port, 'name' => $port];
+                    })
+                    ->values()
+            );
             Log::info('Departure ports retrieved', ['count' => $departurePorts->count()]);
 
             Log::info('Getting arrival ports...');
-            $arrivalPorts = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
-                    return $query->where('company_id', $companyId);
-                })
-                ->whereNotNull('arrival_port')
-                ->distinct()
-                ->pluck('arrival_port')
-                ->filter()
-                ->map(function ($port) {
-                    return ['id' => $port, 'name' => $port];
-                })
-                ->values();
+            $arrivalPorts = $this->sortFilterRowsByName(
+                PurchaseOrder::query()
+                    ->operationalForDashboard()
+                    ->when($companyId, function ($query) use ($companyId) {
+                        return $query->where('company_id', $companyId);
+                    })
+                    ->whereNotNull('arrival_port')
+                    ->distinct()
+                    ->pluck('arrival_port')
+                    ->filter()
+                    ->map(function ($port) {
+                        return ['id' => $port, 'name' => $port];
+                    })
+                    ->values()
+            );
             Log::info('Arrival ports retrieved', ['count' => $arrivalPorts->count()]);
 
             Log::info('Getting shipping lines...');
-            $shippingLines = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
-                    return $query->where('company_id', $companyId);
-                })
-                ->whereNotNull('shipping_line')
-                ->distinct()
-                ->pluck('shipping_line')
-                ->filter()
-                ->map(function ($line) {
-                    return ['id' => $line, 'name' => $line];
-                })
-                ->values();
+            $shippingLines = $this->sortFilterRowsByName(
+                PurchaseOrder::query()
+                    ->operationalForDashboard()
+                    ->when($companyId, function ($query) use ($companyId) {
+                        return $query->where('company_id', $companyId);
+                    })
+                    ->whereNotNull('shipping_line')
+                    ->distinct()
+                    ->pluck('shipping_line')
+                    ->filter()
+                    ->map(function ($line) {
+                        return ['id' => $line, 'name' => $line];
+                    })
+                    ->values()
+            );
             Log::info('Shipping lines retrieved', ['count' => $shippingLines->count()]);
 
             Log::info('Getting service providers...');
-            $serviceProviders = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
-                    return $query->where('company_id', $companyId);
-                })
-                ->where(function ($query) {
-                    $query->whereNotNull('forwarder_name')
-                          ->orWhereNotNull('service_provider');
-                })
-                ->selectRaw('COALESCE(forwarder_name, service_provider) as provider')
-                ->distinct()
-                ->pluck('provider')
-                ->filter()
-                ->map(function ($provider) {
-                    return ['id' => $provider, 'name' => $provider];
-                })
-                ->values();
+            $serviceProviders = $this->sortFilterRowsByName(
+                PurchaseOrder::query()
+                    ->operationalForDashboard()
+                    ->when($companyId, function ($query) use ($companyId) {
+                        return $query->where('company_id', $companyId);
+                    })
+                    ->where(function ($query) {
+                        $query->whereNotNull('forwarder_name')
+                            ->orWhereNotNull('service_provider');
+                    })
+                    ->selectRaw('COALESCE(forwarder_name, service_provider) as provider')
+                    ->distinct()
+                    ->pluck('provider')
+                    ->filter()
+                    ->map(function ($provider) {
+                        return ['id' => $provider, 'name' => $provider];
+                    })
+                    ->values()
+            );
             Log::info('Service providers retrieved', ['count' => $serviceProviders->count()]);
 
             $result = [
@@ -824,7 +846,9 @@ class DashboardService
         try {
             Log::info('Getting material options for company', ['company_id' => $companyId]);
 
-            $purchaseOrders = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
+            $purchaseOrders = PurchaseOrder::query()
+                ->operationalForDashboard()
+                ->when($companyId, function ($query) use ($companyId) {
                     return $query->where('company_id', $companyId);
                 })
                 ->whereNotNull('material_type')
@@ -861,7 +885,10 @@ class DashboardService
                 }
             }
 
-            $result = collect(array_unique($materialTypes))->values()->sort();
+            $result = collect(array_unique($materialTypes))
+                ->values()
+                ->sort(fn ($a, $b) => strnatcasecmp((string) $a, (string) $b))
+                ->values();
 
             Log::info('Material options retrieved', ['count' => $result->count(), 'materials' => $result->toArray()]);
             return $result;
@@ -885,7 +912,8 @@ class DashboardService
         try {
             Log::info('getBaseQuery - Filtros recibidos:', $filters);
             $query = PurchaseOrder::query()
-                ->with(['vendor', 'plannedHub', 'actualHub', 'products']);
+                ->with(['vendor', 'plannedHub', 'actualHub', 'products'])
+                ->operationalForDashboard();
 
             // Apply company filter for current user
             $companyId = auth()->user()->company_id ?? null;

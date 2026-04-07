@@ -158,7 +158,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                            {{ $order->order_date ? formatDate($order->order_date) : 'N/A' }}
+                            {{ $order->order_date ? formatDateOnly($order->order_date) : 'N/A' }}
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                             @if($activeTab === 'route_label')

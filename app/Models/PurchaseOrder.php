@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Traits\SoftCascadeDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -749,6 +750,18 @@ class PurchaseOrder extends Model implements HasMedia
 
         static::updated(function ($purchaseOrder) {
             static::dispatchPorthSync($purchaseOrder);
+        });
+    }
+
+    /**
+     * PO operativas para dashboard y export «activas»: excluye etapas Ingresada y Anulada (slug/nombre).
+     * Exige fila de kanban asociada, alineado con ActivePurchaseOrdersExport.
+     */
+    public function scopeOperationalForDashboard(Builder $query): Builder
+    {
+        return $query->whereHas('kanbanStatus', function (Builder $q) {
+            $q->whereRaw("LOWER(COALESCE(slug, '')) NOT IN ('ingresada', 'anulada')")
+                ->whereRaw("LOWER(COALESCE(name, '')) NOT IN ('ingresada', 'anulada')");
         });
     }
 
