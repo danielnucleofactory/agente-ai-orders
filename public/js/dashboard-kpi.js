@@ -118,6 +118,36 @@ class DashboardKPIManager {
         return `${year}-${month}-${day}`;
     }
 
+    /**
+     * Establece fechas en los inputs del filtro principal (compatible con Flatpickr).
+     * @param {string} dateValue formato Y-m-d
+     */
+    setFilterDateInputValue(input, dateValue) {
+        if (!input || !dateValue) return;
+        input.value = dateValue;
+        if (input._flatpickr) {
+            input._flatpickr.setDate(dateValue, false);
+        } else {
+            setTimeout(() => {
+                if (input._flatpickr) {
+                    input._flatpickr.setDate(dateValue, false);
+                }
+            }, 400);
+        }
+    }
+
+    /**
+     * Rellena "Fecha inicio" / "Fecha fin" con MIN/MAX de order_date (Fecha PO) en PO operativas.
+     * El backend asume order_date siempre definido en esas órdenes.
+     */
+    applyOrderDateBoundsToFilterInputs(minStr, maxStr) {
+        if (!minStr || !maxStr) return;
+        const from = document.getElementById('filter-date-from');
+        const to = document.getElementById('filter-date-to');
+        this.setFilterDateInputValue(from, minStr);
+        this.setFilterDateInputValue(to, maxStr);
+    }
+
     async fetchData(endpoint, method = 'GET', body = null, extraParams = {}) {
         try {
             // Agregar filtros actuales como query params
@@ -196,6 +226,12 @@ class DashboardKPIManager {
                 
                 // Cargar rutas logísticas
                 this.populateSelect('filter-route-label', data.routes || []);
+
+                if (data.order_date_min && data.order_date_max) {
+                    this.applyOrderDateBoundsToFilterInputs(data.order_date_min, data.order_date_max);
+                    // Flatpickr (altInput) a veces aplica el valor un tick después; dar tiempo antes del primer collectFilters en init.
+                    await new Promise((r) => setTimeout(r, 120));
+                }
             }
         } catch (error) {
             console.error('Error loading filter options:', error);
@@ -795,11 +831,12 @@ class DashboardKPIManager {
             const value = port[valueField];
             const portDetails = details.filter(d => d.transshipment_port === port.port);
             const hasDetails = portDetails.length > 0;
+            const portDisplay = port.port_label || port.port;
 
             rows += `
                 <tr class="${hasDetails ? 'expandable-row' : ''}" ${hasDetails ? 'onclick="toggleSubTable(this)"' : ''}>
                     <td style="padding: 12px; border: 1px solid #e5e7eb;">
-                        ${hasDetails ? '<span class="expand-icon">▶</span>' : ''}${port.port}
+                        ${hasDetails ? '<span class="expand-icon">▶</span>' : ''}${portDisplay}
                     </td>
                     <td class="align-right number" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #1AAD8A;">
                         ${value.toLocaleString()}
@@ -823,15 +860,18 @@ class DashboardKPIManager {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${portDetails.map(d => `
+                                    ${portDetails.map(d => {
+                                        const destDisplay = d.destination_port_label || d.destination_port || '';
+                                        return `
                                         <tr style="background: white;">
                                             <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.order_number}</td>
                                             <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.vendor}</td>
                                             <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.shipping_line}</td>
-                                            <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.destination_port}</td>
+                                            <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${destDisplay}</td>
                                             ${isTeus ? `<td style="padding: 10px 12px; font-size: 12px; color: #636e72; text-align: right;">${d.teus}</td>` : ''}
                                         </tr>
-                                    `).join('')}
+                                    `;
+                                    }).join('')}
                                 </tbody>
                             </table>
                         </td>

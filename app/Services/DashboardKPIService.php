@@ -17,9 +17,32 @@ class DashboardKPIService
 {
     protected TransitTimeService $transitTimeService;
 
-    public function __construct(TransitTimeService $transitTimeService)
-    {
+    protected PorthTranslationService $porthTranslationService;
+
+    public function __construct(
+        TransitTimeService $transitTimeService,
+        PorthTranslationService $porthTranslationService
+    ) {
         $this->transitTimeService = $transitTimeService;
+        $this->porthTranslationService = $porthTranslationService;
+    }
+
+    /**
+     * Código UN/LOC con nombre legible entre paréntesis (maestro CSV / traducción Porth).
+     */
+    protected function formatUnlocWithPortName(string $unloc, ?string $porthNameFallback = null): string
+    {
+        $code = strtoupper(trim($unloc));
+        if ($code === '') {
+            return $unloc;
+        }
+
+        $translated = $this->porthTranslationService->translatePortQuiet($code, $porthNameFallback);
+        if ($translated !== null && $translated !== '') {
+            return sprintf('%s (%s)', $code, $translated);
+        }
+
+        return $code;
     }
 
     /**
@@ -679,7 +702,9 @@ class DashboardKPIService
                     'vendor'       => $po->vendor->name ?? 'N/A',
                     'shipping_line' => $po->shipping_line ?? 'N/A',
                     'transshipment_port' => $transshipmentPort,
+                    'transshipment_port_label' => $this->formatUnlocWithPortName($transshipmentPort),
                     'destination_port'   => $pod,
+                    'destination_port_label' => $this->formatUnlocWithPortName($pod, $po->porth_pod_name),
                     'teus' => round($teus, 2),
                 ];
             }
@@ -687,9 +712,10 @@ class DashboardKPIService
             $portData = [];
             foreach ($byPort as $port => $data) {
                 $portData[] = [
-                    'port'     => $port,
-                    'po_count' => $data['count'],
-                    'teus'     => round($data['teus'], 2),
+                    'port'       => $port,
+                    'port_label' => $this->formatUnlocWithPortName($port),
+                    'po_count'   => $data['count'],
+                    'teus'       => round($data['teus'], 2),
                 ];
             }
             usort($portData, fn($a, $b) => $b['po_count'] <=> $a['po_count']);

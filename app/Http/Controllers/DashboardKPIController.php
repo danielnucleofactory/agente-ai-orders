@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PurchaseOrder;
 use App\Services\DashboardKPIService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -396,6 +397,26 @@ class DashboardKPIController extends Controller
                 ->sort(fn ($a, $b) => strnatcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? '')))
                 ->values();
 
+            // PO operativas: asumimos order_date siempre presente; MIN/MAX ignoran filas nulas si las hubiera.
+            $orderDateStats = PurchaseOrder::query()
+                ->operationalForDashboard()
+                ->when($companyId, function ($q) use ($companyId) {
+                    $q->where('company_id', $companyId);
+                })
+                ->selectRaw('MIN(order_date) as min_order_date, MAX(order_date) as max_order_date')
+                ->first();
+
+            $orderDateMin = null;
+            $orderDateMax = null;
+            if ($orderDateStats !== null) {
+                if ($orderDateStats->min_order_date !== null) {
+                    $orderDateMin = \Illuminate\Support\Carbon::parse($orderDateStats->min_order_date)->format('Y-m-d');
+                }
+                if ($orderDateStats->max_order_date !== null) {
+                    $orderDateMax = \Illuminate\Support\Carbon::parse($orderDateStats->max_order_date)->format('Y-m-d');
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -407,6 +428,8 @@ class DashboardKPIController extends Controller
                     'stages' => $stages,
                     'routes' => $routes,
                     'clients' => $clients,
+                    'order_date_min' => $orderDateMin,
+                    'order_date_max' => $orderDateMax,
                 ],
             ]);
         } catch (\Exception $e) {

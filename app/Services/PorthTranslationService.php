@@ -114,13 +114,15 @@ class PorthTranslationService
      * @param string|null $porthName Nombre del puerto de Porth (ej: "Shanghai", "New York")
      * @return string|null Formato: "NOMBRE, PAÍS" (ej: "SHANGHAI, CHINA")
      */
-    public function translatePort(?string $porthCode, ?string $porthName = null): ?string
+    /**
+     * Resuelve nombre maestro sin log (útil en listados con muchas filas, p. ej. dashboard KPI).
+     */
+    public function translatePortQuiet(?string $porthCode, ?string $porthName = null): ?string
     {
         if (empty($porthCode) && empty($porthName)) {
             return null;
         }
 
-        // Intentar buscar por código primero
         if ($porthCode) {
             $port = $this->findPortByCode($porthCode);
             if ($port) {
@@ -128,7 +130,6 @@ class PorthTranslationService
             }
         }
 
-        // Si no hay código o no se encontró, intentar por nombre
         if ($porthName) {
             $port = $this->findPortByName($porthName);
             if ($port) {
@@ -136,12 +137,21 @@ class PorthTranslationService
             }
         }
 
-        Log::warning('porth_translation:port_not_found', [
-            'porth_code' => $porthCode,
-            'porth_name' => $porthName,
-        ]);
-
         return null;
+    }
+
+    public function translatePort(?string $porthCode, ?string $porthName = null): ?string
+    {
+        $result = $this->translatePortQuiet($porthCode, $porthName);
+
+        if ($result === null && (! empty($porthCode) || ! empty($porthName))) {
+            Log::warning('porth_translation:port_not_found', [
+                'porth_code' => $porthCode,
+                'porth_name' => $porthName,
+            ]);
+        }
+
+        return $result;
     }
 
     /**
