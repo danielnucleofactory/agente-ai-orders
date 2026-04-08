@@ -1356,26 +1356,38 @@ class DashboardKPIService
                     $teusCount += $this->calculateTEUs($po->container_type);
                 }
 
-                $result[] = [
+                $result[$key] = [
                     'period' => $period['label'],
                     'po_count' => $poCount,
                     'teus' => round($teusCount, 2),
                 ];
             }
 
-            // Calcular variaciones
+            // Variaciones semana / mes (siguen usando las cuatro ventanas internas)
             $weekVariation = 0;
-            if ($result[1]['po_count'] > 0) {
-                $weekVariation = round((($result[0]['po_count'] - $result[1]['po_count']) / $result[1]['po_count']) * 100, 1);
+            if (($result['last_week']['po_count'] ?? 0) > 0) {
+                $weekVariation = round(
+                    (($result['current_week']['po_count'] - $result['last_week']['po_count']) / $result['last_week']['po_count']) * 100,
+                    1
+                );
             }
 
             $monthVariation = 0;
-            if ($result[3]['po_count'] > 0) {
-                $monthVariation = round((($result[2]['po_count'] - $result[3]['po_count']) / $result[3]['po_count']) * 100, 1);
+            if (($result['last_month']['po_count'] ?? 0) > 0) {
+                $monthVariation = round(
+                    (($result['current_month']['po_count'] - $result['last_month']['po_count']) / $result['last_month']['po_count']) * 100,
+                    1
+                );
             }
 
+            // Tabla: solo mes actual vs mes anterior (evita solapamiento semana⊂mes, OLO-007)
+            $periodsForTable = [
+                $result['current_month'],
+                $result['last_month'],
+            ];
+
             return [
-                'periods' => $result,
+                'periods' => $periodsForTable,
                 'week_variation' => $weekVariation,
                 'month_variation' => $monthVariation,
             ];

@@ -10,6 +10,7 @@ use App\Models\Hub;
 use App\Models\Vendor;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -251,16 +252,7 @@ class DashboardService
                 $query->where('trading_company', $filters['trading_company']);
             }
 
-            // Filtro por etapa (stage)
-            if (!empty($filters['stage'])) {
-                $stages = is_array($filters['stage']) ? $filters['stage'] : [$filters['stage']];
-                $stages = array_filter($stages);
-                if (!empty($stages)) {
-                    $query->whereHas('kanbanStatus', function ($q) use ($stages) {
-                        $q->whereIn('name', $stages);
-                    });
-                }
-            }
+            $this->applyKanbanStageFilter($query, $filters);
 
             // Filtro por proveedor de servicio
             if (!empty($filters['service_provider'])) {
@@ -902,6 +894,51 @@ class DashboardService
     }
 
     /**
+     * Filtro por etapa Kanban: acepta id numérico y/o nombre (OLO-019).
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function applyKanbanStageFilter(Builder $query, array $filters): void
+    {
+        if (empty($filters['stage'])) {
+            return;
+        }
+
+        $stages = is_array($filters['stage']) ? $filters['stage'] : [$filters['stage']];
+        $stages = array_values(array_filter($stages, fn ($v) => $v !== null && $v !== ''));
+        if ($stages === []) {
+            return;
+        }
+
+        Log::info('Applying stage filter', ['stage' => $filters['stage']]);
+
+        $ids = [];
+        $names = [];
+        foreach ($stages as $s) {
+            if (is_int($s) || (is_string($s) && ctype_digit($s))) {
+                $ids[] = (int) $s;
+            } else {
+                $names[] = (string) $s;
+            }
+        }
+
+        $query->whereHas('kanbanStatus', function ($q) use ($ids, $names) {
+            $q->where(function ($inner) use ($ids, $names) {
+                if ($ids !== []) {
+                    $inner->whereIn('id', $ids);
+                }
+                if ($names !== []) {
+                    if ($ids !== []) {
+                        $inner->orWhereIn('name', $names);
+                    } else {
+                        $inner->whereIn('name', $names);
+                    }
+                }
+            });
+        });
+    }
+
+    /**
      * Get base query with filters applied
      *
      * @param array $filters
@@ -1021,16 +1058,18 @@ class DashboardService
                 }
             }
 
-            // Filtro por etapa (nombre de la etapa del kanban_status)
-            if (!empty($filters['stage'])) {
-                Log::info('Applying stage filter', ['stage' => $filters['stage']]);
-                $stages = is_array($filters['stage']) ? $filters['stage'] : [$filters['stage']];
-                $stages = array_filter($stages);
-                if (!empty($stages)) {
-                    $query->whereHas('kanbanStatus', function ($q) use ($stages) {
-                        $q->whereIn('name', $stages);
-                    });
-                }
+            $this->applyKanbanStageFilter($query, $filters);
+
+            if (!empty($filters['trading_company'])) {
+                $query->where('trading_company', $filters['trading_company']);
+            }
+
+            if (!empty($filters['route_label'])) {
+                $query->where('route_label', $filters['route_label']);
+            }
+
+            if (!empty($filters['order_number'])) {
+                $query->where('order_number', 'like', '%' . $filters['order_number'] . '%');
             }
 
             // Filtro por tipo de cliente

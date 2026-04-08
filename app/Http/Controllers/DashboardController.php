@@ -257,6 +257,7 @@ class DashboardController extends Controller
      */
     private function getFilters(Request $request): array
     {
+        // Mismos criterios que export para vista KPI / tendencia (OLO-019)
         $filters = [
             'date_from' => $request->get('date_from'),
             'date_to' => $request->get('date_to'),
@@ -267,6 +268,10 @@ class DashboardController extends Controller
             'arrival_port' => $request->get('arrival_port'),
             'shipping_line' => $request->get('shipping_line'),
             'service_provider' => $request->get('service_provider'),
+            'trading_company' => $request->get('trading_company'),
+            'stage' => $request->get('stage'),
+            'route_label' => $request->get('route_label'),
+            'order_number' => $request->get('order_number'),
             'po_retraso_cl' => $request->boolean('po_retraso_cl', false),
             'po_adelanto_cl' => $request->boolean('po_adelanto_cl', false),
             'indicador_capacidad' => $request->boolean('indicador_capacidad', false),

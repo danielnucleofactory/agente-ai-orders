@@ -8,6 +8,7 @@ use App\Models\KanbanStatus;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderComment;
 use App\Services\MaestrosApiService;
+use Database\Seeders\KanbanBoardSeeder;
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -144,6 +145,14 @@ class KanbanBoard extends Component
                 ->where('type', $this->boardType)
                 ->where('is_active', true)
                 ->first();
+
+            if (!$this->board && $this->boardType === 'po_stages') {
+                (new KanbanBoardSeeder())->ensureBoardsForCompanyId((int) $companyId);
+                $this->board = KanbanBoardModel::where('company_id', $companyId)
+                    ->where('type', $this->boardType)
+                    ->where('is_active', true)
+                    ->first();
+            }
 
             if ($this->board) {
                 $this->boardId = $this->board->id;

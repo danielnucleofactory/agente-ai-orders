@@ -13,22 +13,22 @@ class DashboardKPIManager {
         this.setupEventListeners();
         // Establecer filtros iniciales (fechas por defecto)
         this.currentFilters = this.collectFilters();
-        
+
         // Cargar opciones de filtros primero
         this.loadFilterOptions().then(() => {
             // Actualizar filtros después de cargar opciones
             this.currentFilters = this.collectFilters();
-            
+
             // Establecer fechas por defecto para vista comparativa si está activa
             // Esperar un poco para que Flatpickr se inicialice
             setTimeout(() => {
                 this.setDefaultComparisonPeriods();
             }, 300);
-            
+
             // Verificar qué vista está activa al iniciar
             const tendenciaTeusView = document.getElementById('tendencia-teus');
             const isTeusViewActive = tendenciaTeusView && tendenciaTeusView.classList.contains('active');
-            
+
             // Luego cargar datos iniciales según la vista activa
             if (isTeusViewActive) {
                 this.loadDefaultTeusTable();
@@ -61,7 +61,7 @@ class DashboardKPIManager {
         // Función para establecer fecha (compatible con Flatpickr)
         const setDateValue = (input, dateValue) => {
             if (!input) return;
-            
+
             // Si tiene Flatpickr, usar su API
             if (input._flatpickr) {
                 input._flatpickr.setDate(dateValue, false);
@@ -78,12 +78,12 @@ class DashboardKPIManager {
         };
 
         // Solo establecer si no tienen valores
-        if (!periodAFrom.value && !periodAFrom._flatpickr?.selectedDates.length) {
+        if (!periodAFrom.value && !periodAFrom._flatpickr?.selectedDates?.length) {
             setDateValue(periodAFrom, lastMonth.start);
             setDateValue(periodATo, lastMonth.end);
         }
 
-        if (!periodBFrom.value && !periodBFrom._flatpickr?.selectedDates.length) {
+        if (!periodBFrom.value && !periodBFrom._flatpickr?.selectedDates?.length) {
             setDateValue(periodBFrom, currentMonth.start);
             setDateValue(periodBTo, currentMonth.end);
         }
@@ -93,7 +93,7 @@ class DashboardKPIManager {
         const now = new Date();
         const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-        
+
         return {
             start: this.formatDateForInput(lastMonth),
             end: this.formatDateForInput(lastMonthEnd)
@@ -104,7 +104,7 @@ class DashboardKPIManager {
         const now = new Date();
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
         const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        
+
         return {
             start: this.formatDateForInput(firstDay),
             end: this.formatDateForInput(lastDay)
@@ -184,7 +184,7 @@ class DashboardKPIManager {
             }
 
             const response = await fetch(url.toString(), options);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -199,31 +199,31 @@ class DashboardKPIManager {
     async loadFilterOptions() {
         try {
             const result = await this.fetchData('/filter-options');
-            
+
             if (result && result.success && result.data) {
                 const data = result.data;
-                
+
                 // Cargar clientes
                 this.populateSelect('filter-trading-company', data.clients || []);
-                
+
                 // Cargar etapas
                 this.populateSelect('filter-stage', data.stages || []);
-                
+
                 // Cargar proveedores de mercancía
                 this.populateSelect('filter-vendor-id', data.vendors || []);
-                
+
                 // Cargar proveedores de servicio
                 this.populateSelect('filter-service-provider', data.service_providers || []);
-                
+
                 // Cargar puertos de embarque
                 this.populateSelect('filter-departure-port', data.departure_ports || []);
-                
+
                 // Cargar puertos de arribo
                 this.populateSelect('filter-arrival-port', data.arrival_ports || []);
-                
+
                 // Cargar navieras
                 this.populateSelect('filter-shipping-line', data.shipping_lines || []);
-                
+
                 // Cargar rutas logísticas
                 this.populateSelect('filter-route-label', data.routes || []);
 
@@ -244,9 +244,12 @@ class DashboardKPIManager {
     sortFilterOptions(options) {
         if (!Array.isArray(options)) return [];
         return [...options].sort((a, b) => {
-            const la = String(a?.name ?? a?.id ?? a ?? '');
-            const lb = String(b?.name ?? b?.id ?? b ?? '');
-            return la.localeCompare(lb, 'es', { sensitivity: 'base', numeric: true });
+            const la = String(a?.name ?? a?.id ?? '');
+            const lb = String(b?.name ?? b?.id ?? '');
+            return la.localeCompare(lb, 'es', {
+                sensitivity: 'base',
+                numeric: true
+            });
         });
     }
 
@@ -285,7 +288,7 @@ class DashboardKPIManager {
 
     collectFilters() {
         const filters = {};
-        
+
         const dateFrom = document.getElementById('filter-date-from');
         const dateTo = document.getElementById('filter-date-to');
         const tradingCompany = document.getElementById('filter-trading-company');
@@ -319,9 +322,9 @@ class DashboardKPIManager {
         this.currentFilters = this.collectFilters();
 
         // Detectar vista activa
-        const activeView = document.querySelector('.view-content.active')?.id
-            || document.querySelector('.subtabs-container.active .subtab.active')?.dataset?.subtab
-            || 'tendencia-po';
+        const activeView = document.querySelector('.view-content.active')?.id ||
+            document.querySelector('.subtabs-container.active .subtab.active')?.dataset?.subtab ||
+            'tendencia-po';
 
         const reloads = [];
 
@@ -362,20 +365,20 @@ class DashboardKPIManager {
                 this.fetchData('/pos-with-ata'),
             ]);
 
-            const totalPOs     = stageRes?.data?.total_pos ?? 0;
-            const delayCount   = delayRes?.data?.summary?.total_pos ?? 0;
+            const totalPOs = stageRes?.data?.total_pos ?? 0;
+            const delayCount = delayRes?.data?.summary?.total_pos ?? 0;
             const advanceCount = advanceRes?.data?.summary?.total_pos ?? 0;
-            const ataCount     = ataRes?.data?.summary?.total_pos ?? 0;
+            const ataCount = ataRes?.data?.summary?.total_pos ?? 0;
 
-            const delayPct   = totalPOs > 0 ? ((delayCount   / totalPOs) * 100).toFixed(1) : 0;
+            const delayPct = totalPOs > 0 ? ((delayCount / totalPOs) * 100).toFixed(1) : 0;
             const advancePct = totalPOs > 0 ? ((advanceCount / totalPOs) * 100).toFixed(1) : 0;
 
-            document.getElementById('kpi-total-pos').textContent          = totalPOs.toLocaleString();
-            document.getElementById('kpi-delay-count').textContent        = delayCount.toLocaleString();
-            document.getElementById('kpi-delay-percentage').textContent   = `${delayPct}% del total`;
-            document.getElementById('kpi-advance-count').textContent      = advanceCount.toLocaleString();
+            document.getElementById('kpi-total-pos').textContent = totalPOs.toLocaleString();
+            document.getElementById('kpi-delay-count').textContent = delayCount.toLocaleString();
+            document.getElementById('kpi-delay-percentage').textContent = `${delayPct}% del total`;
+            document.getElementById('kpi-advance-count').textContent = advanceCount.toLocaleString();
             document.getElementById('kpi-advance-percentage').textContent = `${advancePct}% del total`;
-            document.getElementById('kpi-ata-count').textContent          = ataCount.toLocaleString();
+            document.getElementById('kpi-ata-count').textContent = ataCount.toLocaleString();
         } catch (error) {
             console.error('Error loading KPI summary:', error);
         }
@@ -395,7 +398,7 @@ class DashboardKPIManager {
 
         try {
             const result = await this.fetchData('/pos-by-stage');
-            
+
             if (result && result.success && result.data) {
                 this.renderPOsByStageTable(result.data, tableHead, tableBody);
             } else {
@@ -459,7 +462,7 @@ class DashboardKPIManager {
                 <th class="align-right" style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600; color: #374151;">% de Volumen</th>
             </tr>
         `;
-        
+
         tableBody.innerHTML = `
             <tr>
                 <td colspan="3" style="text-align: center; padding: 20px; color: #6b7280;">
@@ -580,6 +583,208 @@ class DashboardKPIManager {
                 });
             }
         });
+
+        this.setupDataTableSorting();
+    }
+
+    /**
+     * Ordenación client-side en todas las tablas `.data-table` del dashboard (kpiCompTable, tendencias, PO vs TEUs, proyección).
+     * Las filas expandibles + subtabla se mueven como un bloque; las filas Total / mensajes colspan quedan al final.
+     */
+    setupDataTableSorting() {
+        const root = document.querySelector('.dashboard-kpi-container');
+        if (!root) {
+            return;
+        }
+        root.addEventListener('click', (e) => {
+            const th = e.target.closest('thead th');
+            if (!th) {
+                return;
+            }
+            const table = th.closest('table');
+            if (!table || !table.classList.contains('data-table')) {
+                return;
+            }
+            if (th.hasAttribute('colspan')) {
+                return;
+            }
+            e.preventDefault();
+            this.sortDataTableByColumn(table, th);
+        });
+    }
+
+    ensureSortIndicators(table) {
+        table.querySelectorAll('thead tr th').forEach((th) => {
+            if (th.hasAttribute('colspan')) {
+                return;
+            }
+            th.classList.add('sortable-th');
+            if (!th.querySelector('.th-sort-ind')) {
+                const span = document.createElement('span');
+                span.className = 'th-sort-ind';
+                span.setAttribute('aria-hidden', 'true');
+                th.appendChild(span);
+            }
+        });
+    }
+
+    updateSortHeaderState(table, colIndex, dir) {
+        const ths = table.querySelectorAll('thead tr th');
+        ths.forEach((th, i) => {
+            if (th.hasAttribute('colspan')) {
+                return;
+            }
+            th.classList.remove('sort-asc', 'sort-desc');
+            th.removeAttribute('aria-sort');
+            if (i === colIndex) {
+                th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+                th.setAttribute('aria-sort', dir === 'asc' ? 'ascending' : 'descending');
+            } else {
+                th.setAttribute('aria-sort', 'none');
+            }
+        });
+    }
+
+    getSortableCellValue(td) {
+        if (!td) {
+            return {
+                type: 'string',
+                value: ''
+            };
+        }
+        const raw = td.textContent.replace(/\u00a0/g, ' ').trim();
+        const cls = td.className || '';
+        const looksNumericClass = cls.includes('number') || cls.includes('percentage') || cls.includes('days');
+        const normalized = raw
+            .replace(/%/g, '')
+            .replace(/\s*días\s*$/i, '')
+            .replace(/\s/g, '')
+            .replace(/,/g, '');
+        const n = parseFloat(normalized);
+        if (looksNumericClass && !Number.isNaN(n)) {
+            return {
+                type: 'number',
+                value: n
+            };
+        }
+        if (!Number.isNaN(n) && normalized !== '' && /^-?[\d.]+$/.test(normalized)) {
+            return {
+                type: 'number',
+                value: n
+            };
+        }
+        return {
+            type: 'string',
+            value: raw.toLowerCase()
+        };
+    }
+
+    compareSortValues(va, vb, dir) {
+        const m = dir === 'asc' ? 1 : -1;
+        if (va.type === 'number' && vb.type === 'number') {
+            return (va.value - vb.value) * m;
+        }
+        const sa = va.type === 'number' ? String(va.value) : va.value;
+        const sb = vb.type === 'number' ? String(vb.value) : vb.value;
+        return sa.localeCompare(sb, 'es', {
+            numeric: true,
+            sensitivity: 'base'
+        }) * m;
+    }
+
+    partitionDataTableBody(tbody) {
+        const rows = Array.from(tbody.querySelectorAll(':scope > tr'));
+        const dataGroups = [];
+        const tailRows = [];
+
+        for (let i = 0; i < rows.length; i++) {
+            const tr = rows[i];
+            if (tr.classList.contains('sub-table-row')) {
+                tailRows.push(tr);
+                continue;
+            }
+            const td0 = tr.querySelector('td');
+            if (!td0) {
+                tailRows.push(tr);
+                continue;
+            }
+            const cs = td0.getAttribute('colspan');
+            if (cs && parseInt(cs, 10) > 1) {
+                tailRows.push(tr);
+                continue;
+            }
+            const firstText = td0.textContent.replace(/\s+/g, ' ').trim();
+            if (/^total/i.test(firstText)) {
+                tailRows.push(tr);
+                continue;
+            }
+            const grp = [tr];
+            if (rows[i + 1] && rows[i + 1].classList.contains('sub-table-row')) {
+                grp.push(rows[i + 1]);
+                i++;
+            }
+            dataGroups.push(grp);
+        }
+        return {
+            dataGroups,
+            tailRows
+        };
+    }
+
+    sortDataTableByColumn(table, th) {
+        const tbody = table.querySelector('tbody');
+        if (!tbody) {
+            return;
+        }
+
+        const theadRow = th.parentElement;
+        if (!theadRow) {
+            return;
+        }
+        const colIndex = Array.from(theadRow.children).indexOf(th);
+        if (colIndex < 0) {
+            return;
+        }
+
+        this.ensureSortIndicators(table);
+
+        const prevCol = table.dataset.sortCol !== undefined ? parseInt(table.dataset.sortCol, 10) : null;
+        let dir = 'asc';
+        if (prevCol === colIndex && table.dataset.sortDir === 'asc') {
+            dir = 'desc';
+        }
+        table.dataset.sortCol = String(colIndex);
+        table.dataset.sortDir = dir;
+
+        const {
+            dataGroups,
+            tailRows
+        } = this.partitionDataTableBody(tbody);
+        if (dataGroups.length <= 1) {
+            this.updateSortHeaderState(table, colIndex, dir);
+            return;
+        }
+
+        const sampleTr = dataGroups[0][0];
+        const tds = sampleTr.querySelectorAll('td');
+        if (colIndex >= tds.length) {
+            return;
+        }
+
+        dataGroups.sort((ga, gb) => {
+            const tda = ga[0].querySelectorAll('td')[colIndex];
+            const tdb = gb[0].querySelectorAll('td')[colIndex];
+            const va = this.getSortableCellValue(tda);
+            const vb = this.getSortableCellValue(tdb);
+            return this.compareSortValues(va, vb, dir);
+        });
+
+        dataGroups.forEach((g) => {
+            g.forEach((tr) => tbody.appendChild(tr));
+        });
+        tailRows.forEach((tr) => tbody.appendChild(tr));
+
+        this.updateSortHeaderState(table, colIndex, dir);
     }
 
     handleFilterClick(filterId, button, type = 'po') {
@@ -657,7 +862,7 @@ class DashboardKPIManager {
 
         try {
             const result = await this.fetchData(endpoint);
-            
+
             if (result && result.success && result.data) {
                 this.renderFilterTable(filterId, result.data, tableHead, tableBody, type);
             } else {
@@ -707,7 +912,7 @@ class DashboardKPIManager {
         vendors.forEach((vendor, index) => {
             const hasDetails = data.details && data.details.filter(d => d.vendor === vendor.vendor).length > 0;
             const vendorDetails = data.details ? data.details.filter(d => d.vendor === vendor.vendor) : [];
-            
+
             rows += `
                 <tr class="${hasDetails ? 'expandable-row' : ''}" ${hasDetails ? 'onclick="toggleSubTable(this)"' : ''}>
                     <td style="padding: 12px; border: 1px solid #e5e7eb;">${hasDetails ? '<span class="expand-icon">▶</span>' : ''}${vendor.vendor}</td>
@@ -748,7 +953,7 @@ class DashboardKPIManager {
         // Fila total
         const totalValue = isTeus ? summary.total_teus : summary.total_pos;
         const avgDays = isDelay ? summary.avg_delay_days : summary.avg_advance_days;
-        
+
         rows += `
             <tr style="background-color: #f8faf9; font-weight: 700;">
                 <td style="padding: 12px; border: 1px solid #e5e7eb; color: #374151;">Total</td>
@@ -900,12 +1105,12 @@ class DashboardKPIManager {
 
         // Combinar clientes y rutas
         let rows = '';
-        
+
         clients.forEach(client => {
             const value = isTeus ? client.teus : client.po_count;
             // Encontrar rutas asociadas
             const clientRoutes = routes.slice(0, 2); // Simplificado
-            
+
             rows += `
                 <tr class="expandable-row" onclick="toggleSubTable(this)">
                     <td style="padding: 12px; border: 1px solid #e5e7eb;"><span class="expand-icon">▶</span>${client.client}</td>
@@ -970,7 +1175,7 @@ class DashboardKPIManager {
 
         try {
             const result = await this.fetchData('/pos-by-stage');
-            
+
             if (result && result.success && result.data) {
                 this.renderTEUsByStageTable(result.data, tableHead, tableBody);
             } else {
@@ -1104,9 +1309,9 @@ class DashboardKPIManager {
 
         // Obtener períodos de comparación (compatible con Flatpickr altInput)
         const periodAFrom = this.getDateInputValue(document.getElementById('comp-period-a-from'));
-        const periodATo   = this.getDateInputValue(document.getElementById('comp-period-a-to'));
+        const periodATo = this.getDateInputValue(document.getElementById('comp-period-a-to'));
         const periodBFrom = this.getDateInputValue(document.getElementById('comp-period-b-from'));
-        const periodBTo   = this.getDateInputValue(document.getElementById('comp-period-b-to'));
+        const periodBTo = this.getDateInputValue(document.getElementById('comp-period-b-to'));
 
         // Validar que todos los períodos estén completos
         if (!periodAFrom || !periodATo || !periodBFrom || !periodBTo) {
@@ -1149,7 +1354,7 @@ class DashboardKPIManager {
         try {
             // Crear URL con los períodos de comparación
             const result = await this.fetchComparisonData(endpoint, periodAFrom, periodATo, periodBFrom, periodBTo);
-            
+
             if (result && result.success && result.data) {
                 this.renderComparisonTable(filterId, result.data, tableHead, tableBody);
             } else {
@@ -1187,9 +1392,9 @@ class DashboardKPIManager {
                 },
                 body: JSON.stringify({
                     period1_start: periodAFrom,
-                    period1_end:   periodATo,
+                    period1_end: periodATo,
                     period2_start: periodBFrom,
-                    period2_end:   periodBTo,
+                    period2_end: periodBTo,
                 }),
             });
 
@@ -1206,11 +1411,21 @@ class DashboardKPIManager {
 
     renderComparisonTable(filterId, data, tableHead, tableBody) {
         // Backend returns { period1: {start, end, total}, period2: {start, end, total}, by_vendor: [...] }
+        const parseYmdLocal = (s) => {
+            if (!s || typeof s !== 'string') return null;
+            const p = s.split('-');
+            if (p.length !== 3) return null;
+            const y = parseInt(p[0], 10);
+            const m = parseInt(p[1], 10) - 1;
+            const d = parseInt(p[2], 10);
+            if (Number.isNaN(y) || Number.isNaN(m) || Number.isNaN(d)) return null;
+            return new Date(y, m, d);
+        };
         const formatLabel = (p) => {
             if (!p || !p.start) return 'Período';
-            const from = new Date(p.start + 'T00:00:00');
-            const to   = new Date(p.end   + 'T00:00:00');
-            const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+            const from = parseYmdLocal(p.start) ?? new Date(p.start);
+            const to = parseYmdLocal(p.end) ?? new Date(p.end);
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
             if (from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear()) {
                 return `${months[from.getMonth()]} ${from.getFullYear()}`;
             }
@@ -1219,8 +1434,8 @@ class DashboardKPIManager {
 
         const periodA = formatLabel(data.period1);
         const periodB = formatLabel(data.period2);
-        const totalA  = data.period1?.total ?? 0;
-        const totalB  = data.period2?.total ?? 0;
+        const totalA = data.period1?.total ?? 0;
+        const totalB = data.period2?.total ?? 0;
 
         tableHead.innerHTML = `
             <tr>
@@ -1236,10 +1451,10 @@ class DashboardKPIManager {
 
         let rows = '';
         vendors.forEach(v => {
-            const p1  = v.period1_count ?? 0;
-            const p2  = v.period2_count ?? 0;
+            const p1 = v.period1_count ?? 0;
+            const p2 = v.period2_count ?? 0;
             const pct = v.variation_percentage ?? 0;
-            const sign  = pct > 0 ? '+' : '';
+            const sign = pct > 0 ? '+' : '';
             const color = (isDelay ? pct < 0 : pct > 0) ? '#27ae60' : '#e17055';
 
             rows += `<tr>
@@ -1250,8 +1465,8 @@ class DashboardKPIManager {
             </tr>`;
         });
 
-        const totalPct   = totalA > 0 ? (((totalB - totalA) / totalA) * 100).toFixed(1) : '0.0';
-        const totalSign  = parseFloat(totalPct) > 0 ? '+' : '';
+        const totalPct = totalA > 0 ? (((totalB - totalA) / totalA) * 100).toFixed(1) : '0.0';
+        const totalSign = parseFloat(totalPct) > 0 ? '+' : '';
         const totalColor = (isDelay ? parseFloat(totalPct) < 0 : parseFloat(totalPct) > 0) ? '#27ae60' : '#e17055';
 
         rows += `<tr style="background-color:#f8faf9;font-weight:700;">
@@ -1271,7 +1486,7 @@ class DashboardKPIManager {
             const fromDate = new Date(from);
             const toDate = new Date(to);
             const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-            
+
             // Si es el mismo mes y año
             if (fromDate.getMonth() === toDate.getMonth() && fromDate.getFullYear() === toDate.getFullYear()) {
                 return `${months[fromDate.getMonth()]} ${fromDate.getFullYear()}`;
@@ -1286,60 +1501,180 @@ class DashboardKPIManager {
         // Datos de ejemplo para cada tipo de comparación
         const exampleData = {
             'btn-comp-retraso-cl': {
-                vendors: [
-                    { name: 'Asia Manufacturing', a: 72, b: 64, var: -11.1 },
-                    { name: 'Global Textiles', a: 54, b: 48, var: -11.1 },
-                    { name: 'Electronics Corp', a: 48, b: 44, var: -8.3 },
-                    { name: 'Premium Goods', a: 12, b: 15, var: 25.0 },
-                    { name: 'Fast Logistics', a: 8, b: 6, var: -25.0 },
+                vendors: [{
+                        name: 'Asia Manufacturing',
+                        a: 72,
+                        b: 64,
+                        var: -11.1
+                    },
+                    {
+                        name: 'Global Textiles',
+                        a: 54,
+                        b: 48,
+                        var: -11.1
+                    },
+                    {
+                        name: 'Electronics Corp',
+                        a: 48,
+                        b: 44,
+                        var: -8.3
+                    },
+                    {
+                        name: 'Premium Goods',
+                        a: 12,
+                        b: 15,
+                        var: 25.0
+                    },
+                    {
+                        name: 'Fast Logistics',
+                        a: 8,
+                        b: 6,
+                        var: -25.0
+                    },
                 ],
                 totalA: 194,
                 totalB: 177,
                 totalVar: -8.8
             },
             'btn-comp-adelanto-cl': {
-                vendors: [
-                    { name: 'Premium Goods', a: 32, b: 38, var: 18.8 },
-                    { name: 'Fast Logistics', a: 28, b: 31, var: 10.7 },
-                    { name: 'Quality First', a: 18, b: 20, var: 11.1 },
-                    { name: 'Asia Manufacturing', a: 15, b: 12, var: -20.0 },
-                    { name: 'Global Textiles', a: 11, b: 9, var: -18.2 },
+                vendors: [{
+                        name: 'Premium Goods',
+                        a: 32,
+                        b: 38,
+                        var: 18.8
+                    },
+                    {
+                        name: 'Fast Logistics',
+                        a: 28,
+                        b: 31,
+                        var: 10.7
+                    },
+                    {
+                        name: 'Quality First',
+                        a: 18,
+                        b: 20,
+                        var: 11.1
+                    },
+                    {
+                        name: 'Asia Manufacturing',
+                        a: 15,
+                        b: 12,
+                        var: -20.0
+                    },
+                    {
+                        name: 'Global Textiles',
+                        a: 11,
+                        b: 9,
+                        var: -18.2
+                    },
                 ],
                 totalA: 104,
                 totalB: 110,
                 totalVar: 5.8
             },
             'btn-comp-capacidad': {
-                vendors: [
-                    { name: 'Asia Manufacturing', a: 412, b: 481, var: 16.7 },
-                    { name: 'Global Textiles', a: 348, b: 394, var: 13.2 },
-                    { name: 'Electronics Corp', a: 225, b: 248, var: 10.2 },
-                    { name: 'Premium Goods', a: 78, b: 85, var: 9.0 },
-                    { name: 'Fast Logistics', a: 45, b: 40, var: -11.1 },
+                vendors: [{
+                        name: 'Asia Manufacturing',
+                        a: 412,
+                        b: 481,
+                        var: 16.7
+                    },
+                    {
+                        name: 'Global Textiles',
+                        a: 348,
+                        b: 394,
+                        var: 13.2
+                    },
+                    {
+                        name: 'Electronics Corp',
+                        a: 225,
+                        b: 248,
+                        var: 10.2
+                    },
+                    {
+                        name: 'Premium Goods',
+                        a: 78,
+                        b: 85,
+                        var: 9.0
+                    },
+                    {
+                        name: 'Fast Logistics',
+                        a: 45,
+                        b: 40,
+                        var: -11.1
+                    },
                 ],
                 totalA: 1108,
                 totalB: 1248,
                 totalVar: 12.6
             },
             'btn-comp-atd': {
-                vendors: [
-                    { name: 'Asia Manufacturing', a: 412, b: 481, var: 16.7 },
-                    { name: 'Global Textiles', a: 348, b: 394, var: 13.2 },
-                    { name: 'Electronics Corp', a: 225, b: 248, var: 10.2 },
-                    { name: 'Premium Goods', a: 78, b: 85, var: 9.0 },
-                    { name: 'Fast Logistics', a: 45, b: 40, var: -11.1 },
+                vendors: [{
+                        name: 'Asia Manufacturing',
+                        a: 412,
+                        b: 481,
+                        var: 16.7
+                    },
+                    {
+                        name: 'Global Textiles',
+                        a: 348,
+                        b: 394,
+                        var: 13.2
+                    },
+                    {
+                        name: 'Electronics Corp',
+                        a: 225,
+                        b: 248,
+                        var: 10.2
+                    },
+                    {
+                        name: 'Premium Goods',
+                        a: 78,
+                        b: 85,
+                        var: 9.0
+                    },
+                    {
+                        name: 'Fast Logistics',
+                        a: 45,
+                        b: 40,
+                        var: -11.1
+                    },
                 ],
                 totalA: 1108,
                 totalB: 1248,
                 totalVar: 12.6
             },
             'btn-comp-ata': {
-                vendors: [
-                    { name: 'Asia Manufacturing', a: 382, b: 421, var: 10.2 },
-                    { name: 'Global Textiles', a: 315, b: 338, var: 7.3 },
-                    { name: 'Electronics Corp', a: 198, b: 212, var: 7.1 },
-                    { name: 'Premium Goods', a: 68, b: 73, var: 7.4 },
-                    { name: 'Fast Logistics', a: 42, b: 38, var: -9.5 },
+                vendors: [{
+                        name: 'Asia Manufacturing',
+                        a: 382,
+                        b: 421,
+                        var: 10.2
+                    },
+                    {
+                        name: 'Global Textiles',
+                        a: 315,
+                        b: 338,
+                        var: 7.3
+                    },
+                    {
+                        name: 'Electronics Corp',
+                        a: 198,
+                        b: 212,
+                        var: 7.1
+                    },
+                    {
+                        name: 'Premium Goods',
+                        a: 68,
+                        b: 73,
+                        var: 7.4
+                    },
+                    {
+                        name: 'Fast Logistics',
+                        a: 42,
+                        b: 38,
+                        var: -9.5
+                    },
                 ],
                 totalA: 1005,
                 totalB: 1082,
@@ -1363,7 +1698,7 @@ class DashboardKPIManager {
             const variationSign = vendor.var > 0 ? '+' : '';
             const isPositive = filterId.includes('retraso') ? vendor.var < 0 : vendor.var > 0;
             const colorClass = isPositive ? '#27ae60' : '#e17055';
-            
+
             rows += `
                 <tr>
                     <td style="padding: 12px; border: 1px solid #e5e7eb;">${vendor.name}</td>
@@ -1488,9 +1823,21 @@ class DashboardKPIManager {
         }
 
         // Actualizar KPI cards
-        const stageColors = { 'Producción': '#565AFF', 'Booking': '#28C7A1', 'Tránsito': '#1AAD8A' };
-        const stageSubtitles = { 'Producción': 'CL Teórica estimada', 'Booking': 'ETD proyectado', 'Tránsito': 'ETA confirmado' };
-        const cardIds = { 'Producción': 'proy-produccion-pos', 'Booking': 'proy-booking-pos', 'Tránsito': 'proy-transito-pos' };
+        const stageColors = {
+            'Producción': '#565AFF',
+            'Booking': '#28C7A1',
+            'Tránsito': '#1AAD8A'
+        };
+        const stageSubtitles = {
+            'Producción': 'CL Teórica estimada',
+            'Booking': 'ETD proyectado',
+            'Tránsito': 'ETA confirmado'
+        };
+        const cardIds = {
+            'Producción': 'proy-produccion-pos',
+            'Booking': 'proy-booking-pos',
+            'Tránsito': 'proy-transito-pos'
+        };
 
         let grandTotal = 0;
         stages.forEach(stage => {
@@ -1514,7 +1861,11 @@ class DashboardKPIManager {
         const weeklyTotals = new Array(weeks.length).fill(0);
         let rows = '';
 
-        const stageLabels = { 'Producción': 'CL Teórica', 'Booking': 'ETD', 'Tránsito': 'ETA' };
+        const stageLabels = {
+            'Producción': 'CL Teórica',
+            'Booking': 'ETD',
+            'Tránsito': 'ETA'
+        };
         stages.forEach(stage => {
             const color = stageColors[stage.stage] || '#374151';
             const sublabel = stageLabels[stage.stage] || '';
@@ -1566,21 +1917,21 @@ class DashboardKPIManager {
             ]);
 
             // KPI cards desde etapas (total_pos / total_teus)
-            const totalPos  = stageRes?.data?.total_pos  ?? 0;
+            const totalPos = stageRes?.data?.total_pos ?? 0;
             const totalTeus = stageRes?.data?.total_teus ?? 0;
-            this._setText('povsteus-total-pos',  totalPos.toLocaleString());
+            this._setText('povsteus-total-pos', totalPos.toLocaleString());
             this._setText('povsteus-total-teus', totalTeus.toLocaleString());
 
             // Variaciones desde períodos
-            const weekVar  = periodRes?.data?.week_variation;
+            const weekVar = periodRes?.data?.week_variation;
             const monthVar = periodRes?.data?.month_variation;
-            this._setText('povsteus-week-variation',  weekVar  != null ? (weekVar  >= 0 ? '+' : '') + weekVar  + '%' : '-');
+            this._setText('povsteus-week-variation', weekVar != null ? (weekVar >= 0 ? '+' : '') + weekVar + '%' : '-');
             this._setText('povsteus-month-variation', monthVar != null ? (monthVar >= 0 ? '+' : '') + monthVar + '%' : '-');
 
-            this.renderPoVsTeusByStage(stageRes?.data,   'povsteus-stage-head',  'povsteus-stage-body');
+            this.renderPoVsTeusByStage(stageRes?.data, 'povsteus-stage-head', 'povsteus-stage-body');
             this.renderPoVsTeusByPeriod(periodRes?.data, 'povsteus-period-head', 'povsteus-period-body');
-            this.renderPoVsTeusByGroup(vendorRes?.data,  'vendor', 'Proveedor de Mercancía', 'povsteus-vendor-head', 'povsteus-vendor-body');
-            this.renderPoVsTeusByGroup(lineRes?.data,    'shipping_line', 'Naviera', 'povsteus-line-head', 'povsteus-line-body');
+            this.renderPoVsTeusByGroup(vendorRes?.data, 'vendor', 'Proveedor de Mercancía', 'povsteus-vendor-head', 'povsteus-vendor-body');
+            this.renderPoVsTeusByGroup(lineRes?.data, 'shipping_line', 'Naviera', 'povsteus-line-head', 'povsteus-line-body');
 
         } catch (error) {
             console.error('Error loading PO vs TEUs:', error);
@@ -1704,9 +2055,9 @@ class DashboardKPIManager {
 function toggleSubTable(row) {
     const subTableRow = row.nextElementSibling;
     const expandIcon = row.querySelector('.expand-icon');
-    
+
     if (!subTableRow || !subTableRow.classList.contains('sub-table-row')) return;
-    
+
     if (subTableRow.classList.contains('visible')) {
         subTableRow.classList.remove('visible');
         row.classList.remove('expanded');

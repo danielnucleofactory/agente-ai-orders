@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Exports;
 
+use App\Models\KanbanStatus;
+use Illuminate\Support\Carbon;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
@@ -186,6 +188,9 @@ class DashboardExport implements FromArray, WithHeadings, WithStyles, WithTitle,
         foreach ($this->appliedFilters as $key => $value) {
             if (!empty($value) && isset($filterLabels[$key])) {
                 $displayValue = is_array($value) ? implode(', ', $value) : $value;
+                if ($key === 'stage' && is_numeric($displayValue)) {
+                    $displayValue = KanbanStatus::query()->whereKey((int) $displayValue)->value('name') ?? $displayValue;
+                }
                 if ($value === true || $value === '1') {
                     $displayValue = 'Sí';
                 }
@@ -214,7 +219,7 @@ class DashboardExport implements FromArray, WithHeadings, WithStyles, WithTitle,
         // Agregar fecha de generación
         $row += 1;
         $sheet->setCellValue("A{$row}", 'Generado:');
-        $sheet->setCellValue("B{$row}", now()->format('d/m/Y H:i:s'));
+        $sheet->setCellValue("B{$row}", Carbon::now(config('app.timezone'))->format('d/m/Y H:i:s'));
         
         $sheet->getStyle("A{$row}")->applyFromArray([
             'font' => [

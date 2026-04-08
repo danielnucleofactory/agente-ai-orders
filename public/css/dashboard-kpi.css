@@ -214,7 +214,7 @@
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     padding: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .table-header {
@@ -264,6 +264,44 @@
     color: #374151;
     border: 1px solid #e5e7eb;
     font-family: 'Lato', sans-serif;
+}
+
+/* Ordenación por columna (dashboard KPI) */
+.data-table thead th.sortable-th {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 22px;
+}
+
+.data-table thead th.sortable-th:hover {
+    background: #f3f4f6;
+}
+
+.data-table thead th.sortable-th .th-sort-ind {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    color: #9ca3af;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.data-table thead th.sortable-th.sort-asc .th-sort-ind::after {
+    content: '▲';
+    color: #1AAD8A;
+}
+
+.data-table thead th.sortable-th.sort-desc .th-sort-ind::after {
+    content: '▼';
+    color: #1AAD8A;
+}
+
+.data-table thead th.sortable-th:not(.sort-asc):not(.sort-desc) .th-sort-ind::after {
+    content: '↕';
+    opacity: 0.45;
 }
 
 .data-table th.align-right,
@@ -455,7 +493,7 @@
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     padding: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .filters-panel {
@@ -468,7 +506,7 @@
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     padding: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .additional-filters-title {
@@ -640,4 +678,3 @@
     width: 150px !important;
     height: 40px !important;
 }
-

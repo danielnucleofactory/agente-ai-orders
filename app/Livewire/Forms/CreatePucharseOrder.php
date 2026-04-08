@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Forms;
 
+use App\Models\Company;
 use App\Models\Product;
 use App\Models\Vendor;
 use App\Models\ShipTo;
@@ -890,8 +891,8 @@ class CreatePucharseOrder extends Component
             // Inicializar el array de productos vacío
             $this->orderProducts = [];
 
-            // El campo trading_company se deja vacío para que el usuario lo llene
-            // Al escribir el nombre del cliente, se cargarán las opciones de maestros automáticamente
+            // Catálogos maestros: sin trading_company aún, usar empresa del usuario (OLO-009 / OLO-020)
+            $this->loadMaestrosOptions();
 
             // Generar un número de orden único
             //$this->generateUniqueOrderNumber();
@@ -904,6 +905,25 @@ class CreatePucharseOrder extends Component
     protected function getMaestrosApiService(): MaestrosApiService
     {
         return app(MaestrosApiService::class);
+    }
+
+    /**
+     * Valor de compañía/cliente para consultar maestros: trading_company si tiene ≥2 caracteres; si no, nombre de la empresa del usuario.
+     */
+    protected function resolveMaestrosTradingCompanyForApi(): string
+    {
+        $trading = trim((string) ($this->trading_company ?? ''));
+        if (strlen($trading) >= 2) {
+            return $trading;
+        }
+        $user = auth()->user();
+        if ($user && $user->company_id) {
+            $name = Company::query()->whereKey($user->company_id)->value('name');
+
+            return trim((string) ($name ?? ''));
+        }
+
+        return '';
     }
 
     protected function loadHubs()
@@ -925,10 +945,8 @@ class CreatePucharseOrder extends Component
      */
     protected function loadMaestrosOptions()
     {
-        // Si no hay trading_company, no cargar opciones de la API
-        $tradingCompanyValue = trim($this->trading_company ?? '');
-        if (empty($tradingCompanyValue)) {
-            // Limpiar los arrays si no hay cliente
+        $tradingCompanyValue = $this->resolveMaestrosTradingCompanyForApi();
+        if ($tradingCompanyValue === '') {
             $this->departurePortArray = [];
             $this->arrivalPortArray = [];
             $this->shippingLineArray = [];
@@ -1194,15 +1212,9 @@ class CreatePucharseOrder extends Component
     {
         $tradingCompanyValue = trim($this->trading_company ?? '');
 
-        // Si el campo está vacío o tiene menos de 2 caracteres, limpiar los arrays
         if (strlen($tradingCompanyValue) < 2) {
-            $this->departurePortArray = [];
-            $this->arrivalPortArray = [];
-            $this->shippingLineArray = [];
-            $this->containerTypeArray = [];
-            $this->serviceProviderArray = [];
-            $this->transportTypeArray = [];
-            $this->rateTypeArray = [];
+            $this->loadMaestrosOptions();
+
             return;
         }
 
