@@ -777,8 +777,9 @@ class DashboardKPIService
                 $byRoute[$routeLabel]['count']++;
                 $byRoute[$routeLabel]['teus'] += $teus;
 
-                // Detalles para subtabla
+                // Detalles para subtabla (incluye cliente para agrupar en el dashboard)
                 $details[] = [
+                    'client' => $clientName,
                     'order_number' => $po->order_number,
                     'vendor' => $po->vendor->name ?? 'N/A',
                     'shipping_line' => $po->shipping_line ?? 'N/A',

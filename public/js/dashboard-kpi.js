@@ -935,7 +935,7 @@ class DashboardKPIManager {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${vendorDetails.slice(0, 5).map(detail => `
+                                    ${vendorDetails.map(detail => `
                                         <tr>
                                             <td style="padding: 10px 12px; font-size: 13px;">${detail.order_number}</td>
                                             <td class="days" style="padding: 10px 12px; font-size: 13px; color: ${isDelay ? '#e17055' : '#27ae60'};">${detail[isDelay ? 'delay_days' : 'advance_days']} días</td>
@@ -1100,28 +1100,35 @@ class DashboardKPIManager {
         `;
 
         const clients = data.by_client || [];
-        const routes = data.by_route || [];
         const summary = data.summary || {};
 
-        // Combinar clientes y rutas
         let rows = '';
 
         clients.forEach(client => {
             const value = isTeus ? client.teus : client.po_count;
-            // Encontrar rutas asociadas
-            const clientRoutes = routes.slice(0, 2); // Simplificado
+            const allDetails = data.details || [];
+            const detailsHaveClient = allDetails.some((d) => d && Object.prototype.hasOwnProperty.call(d, 'client'));
+            let clientDetails;
+            if (detailsHaveClient) {
+                clientDetails = allDetails.filter((d) => d.client === client.client);
+            } else if (clients.length === 1) {
+                // API sin campo client: un solo cliente → todos los detalles corresponden a esa fila
+                clientDetails = allDetails;
+            } else {
+                clientDetails = [];
+            }
+            const hasDetails = clientDetails.length > 0;
 
             rows += `
-                <tr class="expandable-row" onclick="toggleSubTable(this)">
-                    <td style="padding: 12px; border: 1px solid #e5e7eb;"><span class="expand-icon">▶</span>${client.client}</td>
+                <tr class="${hasDetails ? 'expandable-row' : ''}" ${hasDetails ? 'onclick="toggleSubTable(this)"' : ''}>
+                    <td style="padding: 12px; border: 1px solid #e5e7eb;">${hasDetails ? '<span class="expand-icon">▶</span>' : ''}${client.client}</td>
                     <td style="padding: 12px; border: 1px solid #e5e7eb;">-</td>
                     <td class="align-right number" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #1AAD8A;">${value.toLocaleString()}</td>
                 </tr>
             `;
 
-            // Subtabla con detalles
-            if (data.details && data.details.length > 0) {
-                const clientDetails = data.details.slice(0, 5);
+            // Subtabla con detalles del cliente
+            if (hasDetails) {
                 rows += `
                     <tr class="sub-table-row">
                         <td colspan="3" class="sub-table-cell" style="padding: 0;">

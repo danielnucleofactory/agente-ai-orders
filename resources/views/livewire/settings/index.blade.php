@@ -1,5 +1,4 @@
 @php
-    $languagesArray = ['en_US' => 'Inglés', 'es_CL' => 'Español (Chile)'];
     $timeZonesArray = [
         'America/Santiago'   => 'Santiago, Chile (GMT-4/-3)',
         'America/Costa_Rica' => 'San José, Costa Rica (GMT-6)',
@@ -141,14 +140,9 @@
         </ul>
     </div>
 
-    <div class="flex items-center justify-between">
-        <label for="language" class="flex flex-col">
-            <span class="text-lg font-bold text-[#1AAD8A]">Idioma</span>
-            <span class="text-[#898989]">Elige el idioma</span>
-        </label>
-
-        <x-form-select wire:model="language" selectClasses="w-[366px] rounded-xl border-2 border-[#28C7A1]" name="language"
-            :options="$languagesArray" />
+    <div class="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] px-4 py-3 text-sm text-[#374151]">
+        <span class="font-semibold text-[#1AAD8A]">Idioma de la aplicación</span>
+        <p class="mt-1 text-[#6b7280]">Por ahora la interfaz está disponible solo en <strong>español</strong>.</p>
     </div>
 
     <div class="flex items-center justify-between">

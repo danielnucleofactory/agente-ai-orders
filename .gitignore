@@ -40,8 +40,5 @@ utils_temp.php
 *_test.php
 *_debug.php
 *_demo.php
-*.Identifier
-
-# Cursor / Agent kit (solo local)
 .cursor/
 AGENTS.md
