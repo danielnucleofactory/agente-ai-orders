@@ -266,19 +266,22 @@
     font-family: 'Lato', sans-serif;
 }
 
-/* Ordenación por columna (dashboard KPI) */
-.data-table thead th.sortable-th {
+/* Ordenación por columna (dashboard KPI): tabla principal y subtablas de detalle */
+.data-table thead th.sortable-th,
+.sub-table thead th.sortable-th {
     cursor: pointer;
     user-select: none;
     position: relative;
     padding-right: 22px;
 }
 
-.data-table thead th.sortable-th:hover {
+.data-table thead th.sortable-th:hover,
+.sub-table thead th.sortable-th:hover {
     background: #f3f4f6;
 }
 
-.data-table thead th.sortable-th .th-sort-ind {
+.data-table thead th.sortable-th .th-sort-ind,
+.sub-table thead th.sortable-th .th-sort-ind {
     position: absolute;
     right: 6px;
     top: 50%;
@@ -289,17 +292,20 @@
     pointer-events: none;
 }
 
-.data-table thead th.sortable-th.sort-asc .th-sort-ind::after {
+.data-table thead th.sortable-th.sort-asc .th-sort-ind::after,
+.sub-table thead th.sortable-th.sort-asc .th-sort-ind::after {
     content: '▲';
     color: #1AAD8A;
 }
 
-.data-table thead th.sortable-th.sort-desc .th-sort-ind::after {
+.data-table thead th.sortable-th.sort-desc .th-sort-ind::after,
+.sub-table thead th.sortable-th.sort-desc .th-sort-ind::after {
     content: '▼';
     color: #1AAD8A;
 }
 
-.data-table thead th.sortable-th:not(.sort-asc):not(.sort-desc) .th-sort-ind::after {
+.data-table thead th.sortable-th:not(.sort-asc):not(.sort-desc) .th-sort-ind::after,
+.sub-table thead th.sortable-th:not(.sort-asc):not(.sort-desc) .th-sort-ind::after {
     content: '↕';
     opacity: 0.45;
 }

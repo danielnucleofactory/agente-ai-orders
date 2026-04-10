@@ -13,6 +13,8 @@ class HistoricalDataTable extends Component
     protected $paginationTheme = 'tailwind';
 
     public $search = '';
+    public string $sortField = 'emision_date_po';
+    public string $sortDirection = 'desc';
     public $filters = [
         'vendor' => '',
         'date_from' => '',
@@ -26,6 +28,8 @@ class HistoricalDataTable extends Component
         'search' => ['except' => ''],
         'filters' => ['except' => []],
         'perPage' => ['except' => 25],
+        'sortField' => ['except' => 'emision_date_po'],
+        'sortDirection' => ['except' => 'desc'],
     ];
 
     protected $listeners = [
@@ -51,6 +55,33 @@ class HistoricalDataTable extends Component
 
     public function updatingPerPage()
     {
+        $this->resetPage();
+    }
+
+    public function sortBy(string $field): void
+    {
+        $allowed = [
+            'order_number',
+            'vendor_name',
+            'emision_date_po',
+            'net_total',
+            'container_number',
+            'date_etd',
+            'date_eta',
+            'trading_company',
+        ];
+
+        if (!in_array($field, $allowed, true)) {
+            return;
+        }
+
+        if ($this->sortField === $field) {
+            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->sortField = $field;
+            $this->sortDirection = 'asc';
+        }
+
         $this->resetPage();
     }
 
@@ -85,10 +116,25 @@ class HistoricalDataTable extends Component
             $query->where('trading_company', $this->filters['trading_company']);
         }
 
-        // Ordenar por fecha de emisión descendente
-        $historicalData = $query->orderBy('emision_date_po', 'desc')
-                                ->orderBy('id', 'desc')
-                                ->paginate($this->perPage);
+        // Ordenamiento (allowlist + tie-breaker estable)
+        $sortField = $this->sortField ?: 'emision_date_po';
+        $sortDir = strtolower($this->sortDirection) === 'asc' ? 'asc' : 'desc';
+        $allowedSorts = [
+            'order_number' => 'order_number',
+            'vendor_name' => 'vendor_name',
+            'emision_date_po' => 'emision_date_po',
+            'net_total' => 'net_total',
+            'container_number' => 'container_number',
+            'date_etd' => 'date_etd',
+            'date_eta' => 'date_eta',
+            'trading_company' => 'trading_company',
+        ];
+        $column = $allowedSorts[$sortField] ?? 'emision_date_po';
+
+        $historicalData = $query
+            ->orderBy($column, $sortDir)
+            ->orderBy('id', 'desc')
+            ->paginate($this->perPage);
 
         // Log para debugging (remover en producción si es necesario)
         \Log::debug('HistoricalDataTable render', [

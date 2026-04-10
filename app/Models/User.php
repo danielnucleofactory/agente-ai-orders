@@ -157,6 +157,20 @@ class User extends Authenticatable implements HasMedia, CanResetPassword
     }
 
     /**
+     * Primera palabra del nombre completo (menú de navegación, saludos, etc.).
+     */
+    public function firstName(): string
+    {
+        $name = trim((string) $this->name);
+        if ($name === '') {
+            return '';
+        }
+        $parts = preg_split('/\s+/u', $name);
+
+        return $parts[0] ?? '';
+    }
+
+    /**
      * Send the password reset notification.
      *
      * @param  string  $token

@@ -66,8 +66,30 @@
                             </svg>
                         @endif
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-lg font-bold text-[#121619]">OLO ID</th>
-                    <th scope="col" class="px-6 py-3 text-left text-lg font-bold text-[#121619]">Compañía</th>
+                    <th scope="col" class="px-6 py-3 text-left text-lg font-bold text-[#121619] cursor-pointer" wire:click="sortBy('olo_id')">
+                        OLO ID
+                        @if ($sortField === 'olo_id')
+                            <svg class="inline-block ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                @if ($sortDirection === 'asc')
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                @else
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                @endif
+                            </svg>
+                        @endif
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-lg font-bold text-[#121619] cursor-pointer" wire:click="sortBy('company')">
+                        Compañía
+                        @if ($sortField === 'company')
+                            <svg class="inline-block ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                @if ($sortDirection === 'asc')
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                @else
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                @endif
+                            </svg>
+                        @endif
+                    </th>
                     <th scope="col" class="px-6 py-3 text-left text-lg font-bold text-[#121619] cursor-pointer" wire:click="sortBy('active')">
                         Estado
                         @if ($sortField === 'active')

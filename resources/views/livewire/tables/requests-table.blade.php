@@ -49,11 +49,36 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-[#D4F5ED]">
                     <tr>
-                        @foreach($headers as $key => $label)
-                            <th class="px-6 py-6 text-xs font-bold tracking-wider text-left text-black uppercase">
-                                {{ $label }}
-                            </th>
-                        @endforeach
+                        @php
+                            $sortIcon = function (string $field) {
+                                if (($this->sortField ?? '') !== $field) return '↕';
+                                return (($this->sortDirection ?? 'asc') === 'asc') ? '▲' : '▼';
+                            };
+                            $sortableTh = 'px-6 py-6 text-xs font-bold tracking-wider text-left text-black uppercase cursor-pointer select-none';
+                            $plainTh = 'px-6 py-6 text-xs font-bold tracking-wider text-left text-black uppercase';
+                        @endphp
+
+                        <th class="{{ $sortableTh }}" wire:click="sortBy('created_at')">
+                            {{ $headers['created_at'] }} <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('created_at') }}</span>
+                        </th>
+                        <th class="{{ $sortableTh }}" wire:click="sortBy('operation_id')">
+                            {{ $headers['operation_id'] }} <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('operation_id') }}</span>
+                        </th>
+                        <th class="{{ $sortableTh }}" wire:click="sortBy('authorizable_id')">
+                            {{ $headers['authorizable_id'] }} <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('authorizable_id') }}</span>
+                        </th>
+                        <th class="{{ $sortableTh }}" wire:click="sortBy('requester_id')">
+                            {{ $headers['requester_id'] }} <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('requester_id') }}</span>
+                        </th>
+                        <th class="{{ $sortableTh }}" wire:click="sortBy('operation_type')">
+                            {{ $headers['operation_type'] }} <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('operation_type') }}</span>
+                        </th>
+                        <th class="{{ $sortableTh }}" wire:click="sortBy('status')">
+                            {{ $headers['status'] }} <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('status') }}</span>
+                        </th>
+                        <th class="{{ $plainTh }}">
+                            {{ $headers['actions'] }}
+                        </th>
                     </tr>
                 </thead>
 

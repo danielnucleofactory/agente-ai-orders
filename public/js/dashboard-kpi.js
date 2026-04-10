@@ -602,10 +602,20 @@ class DashboardKPIManager {
                 return;
             }
             const table = th.closest('table');
-            if (!table || !table.classList.contains('data-table')) {
+            if (!table) {
                 return;
             }
             if (th.hasAttribute('colspan')) {
+                return;
+            }
+            // Subtablas expandibles (detalle por proveedor / puerto / cliente)
+            if (table.classList.contains('sub-table')) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.sortSubTableByColumn(table, th);
+                return;
+            }
+            if (!table.classList.contains('data-table')) {
                 return;
             }
             e.preventDefault();
@@ -787,6 +797,57 @@ class DashboardKPIManager {
         this.updateSortHeaderState(table, colIndex, dir);
     }
 
+    /**
+     * Ordenación solo sobre filas de datos de una subtabla (sin filas Total ni grupos expandibles).
+     */
+    sortSubTableByColumn(table, th) {
+        const tbody = table.querySelector('tbody');
+        if (!tbody) {
+            return;
+        }
+
+        const theadRow = th.parentElement;
+        if (!theadRow) {
+            return;
+        }
+        const colIndex = Array.from(theadRow.children).indexOf(th);
+        if (colIndex < 0) {
+            return;
+        }
+
+        this.ensureSortIndicators(table);
+
+        const prevCol = table.dataset.sortCol !== undefined ? parseInt(table.dataset.sortCol, 10) : null;
+        let dir = 'asc';
+        if (prevCol === colIndex && table.dataset.sortDir === 'asc') {
+            dir = 'desc';
+        }
+        table.dataset.sortCol = String(colIndex);
+        table.dataset.sortDir = dir;
+
+        const rows = Array.from(tbody.querySelectorAll(':scope > tr'));
+        if (rows.length <= 1) {
+            this.updateSortHeaderState(table, colIndex, dir);
+            return;
+        }
+
+        const sampleTds = rows[0].querySelectorAll('td');
+        if (colIndex >= sampleTds.length) {
+            return;
+        }
+
+        rows.sort((ra, rb) => {
+            const tda = ra.querySelectorAll('td')[colIndex];
+            const tdb = rb.querySelectorAll('td')[colIndex];
+            const va = this.getSortableCellValue(tda);
+            const vb = this.getSortableCellValue(tdb);
+            return this.compareSortValues(va, vb, dir);
+        });
+
+        rows.forEach((tr) => tbody.appendChild(tr));
+        this.updateSortHeaderState(table, colIndex, dir);
+    }
+
     handleFilterClick(filterId, button, type = 'po') {
         // Si el mismo botón está activo, desactivarlo y cargar tabla por defecto
         if (button.classList.contains('active') && this.activeFilter === filterId) {
@@ -938,7 +999,7 @@ class DashboardKPIManager {
                                     ${vendorDetails.map(detail => `
                                         <tr>
                                             <td style="padding: 10px 12px; font-size: 13px;">${detail.order_number}</td>
-                                            <td class="days" style="padding: 10px 12px; font-size: 13px; color: ${isDelay ? '#e17055' : '#27ae60'};">${detail[isDelay ? 'delay_days' : 'advance_days']} días</td>
+                                            <td class="days align-right" style="padding: 10px 12px; font-size: 13px; color: ${isDelay ? '#e17055' : '#27ae60'};">${detail[isDelay ? 'delay_days' : 'advance_days']} días</td>
                                             <td style="padding: 10px 12px; font-size: 13px;">${detail.stage}</td>
                                         </tr>
                                     `).join('')}
@@ -1073,7 +1134,7 @@ class DashboardKPIManager {
                                             <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.vendor}</td>
                                             <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.shipping_line}</td>
                                             <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${destDisplay}</td>
-                                            ${isTeus ? `<td style="padding: 10px 12px; font-size: 12px; color: #636e72; text-align: right;">${d.teus}</td>` : ''}
+                                            ${isTeus ? `<td class="align-right number" style="padding: 10px 12px; font-size: 12px; color: #636e72; text-align: right;">${d.teus}</td>` : ''}
                                         </tr>
                                     `;
                                     }).join('')}
@@ -1147,7 +1208,7 @@ class DashboardKPIManager {
                                             <td style="padding: 10px 12px; font-size: 13px;">${detail.order_number}</td>
                                             <td style="padding: 10px 12px; font-size: 13px;">${detail.shipping_line}</td>
                                             <td style="padding: 10px 12px; font-size: 13px;">${detail.arrival_port}</td>
-                                            <td style="padding: 10px 12px; font-size: 13px;">${detail.date_ata}</td>
+                                            <td class="ata-date" style="padding: 10px 12px; font-size: 13px;">${detail.date_ata}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>

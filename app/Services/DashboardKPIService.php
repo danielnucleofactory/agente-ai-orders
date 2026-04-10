@@ -155,7 +155,7 @@ class DashboardKPIService
 
         $query->operationalForDashboard();
 
-        Log::info('DashboardKPIService::getBaseQuery', [
+        Log::debug('DashboardKPIService::getBaseQuery', [
             'filters' => $filters,
             'company_id' => $companyId,
         ]);
@@ -663,11 +663,44 @@ class DashboardKPIService
     public function getPOsInTransshipment(array $filters = []): array
     {
         try {
-            $pos = $this->getBaseQuery($filters)
+            $query = $this->getBaseQuery($filters)
                 ->whereNotNull('porth_itinerary')
-                ->whereNotNull('porth_pod')
-                ->with(['vendor', 'company'])
-                ->get();
+                ->whereNotNull('porth_pod');
+
+            // Solo filas que pueden tener transbordo activo (misma condición que resolveCurrentTransshipmentPort: evento TRANSSHIPMENT DISCHARGED).
+            // Reduce filas transferidas y decodificadas en PHP; solo PostgreSQL (ILIKE + cast JSON).
+            if (DB::connection()->getDriverName() === 'pgsql') {
+                $query->whereRaw('CAST(porth_itinerary AS TEXT) ILIKE ?', ['%TRANSSHIPMENT DISCHARGED%']);
+            }
+
+            // Columnas mínimas + JSON de itinerario; evita hidratar el modelo completo.
+            $query->select([
+                'purchase_orders.id',
+                'purchase_orders.order_number',
+                'purchase_orders.container_type',
+                'purchase_orders.shipping_line',
+                'purchase_orders.porth_itinerary',
+                'purchase_orders.porth_pod',
+                'purchase_orders.porth_pod_name',
+                'purchase_orders.vendor_id',
+            ]);
+
+            $pos = $query->with([
+                'vendor' => static function ($q) {
+                    $q->select('id', 'name');
+                },
+            ])->get();
+
+            // Misma instancia de servicio puede ser singleton: cache solo en el ámbito de esta petición.
+            $portLabelCache = [];
+            $label = function (string $code, ?string $porthNameFallback = null) use (&$portLabelCache): string {
+                $key = strtoupper(trim($code))."\0".($porthNameFallback ?? '');
+                if (! \array_key_exists($key, $portLabelCache)) {
+                    $portLabelCache[$key] = $this->formatUnlocWithPortName($code, $porthNameFallback);
+                }
+
+                return $portLabelCache[$key];
+            };
 
             $totalPOs = 0;
             $totalTEUs = 0;
@@ -702,9 +735,9 @@ class DashboardKPIService
                     'vendor'       => $po->vendor->name ?? 'N/A',
                     'shipping_line' => $po->shipping_line ?? 'N/A',
                     'transshipment_port' => $transshipmentPort,
-                    'transshipment_port_label' => $this->formatUnlocWithPortName($transshipmentPort),
+                    'transshipment_port_label' => $label($transshipmentPort),
                     'destination_port'   => $pod,
-                    'destination_port_label' => $this->formatUnlocWithPortName($pod, $po->porth_pod_name),
+                    'destination_port_label' => $label($pod, $po->porth_pod_name),
                     'teus' => round($teus, 2),
                 ];
             }
@@ -713,7 +746,7 @@ class DashboardKPIService
             foreach ($byPort as $port => $data) {
                 $portData[] = [
                     'port'       => $port,
-                    'port_label' => $this->formatUnlocWithPortName($port),
+                    'port_label' => $label($port),
                     'po_count'   => $data['count'],
                     'teus'       => round($data['teus'], 2),
                 ];

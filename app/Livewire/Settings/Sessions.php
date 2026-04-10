@@ -2,14 +2,17 @@
 
 namespace App\Livewire\Settings;
 
-use App\Models\Session;
 use App\Models\User;
-use Livewire\Component;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
+use Livewire\Component;
+use Livewire\WithPagination;
 
-class Sessions extends Component {
+class Sessions extends Component
+{
+    use WithPagination;
 
-    public $sessions;
     public $search = '';
     public $headers = [
         'Usuario',
@@ -23,26 +26,60 @@ class Sessions extends Component {
 
     public $users;
 
+    private const PER_PAGE = 25;
+
     public function mount()
     {
-        $this->loadSessions();
         $this->users = User::all();
     }
 
     public function render()
     {
         return view('livewire.settings.sessions', [
-            'sessions' => $this->sessions,
+            'sessions' => $this->getSessionsPaginator(),
             'users' => $this->users,
         ])->layout('layouts.settings.user-management');
     }
 
     public function updatedSearch()
     {
-        $this->loadSessions();
+        $this->resetPage();
     }
 
-    private function loadSessions()
+    private function getSessionsPaginator(): LengthAwarePaginator
+    {
+        $unionQuery = $this->sessionsUnionQuery();
+        $sql = $unionQuery->toSql();
+        $bindings = $unionQuery->getBindings();
+
+        $countRow = DB::selectOne(
+            "SELECT COUNT(*) AS total FROM ({$sql}) AS combined",
+            $bindings
+        );
+        $total = (int) ($countRow->total ?? 0);
+
+        $currentPage = Paginator::resolveCurrentPage();
+        $offset = max(0, ($currentPage - 1) * self::PER_PAGE);
+
+        $items = collect(DB::select(
+            "SELECT * FROM ({$sql}) AS combined ORDER BY activity_timestamp DESC LIMIT ? OFFSET ?",
+            array_merge($bindings, [self::PER_PAGE, $offset])
+        ));
+
+        return new LengthAwarePaginator(
+            $items,
+            $total,
+            self::PER_PAGE,
+            $currentPage,
+            [
+                'path' => Paginator::resolveCurrentPath(),
+                'pageName' => 'page',
+                'query' => request()->query(),
+            ]
+        );
+    }
+
+    private function sessionsUnionQuery()
     {
         // Query para sesiones activas
         $sessionsQuery = DB::table('sessions')
@@ -112,18 +149,7 @@ class Sessions extends Component {
             });
         }
 
-        // Hacer UNION y ordenar por fecha descendente
-        $unionQuery = $sessionsQuery->union($authEventsQuery);
-        
-        // Obtener SQL y bindings
-        $sql = $unionQuery->toSql();
-        $bindings = $unionQuery->getBindings();
-        
-        // Ejecutar query con ordenamiento
-        $this->sessions = collect(DB::select(
-            "SELECT * FROM ({$sql}) as combined ORDER BY activity_timestamp DESC",
-            $bindings
-        ));
+        return $sessionsQuery->union($authEventsQuery);
     }
 
     public function getDeviceType($userAgent)
@@ -157,9 +183,6 @@ class Sessions extends Component {
 
 
             $this->dispatch('open-modal', 'modal-session-closed');
-
-            // Recargar las sesiones
-            $this->loadSessions();
 
         } catch (\Exception $e) {
             session()->flash('error', 'No se pudo cerrar la sesión');

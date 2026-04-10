@@ -112,6 +112,23 @@
         </tbody>
     </table>
 
+    @if ($sessions->hasPages() || $sessions->total() > 0)
+        <div class="flex flex-col gap-3 mt-6 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-sm text-gray-600">
+                Mostrando
+                <span class="font-medium text-gray-900">{{ $sessions->firstItem() ?? 0 }}</span>
+                –
+                <span class="font-medium text-gray-900">{{ $sessions->lastItem() ?? 0 }}</span>
+                de
+                <span class="font-medium text-gray-900">{{ $sessions->total() }}</span>
+                registro(s) · 25 por página
+            </p>
+            <div class="text-sm">
+                {{ $sessions->links() }}
+            </div>
+        </div>
+    @endif
+
 <x-modal-success name="modal-session-closed">
     <x-slot:title>
         Sesión cerrada correctamente

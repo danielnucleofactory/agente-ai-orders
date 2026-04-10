@@ -18,8 +18,11 @@ class RequestsTable extends Component {
 
     public $actions = false;
     public $search = '';
+    public string $sortField = 'created_at';
+    public string $sortDirection = 'desc';
     public $filters = [
-        'operation' => ''
+        'operation' => '',
+        'status' => '',
     ];
 
     public $showModal = false;
@@ -33,6 +36,24 @@ class RequestsTable extends Component {
 
     public function mount($actions = false) {
         $this->actions = $actions;
+    }
+
+    public function sortBy(string $field): void
+    {
+        // Nota: 'authorizable_id' muestra order_number derivado, pero el orden real será por authorizable_id.
+        $allowed = ['created_at', 'operation_id', 'authorizable_id', 'requester_id', 'operation_type', 'status'];
+        if (!in_array($field, $allowed, true)) {
+            return;
+        }
+
+        if ($this->sortField === $field) {
+            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->sortField = $field;
+            $this->sortDirection = 'asc';
+        }
+
+        $this->resetPage();
     }
 
     public function closeModal() {
@@ -136,7 +157,28 @@ class RequestsTable extends Component {
             $query->where('operation_type', $this->filters['operation']);
         }
 
-        $requests = $query->latest()->paginate(10);
+        // Ordenamiento (allowlist + join opcional para requester)
+        $sortField = $this->sortField ?: 'created_at';
+        $sortDir = strtolower($this->sortDirection) === 'asc' ? 'asc' : 'desc';
+
+        if ($sortField === 'requester_id') {
+            // Ordenar por nombre del requester cuando sea posible (sin romper eager load).
+            $query->leftJoin('users as requester_users', 'authorizations.requester_id', '=', 'requester_users.id')
+                  ->orderBy('requester_users.name', $sortDir)
+                  ->select('authorizations.*');
+        } else {
+            $allowedSorts = [
+                'created_at' => 'created_at',
+                'operation_id' => 'operation_id',
+                'authorizable_id' => 'authorizable_id',
+                'operation_type' => 'operation_type',
+                'status' => 'status',
+            ];
+            $column = $allowedSorts[$sortField] ?? 'created_at';
+            $query->orderBy($column, $sortDir);
+        }
+
+        $requests = $query->orderBy('id', 'desc')->paginate(10);
 
         // Obtener todos los IDs de solicitudes relacionadas con PurchaseOrder
         $poAuthorizableIds = $requests->filter(function($request) {

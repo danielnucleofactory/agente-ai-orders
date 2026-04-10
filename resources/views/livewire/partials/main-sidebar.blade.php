@@ -35,8 +35,8 @@
 
             <div class="profile-name font-inter text-[#2E2E2E]">
                 <span class="text-sm">Hola 👋</span>
-                <div class="text-2xl" x-data="{{ json_encode(['name' => auth()->user()->name]) }}" x-text="name"
-                    x-on:profile-updated.window="name = $event.detail.name"></div>
+                <div class="text-2xl" x-data="{{ json_encode(['name' => auth()->user()->firstName()]) }}" x-text="name"
+                    x-on:profile-updated.window="name = (($event.detail.name || '').trim().split(/\s+/).filter(Boolean)[0] || '')"></div>
             </div>
             </a>
         @endcan

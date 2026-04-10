@@ -204,14 +204,38 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-[#D4F5ED]">
                     <tr>
-                        <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-black uppercase">Orden</th>
-                        <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-black uppercase">Proveedor</th>
-                        <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-black uppercase">Fecha Emisión</th>
-                        <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-black uppercase">Total Neto</th>
-                        <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-black uppercase">Contenedor</th>
-                        <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-black uppercase">ETD</th>
-                        <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-black uppercase">ETA</th>
-                        <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-black uppercase">Empresa</th>
+                        @php
+                            $sortIcon = function (string $field) {
+                                if (($this->sortField ?? '') !== $field) return '↕';
+                                return (($this->sortDirection ?? 'asc') === 'asc') ? '▲' : '▼';
+                            };
+                            $thClass = 'px-6 py-3 text-xs font-bold tracking-wider text-left text-black uppercase cursor-pointer select-none';
+                        @endphp
+
+                        <th class="{{ $thClass }}" wire:click="sortBy('order_number')">
+                            Orden <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('order_number') }}</span>
+                        </th>
+                        <th class="{{ $thClass }}" wire:click="sortBy('vendor_name')">
+                            Proveedor <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('vendor_name') }}</span>
+                        </th>
+                        <th class="{{ $thClass }}" wire:click="sortBy('emision_date_po')">
+                            Fecha Emisión <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('emision_date_po') }}</span>
+                        </th>
+                        <th class="{{ $thClass }}" wire:click="sortBy('net_total')">
+                            Total Neto <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('net_total') }}</span>
+                        </th>
+                        <th class="{{ $thClass }}" wire:click="sortBy('container_number')">
+                            Contenedor <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('container_number') }}</span>
+                        </th>
+                        <th class="{{ $thClass }}" wire:click="sortBy('date_etd')">
+                            ETD <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('date_etd') }}</span>
+                        </th>
+                        <th class="{{ $thClass }}" wire:click="sortBy('date_eta')">
+                            ETA <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('date_eta') }}</span>
+                        </th>
+                        <th class="{{ $thClass }}" wire:click="sortBy('trading_company')">
+                            Empresa <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('trading_company') }}</span>
+                        </th>
                     </tr>
                 </thead>
 
