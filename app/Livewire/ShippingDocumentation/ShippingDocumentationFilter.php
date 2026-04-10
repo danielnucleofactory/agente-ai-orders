@@ -108,12 +108,11 @@ class ShippingDocumentationFilter extends Component
             }
         }
 
-        // Ordenar valores
-        sort($currencies);
-        sort($incoterms);
-        sort($materialTypes);
-        asort($plannedHubOptions);
-        asort($actualHubOptions);
+        sort($currencies, SORT_NATURAL | SORT_FLAG_CASE);
+        sort($incoterms, SORT_NATURAL | SORT_FLAG_CASE);
+        sort($materialTypes, SORT_NATURAL | SORT_FLAG_CASE);
+        asort($plannedHubOptions, SORT_NATURAL | SORT_FLAG_CASE);
+        asort($actualHubOptions, SORT_NATURAL | SORT_FLAG_CASE);
 
         // Asignar a las propiedades del componente
         $this->currencies = $currencies;

@@ -58,6 +58,8 @@ class KanbanFilters extends Component
         // Extraer valores únicos para cada filtro
         $this->currencies = $purchaseOrders->pluck('currency')->filter()->unique()->values()->toArray();
         $this->incoterms = $purchaseOrders->pluck('incoterms')->filter()->unique()->values()->toArray();
+        sort($this->currencies, SORT_NATURAL | SORT_FLAG_CASE);
+        sort($this->incoterms, SORT_NATURAL | SORT_FLAG_CASE);
 
         // Obtener los hubs planificados y reales
         $plannedHubIds = $purchaseOrders->pluck('planned_hub_id')->filter()->unique()->values()->toArray();
@@ -69,10 +71,12 @@ class KanbanFilters extends Component
         $this->plannedHubs = $hubs->whereIn('id', $plannedHubIds)
             ->pluck('name', 'id')
             ->toArray();
+        asort($this->plannedHubs, SORT_NATURAL | SORT_FLAG_CASE);
 
         $this->actualHubs = $hubs->whereIn('id', $actualHubIds)
             ->pluck('name', 'id')
             ->toArray();
+        asort($this->actualHubs, SORT_NATURAL | SORT_FLAG_CASE);
 
                                         // Hardcoded types based on database analysis - más confiable que parsing dinámico
         // Basado en los valores reales encontrados: Standard, dangerous, estibable, exclusive, general
@@ -116,7 +120,7 @@ class KanbanFilters extends Component
             $this->materialTypes = array_unique(array_merge($this->materialTypes, $dynamicTypes));
         }
 
-        sort($this->materialTypes);
+        sort($this->materialTypes, SORT_NATURAL | SORT_FLAG_CASE);
     }
 
     public function applyFilters()

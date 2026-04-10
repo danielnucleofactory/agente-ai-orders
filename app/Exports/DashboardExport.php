@@ -4,20 +4,24 @@ declare(strict_types=1);
 
 namespace App\Exports;
 
+use App\Exports\Concerns\RegistersExcelTable;
 use App\Models\KanbanStatus;
 use Illuminate\Support\Carbon;
 use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class DashboardExport implements FromArray, WithHeadings, WithStyles, WithTitle, ShouldAutoSize
+class DashboardExport implements FromArray, WithHeadings, WithStyles, WithTitle, ShouldAutoSize, WithEvents
 {
+    use RegistersExcelTable;
     protected array $data;
     protected array $monthLabels;
     protected array $appliedFilters;
@@ -235,5 +239,17 @@ class DashboardExport implements FromArray, WithHeadings, WithStyles, WithTitle,
                 'color' => ['rgb' => self::OLO_GRAY_TEXT],
             ],
         ]);
+    }
+
+    /**
+     * La tabla solo cubre la grilla de tendencia; el bloque "Filtros aplicados" queda fuera.
+     */
+    protected function excelTableRange(Worksheet $worksheet): ?string
+    {
+        $lastColIndex = count($this->monthLabels) + 1;
+        $lastRow = 1 + count($this->data);
+        $lastColLetter = Coordinate::stringFromColumnIndex($lastColIndex);
+
+        return 'A1:' . $lastColLetter . $lastRow;
     }
 }

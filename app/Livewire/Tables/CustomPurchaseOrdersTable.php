@@ -377,7 +377,7 @@ class CustomPurchaseOrdersTable extends Component
             ->mapWithKeys(function ($statusName) {
                 return [$statusName => $statusName];
             })
-            ->sort()
+            ->sortKeysUsing('strnatcasecmp')
             ->toArray();
             
         return $statuses;

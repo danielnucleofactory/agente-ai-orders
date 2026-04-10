@@ -12,7 +12,9 @@ class CompanySelector extends Component
     public function mount()
     {
         $user = auth()->user();
-        $this->companies = $user->companies;
+        $this->companies = $user->companies
+            ->sortBy(fn ($c) => mb_strtolower($c->name ?? ''))
+            ->values();
 
         // Get the current company ID from the user
         $this->selectedCompany = $user->getCurrentCompanyId();

@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Services\ForecastService;
+use App\Exports\ForecastExport;
 use App\Services\DashboardService;
+use App\Services\ForecastService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\Response;
 
 class ForecastController extends Controller
@@ -104,32 +106,9 @@ class ForecastController extends Controller
             $filters = $this->getFilters($request);
             $exportData = $this->forecastService->getExportData($filters);
 
-            $filename = 'forecast_export_' . date('Y-m-d_H-i-s') . '.csv';
+            $filename = 'forecast_export_' . date('Y-m-d_H-i-s') . '.xlsx';
 
-            return response()->streamDownload(function () use ($exportData) {
-                $handle = fopen('php://output', 'w');
-
-                // Headers
-                fputcsv($handle, [
-                    'Material',
-                    'Forecast KG',
-                    'Cantidad Real KG',
-                    'Desviación KG',
-                    'Mes',
-                    'Vendor',
-                    'Monto'
-                ]);
-
-                // Data rows
-                foreach ($exportData as $row) {
-                    fputcsv($handle, $row);
-                }
-
-                fclose($handle);
-            }, $filename, [
-                'Content-Type' => 'text/csv',
-                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            ]);
+            return Excel::download(new ForecastExport($exportData), $filename);
         } catch (\Exception $e) {
             Log::error('Error in ForecastController::export', [
                 'error' => $e->getMessage(),

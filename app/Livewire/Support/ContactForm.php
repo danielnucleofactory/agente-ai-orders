@@ -27,6 +27,11 @@ class ContactForm extends Component
         'Otro',
     ];
 
+    public function mount(): void
+    {
+        sort($this->subjectOptions, SORT_NATURAL | SORT_FLAG_CASE);
+    }
+
     protected $rules = [
         'name' => 'required|string|max:255',
         'email' => 'required|email|max:255',

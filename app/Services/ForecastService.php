@@ -145,7 +145,10 @@ class ForecastService
      * @param array $filters
      * @return Collection
      */
-    public function getForecastTableData(array $filters): Collection
+    /**
+     * @param  bool  $rawNumericValues  true = floats para export Excel; false = strings formateados para la UI
+     */
+    public function getForecastTableData(array $filters, bool $rawNumericValues = false): Collection
     {
         try {
             Log::info('Getting forecast table data...');
@@ -179,12 +182,25 @@ class ForecastService
 
             $result = $query->get();
 
-            $collection = $result->map(function ($item) {
+            $collection = $result->map(function ($item) use ($rawNumericValues) {
+                $fk = (float) ($item->forecast_kg ?? 0);
+                $ak = (float) ($item->actual_kg ?? 0);
+                $dk = (float) ($item->deviation_kg ?? 0);
+
+                if ($rawNumericValues) {
+                    return [
+                        'material' => $item->material,
+                        'forecast_kg' => $fk,
+                        'actual_kg' => $ak,
+                        'deviation_kg' => $dk,
+                    ];
+                }
+
                 return [
                     'material' => $item->material,
-                    'forecast_kg' => number_format((float)($item->forecast_kg ?? 0), 2),
-                    'actual_kg' => number_format((float)($item->actual_kg ?? 0), 2),
-                    'deviation_kg' => number_format((float)($item->deviation_kg ?? 0), 2),
+                    'forecast_kg' => number_format($fk, 2),
+                    'actual_kg' => number_format($ak, 2),
+                    'deviation_kg' => number_format($dk, 2),
                 ];
             });
 
@@ -418,22 +434,19 @@ class ForecastService
             Log::info('Getting forecast export data...');
 
             // Combine all data for export
-            $forecastTable = $this->getForecastTableData($filters);
-            $monthlyKgs = $this->getMonthlyKgs($filters);
-            $vendorDeviation = $this->getVendorDeviation($filters);
+            $forecastTable = $this->getForecastTableData($filters, true);
 
             $exportData = collect([]);
 
-            // Add forecast table data
             foreach ($forecastTable as $row) {
                 $exportData->push([
-                    $row['material'],
-                    $row['forecast_kg'],
-                    $row['actual_kg'],
-                    $row['deviation_kg'],
-                    '',
-                    '',
-                    ''
+                    'material' => $row['material'],
+                    'forecast_kg' => $row['forecast_kg'],
+                    'actual_kg' => $row['actual_kg'],
+                    'deviation_kg' => $row['deviation_kg'],
+                    'month' => '',
+                    'vendor' => '',
+                    'amount' => '',
                 ]);
             }
 

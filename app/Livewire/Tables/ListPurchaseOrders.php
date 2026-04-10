@@ -213,6 +213,7 @@ class ListPurchaseOrders extends Component
         
         if (!$companyId) {
             return \App\Models\KanbanStatus::select('id', 'name')
+                ->orderByRaw('LOWER(name)')
                 ->orderBy('id')
                 ->get();
         }
@@ -227,7 +228,7 @@ class ListPurchaseOrders extends Component
                   ->where('is_active', true);
         })
         ->select('id', 'name')
-        ->orderBy('position')
+        ->orderByRaw('LOWER(name)')
         ->orderBy('id')
         ->get();
     }

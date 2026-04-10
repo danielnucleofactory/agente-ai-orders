@@ -114,6 +114,33 @@ class KanbanBoard extends Component
     // Estado de carga del modal
     public $isLoadingModalData = false;
 
+    /**
+     * Estado Kanban por defecto del tablero actual (evita query extra en loadTasks).
+     * No es propiedad Livewire pública: se rellena en cada loadColumns().
+     */
+    private ?KanbanStatus $defaultKanbanStatusForBoard = null;
+
+    /**
+     * Columnas mínimas de purchase_orders para tarjetas del Kanban + filtros.
+     */
+    private const KANBAN_PO_SELECT = [
+        'id',
+        'company_id',
+        'order_number',
+        'vendor_id',
+        'kanban_status_id',
+        'order_date',
+        'date_required_in_destination',
+        'total',
+        'created_at',
+        'currency',
+        'incoterms',
+        'planned_hub_id',
+        'actual_hub_id',
+        'material_type',
+        'tracking_id',
+    ];
+
     // Agregar los listeners para los eventos
     protected $listeners = [
         'refreshKanban' => 'loadData',
@@ -187,6 +214,8 @@ class KanbanBoard extends Component
     {
         if (!$this->board) {
             $this->columns = [];
+            $this->defaultKanbanStatusForBoard = null;
+
             return;
         }
 
@@ -203,8 +232,12 @@ class KanbanBoard extends Component
                 'board_type' => $this->boardType
             ]);
             $this->columns = [];
+            $this->defaultKanbanStatusForBoard = null;
+
             return;
         }
+
+        $this->defaultKanbanStatusForBoard = $statuses->firstWhere('is_default', true);
 
         $this->columns = $statuses->map(function ($status) {
             return [
@@ -233,15 +266,20 @@ class KanbanBoard extends Component
     {
         if (!$this->board) {
             $this->tasks = [];
+
             return;
         }
 
-        // Columnas del tablero actual
-        $this->loadColumns();
-        $defaultStatus = $this->board->statuses()->where('is_default', true)->first();
+        if ($this->columns === []) {
+            $this->tasks = [];
+
+            return;
+        }
+
+        $defaultStatus = $this->defaultKanbanStatusForBoard;
 
         // Obtener los IDs de los estados de este tablero
-        $statusIds = collect($this->columns)->pluck('id')->toArray();
+        $statusIds = collect($this->columns)->pluck('id')->all();
 
         // Detectar el ID de la columna "Anulada" en este tablero (fallback 10 si no la encuentra)
         $anuladaStatusId = optional(
@@ -253,28 +291,60 @@ class KanbanBoard extends Component
 
         $companyId = auth()->user()->company_id ?? null;
 
-        // === 1) PO activas (NO borradas) -> van a su columna actual ===
-        $activeQuery = \App\Models\PurchaseOrder::with(['company', 'kanbanStatus', 'vendor'])
-            ->withoutTrashed()
-            ->where('company_id', $companyId);
+        $activeWith = [
+            'company:id,name',
+            'kanbanStatus:id,slug',
+            'vendor:id,name',
+        ];
 
-        // Aplicar filtros si están activos
+        $trashedWith = [
+            'company:id,name',
+            'vendor:id,name',
+        ];
+
+        // === 1) PO activas: solo columnas necesarias + estados de ESTE tablero (o sin estado para asignar default) ===
+        $activeQuery = PurchaseOrder::query()
+            ->select(self::KANBAN_PO_SELECT)
+            ->with($activeWith)
+            ->withoutTrashed()
+            ->where('company_id', $companyId)
+            ->where(function ($q) use ($statusIds) {
+                $q->whereIn('kanban_status_id', $statusIds)
+                    ->orWhereNull('kanban_status_id');
+            });
+
         $this->applyQueryFilters($activeQuery);
 
         $activeOrders = $activeQuery->get();
 
-        // Limpiar el array de tareas
+        // Asignar estado por defecto en bloque (evita N updates + N refresh en el bucle)
+        if ($defaultStatus && $statusIds !== []) {
+            $idsMissingStatus = $activeOrders
+                ->filter(fn (PurchaseOrder $o) => $o->kanban_status_id === null)
+                ->pluck('id')
+                ->all();
+
+            if ($idsMissingStatus !== []) {
+                PurchaseOrder::query()
+                    ->withoutTrashed()
+                    ->where('company_id', $companyId)
+                    ->whereIn('id', $idsMissingStatus)
+                    ->update(['kanban_status_id' => $defaultStatus->id]);
+
+                foreach ($activeOrders as $order) {
+                    if (! in_array($order->id, $idsMissingStatus, true)) {
+                        continue;
+                    }
+                    $order->kanban_status_id = $defaultStatus->id;
+                    $order->setRelation('kanbanStatus', $defaultStatus);
+                }
+            }
+        }
+
         $this->tasks = [];
 
         foreach ($activeOrders as $order) {
-            // Asignar estado por defecto si no tiene
-            if (!$order->kanban_status_id && $defaultStatus) {
-                $order->update(['kanban_status_id' => $defaultStatus->id]);
-                $order->refresh();
-            }
-
-            // Saltar si no tiene estado o no pertenece a este tablero
-            if (!$order->kanban_status_id || !in_array($order->kanban_status_id, $statusIds)) {
+            if (! $order->kanban_status_id || ! in_array((int) $order->kanban_status_id, $statusIds, true)) {
                 continue;
             }
 
@@ -286,7 +356,7 @@ class KanbanBoard extends Component
                 'status' => $order->kanban_status_id,
                 'status_slug' => $order->kanbanStatus->slug ?? 'unknown',
                 'order_date' => $order->order_date ? $order->order_date->format('Y-m-d') : null,
-                'requested_delivery_date' => $order->requested_delivery_date ? $order->requested_delivery_date->format('Y-m-d') : null,
+                'requested_delivery_date' => $order->date_required_in_destination ? $order->date_required_in_destination->format('Y-m-d') : null,
                 'total' => $order->total,
                 'company' => $order->company->name ?? 'N/A',
                 'created_at' => $order->created_at,
@@ -299,11 +369,13 @@ class KanbanBoard extends Component
         }
 
         // === 2) PO ANULADAS = soft-deleted -> SIEMPRE a la columna "Anulada" ===
-        $trashedQuery = \App\Models\PurchaseOrder::onlyTrashed()
-            ->with(['company', 'kanbanStatus', 'vendor'])
+        $trashedQuery = PurchaseOrder::query()
+            ->select(self::KANBAN_PO_SELECT)
+            ->with($trashedWith)
+            ->onlyTrashed()
             ->where('company_id', $companyId);
 
-        $this->applyQueryFilters($trashedQuery); // respeta filtros activos
+        $this->applyQueryFilters($trashedQuery);
 
         $trashedOrders = $trashedQuery->get();
 
@@ -316,7 +388,7 @@ class KanbanBoard extends Component
                 'status' => $anuladaStatusId,          // <- forzamos columna "Anulada"
                 'status_slug' => 'anulada',
                 'order_date' => $order->order_date ? $order->order_date->format('Y-m-d') : null,
-                'requested_delivery_date' => $order->requested_delivery_date ? $order->requested_delivery_date->format('Y-m-d') : null,
+                'requested_delivery_date' => $order->date_required_in_destination ? $order->date_required_in_destination->format('Y-m-d') : null,
                 'total' => $order->total,
                 'company' => $order->company->name ?? 'N/A',
                 'created_at' => $order->created_at,    // para mantener el orden cronológico
@@ -327,9 +399,6 @@ class KanbanBoard extends Component
                 'material_type' => $order->material_type,
             ];
         }
-
-        // Finalmente organizar en columnas y ordenar por created_at desc
-        $this->organizeTasksByColumn();
     }
 
     protected function applyQueryFilters($query)

@@ -201,15 +201,18 @@ class RequestsTable extends Component {
             }
         }
 
-        // Obtener operaciones únicas solo de solicitudes pendientes para el filtro
+        // Operaciones únicas (pendientes), orden alfabético para el <select>
         $operationTypes = Authorization::where('status', 'pending')
-                                           ->select('operation_type')
-                                           ->distinct()
-                                           ->pluck('operation_type');
+            ->select('operation_type')
+            ->whereNotNull('operation_type')
+            ->groupBy('operation_type')
+            ->orderByRaw('LOWER(operation_type)')
+            ->pluck('operation_type')
+            ->values();
 
         return view('livewire.tables.requests-table', [
             'requests' => $requests,
-            'operationTypes' => $operationTypes
+            'operationTypes' => $operationTypes,
         ]);
     }
 }

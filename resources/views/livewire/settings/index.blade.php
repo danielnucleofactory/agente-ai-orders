@@ -1,8 +1,8 @@
 @php
     $timeZonesArray = [
-        'America/Santiago'   => 'Santiago, Chile (GMT-4/-3)',
-        'America/Costa_Rica' => 'San José, Costa Rica (GMT-6)',
         'America/Caracas'    => 'Caracas, Venezuela (GMT-4)',
+        'America/Costa_Rica' => 'San José, Costa Rica (GMT-6)',
+        'America/Santiago'   => 'Santiago, Chile (GMT-4/-3)',
     ];
     $dateFormatArray = [
         'DD/MM/YYYY' => 'DD/MM/YYYY',

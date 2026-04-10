@@ -30,14 +30,14 @@
             <div class="flex space-x-4">
                 <select wire:model.live="filters.status" class="border-gray-300 rounded-md">
                     <option value="">Todos los estados</option>
-                    <option value="pending">Pendientes</option>
                     <option value="approved">Aprobados</option>
+                    <option value="pending">Pendientes</option>
                     <option value="rejected">Rechazados</option>
                 </select>
 
                 <select wire:model.live="filters.operation" class="border-gray-300 rounded-md">
                     <option value="">Todas las operaciones</option>
-                    @foreach($requests->pluck('operation_type')->unique() as $operation)
+                    @foreach($operationTypes as $operation)
                         <option value="{{ $operation }}">{{ $operation }}</option>
                     @endforeach
                 </select>

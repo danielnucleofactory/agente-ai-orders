@@ -82,17 +82,19 @@ class ForecastManager {
 
         const filterOptions = window.forecastData.filterOptions;
 
-        const sortByLabelEs = (arr, labelFn) =>
-            [...arr].sort((a, b) =>
-                labelFn(a).localeCompare(labelFn(b), 'es', { sensitivity: 'base', numeric: true })
-            );
+        const sortByLabelEs = (arr, labelFn) => [...arr].sort((a, b) =>
+            labelFn(a).localeCompare(labelFn(b), 'es', {
+                sensitivity: 'base',
+                numeric: true
+            })
+        );
 
         // Vendor
         const vendorGroup = document.querySelector('.filter-group[data-filter="vendor"]');
         if (vendorGroup && filterOptions.vendors) {
             const optionsBox = vendorGroup.querySelector('.multi-select-options');
             while (optionsBox.firstChild) optionsBox.removeChild(optionsBox.firstChild);
-            sortByLabelEs(filterOptions.vendors, (v) => String(v.name ?? '')).forEach(vendor => {
+            sortByLabelEs(filterOptions.vendors, (v) => String(v.name ? ? '')).forEach(vendor => {
                 const label = document.createElement('label');
                 label.className = 'multi-select-option';
                 label.innerHTML = `<input type="checkbox" value="${vendor.id}"> ${vendor.name}`;
@@ -105,7 +107,7 @@ class ForecastManager {
         if (productGroup && filterOptions.products) {
             const optionsBox = productGroup.querySelector('.multi-select-options');
             while (optionsBox.firstChild) optionsBox.removeChild(optionsBox.firstChild);
-            sortByLabelEs(filterOptions.products, (p) => String(p.name ?? '')).forEach(product => {
+            sortByLabelEs(filterOptions.products, (p) => String(p.name ? ? '')).forEach(product => {
                 const label = document.createElement('label');
                 label.className = 'multi-select-option';
                 label.innerHTML = `<input type="checkbox" value="${product.id}"> ${product.name} (${product.material_id})`;
@@ -123,7 +125,7 @@ class ForecastManager {
                 materials = Object.values(materials);
             }
             if (materials && Array.isArray(materials)) {
-                sortByLabelEs(materials, (m) => String(m ?? '')).forEach(material => {
+                sortByLabelEs(materials, (m) => String(m ? ? '')).forEach(material => {
                     const label = document.createElement('label');
                     label.className = 'multi-select-option';
                     label.innerHTML = `<input type="checkbox" value="${material}"> ${material}`;
@@ -220,7 +222,10 @@ class ForecastManager {
             const observer = new MutationObserver(() => {
                 updateDisplay();
             });
-            observer.observe(optionsBox, { childList: true, subtree: true });
+            observer.observe(optionsBox, {
+                childList: true,
+                subtree: true
+            });
 
             updateDisplay();
         });
@@ -301,10 +306,10 @@ class ForecastManager {
     // Handle vendor click from charts (using dashboard principal logic)
     handleVendorClick(vendorName) {
         console.log('Vendor clicked:', vendorName);
-        
+
         // Find vendor ID from filter options
-        const filterOptions = window.forecastData?.filterOptions;
-        if (!filterOptions?.vendors) return;
+        const filterOptions = window.forecastData ? .filterOptions;
+        if (!filterOptions ? .vendors) return;
 
         const vendor = filterOptions.vendors.find(v => v.name === vendorName);
         if (!vendor) {
@@ -336,25 +341,25 @@ class ForecastManager {
     // Handle month click from bar chart (using dashboard principal logic)
     handleMonthClick(monthString) {
         console.log('Month clicked:', monthString);
-        
+
         // Convert month string (YYYY-MM) to date range
         try {
             const [year, month] = monthString.split('-');
             const firstDay = `${year}-${month}-01`;
             const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
             const lastDayStr = `${year}-${month}-${lastDay.toString().padStart(2, '0')}`;
-            
+
             // Update active filters
             this.activeFilters.date_from = firstDay;
             this.activeFilters.date_to = lastDayStr;
-            
+
             // Update date inputs
             const startDateInput = document.getElementById('startDate');
             const endDateInput = document.getElementById('endDate');
-            
+
             if (startDateInput) startDateInput.value = firstDay;
             if (endDateInput) endDateInput.value = lastDayStr;
-            
+
             this.updateForecastUI();
             this.updateClearFiltersButton();
         } catch (error) {
@@ -389,11 +394,11 @@ class ForecastManager {
     // Clear all filters
     clearAllFilters() {
         console.log('Clearing all filters...');
-        
+
         // Clear date filters
         const dateFromInput = document.querySelector('input[name="date_from"]');
         const dateToInput = document.querySelector('input[name="date_to"]');
-        
+
         if (dateFromInput) dateFromInput.value = '';
         if (dateToInput) dateToInput.value = '';
 
@@ -408,7 +413,7 @@ class ForecastManager {
         multiSelects.forEach(select => {
             this.updateMultiSelectDisplay(select);
         });
-        
+
         // Close all dropdowns
         this.closeAllMultiSelects();
 
@@ -424,18 +429,18 @@ class ForecastManager {
 
             // Build query parameters from active filters
             const params = new URLSearchParams();
-            
+
             if (this.activeFilters.date_from) params.append('date_from', this.activeFilters.date_from);
             if (this.activeFilters.date_to) params.append('date_to', this.activeFilters.date_to);
-            
+
             if (this.activeFilters.vendor_id.length > 0) {
                 this.activeFilters.vendor_id.forEach(id => params.append('vendor_id[]', id.toString()));
             }
-            
+
             if (this.activeFilters.product_id.length > 0) {
                 this.activeFilters.product_id.forEach(id => params.append('product_id[]', id.toString()));
             }
-            
+
             if (this.activeFilters.material_type.length > 0) {
                 this.activeFilters.material_type.forEach(material => params.append('material_type[]', material));
             }
@@ -503,7 +508,7 @@ class ForecastManager {
 
             // Get filename from response headers if available
             const contentDisposition = response.headers.get('Content-Disposition');
-            let filename = 'forecast_export.csv';
+            let filename = 'forecast_export.xlsx';
             if (contentDisposition) {
                 const matches = /filename="(.+)"/.exec(contentDisposition);
                 if (matches) {
@@ -638,11 +643,17 @@ class ForecastManager {
         const ratio = value / maxValue;
 
         if (ratio > 0.7) {
-            return { gridArea: "1 / 1 / 3 / 3" }; // large
+            return {
+                gridArea: "1 / 1 / 3 / 3"
+            }; // large
         } else if (ratio > 0.4) {
-            return { gridArea: "1 / 3 / 2 / 4" }; // medium
+            return {
+                gridArea: "1 / 3 / 2 / 4"
+            }; // medium
         } else {
-            return { gridArea: "2 / 3 / 3 / 4" }; // small
+            return {
+                gridArea: "2 / 3 / 3 / 4"
+            }; // small
         }
     }
 
@@ -671,7 +682,7 @@ class ForecastManager {
             // For temporal bar chart, keep normal colors but respond to clicks
             // Bar chart shows monthly data - doesn't need opacity effects from other filters
             const backgroundColors = data.map(() => '#565AFF');
-            
+
             this.charts.barChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -760,8 +771,8 @@ class ForecastManager {
             // Apply opacity effect based on vendor filters (using dashboard principal logic)
             let backgroundColors = colors.slice();
             if (this.activeFilters.vendor_id.length > 0) {
-                const filterOptions = window.forecastData?.filterOptions;
-                if (filterOptions?.vendors) {
+                const filterOptions = window.forecastData ? .filterOptions;
+                if (filterOptions ? .vendors) {
                     backgroundColors = data.map((item, index) => {
                         const vendor = filterOptions.vendors.find(v => v.name === item.name);
                         const isSelected = vendor && this.activeFilters.vendor_id.includes(vendor.id);
@@ -821,11 +832,11 @@ class ForecastManager {
                 const vendorItem = document.createElement('div');
                 vendorItem.className = 'vendor-item';
                 vendorItem.style.cursor = 'pointer';
-                
+
                 // Apply opacity effect to legend based on vendor filters (using dashboard principal logic)
                 if (this.activeFilters.vendor_id.length > 0) {
-                    const filterOptions = window.forecastData?.filterOptions;
-                    if (filterOptions?.vendors) {
+                    const filterOptions = window.forecastData ? .filterOptions;
+                    if (filterOptions ? .vendors) {
                         const vendor = filterOptions.vendors.find(v => v.name === item.name);
                         const isSelected = vendor && this.activeFilters.vendor_id.includes(vendor.id);
                         vendorItem.style.opacity = isSelected ? '1' : '0.3';
@@ -833,7 +844,7 @@ class ForecastManager {
                 } else {
                     vendorItem.style.opacity = '1';
                 }
-                
+
                 vendorItem.innerHTML = `
                     <div class="vendor-info">
                         <div class="vendor-color" style="background-color: ${colors[index]}"></div>
@@ -844,12 +855,12 @@ class ForecastManager {
                         <div class="vendor-percentage">${item.percentage}%</div>
                     </div>
                 `;
-                
+
                 // Add click handler to legend items
                 vendorItem.addEventListener('click', () => {
                     this.handleVendorClick(item.name);
                 });
-                
+
                 legendContainer.appendChild(vendorItem);
             });
 

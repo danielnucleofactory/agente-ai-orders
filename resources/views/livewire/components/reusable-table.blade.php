@@ -29,7 +29,9 @@
                             <select wire:model="filters.{{ $filter }}"
                                 class="px-4 py-2 ml-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">Todos</option>
-                                @foreach ($filterOptions[$filter] as $value => $label)
+                                @foreach (collect($filterOptions[$filter] ?? [])->sort(
+                                    fn ($a, $b) => strnatcasecmp((string) $a, (string) $b)
+                                ) as $value => $label)
                                     <option value="{{ $value }}">{{ $label }}</option>
                                 @endforeach
                             </select>
