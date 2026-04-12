@@ -173,7 +173,7 @@ class History extends ReusableTable
         $hasChanges = !empty($comment->old_values) || !empty($comment->new_values);
         $commentId = (int) $comment->id;
         $changesHtml = $hasChanges
-            ? '<button type="button" wire:click="$dispatchTo(\'partials.activity-detail-modal\', \'openActivityDetail\', ' . $commentId . ')" class="text-[#1AAD8A] hover:text-[#0F614D] hover:underline">Ver cambios</button>'
+            ? '<button type="button" wire:click="$dispatchTo(\'partials.activity-detail-modal\', \'openActivityDetail\', [' . $commentId . '])" class="text-[#1AAD8A] hover:text-[#0F614D] hover:underline">Ver cambios</button>'
             : '<span class="text-gray-400">-</span>';
 
         if ($displayAttachment) {
