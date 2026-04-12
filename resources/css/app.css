@@ -78,6 +78,7 @@ input.flatpickr-alt-input.border-red-500,
     border-color: #ef4444 !important;
     border-width: 2px !important;
 }
+
 html,
 body {
     height: 100%;
@@ -88,11 +89,11 @@ body {
 }
 
 .w-98 {
-    width: 98px!important;
+    width: 98px !important;
 }
 
 .w-6rem {
-    padding-left: 6rem!important;
+    padding-left: 6rem !important;
 }
 
 .page-wrapper h1 {
@@ -101,7 +102,8 @@ body {
     font-size: 30px;
     font-style: normal;
     font-weight: 700;
-    line-height: 40px; /* 133.333% */
+    line-height: 40px;
+    /* 133.333% */
     margin-bottom: 30px;
 }
 
@@ -133,7 +135,7 @@ body {
     background: #D4F5ED;
     gap: 8px;
     font-size: 16px;
-    color:#28C7A1;
+    color: #28C7A1;
 }
 
 .search-input::placeholder {
@@ -146,11 +148,13 @@ body {
     margin-left: 10px;
     cursor: pointer;
 }
+
 .tags {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
 }
+
 .tag {
     background-color: #D4F5ED;
     padding: 5px 10px;
@@ -158,62 +162,76 @@ body {
     display: flex;
     align-items: center;
 }
+
 .tag-close {
     margin-left: 5px;
     cursor: pointer;
 }
+
 .actions {
     display: flex;
     justify-content: space-between;
     margin-bottom: 20px;
 }
+
 .action-buttons {
     display: flex;
     gap: 10px;
 }
+
 .action-button {
     padding: 10px 20px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
 }
+
 .add-button {
     background-color: #1AAD8A;
     color: white;
 }
+
 table {
     width: 100%;
     border: 1px solid #D4F5ED;
     background-color: white;
     color: #2E2E2E;
 }
-th, td {
+
+th,
+td {
     text-align: left;
     padding: 12px;
     border-bottom: 1px solid #ddd;
     font-size: 14px;
 }
+
 th {
     font-size: 14px;
 }
+
 .status {
     padding: 5px 10px;
     border-radius: 4px;
     font-size: 0.8em;
 }
+
 .status-active {
     background-color: #5DD595;
     color: #fff;
 }
+
 .status-inactive {
     background-color: #FF3459;
     color: #fff;
 }
+
 .pagination {
     display: flex;
     justify-content: center;
     margin-top: 20px;
 }
+
 .pagination button {
     margin: 0 5px;
     padding: 5px 10px;
@@ -221,6 +239,7 @@ th {
     background-color: white;
     cursor: pointer;
 }
+
 .pagination button.active {
     background-color: #1AAD8A;
     color: white;
@@ -242,6 +261,7 @@ th {
 
 /* Main Sidebar */
 @layer base {
+
     table th,
     table td {
         border: none;
@@ -259,11 +279,12 @@ th {
     .main-sidebar .profile-name,
     .main-sidebar .sidebar-dropdown-text,
     .main-sidebar .sidebar-dropdown .icon {
-        @apply text-nowrap overflow-hidden [transition:_opacity_0.3s,_width_0.5s] w-0 opacity-0;
+        @apply text-nowrap overflow-hidden w-0 opacity-0;
+        transition: opacity 0.3s, width 0.5s;
     }
 
     .main-sidebar .sidebar-toggler-btn {
-        @apply rotate-180 transition-[transform_0.3s_ease];
+        @apply rotate-180 transition-transform duration-300 ease-in-out;
     }
 }
 
@@ -516,3 +537,12 @@ th {
     background-color: #127A62;
 }
 
+/*
+ * Escritorio estrecho (< 1366px): escala visual ~90% para ganar aire útil.
+ * min-width 1024px evita aplicar zoom en tablets/móviles (layout táctil).
+ */
+@media screen and (min-width: 1024px) and (max-width: 1365px) {
+    html {
+        zoom: 0.9;
+    }
+}

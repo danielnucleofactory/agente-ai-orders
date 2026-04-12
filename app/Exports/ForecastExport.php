@@ -8,13 +8,11 @@ use App\Exports\Concerns\RegistersExcelTable;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use Maatwebsite\Excel\Concerns\WithTitle;
 
-class ForecastExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithEvents, WithColumnFormatting
+class ForecastExport implements FromCollection, WithHeadings, ShouldAutoSize, WithEvents, WithTitle
 {
     use RegistersExcelTable;
 
@@ -40,29 +38,18 @@ class ForecastExport implements FromCollection, WithHeadings, WithMapping, Shoul
         ];
     }
 
-    /**
-     * @param  array<string, mixed>  $row
-     */
-    public function map($row): array
+    public function title(): string
     {
-        return [
-            $row['material'] ?? '',
-            isset($row['forecast_kg']) ? (float) $row['forecast_kg'] : null,
-            isset($row['actual_kg']) ? (float) $row['actual_kg'] : null,
-            isset($row['deviation_kg']) ? (float) $row['deviation_kg'] : null,
-            $row['month'] ?? '',
-            $row['vendor'] ?? '',
-            isset($row['amount']) ? (float) $row['amount'] : null,
-        ];
+        return 'Forecast';
     }
 
-    public function columnFormats(): array
+    protected function excelTableEndRow(): ?int
     {
-        return [
-            'B' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED2,
-            'C' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED2,
-            'D' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED2,
-            'G' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED2,
-        ];
+        return $this->rows->count() + 1;
+    }
+
+    protected function excelTableEndColumnIndex(): ?int
+    {
+        return count($this->headings());
     }
 }

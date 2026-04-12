@@ -27,10 +27,8 @@
                     <select wire:model.live="statusFilter" id="statusFilter"
                             class="block w-full border-gray-300 rounded-md focus:border-[#1AAD8A] focus:ring-[#1AAD8A] sm:text-sm">
                         <option value="">Todas las etapas</option>
-                        <option value="__trashed">Anuladas</option>
-                        <option value="__no_kanban">Sin etapa</option>
-                        @foreach($kanbanStatuses as $kanbanStatus)
-                            <option value="kanban_{{ $kanbanStatus->id }}">{{ $kanbanStatus->name }}</option>
+                        @foreach($sortedStatusFilterOptions as $opt)
+                            <option value="{{ $opt['value'] }}">{{ $opt['label'] }}</option>
                         @endforeach
                     </select>
                 </div>

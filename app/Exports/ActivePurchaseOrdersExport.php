@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Exports;
 
+use App\Exports\Concerns\ExcelDateFormat;
 use App\Exports\Concerns\RegistersExcelTable;
 use App\Models\PurchaseOrder;
 use Carbon\Carbon;
@@ -18,15 +19,33 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping, WithTitle, ShouldAutoSize, WithStyles, WithEvents, WithColumnFormatting
 {
     use RegistersExcelTable;
+
+    /**
+     * Títulos que son fecha pero no empiezan por "Fecha " (alineados con {@see headingsDefinition()}).
+     *
+     * No incluye columnas de texto (Moneda, incoterms, puertos, etc.): no deben usar formato fecha.
+     */
+    private const DATE_HEADING_LABELS_WITHOUT_FECHA_PREFIX = [
+        'Solicitud de Booking',
+        'Autorización Booking',
+        'ETD Inicial',
+        'ETD Variable',
+        'ATD',
+        'ETA Inicial',
+        'ETA Variable',
+        'ATA',
+        'Ingreso Almacén Fiscal',
+        'Salida Almacén Fiscal',
+    ];
 
     private const OLO_GREEN_PRIMARY = '1AAD8A';
     private const OLO_GREEN_BORDER  = '28C7A1';
@@ -108,6 +127,14 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
 
     public function headings(): array
     {
+        return self::headingsDefinition();
+    }
+
+    /**
+     * Orden debe coincidir exactamente con el array devuelto por {@see map()}.
+     */
+    private static function headingsDefinition(): array
+    {
         return [
             'Etapa',
             'N° Orden de Compra (PO)',
@@ -181,19 +208,38 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
         ];
     }
 
+    /**
+     * Índices de columna 1-based para formato y tipo fecha (DD/MM/YYYY, sin hora).
+     */
+    private static function dateColumnOneBasedIndices(): array
+    {
+        $indices = [];
+        foreach (self::headingsDefinition() as $i => $label) {
+            $isDate = str_starts_with($label, 'Fecha ')
+                || in_array($label, self::DATE_HEADING_LABELS_WITHOUT_FECHA_PREFIX, true);
+            if ($isDate) {
+                $indices[] = $i + 1;
+            }
+        }
+
+        return $indices;
+    }
+
     public function map($po): array
     {
-        $bool = fn ($v) => $v ? 'Sí' : 'No';
-        $dateCell = function ($v) {
+        $bool = fn($v) => $v ? 'Sí' : 'No';
+        // PhpSpreadsheet convierte DateTimeInterface a string "Y-m-d H:i:s" → hay que escribir serial Excel.
+        $date = function ($v) {
             if ($v === null || $v === '') {
-                return null;
+                return '';
             }
             try {
-                $c = Carbon::parse($v)->timezone(config('app.timezone'))->startOfDay();
+                $carbon = Carbon::parse($v)->timezone(config('app.timezone'))->startOfDay();
+                $serial = ExcelDate::PHPToExcel($carbon->toDateTimeImmutable());
 
-                return ExcelDate::PHPToExcel($c);
+                return $serial !== false ? (float) $serial : '';
             } catch (\Throwable) {
-                return null;
+                return '';
             }
         };
 
@@ -201,8 +247,8 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
             $po->kanbanStatus->name ?? '',
             $po->order_number ?? '',
             $po->vendor->name ?? '',
-            $dateCell($po->emision_date_po),
-            $dateCell($po->created_at),
+            $date($po->emision_date_po),
+            $date($po->created_at),
             $po->currency ?? '',
             $po->incoterms ?? '',
             $po->payment_terms ?? '',
@@ -222,27 +268,27 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
             $po->tariff_type ?? '',
             $po->route_label ?? '',
             $po->consolidator_name ?? '',
-            $dateCell($po->date_variable_date),
-            $dateCell($po->date_theorical_load),
-            $dateCell($po->date_booking_request),
-            $dateCell($po->date_booking_authorized),
-            $dateCell($po->forwader_date),
-            $dateCell($po->inspection_date),
-            $dateCell($po->vgm_cut_date),
-            $dateCell($po->date_etd_initial),
-            $dateCell($po->date_etd),
-            $dateCell($po->date_atd),
-            $dateCell($po->date_eta_initial),
-            $dateCell($po->date_eta),
-            $dateCell($po->date_ata),
-            $dateCell($po->bonded_warehouse_enter),
-            $dateCell($po->bonded_warehouse_exit),
-            $dateCell($po->receipt_note_date),
-            $dateCell($po->estimated_dc_availability_date),
-            $dateCell($po->balance_payment_date),
-            $dateCell($po->local_charges_payment_date),
-            $dateCell($po->date_invoice_received),
-            $dateCell($po->date_vendor_document_received),
+            $date($po->date_variable_date),
+            $date($po->date_theorical_load),
+            $date($po->date_booking_request),
+            $date($po->date_booking_authorized),
+            $date($po->forwader_date),
+            $date($po->inspection_date),
+            $date($po->vgm_cut_date),
+            $date($po->date_etd_initial),
+            $date($po->date_etd),
+            $date($po->date_atd),
+            $date($po->date_eta_initial),
+            $date($po->date_eta),
+            $date($po->date_ata),
+            $date($po->bonded_warehouse_enter),
+            $date($po->bonded_warehouse_exit),
+            $date($po->receipt_note_date),
+            $date($po->estimated_dc_availability_date),
+            $date($po->balance_payment_date),
+            $date($po->local_charges_payment_date),
+            $date($po->date_invoice_received),
+            $date($po->date_vendor_document_received),
             $po->cbm ?? '',
             $po->total ?? '',
             $po->Invoice_amount ?? '',
@@ -275,9 +321,20 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
         return 'POs Activas';
     }
 
+    public function columnFormats(): array
+    {
+        $format = ExcelDateFormat::SHORT_DD_MM_YYYY;
+        $formats = [];
+        foreach (self::dateColumnOneBasedIndices() as $colIndex) {
+            $formats[Coordinate::stringFromColumnIndex($colIndex)] = $format;
+        }
+
+        return $formats;
+    }
+
     public function styles(Worksheet $sheet): array
     {
-        $lastCol = count($this->headings());
+        $lastCol = count(self::headingsDefinition());
         $lastColLetter = $this->columnLetter($lastCol);
 
         $sheet->getRowDimension(1)->setRowHeight(20);
@@ -338,8 +395,4 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
         return $out;
     }
 
-    public function columnFormats(): array
-    {
-        return $this->dateColumnFormats();
-    }
 }

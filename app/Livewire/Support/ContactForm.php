@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Support;
 
+use App\Support\SelectOptions;
 use Livewire\Component;
 use App\Models\SupportRequest;
 use App\Mail\SupportRequestNotification;
@@ -17,15 +18,7 @@ class ContactForm extends Component
     public $description = '';
     public $showSuccessModal = false;
 
-    public $subjectOptions = [
-        'Consulta técnica',
-        'Problema con facturación',
-        'Soporte de proveedores',
-        'Problema con tarifas',
-        'Registro de vehículos',
-        'Configuración de cuenta',
-        'Otro',
-    ];
+    public $subjectOptions = [];
 
     public function mount(): void
     {
@@ -48,6 +41,21 @@ class ContactForm extends Component
         'description.min' => 'La descripción debe tener al menos 10 caracteres.',
     ];
 
+    public function boot(): void
+    {
+        if ($this->subjectOptions !== []) {
+            return;
+        }
+        $this->subjectOptions = SelectOptions::sortList([
+            'Consulta técnica',
+            'Problema con facturación',
+            'Soporte de proveedores',
+            'Problema con tarifas',
+            'Registro de vehículos',
+            'Configuración de cuenta',
+            'Otro',
+        ]);
+    }
 
     public function submit()
     {

@@ -4,62 +4,119 @@ declare(strict_types=1);
 
 namespace App\Exports\Concerns;
 
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Worksheet\Table;
+use PhpOffice\PhpSpreadsheet\Worksheet\Table\TableStyle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 /**
- * Tras escribir la hoja, registra un objeto Tabla de Excel (A1:…) para filtros y ordenación por columna.
+ * Registra el rango de datos como tabla de Excel (filtro y orden en cabeceras).
+ * Usar junto con {@see \Maatwebsite\Excel\Concerns\WithEvents} en la misma clase export.
  */
 trait RegistersExcelTable
 {
+    /** Primera fila del rango (1-based), normalmente la fila de cabeceras. */
+    protected function excelTableStartRow(): int
+    {
+        return 1;
+    }
+
+    /** Índice de columna inicial (1 = A). */
+    protected function excelTableStartColumnIndex(): int
+    {
+        return 1;
+    }
+
+    /**
+     * Última fila incluida en la tabla (1-based), o null para detectar con getHighestDataRow().
+     * Sobrescribir si después de los datos se añaden bloques (p. ej. texto de filtros).
+     */
+    protected function excelTableEndRow(): ?int
+    {
+        return null;
+    }
+
+    /**
+     * Última columna incluida (índice 1-based), o null para detectar desde la hoja.
+     */
+    protected function excelTableEndColumnIndex(): ?int
+    {
+        return null;
+    }
+
+    /**
+     * Nombre único válido para Excel (letra o _ al inicio).
+     */
+    protected function excelTableName(): string
+    {
+        $base = Str::slug(class_basename(static::class), '_');
+        if ($base === '') {
+            $base = 'tabla';
+        }
+        if (preg_match('/^[0-9]/', $base)) {
+            $base = 'T_' . $base;
+        }
+
+        return substr($base, 0, 200) . '_' . bin2hex(random_bytes(3));
+    }
+
     public function registerEvents(): array
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
+                $export = $event->getConcernable();
+                if (! is_object($export) || ! method_exists($export, 'registerExcelTableOnWorksheet')) {
+                    return;
+                }
                 $worksheet = $event->sheet->getDelegate();
-                $range = $this->excelTableRange($worksheet);
-
-                if ($range === null) {
-                    $lastRow = (int) $worksheet->getHighestDataRow();
-                    $lastCol = $worksheet->getHighestDataColumn();
-                    if ($lastRow < 2) {
-                        return;
-                    }
-                    $range = 'A1:' . $lastCol . $lastRow;
-                } elseif (preg_match('/:([A-Z]+)(\d+)$/i', $range, $m) && (int) $m[2] < 2) {
-                    return;
-                }
-
-                if (! preg_match('/^A1:/i', $range)) {
-                    return;
-                }
-
-                $table = new Table($range, $this->excelTableName());
-                $worksheet->addTable($table);
+                $export->registerExcelTableOnWorksheet($worksheet);
             },
         ];
     }
 
     /**
-     * Nombre interno de la tabla (Excel: letras, números, _; no puede empezar por número).
+     * Público para poder invocarlo desde el callback de AfterSheet (no es $this del export).
      */
-    protected function excelTableName(): string
+    public function registerExcelTableOnWorksheet(Worksheet $sheet): void
     {
-        $name = preg_replace('/[^A-Za-z0-9_]/', '_', class_basename(static::class));
-        if ($name === '' || preg_match('/^[0-9]/', $name)) {
-            $name = 'T_' . $name;
+        $startRow = $this->excelTableStartRow();
+        $startCol = $this->excelTableStartColumnIndex();
+        $endRow = $this->excelTableEndRow();
+        $endColIdx = $this->excelTableEndColumnIndex();
+
+        if ($endRow === null) {
+            $endRow = (int) $sheet->getHighestDataRow();
+        }
+        if ($endColIdx === null) {
+            $highestCol = $sheet->getHighestDataColumn();
+            if ($highestCol === null || $highestCol === '') {
+                return;
+            }
+            $endColIdx = Coordinate::columnIndexFromString($highestCol);
         }
 
-        return substr($name, 0, 255);
-    }
+        if ($endRow < $startRow || $endColIdx < $startCol) {
+            return;
+        }
 
-    /**
-     * Rango exacto de la tabla (p. ej. si debajo hay texto de filtros que no debe entrar en la tabla).
-     * null = desde A1 hasta la última celda con datos (contigua).
-     */
-    protected function excelTableRange(Worksheet $worksheet): ?string
-    {
-        return null;
+        $startLetter = Coordinate::stringFromColumnIndex($startCol);
+        $endLetter = Coordinate::stringFromColumnIndex($endColIdx);
+        $range = "{$startLetter}{$startRow}:{$endLetter}{$endRow}";
+
+        try {
+            $table = new Table($range, $this->excelTableName());
+            $style = new TableStyle();
+            $style->setTheme(TableStyle::TABLE_STYLE_MEDIUM2);
+            $table->setStyle($style);
+            $sheet->addTable($table);
+        } catch (\Throwable $e) {
+            \Log::warning('No se pudo registrar tabla de Excel', [
+                'export' => static::class,
+                'range' => $range,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 }

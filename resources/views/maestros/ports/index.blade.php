@@ -12,7 +12,32 @@
     </div>
 
     <div class="mt-4">
-        <livewire:maestros.ports-table />
+        @php
+            $headers = [
+                'name' => 'Nombre',
+                'olo_id' => 'OLO ID',
+                'company' => 'Compañía',
+                'active' => 'Estado',
+            ];
+            $sortable = [];
+            $searchable = ['name', 'olo_id', 'company', 'active'];
+            $filterable = ['active'];
+            $filterOptions = [
+                'active' => [
+                    'true' => 'Activo',
+                    'false' => 'Inactivo',
+                ],
+            ];
+        @endphp
+
+        <livewire:components.reusable-table
+            maestro-catalog-key="ports"
+            :headers="$headers"
+            :sortable="$sortable"
+            :searchable="$searchable"
+            :filterable="$filterable"
+            :filterOptions="$filterOptions"
+        />
     </div>
 </x-app-layout>
 

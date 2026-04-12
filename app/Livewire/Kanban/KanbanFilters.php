@@ -3,6 +3,7 @@
 namespace App\Livewire\Kanban;
 
 use App\Exports\ActivePurchaseOrdersExport;
+use App\Support\SelectOptions;
 use App\Models\Hub;
 use App\Models\PurchaseOrder;
 use Livewire\Component;
@@ -120,7 +121,11 @@ class KanbanFilters extends Component
             $this->materialTypes = array_unique(array_merge($this->materialTypes, $dynamicTypes));
         }
 
-        sort($this->materialTypes, SORT_NATURAL | SORT_FLAG_CASE);
+        $this->currencies = SelectOptions::sortList($this->currencies);
+        $this->incoterms = SelectOptions::sortList($this->incoterms);
+        $this->plannedHubs = SelectOptions::sortAssociative($this->plannedHubs);
+        $this->actualHubs = SelectOptions::sortAssociative($this->actualHubs);
+        $this->materialTypes = SelectOptions::sortList($this->materialTypes);
     }
 
     public function applyFilters()

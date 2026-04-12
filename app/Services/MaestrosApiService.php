@@ -65,7 +65,7 @@ class MaestrosApiService
     {
         $defaultParams = [
             'page' => $params['page'] ?? 1,
-            'per_page' => $params['per_page'] ?? 20,
+            'per_page' => $params['per_page'] ?? 10,
             'sort' => $params['sort'] ?? 'created_at',
             'order' => $params['order'] ?? 'desc',
         ];
@@ -105,7 +105,7 @@ class MaestrosApiService
     {
         $defaultParams = [
             'page' => $params['page'] ?? 1,
-            'per_page' => $params['per_page'] ?? 20,
+            'per_page' => $params['per_page'] ?? 10,
             'sort' => $params['sort'] ?? 'created_at',
             'order' => $params['order'] ?? 'desc',
         ];
@@ -145,7 +145,7 @@ class MaestrosApiService
     {
         $defaultParams = [
             'page' => $params['page'] ?? 1,
-            'per_page' => $params['per_page'] ?? 20,
+            'per_page' => $params['per_page'] ?? 10,
             'sort' => $params['sort'] ?? 'created_at',
             'order' => $params['order'] ?? 'desc',
         ];
@@ -185,7 +185,7 @@ class MaestrosApiService
     {
         $defaultParams = [
             'page' => $params['page'] ?? 1,
-            'per_page' => $params['per_page'] ?? 20,
+            'per_page' => $params['per_page'] ?? 10,
             'sort' => $params['sort'] ?? 'created_at',
             'order' => $params['order'] ?? 'desc',
         ];
@@ -225,7 +225,7 @@ class MaestrosApiService
     {
         $defaultParams = [
             'page' => $params['page'] ?? 1,
-            'per_page' => $params['per_page'] ?? 20,
+            'per_page' => $params['per_page'] ?? 10,
             'sort' => $params['sort'] ?? 'created_at',
             'order' => $params['order'] ?? 'desc',
         ];
@@ -265,7 +265,7 @@ class MaestrosApiService
     {
         $defaultParams = [
             'page' => $params['page'] ?? 1,
-            'per_page' => $params['per_page'] ?? 20,
+            'per_page' => $params['per_page'] ?? 10,
             'sort' => $params['sort'] ?? 'created_at',
             'order' => $params['order'] ?? 'desc',
         ];

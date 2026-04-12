@@ -30,13 +30,18 @@
             <div class="flex space-x-4">
                 <select wire:model.live="filters.status" class="border-gray-300 rounded-md">
                     <option value="">Todos los estados</option>
-                    <option value="approved">Aprobados</option>
-                    <option value="rejected">Rechazados</option>
+                    @foreach(\App\Support\SelectOptions::sortAssociative([
+                        'pending' => 'Pendientes',
+                        'approved' => 'Aprobados',
+                        'rejected' => 'Rechazados',
+                    ]) as $stVal => $stLabel)
+                        <option value="{{ $stVal }}">{{ $stLabel }}</option>
+                    @endforeach
                 </select>
 
                 <select wire:model.live="filters.operation" class="border-gray-300 rounded-md">
                     <option value="">Todas las operaciones</option>
-                    @foreach($operationTypes as $operation)
+                    @foreach(\App\Support\SelectOptions::sortList($requests->pluck('operation_type')->unique()->filter()->values()->all()) as $operation)
                         <option value="{{ $operation }}">{{ $operation }}</option>
                     @endforeach
                 </select>

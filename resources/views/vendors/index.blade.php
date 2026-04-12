@@ -37,13 +37,12 @@
                     'phone' => 'Teléfono',
                     'status' => 'Estado',
                     'actions' => 'Acciones',
-                    'actions_html' => '',
                 ];
 
-                $sortable = ['name', 'email', 'phone', 'status', 'vendo_code'];
-                $searchable = ['name', 'email', 'phone', 'status', 'vendo_code'];
-                $filterable = ['name', 'email', 'phone', 'status'];
-                $filterOptions = ['name', 'email', 'phone', 'status'];
+                $sortable = [];
+                $searchable = ['name', 'email', 'phone', 'status', 'vendo_code', 'contact_person', 'address'];
+                $filterable = [];
+                $filterOptions = [];
             @endphp
 
 

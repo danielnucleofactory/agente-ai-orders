@@ -50,8 +50,8 @@ class UserCreate extends Component
             abort_unless(auth()->user()?->can('has_create_users'), 403);
         }
 
-        $this->roles = Role::all();
-        $this->companies = Company::all();
+        $this->roles = Role::query()->orderByRaw('LOWER(name)')->get();
+        $this->companies = Company::query()->orderByRaw('LOWER(name)')->get();
 
         if ($id) {
             $user = User::with('roles', 'companies')->findOrFail($id);

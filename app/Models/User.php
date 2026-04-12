@@ -180,4 +180,18 @@ class User extends Authenticatable implements HasMedia, CanResetPassword
     {
         $this->notify(new ResetPasswordNotification($token));
     }
+
+    /**
+     * Nombres de roles para columnas de tabla (requiere eager load roles).
+     */
+    public function getRoleNamesAttribute(): string
+    {
+        if (!$this->relationLoaded('roles')) {
+            $this->load('roles');
+        }
+
+        $names = $this->roles->pluck('name')->filter()->values();
+
+        return $names->isEmpty() ? 'Sin rol' : $names->implode(', ');
+    }
 }

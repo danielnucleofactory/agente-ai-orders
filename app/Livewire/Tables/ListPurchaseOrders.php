@@ -3,6 +3,7 @@
 namespace App\Livewire\Tables;
 
 use App\Models\PurchaseOrder;
+use App\Support\SelectOptions;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -233,6 +234,28 @@ class ListPurchaseOrders extends Component
         ->get();
     }
 
+    /**
+     * Opciones del filtro de etapa (sin la opción “todas”), ordenadas por etiqueta.
+     *
+     * @return list<array{value: string, label: string}>
+     */
+    public function getSortedStatusFilterOptions(): array
+    {
+        $items = [
+            ['value' => '__trashed', 'label' => 'Anuladas'],
+            ['value' => '__no_kanban', 'label' => 'Sin etapa'],
+        ];
+        foreach ($this->getAvailableKanbanStatuses() as $kanbanStatus) {
+            $items[] = [
+                'value' => 'kanban_' . $kanbanStatus->id,
+                'label' => (string) $kanbanStatus->name,
+            ];
+        }
+        usort($items, fn (array $a, array $b): int => SelectOptions::compareLabels($a['label'], $b['label']));
+
+        return $items;
+    }
+
     public function render()
     {
         $query = \App\Models\PurchaseOrder::query()
@@ -271,7 +294,7 @@ class ListPurchaseOrders extends Component
 
         return view('livewire.tables.list-purchase-orders', [
             'purchaseOrders' => $purchaseOrders,
-            'kanbanStatuses' => $this->getAvailableKanbanStatuses()
+            'sortedStatusFilterOptions' => $this->getSortedStatusFilterOptions(),
         ]);
     }
 

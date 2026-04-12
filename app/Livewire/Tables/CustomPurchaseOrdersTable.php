@@ -3,6 +3,7 @@
 namespace App\Livewire\Tables;
 
 use App\Models\PurchaseOrder;
+use App\Support\SelectOptions;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
@@ -377,9 +378,8 @@ class CustomPurchaseOrdersTable extends Component
             ->mapWithKeys(function ($statusName) {
                 return [$statusName => $statusName];
             })
-            ->sortKeysUsing('strnatcasecmp')
             ->toArray();
-            
-        return $statuses;
+
+        return SelectOptions::sortAssociative($statuses);
     }
 }

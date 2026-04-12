@@ -13,7 +13,7 @@ class CompanySelector extends Component
     {
         $user = auth()->user();
         $this->companies = $user->companies
-            ->sortBy(fn ($c) => mb_strtolower($c->name ?? ''))
+            ->sortBy(fn ($c) => mb_strtolower($c->name ?? '', 'UTF-8'), SORT_NATURAL)
             ->values();
 
         // Get the current company ID from the user

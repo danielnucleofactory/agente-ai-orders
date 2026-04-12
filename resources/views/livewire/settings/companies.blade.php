@@ -41,11 +41,10 @@
                 'website' => 'Sitio Web',
                 'users_count' => 'Usuarios',
                 'actions' => 'Acciones',
-                'actions_html' => '',
             ];
 
-            $sortable = ['name', 'country', 'city'];
-            $searchable = ['name', 'country', 'city', 'website'];
+            $sortable = [];
+            $searchable = ['name', 'country', 'city', 'website', 'phone'];
             $filterable = [];
             $filterOptions = [];
         @endphp
@@ -56,6 +55,7 @@
             :searchable="$searchable"
             :filterable="$filterable"
             :filterOptions="$filterOptions"
+            :withCount="['users']"
             :actions="true"
             :actionsView="false"
             :actionsEdit="true"

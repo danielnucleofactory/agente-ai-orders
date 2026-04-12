@@ -1,8 +1,9 @@
-<div>
+<div class="flex h-full w-full min-w-0">
     {{-- Botón Importar CSV --}}
     <button
         wire:click="openModal"
-        class="inline-flex items-center px-4 py-2.5 bg-white border-2 border-[#1AAD8A] text-[#1AAD8A] font-medium rounded-lg hover:bg-[#D4F5ED] transition-colors duration-200 w-[209px] justify-center">
+        type="button"
+        class="inline-flex h-full min-h-[2.75rem] w-full min-w-0 items-center justify-center rounded-lg border-2 border-[#1AAD8A] bg-white px-4 py-2.5 font-medium text-[#1AAD8A] transition-colors duration-200 hover:bg-[#D4F5ED]">
         <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
         </svg>

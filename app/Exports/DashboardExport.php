@@ -13,15 +13,15 @@ use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 class DashboardExport implements FromArray, WithHeadings, WithStyles, WithTitle, ShouldAutoSize, WithEvents
 {
     use RegistersExcelTable;
+
     protected array $data;
     protected array $monthLabels;
     protected array $appliedFilters;
@@ -67,6 +67,19 @@ class DashboardExport implements FromArray, WithHeadings, WithStyles, WithTitle,
     public function title(): string
     {
         return 'Tendencia por Etapas';
+    }
+
+    /**
+     * Excluir el bloque "Filtros aplicados" bajo la grilla de datos.
+     */
+    protected function excelTableEndRow(): ?int
+    {
+        return count($this->data) + 1;
+    }
+
+    protected function excelTableEndColumnIndex(): ?int
+    {
+        return count($this->monthLabels) + 1;
     }
 
     public function styles(Worksheet $sheet): array

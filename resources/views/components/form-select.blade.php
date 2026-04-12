@@ -8,6 +8,8 @@
     'error' => false,
     'showError' => true,
     'value' => null,
+    /** Ordenar opciones por etiqueta (excepto placeholder y __no_data__). */
+    'alphabetizeOptions' => true,
 ])
 
 <div class="relative flex flex-col">
@@ -23,18 +25,18 @@
         {{ $attributes }}>
         <option value="">{{ $optionPlaceholder }}</option>
         @php
-            $opts = collect($options ?? []);
-            $noDataLabel = $opts->pull('__no_data__');
-            $sortedOpts = $opts->sort(
-                fn ($a, $b) => strnatcasecmp((string) $a, (string) $b)
-            );
+            $selectOptionsList = $alphabetizeOptions
+                ? \App\Support\SelectOptions::forSelectAssociative($options)
+                : $options;
         @endphp
-        @foreach ($sortedOpts as $key => $option)
-            <option value="{{ $key }}" @selected($value !== null && (string)$key === (string)$value)>{{ $option }}</option>
+        @foreach ($selectOptionsList as $key => $option)
+            @if($key === '__no_data__')
+                <option value="" disabled style="color: #ef4444; font-style: italic;">{{ $option }}</option>
+            @else
+                <option value="{{ $key }}" @selected($value !== null && (string)$key === (string)$value)>{{ $option }}</option>
+            @endif
         @endforeach
-        @if ($noDataLabel !== null)
-            <option value="" disabled style="color: #ef4444; font-style: italic;">{{ $noDataLabel }}</option>
-        @endif
+        
     </select>
 
     @if ($error && $showError)

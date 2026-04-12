@@ -1,19 +1,27 @@
-<div>
+<div id="lw-historical-data-table">
     @push('styles')
         <style>
             /* Estilos para filtros de historical-data - igualar al dashboard */
             .historical-filters-section {
                 display: flex;
                 align-items: flex-end;
-                gap: 16px;
-                flex-wrap: wrap;
+                gap: 12px;
+                flex-wrap: nowrap;
                 font-family: 'Lato', sans-serif;
                 margin-bottom: 24px;
+                width: 100%;
+                min-width: 0;
+                overflow-x: auto;
+                overflow-y: visible;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
             }
             
             .historical-filters-section .filter-group {
-                width: 150px !important;
-                max-width: 150px !important;
+                flex: 0 1 9rem;
+                min-width: 0;
+                width: auto !important;
+                max-width: none !important;
             }
             
             .historical-filters-section .filter-label {
@@ -23,26 +31,26 @@
                 margin-bottom: 4px;
             }
             
-            /* Buscador 500x40 - Máxima especificidad */
             .historical-filters-section .search-input-wrapper {
-                width: 500px !important;
-                min-width: 500px !important;
-                max-width: 500px !important;
+                flex: 1 1 8rem;
+                min-width: 0;
+                width: auto !important;
+                max-width: none !important;
             }
             
             .historical-filters-section .search-input-wrapper > div,
             .historical-filters-section .search-input-wrapper .relative {
-                width: 500px !important;
-                min-width: 500px !important;
-                max-width: 500px !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: none !important;
                 position: relative !important;
             }
             
             .historical-filters-section .search-input-wrapper input,
             .historical-filters-section .search-input-wrapper input[type="text"] {
-                width: 500px !important;
-                min-width: 500px !important;
-                max-width: 500px !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: none !important;
                 height: 40px !important;
                 min-height: 40px !important;
                 max-height: 40px !important;
@@ -59,9 +67,9 @@
             /* Inputs de fecha - altura exacta de 40px (incluyendo border) */
             .historical-filters-section .filter-group input.flatpickr-alt-input,
             .historical-filters-section input.flatpickr-alt-input {
-                width: 150px !important;
-                max-width: 150px !important;
-                min-width: 150px !important;
+                width: 100% !important;
+                max-width: none !important;
+                min-width: 0 !important;
                 height: 40px !important;
                 min-height: 40px !important;
                 max-height: 40px !important;
@@ -80,9 +88,9 @@
             /* Selects - color #222 y altura 40px (incluyendo border) */
             .historical-filters-section .filter-group select,
             .historical-filters-section select {
-                width: 150px !important;
-                max-width: 150px !important;
-                min-width: 150px !important;
+                width: 100% !important;
+                max-width: none !important;
+                min-width: 0 !important;
                 height: 40px !important;
                 min-height: 40px !important;
                 max-height: 40px !important;
@@ -177,223 +185,26 @@
             </div>
         </div>
 
-        <!-- Controles superiores: Botón de descarga y Por página -->
-        <div class="flex justify-between items-center mb-4">
-            <div>
-                <button onclick="exportHistoricalData()" 
-                   class="inline-flex items-center px-4 py-2 bg-[#1AAD8A] text-white rounded-lg hover:bg-[#159a7a] transition-colors duration-200 font-medium text-sm">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    Descargar Excel
-                </button>
-            </div>
-            <div>
-                <label for="perPage" class="sr-only">Por página</label>
-                <select wire:model.live="perPage" id="perPage" class="block w-full border-gray-300 rounded-md focus:border-[#1AAD8A] focus:ring-[#1AAD8A] sm:text-sm">
-                    <option value="10">10 por página</option>
-                    <option value="25">25 por página</option>
-                    <option value="50">50 por página</option>
-                    <option value="100">100 por página</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Tabla -->
-        <div class="overflow-x-auto bg-white rounded-lg shadow">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-[#D4F5ED]">
-                    <tr>
-                        @php
-                            $sortIcon = function (string $field) {
-                                if (($this->sortField ?? '') !== $field) return '↕';
-                                return (($this->sortDirection ?? 'asc') === 'asc') ? '▲' : '▼';
-                            };
-                            $thClass = 'px-6 py-3 text-xs font-bold tracking-wider text-left text-black uppercase cursor-pointer select-none';
-                        @endphp
-
-                        <th class="{{ $thClass }}" wire:click="sortBy('order_number')">
-                            Orden <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('order_number') }}</span>
-                        </th>
-                        <th class="{{ $thClass }}" wire:click="sortBy('vendor_name')">
-                            Proveedor <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('vendor_name') }}</span>
-                        </th>
-                        <th class="{{ $thClass }}" wire:click="sortBy('emision_date_po')">
-                            Fecha Emisión <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('emision_date_po') }}</span>
-                        </th>
-                        <th class="{{ $thClass }}" wire:click="sortBy('net_total')">
-                            Total Neto <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('net_total') }}</span>
-                        </th>
-                        <th class="{{ $thClass }}" wire:click="sortBy('container_number')">
-                            Contenedor <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('container_number') }}</span>
-                        </th>
-                        <th class="{{ $thClass }}" wire:click="sortBy('date_etd')">
-                            ETD <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('date_etd') }}</span>
-                        </th>
-                        <th class="{{ $thClass }}" wire:click="sortBy('date_eta')">
-                            ETA <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('date_eta') }}</span>
-                        </th>
-                        <th class="{{ $thClass }}" wire:click="sortBy('trading_company')">
-                            Empresa <span class="ml-1 text-[10px] opacity-60">{{ $sortIcon('trading_company') }}</span>
-                        </th>
-                    </tr>
-                </thead>
-
-                <tbody class="bg-white divide-y divide-gray-200">
-                    @forelse($historicalData as $record)
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                                {{ $record->order_number }}
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500">
-                                <div class="max-w-xs truncate" title="{{ $record->vendor_name }}">
-                                    {{ $record->vendor_name }}
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $record->emision_date_po ? formatDateOnly($record->emision_date_po) : 'N/A' }}
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                @if($record->net_total)
-                                    {{ number_format($record->net_total, 2) }} {{ $record->currency ?? '' }}
-                                @else
-                                    N/A
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $record->container_number ?? 'N/A' }}
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $record->date_etd ? formatDate($record->date_etd) : 'N/A' }}
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $record->date_eta ? formatDate($record->date_eta) : 'N/A' }}
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $record->trading_company ?? 'N/A' }}
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="8" class="px-6 py-4 text-center text-gray-500">
-                                No se encontraron registros históricos
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Paginación - Estilo igual a purchase-orders -->
-        <div class="flex items-center justify-between mt-6">
-            <div class="flex justify-between flex-1 sm:hidden">
-                <button 
-                    wire:click="previousPage" 
-                    @if($historicalData->onFirstPage()) disabled @endif 
-                    class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 {{ $historicalData->onFirstPage() ? 'opacity-50 cursor-not-allowed' : '' }}">
-                    Anterior
-                </button>
-                <button 
-                    wire:click="nextPage" 
-                    @if(!$historicalData->hasMorePages()) disabled @endif 
-                    class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 {{ !$historicalData->hasMorePages() ? 'opacity-50 cursor-not-allowed' : '' }}">
-                    Siguiente
-                </button>
-            </div>
-            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                    <p class="text-sm text-gray-700">
-                        Mostrando
-                        <span class="font-medium">{{ $historicalData->firstItem() ?? 0 }}</span>
-                        a
-                        <span class="font-medium">{{ $historicalData->lastItem() ?? 0 }}</span>
-                        de
-                        <span class="font-medium">{{ $historicalData->total() }}</span>
-                        resultados
-                    </p>
-                </div>
-                <div>
-                    <nav class="relative z-0 inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                        <!-- Botón Anterior -->
-                        <button 
-                            wire:click="previousPage" 
-                            @if($historicalData->onFirstPage()) disabled @endif 
-                            class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 {{ $historicalData->onFirstPage() ? 'opacity-50 cursor-not-allowed' : '' }}">
-                            <span class="sr-only">Anterior</span>
-                            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                            </svg>
-                        </button>
-
-                        <!-- Números de página (mostrar solo si hay pocas páginas para evitar sobrecarga) -->
-                        @if($historicalData->lastPage() <= 10)
-                            @for ($i = 1; $i <= $historicalData->lastPage(); $i++)
-                                <button 
-                                    wire:click="gotoPage({{ $i }})" 
-                                    class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium {{ $historicalData->currentPage() === $i ? 'z-10 bg-[#D4F5ED] border-[#1AAD8A] text-[#1AAD8A]' : 'text-gray-700 hover:bg-gray-50' }}">
-                                    {{ $i }}
-                                </button>
-                            @endfor
-                        @else
-                            <!-- Paginación inteligente para muchas páginas -->
-                            @php
-                                $currentPage = $historicalData->currentPage();
-                                $lastPage = $historicalData->lastPage();
-                                $start = max(1, $currentPage - 2);
-                                $end = min($lastPage, $currentPage + 2);
-                            @endphp
-
-                            @if($start > 1)
-                                <button wire:click="gotoPage(1)" class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">
-                                    1
-                                </button>
-                                @if($start > 2)
-                                    <span class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300">
-                                        ...
-                                    </span>
-                                @endif
-                            @endif
-
-                            @for ($i = $start; $i <= $end; $i++)
-                                <button wire:click="gotoPage({{ $i }})" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium {{ $currentPage === $i ? 'z-10 bg-[#D4F5ED] border-[#1AAD8A] text-[#1AAD8A]' : 'text-gray-700 hover:bg-gray-50' }}">
-                                    {{ $i }}
-                                </button>
-                            @endfor
-
-                            @if($end < $lastPage)
-                                @if($end < $lastPage - 1)
-                                    <span class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300">
-                                        ...
-                                    </span>
-                                @endif
-                                <button wire:click="gotoPage({{ $lastPage }})" class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">
-                                    {{ $lastPage }}
-                                </button>
-                            @endif
-                        @endif
-
-                        <!-- Botón Siguiente -->
-                        <button 
-                            wire:click="nextPage" 
-                            @if(!$historicalData->hasMorePages()) disabled @endif 
-                            class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 {{ !$historicalData->hasMorePages() ? 'opacity-50 cursor-not-allowed' : '' }}">
-                            <span class="sr-only">Siguiente</span>
-                            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                            </svg>
-                        </button>
-                    </nav>
-                </div>
-            </div>
-        </div>
+        @include('livewire.components.reusable-table')
     </div>
 
     @push('scripts')
     <script>
         function exportHistoricalData() {
-            // Obtener los valores actuales de los filtros desde Livewire
-            const search = @js($search);
-            const filters = @js($filters);
+            const root = document.getElementById('lw-historical-data-table');
+            if (!root) {
+                return;
+            }
+            const wireId = root.getAttribute('wire:id');
+            if (!wireId || typeof Livewire === 'undefined') {
+                return;
+            }
+            const component = Livewire.find(wireId);
+            if (!component) {
+                return;
+            }
+            const search = component.get('search') ?? '';
+            const filters = component.get('filters') ?? {};
             
             // Construir la URL con los parámetros
             const params = new URLSearchParams();

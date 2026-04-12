@@ -37,16 +37,27 @@
                     'actions' => 'Acciones',
                 ];
 
-                $sortable = ['name', 'permissions_count', 'users_count'];
+                $sortable = [];
                 $searchable = ['name'];
-                $filterable = ['name'];
-                $filterOptions = ['name'];
+                $filterable = [];
+                $filterOptions = [];
             @endphp
 
-            <livewire:components.reusable-table :headers="$headers" :sortable="$sortable" :searchable="$searchable" :filterable="$filterable"
-                :filterOptions="$filterOptions" :withCount="['permissions','users']" :actions="true" :actionsView="false" :actionsEdit="true" :actionsDelete="true"
-                :editPermission="'has_edit_roles'" :deletePermission="'has_delete_roles'"
-                :rows="$roles" :baseRoute="'settings.roles'"  :model="\Spatie\Permission\Models\Role::class" />
+            <livewire:components.reusable-table
+                :headers="$headers"
+                :sortable="$sortable"
+                :searchable="$searchable"
+                :filterable="$filterable"
+                :filterOptions="$filterOptions"
+                :withCount="['permissions','users']"
+                :actions="true"
+                :actionsView="false"
+                :actionsEdit="true"
+                :actionsDelete="true"
+                :editPermission="'has_edit_roles'"
+                :deletePermission="'has_delete_roles'"
+                :baseRoute="'settings.roles'"
+                :model="\Spatie\Permission\Models\Role::class" />
         </div>
     </div>
 </div>

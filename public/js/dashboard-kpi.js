@@ -588,8 +588,8 @@ class DashboardKPIManager {
     }
 
     /**
-     * Ordenación client-side en todas las tablas `.data-table` del dashboard (kpiCompTable, tendencias, PO vs TEUs, proyección).
-     * Las filas expandibles + subtabla se mueven como un bloque; las filas Total / mensajes colspan quedan al final.
+     * Ordenación client-side en tablas `.data-table` y en subtablas `.sub-table` (detalle dentro de filas expandibles).
+     * En la tabla principal, fila expandible + subfila se mueven como bloque; filas Total / colspan al final.
      */
     setupDataTableSorting() {
         const root = document.querySelector('.dashboard-kpi-container');
@@ -603,6 +603,11 @@ class DashboardKPIManager {
             }
             const table = th.closest('table');
             if (!table) {
+                return;
+            }
+            const isMainDataTable = table.classList.contains('data-table');
+            const isSubTable = table.classList.contains('sub-table');
+            if (!isMainDataTable && !isSubTable) {
                 return;
             }
             if (th.hasAttribute('colspan')) {
@@ -619,7 +624,18 @@ class DashboardKPIManager {
                 return;
             }
             e.preventDefault();
+            e.stopPropagation();
             this.sortDataTableByColumn(table, th);
+        });
+    }
+
+    /** Indicadores de ordenación en subtablas expandibles (detalle por proveedor/puerto/cliente). */
+    decorateSubTables(container) {
+        if (!container || !container.querySelectorAll) {
+            return;
+        }
+        container.querySelectorAll('table.sub-table').forEach((st) => {
+            this.ensureSortIndicators(st);
         });
     }
 
@@ -1024,6 +1040,7 @@ class DashboardKPIManager {
         `;
 
         tableBody.innerHTML = rows;
+        this.decorateSubTables(tableBody);
     }
 
     renderCapacityTable(data, tableHead, tableBody, isTeus) {
@@ -1134,7 +1151,7 @@ class DashboardKPIManager {
                                             <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.vendor}</td>
                                             <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.shipping_line}</td>
                                             <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${destDisplay}</td>
-                                            ${isTeus ? `<td class="align-right number" style="padding: 10px 12px; font-size: 12px; color: #636e72; text-align: right;">${d.teus}</td>` : ''}
+                                            ${isTeus ? `<td class="number" style="padding: 10px 12px; font-size: 12px; color: #636e72; text-align: right;">${d.teus}</td>` : ''}
                                         </tr>
                                     `;
                                     }).join('')}
@@ -1147,6 +1164,7 @@ class DashboardKPIManager {
         });
 
         tableBody.innerHTML = rows;
+        this.decorateSubTables(tableBody);
     }
 
     renderATATable(data, tableHead, tableBody, isTeus) {
@@ -1229,6 +1247,7 @@ class DashboardKPIManager {
         `;
 
         tableBody.innerHTML = rows || '<tr><td colspan="3" style="text-align: center; padding: 20px; color: #6b7280;">No hay datos disponibles</td></tr>';
+        this.decorateSubTables(tableBody);
     }
 
     async loadDefaultTeusTable() {
@@ -1529,7 +1548,7 @@ class DashboardKPIManager {
                 <td style="padding:12px;border:1px solid #e5e7eb;">${v.vendor}</td>
                 <td style="padding:12px;border:1px solid #e5e7eb;text-align:right;" class="number">${p1.toLocaleString()}</td>
                 <td style="padding:12px;border:1px solid #e5e7eb;text-align:right;" class="number">${p2.toLocaleString()}</td>
-                <td style="padding:12px;border:1px solid #e5e7eb;text-align:right;color:${color};">${sign}${pct.toFixed(1)}%</td>
+                <td class="percentage" style="padding:12px;border:1px solid #e5e7eb;text-align:right;color:${color};">${sign}${pct.toFixed(1)}%</td>
             </tr>`;
         });
 
@@ -1541,7 +1560,7 @@ class DashboardKPIManager {
             <td style="padding:12px;border:1px solid #e5e7eb;color:#374151;">Total</td>
             <td style="padding:12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#1AAD8A;" class="number">${totalA.toLocaleString()}</td>
             <td style="padding:12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#1AAD8A;" class="number">${totalB.toLocaleString()}</td>
-            <td style="padding:12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:${totalColor};">${totalSign}${totalPct}%</td>
+            <td class="percentage" style="padding:12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:${totalColor};">${totalSign}${totalPct}%</td>
         </tr>`;
 
         tableBody.innerHTML = rows;
@@ -1772,7 +1791,7 @@ class DashboardKPIManager {
                     <td style="padding: 12px; border: 1px solid #e5e7eb;">${vendor.name}</td>
                     <td class="align-right number" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right;">${vendor.a.toLocaleString()}</td>
                     <td class="align-right number" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right;">${vendor.b.toLocaleString()}</td>
-                    <td class="align-right" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; color: ${colorClass};">${variationSign}${vendor.var.toFixed(1)}%</td>
+                    <td class="align-right percentage" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; color: ${colorClass};">${variationSign}${vendor.var.toFixed(1)}%</td>
                 </tr>
             `;
         });
@@ -1786,7 +1805,7 @@ class DashboardKPIManager {
                 <td style="padding: 12px; border: 1px solid #e5e7eb; color: #374151;">Total</td>
                 <td class="align-right number" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; color: #1AAD8A;">${data.totalA.toLocaleString()}</td>
                 <td class="align-right number" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; color: #1AAD8A;">${data.totalB.toLocaleString()}</td>
-                <td class="align-right" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; color: ${totalColor};">${totalVarSign}${data.totalVar.toFixed(1)}%</td>
+                <td class="align-right percentage" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; color: ${totalColor};">${totalVarSign}${data.totalVar.toFixed(1)}%</td>
             </tr>
         `;
 
