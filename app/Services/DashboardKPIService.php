@@ -8,6 +8,7 @@ use App\Models\PurchaseOrder;
 use App\Models\KanbanStatus;
 use App\Models\Company;
 use App\Models\Vendor;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Carbon;
@@ -662,16 +663,55 @@ class DashboardKPIService
      */
     public function getPOsInTransshipment(array $filters = []): array
     {
+        $user = auth()->user();
+        if ($user === null) {
+            return [
+                'summary' => ['total_pos' => 0, 'total_teus' => 0],
+                'by_port' => [],
+                'details' => [],
+            ];
+        }
+
+        $ttl = (int) config('dashboard.kpi_transshipment_cache_seconds', 120);
+        if ($ttl <= 0) {
+            return $this->computePOsInTransshipment($filters);
+        }
+
+        $filtersKey = json_encode($filters);
+        if ($filtersKey === false) {
+            $filtersKey = '';
+        }
+
+        $cacheKey = sprintf(
+            'dashboard_kpi:transshipment:v3:%s:%s:%s',
+            hash('sha256', $filtersKey),
+            (string) ($user->company_id ?? '0'),
+            (string) $user->id
+        );
+
+        return Cache::remember($cacheKey, now()->addSeconds($ttl), fn () => $this->computePOsInTransshipment($filters));
+    }
+
+    /**
+     * Cálculo pesado de transbordos (sin caché).
+     */
+    protected function computePOsInTransshipment(array $filters = []): array
+    {
         try {
             $query = $this->getBaseQuery($filters)
                 ->whereNotNull('porth_itinerary')
                 ->whereNotNull('porth_pod');
 
-            // Solo filas que pueden tener transbordo activo (misma condición que resolveCurrentTransshipmentPort: evento TRANSSHIPMENT DISCHARGED).
-            // Reduce filas transferidas y decodificadas en PHP; solo PostgreSQL (ILIKE + cast JSON).
+            // PostgreSQL: filtrar por evento en el array JSON sin CAST del blob completo a TEXT (más barato en tablas grandes).
             if (DB::connection()->getDriverName() === 'pgsql') {
-                $query->whereRaw('CAST(porth_itinerary AS TEXT) ILIKE ?', ['%TRANSSHIPMENT DISCHARGED%']);
+                $query->whereRaw(
+                    "jsonb_typeof(porth_itinerary::jsonb) = 'array' AND EXISTS ("
+                    .'SELECT 1 FROM jsonb_array_elements(porth_itinerary::jsonb) AS t(elem) '
+                    ."WHERE COALESCE(elem->>'name', '') ILIKE ?)",
+                    ['%TRANSSHIPMENT DISCHARGED%']
+                );
             }
+            // Fuera de PostgreSQL no se aplica filtro SQL al JSON (comportamiento previo del servicio).
 
             // Columnas mínimas + JSON de itinerario; evita hidratar el modelo completo.
             $query->select([
@@ -685,11 +725,13 @@ class DashboardKPIService
                 'purchase_orders.vendor_id',
             ]);
 
+            $chunk = max(50, (int) config('dashboard.kpi_transshipment_lazy_chunk', 400));
+
             $pos = $query->with([
                 'vendor' => static function ($q) {
                     $q->select('id', 'name');
                 },
-            ])->get();
+            ])->lazy($chunk);
 
             // Misma instancia de servicio puede ser singleton: cache solo en el ámbito de esta petición.
             $portLabelCache = [];
@@ -762,7 +804,7 @@ class DashboardKPIService
                 'details' => $details,
             ];
         } catch (\Exception $e) {
-            Log::error('Error in getPOsInTransshipment', ['error' => $e->getMessage()]);
+            Log::error('Error in computePOsInTransshipment', ['error' => $e->getMessage()]);
             return [
                 'summary' => ['total_pos' => 0, 'total_teus' => 0],
                 'by_port' => [],

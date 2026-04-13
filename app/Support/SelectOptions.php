@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use Illuminate\Contracts\Support\Arrayable;
+
 /**
  * Orden alfabético de etiquetas para &lt;select&gt; (español, natural).
  */
@@ -61,11 +63,15 @@ final class SelectOptions
     /**
      * Mapa para &lt;select&gt;: clave '' primero, luego etiquetas A–Z, luego __no_data__ al final.
      *
-     * @param  array<string|int, string>  $options
+     * @param  array<string|int, string>|Arrayable<string|int, string>  $options
      * @return array<string|int, string>
      */
-    public static function forSelectAssociative(array $options): array
+    public static function forSelectAssociative(array|Arrayable $options): array
     {
+        if ($options instanceof Arrayable) {
+            $options = $options->toArray();
+        }
+
         $prefix = [];
         if (array_key_exists('', $options)) {
             $prefix[''] = $options[''];
