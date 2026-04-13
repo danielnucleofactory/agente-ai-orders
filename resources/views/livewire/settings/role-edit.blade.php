@@ -39,11 +39,11 @@
                         class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-[#231F20] hover:bg-gray-50">
                         Limpiar
                     </button>
-                    <button type="button" onclick="document.querySelectorAll('details[data-perm-panel]').forEach(function (el) { el.open = true; })"
+                    <button type="button" wire:click="expandAllPermissionGroups"
                         class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-[#231F20] hover:bg-gray-50">
                         Expandir grupos
                     </button>
-                    <button type="button" onclick="document.querySelectorAll('details[data-perm-panel]').forEach(function (el) { el.open = false; })"
+                    <button type="button" wire:click="collapseAllPermissionGroups"
                         class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-[#231F20] hover:bg-gray-50">
                         Colapsar grupos
                     </button>
@@ -53,8 +53,12 @@
             <!-- Permisos organizados por grupos (colapsables) -->
             <div class="space-y-4">
                 @foreach($permissionGroups as $groupName => $permissions)
-                    <details data-perm-panel class="group overflow-hidden rounded-2xl border border-gray-200 bg-white">
-                        <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-[#F7F7F7] px-6 py-4 [&::-webkit-details-marker]:hidden">
+                    <details
+                        data-perm-panel
+                        wire:key="perm-grp-{{ md5($groupName) }}"
+                        @if($expandedGroups[$groupName] ?? false) open @endif
+                        class="group overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                        <summary wire:click.prevent="toggleGroupExpanded(@js($groupName))" class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-[#F7F7F7] px-6 py-4 [&::-webkit-details-marker]:hidden">
                             <div class="flex min-w-0 flex-1 items-center gap-3">
                                 <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center text-[#127A62] transition-transform group-open:rotate-90" aria-hidden="true">▸</span>
                                 <h2 class="text-base font-bold text-[#231F20]">{{ $groupName }}</h2>

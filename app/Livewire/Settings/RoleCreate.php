@@ -16,6 +16,9 @@ class RoleCreate extends Component
     public $id;
     public $allPermissionNames = [];
 
+    /** Panel de cada grupo expandido o no (persiste al re-renderizar Livewire). */
+    public array $expandedGroups = [];
+
     private const SUPER_ADMIN_NAME = 'Super Administrador';
 
     public function mount($id = null)
@@ -221,7 +224,7 @@ class RoleCreate extends Component
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $this->reset(['name', 'selectedPermissions']);
+        $this->reset(['name', 'selectedPermissions', 'expandedGroups']);
         $this->dispatch('open-modal', 'modal-role-created');
     }
 
@@ -236,6 +239,24 @@ class RoleCreate extends Component
     public function clearAllPermissions()
     {
         $this->selectedPermissions = [];
+    }
+
+    public function toggleGroupExpanded(string $groupName): void
+    {
+        $current = (bool) ($this->expandedGroups[$groupName] ?? false);
+        $this->expandedGroups[$groupName] = ! $current;
+    }
+
+    public function expandAllPermissionGroups(): void
+    {
+        foreach (array_keys($this->permissionGroups) as $name) {
+            $this->expandedGroups[$name] = true;
+        }
+    }
+
+    public function collapseAllPermissionGroups(): void
+    {
+        $this->expandedGroups = [];
     }
 
     public function selectPermissionsByGroup(string $groupName)
