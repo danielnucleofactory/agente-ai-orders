@@ -631,9 +631,13 @@
                         
                         // Si se cambia a la vista comparativa, establecer fechas por defecto
                         if (viewId === 'comparativo' && window.dashboardKPIManager) {
-                            // Esperar a que Flatpickr se inicialice
+                            // Esperar a que Flatpickr (Alpine datePicker) esté listo
                             setTimeout(() => {
                                 window.dashboardKPIManager.setDefaultComparisonPeriods();
+                                window.dashboardKPIManager.bindComparativoPeriodFlatpickrHooks();
+                                setTimeout(() => {
+                                    window.dashboardKPIManager.loadComparativoKpiCards();
+                                }, 400);
                             }, 300);
                         }
 

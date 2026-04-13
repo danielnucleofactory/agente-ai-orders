@@ -23,6 +23,11 @@ class DashboardKPIManager {
             // Esperar un poco para que Flatpickr se inicialice
             setTimeout(() => {
                 this.setDefaultComparisonPeriods();
+                this.bindComparativoPeriodFlatpickrHooks();
+                const comparativoView = document.getElementById('comparativo');
+                if (comparativoView && comparativoView.classList.contains('active')) {
+                    setTimeout(() => this.loadComparativoKpiCards(), 250);
+                }
             }, 300);
 
             // Verificar qué vista está activa al iniciar
@@ -348,12 +353,121 @@ class DashboardKPIManager {
         } else if (activeView === 'proyeccion') {
             reloads.push(this.loadProyeccion());
         } else if (activeView === 'comparativo') {
+            reloads.push(this.loadComparativoKpiCards());
             if (this.activeCompFilter) {
                 reloads.push(this.updateCompTable(this.activeCompFilter));
             }
         }
 
         await Promise.all(reloads);
+    }
+
+    /**
+     * Variación % de la fila Total (misma fórmula que renderComparisonTable).
+     * @param {boolean} isDelay - true para PO con Atraso CL (mejor si el % baja)
+     */
+    formatComparisonTotalVariationDisplay(data, isDelay) {
+        if (!data || data.period1 == null || data.period2 == null) {
+            return {
+                text: '—',
+                color: ''
+            };
+        }
+        const totalA = data.period1?.total ?? 0;
+        const totalB = data.period2?.total ?? 0;
+        const totalPct = totalA > 0 ? (((totalB - totalA) / totalA) * 100).toFixed(1) : '0.0';
+        const totalPctNum = parseFloat(totalPct);
+        const totalSign = totalPctNum > 0 ? '+' : '';
+        const totalColor = (isDelay ? totalPctNum < 0 : totalPctNum > 0) ? '#27ae60' : '#e17055';
+        return {
+            text: `${totalSign}${totalPct}%`,
+            color: totalColor
+        };
+    }
+
+    setComparativoKpiCardElement(elementId, data, isDelay) {
+        const el = document.getElementById(elementId);
+        if (!el) {
+            return;
+        }
+        const {
+            text,
+            color
+        } = this.formatComparisonTotalVariationDisplay(data, isDelay);
+        el.textContent = text;
+        el.style.color = color || '';
+    }
+
+    /**
+     * Cards superiores: % Total de PO con ATD / ATA / Atraso CL (endpoints alineados con la tabla comparativa).
+     */
+    async loadComparativoKpiCards() {
+        const periodAFrom = this.getDateInputValue(document.getElementById('comp-period-a-from'));
+        const periodATo = this.getDateInputValue(document.getElementById('comp-period-a-to'));
+        const periodBFrom = this.getDateInputValue(document.getElementById('comp-period-b-from'));
+        const periodBTo = this.getDateInputValue(document.getElementById('comp-period-b-to'));
+
+        const resetCards = () => {
+            ['kpi-comp-var-atd', 'kpi-comp-var-ata', 'kpi-comp-var-atrasos'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.textContent = '—';
+                    el.style.color = '';
+                }
+            });
+        };
+
+        if (!periodAFrom || !periodATo || !periodBFrom || !periodBTo) {
+            resetCards();
+            return;
+        }
+
+        try {
+            const [atdRes, ataRes, delayRes] = await Promise.all([
+                this.fetchComparisonData('/compare-atd', periodAFrom, periodATo, periodBFrom, periodBTo),
+                this.fetchComparisonData('/compare-ata', periodAFrom, periodATo, periodBFrom, periodBTo),
+                this.fetchComparisonData('/compare-delay-cl', periodAFrom, periodATo, periodBFrom, periodBTo),
+            ]);
+
+            this.setComparativoKpiCardElement('kpi-comp-var-atd', atdRes?.success ? atdRes.data : null, false);
+            this.setComparativoKpiCardElement('kpi-comp-var-ata', ataRes?.success ? ataRes.data : null, false);
+            this.setComparativoKpiCardElement('kpi-comp-var-atrasos', delayRes?.success ? delayRes.data : null, true);
+        } catch (e) {
+            console.error('Error loading comparativo KPI cards:', e);
+            resetCards();
+        }
+    }
+
+    scheduleComparativoKpiCardsRefresh() {
+        clearTimeout(this._compKpiCardsTimer);
+        this._compKpiCardsTimer = setTimeout(() => {
+            const comparativo = document.getElementById('comparativo');
+            if (comparativo && comparativo.classList.contains('active')) {
+                this.loadComparativoKpiCards();
+            }
+        }, 450);
+    }
+
+    /**
+     * Encadena onChange de Flatpickr (Alpine datePicker) para refrescar las cards sin sustituir el handler previo.
+     */
+    bindComparativoPeriodFlatpickrHooks() {
+        const ids = ['comp-period-a-from', 'comp-period-a-to', 'comp-period-b-from', 'comp-period-b-to'];
+        ids.forEach((id) => {
+            const input = document.getElementById(id);
+            const fp = input?._flatpickr;
+            if (!fp || fp._compKpiBound) {
+                return;
+            }
+            fp._compKpiBound = true;
+            const prev = fp.config.onChange;
+            fp.config.onChange = (selectedDates, dateStr, instance) => {
+                if (typeof prev === 'function') {
+                    prev(selectedDates, dateStr, instance);
+                }
+                this.scheduleComparativoKpiCardsRefresh();
+            };
+        });
     }
 
     async loadKPISummary() {
@@ -582,6 +696,17 @@ class DashboardKPIManager {
                     this.handleCompFilterClick(filterId, button);
                 });
             }
+        });
+
+        // Recalcular cards ATD / ATA / Atrasos al cambiar fechas de comparación (Flatpickr + input nativo)
+        ['comp-period-a-from', 'comp-period-a-to', 'comp-period-b-from', 'comp-period-b-to'].forEach((id) => {
+            const input = document.getElementById(id);
+            if (!input) {
+                return;
+            }
+            const handler = () => this.scheduleComparativoKpiCardsRefresh();
+            input.addEventListener('change', handler);
+            input.addEventListener('blur', handler);
         });
 
         this.setupDataTableSorting();
