@@ -103,7 +103,7 @@ $resetPassword = function () {
             </div>
 
             <div class="flex items-center justify-center mt-10">
-                <x-primary-button class="flex items-center gap-3" wire:loading.attr="disabled">
+                <x-primary-button type="submit" class="flex items-center gap-3" wire:loading.attr="disabled">
                     {{ __('Confirmar') }}
 
                     <div wire:loading>
