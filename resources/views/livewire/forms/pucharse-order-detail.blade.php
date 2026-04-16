@@ -113,7 +113,7 @@
                                 </p>
                                 @if($phase['date'])
                                     <p class="mb-1 text-xs font-medium {{ $phase['is_completed'] || $phase['is_current'] ? 'text-gray-600' : 'text-gray-400' }}">
-                                        {{ formatDate($phase['date']) }}
+                                        {{ formatDateOnly($phase['date']) }}
                                         <span class="{{ $phase['is_completed'] || $phase['is_current'] ? 'text-dark-blue font-bold' : 'text-gray-400' }}">
                                             {{ \Carbon\Carbon::parse($phase['date'])->format('H:i') }}
                                         </span>
@@ -137,7 +137,7 @@
                             <div>
                                 <p class="text-sm text-gray-500">Entrega estimada</p>
                                 <p class="text-lg font-bold text-dark-blue">
-                                    {{ isset($trackingData['estimated_delivery']) ? formatDate($trackingData['estimated_delivery']) : 'N/A' }}
+                                    {{ isset($trackingData['estimated_delivery']) ? formatDateOnly($trackingData['estimated_delivery']) : 'N/A' }}
                                 </p>
                             </div>
                         </div>
@@ -465,7 +465,7 @@
             <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
                     <p class="mb-1 text-gray-500">ETD Inicial</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_etd_initial) }}</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_etd_initial) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">ETD Inicial Validada</p>
@@ -479,11 +479,11 @@
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">ETD</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_etd) }}</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_etd) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">ATD</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_atd) }}</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_atd) }}</p>
                 </div>
             </div>
 
@@ -492,19 +492,19 @@
             <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
                     <p class="mb-1 text-gray-500">ETA</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_eta) }}</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_eta) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">ETA Inicial</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_eta_initial) }}</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_eta_initial) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">ETA Variable</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_eta_updated) }}</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_eta_updated) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">ATA</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_ata) }}</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_ata) }}</p>
                 </div>
             </div>
 

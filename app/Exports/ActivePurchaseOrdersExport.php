@@ -243,6 +243,22 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
             }
         };
 
+        // ETD/ETA/ATA/ATD (Porth): día de calendario del instante almacenado, sin reubicar a app timezone.
+        $dateEmbarque = function ($v) {
+            if ($v === null || $v === '') {
+                return '';
+            }
+            try {
+                $c = Carbon::parse($v);
+                $midnight = Carbon::createFromDate($c->year, $c->month, $c->day, $c->getTimezone())->startOfDay();
+                $serial = ExcelDate::PHPToExcel($midnight->toDateTimeImmutable());
+
+                return $serial !== false ? (float) $serial : '';
+            } catch (\Throwable) {
+                return '';
+            }
+        };
+
         return [
             $po->kanbanStatus->name ?? '',
             $po->order_number ?? '',
@@ -275,12 +291,12 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
             $date($po->forwader_date),
             $date($po->inspection_date),
             $date($po->vgm_cut_date),
-            $date($po->date_etd_initial),
-            $date($po->date_etd),
-            $date($po->date_atd),
-            $date($po->date_eta_initial),
-            $date($po->date_eta),
-            $date($po->date_ata),
+            $dateEmbarque($po->date_etd_initial),
+            $dateEmbarque($po->date_etd),
+            $dateEmbarque($po->date_atd),
+            $dateEmbarque($po->date_eta_initial),
+            $dateEmbarque($po->date_eta),
+            $dateEmbarque($po->date_ata),
             $date($po->bonded_warehouse_enter),
             $date($po->bonded_warehouse_exit),
             $date($po->receipt_note_date),

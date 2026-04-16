@@ -125,8 +125,8 @@ class HistoricalDataTable extends ReusableTable
                 ? number_format((float) $record->net_total, 2) . ' ' . e($record->currency ?? '')
                 : 'N/A';
             $emision = $record->emision_date_po ? formatDateOnly($record->emision_date_po) : 'N/A';
-            $etd = $record->date_etd ? formatDate($record->date_etd) : 'N/A';
-            $eta = $record->date_eta ? formatDate($record->date_eta) : 'N/A';
+            $etd = $record->date_etd ? formatDateOnly($record->date_etd) : 'N/A';
+            $eta = $record->date_eta ? formatDateOnly($record->date_eta) : 'N/A';
 
             return [
                 'id' => $record->id,

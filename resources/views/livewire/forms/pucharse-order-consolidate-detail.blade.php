@@ -239,7 +239,7 @@
                                 </p>
                                 @if($phase['date'])
                                     <p class="mb-1 text-xs font-medium {{ $phase['is_completed'] || $phase['is_current'] ? 'text-gray-600' : 'text-gray-400' }}">
-                                        {{ formatDate($phase['date']) }}
+                                        {{ formatDateOnly($phase['date']) }}
                                         <span class="{{ $phase['is_completed'] || $phase['is_current'] ? 'text-dark-blue font-bold' : 'text-gray-400' }}">
                                             {{ \Carbon\Carbon::parse($phase['date'])->format('H:i') }}
                                         </span>
@@ -263,7 +263,7 @@
                             <div>
                                 <p class="text-sm text-gray-500">Entrega estimada</p>
                                 <p class="text-lg font-bold text-dark-blue">
-                                    {{ formatDate($trackingData['estimated_delivery']) }}
+                                    {{ formatDateOnly($trackingData['estimated_delivery']) }}
                                 </p>
                             </div>
                         </div>

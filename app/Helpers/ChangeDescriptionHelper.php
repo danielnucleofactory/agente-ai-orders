@@ -14,6 +14,50 @@ use Carbon\Carbon;
 class ChangeDescriptionHelper
 {
     /**
+     * Fechas de embarque (Porth / ETD-ETA-ATA-ATD): día según valor almacenado, sin TZ del usuario.
+     */
+    protected static array $purchaseOrderDateOnlyFields = [
+        'date_etd',
+        'date_atd',
+        'date_eta',
+        'date_ata',
+        'date_eta_initial',
+        'date_etd_initial',
+        'date_eta_updated',
+        'date_etd_updated',
+        'porth_first_eta',
+        'porth_first_etd',
+        'porth_ready',
+        'porth_to_origin_port',
+        'porth_at_origin_port',
+        'porth_in_transit',
+        'porth_at_destination_port',
+        'porth_to_final_destination',
+        'porth_delivered',
+    ];
+
+    /**
+     * Fechas de embarque en documento de envío: mismo criterio que PO.
+     */
+    protected static array $shippingDocumentDateOnlyFields = [
+        'estimated_departure_date',
+        'estimated_arrival_date',
+        'actual_departure_date',
+        'actual_arrival_date',
+        'date_etd_updated',
+        'date_eta_updated',
+        'porth_first_eta',
+        'porth_first_etd',
+        'porth_ready',
+        'porth_to_origin_port',
+        'porth_at_origin_port',
+        'porth_in_transit',
+        'porth_at_destination_port',
+        'porth_to_final_destination',
+        'porth_delivered',
+    ];
+
+    /**
      * Mapeo de campos técnicos a nombres en español para Purchase Orders
      */
     protected static array $purchaseOrderFieldLabels = [
@@ -311,6 +355,18 @@ class ChangeDescriptionHelper
             return self::$purchaseOrderStatusLabels[$value] ?? $value;
         }
         
+        if (in_array($field, self::$purchaseOrderDateOnlyFields, true)) {
+            if ($value) {
+                try {
+                    return formatDateOnly($value);
+                } catch (\Exception $e) {
+                    return (string) $value;
+                }
+            }
+
+            return 'N/A';
+        }
+
         // Manejar fechas
         if (str_starts_with($field, 'date_') || str_ends_with($field, '_date') || $field === 'order_date' || $field === 'emision_date_po' || $field === 'update_date_po') {
             if ($value) {
@@ -365,6 +421,18 @@ class ChangeDescriptionHelper
             return $value ?: 'N/A';
         }
         
+        if (in_array($field, self::$shippingDocumentDateOnlyFields, true)) {
+            if ($value) {
+                try {
+                    return formatDateOnly($value);
+                } catch (\Exception $e) {
+                    return (string) $value;
+                }
+            }
+
+            return 'N/A';
+        }
+
         // Manejar fechas
         if (str_starts_with($field, 'date_') || str_ends_with($field, '_date') || $field === 'creation_date') {
             if ($value) {

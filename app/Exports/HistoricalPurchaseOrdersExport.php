@@ -75,8 +75,8 @@ class HistoricalPurchaseOrdersExport implements FromCollection, WithHeadings, Wi
             $record->net_total !== null ? number_format((float) $record->net_total, 2, '.', '') : '',
             $record->currency ?? '',
             $record->container_number ?? 'N/A',
-            $this->dateSerialOrNa($record->date_etd),
-            $this->dateSerialOrNa($record->date_eta),
+            $this->dateSerialEmbarqueOrNa($record->date_etd),
+            $this->dateSerialEmbarqueOrNa($record->date_eta),
             $record->trading_company ?? 'N/A',
         ];
     }
@@ -95,6 +95,23 @@ class HistoricalPurchaseOrdersExport implements FromCollection, WithHeadings, Wi
         $serial = ExcelDate::PHPToExcel($carbon->toDateTimeImmutable());
 
         return $serial !== false ? (float) $serial : 'N/A';
+    }
+
+    /** ETD/ETA históricos: día del instante guardado, sin normalizar a app timezone. */
+    private function dateSerialEmbarqueOrNa(mixed $value): float|string
+    {
+        if ($value === null) {
+            return 'N/A';
+        }
+        try {
+            $c = Carbon::parse($value);
+            $midnight = Carbon::createFromDate($c->year, $c->month, $c->day, $c->getTimezone())->startOfDay();
+            $serial = ExcelDate::PHPToExcel($midnight->toDateTimeImmutable());
+
+            return $serial !== false ? (float) $serial : 'N/A';
+        } catch (\Throwable) {
+            return 'N/A';
+        }
     }
 
     public function columnFormats(): array

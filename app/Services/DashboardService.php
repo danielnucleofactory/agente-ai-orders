@@ -569,7 +569,7 @@ class DashboardService
                 return [
                     'po_number' => $item->order_number, // Show actual PO number instead of count
                     'fecha_salida' => $item->dispatch_date ? formatDate($item->dispatch_date) : '-',
-                    'fecha_estimada' => $item->eta ? formatDate($item->eta) : '-',
+                    'fecha_estimada' => $item->eta ? formatDateOnly($item->eta) : '-',
                     'fecha_real' => '-', // Not used in this aggregated view
                     'cantidad_kg' => number_format((float)($item->total_kgs ?? 0), 2),
                 ];
@@ -607,9 +607,9 @@ class DashboardService
                 ->map(function ($po) {
                     return [
                         $po->order_number,
-                        $po->date_atd ? formatDate($po->date_atd) : '',
-                        $po->date_eta ? formatDate($po->date_eta) : '',
-                        $po->date_ata ? formatDate($po->date_ata) : '',
+                        $po->date_atd ? formatDateOnly($po->date_atd) : '',
+                        $po->date_eta ? formatDateOnly($po->date_eta) : '',
+                        $po->date_ata ? formatDateOnly($po->date_ata) : '',
                         $po->weight_kg ?? 0,
                         $po->status ?? '',
                         $po->plannedHub->name ?? '',
