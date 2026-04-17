@@ -1225,26 +1225,16 @@ class DashboardKPIService
     public function comparePOsWithATD(array $filters, string $period1Start, string $period1End, string $period2Start, string $period2End): array
     {
         try {
-            $companyId = auth()->user()->company_id ?? null;
-
             // Período 1
-            $query1 = PurchaseOrder::query()
-                ->operationalForDashboard()
+            $query1 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_atd')
                 ->whereBetween('date_atd', [$period1Start, $period1End]);
-            if ($companyId) {
-                $query1->where('company_id', $companyId);
-            }
             $period1Data = $query1->with('vendor')->get();
 
             // Período 2
-            $query2 = PurchaseOrder::query()
-                ->operationalForDashboard()
+            $query2 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_atd')
                 ->whereBetween('date_atd', [$period2Start, $period2End]);
-            if ($companyId) {
-                $query2->where('company_id', $companyId);
-            }
             $period2Data = $query2->with('vendor')->get();
 
             // Agrupar por proveedor
@@ -1305,26 +1295,16 @@ class DashboardKPIService
     public function comparePOsWithATA(array $filters, string $period1Start, string $period1End, string $period2Start, string $period2End): array
     {
         try {
-            $companyId = auth()->user()->company_id ?? null;
-
             // Período 1
-            $query1 = PurchaseOrder::query()
-                ->operationalForDashboard()
+            $query1 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_ata')
                 ->whereBetween('date_ata', [$period1Start, $period1End]);
-            if ($companyId) {
-                $query1->where('company_id', $companyId);
-            }
             $period1Data = $query1->with('vendor')->get();
 
             // Período 2
-            $query2 = PurchaseOrder::query()
-                ->operationalForDashboard()
+            $query2 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_ata')
                 ->whereBetween('date_ata', [$period2Start, $period2End]);
-            if ($companyId) {
-                $query2->where('company_id', $companyId);
-            }
             $period2Data = $query2->with('vendor')->get();
 
             // Agrupar por proveedor
@@ -1385,30 +1365,20 @@ class DashboardKPIService
     public function comparePOsWithDelayCL(array $filters, string $period1Start, string $period1End, string $period2Start, string $period2End): array
     {
         try {
-            $companyId = auth()->user()->company_id ?? null;
-
             // Período 1
-            $query1 = PurchaseOrder::query()
-                ->operationalForDashboard()
+            $query1 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
                 ->whereRaw('date_variable_date > date_theorical_load')
                 ->whereBetween('date_variable_date', [$period1Start, $period1End]);
-            if ($companyId) {
-                $query1->where('company_id', $companyId);
-            }
             $period1Data = $query1->with('vendor')->get();
 
             // Período 2
-            $query2 = PurchaseOrder::query()
-                ->operationalForDashboard()
+            $query2 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
                 ->whereRaw('date_variable_date > date_theorical_load')
                 ->whereBetween('date_variable_date', [$period2Start, $period2End]);
-            if ($companyId) {
-                $query2->where('company_id', $companyId);
-            }
             $period2Data = $query2->with('vendor')->get();
 
             // Agrupar por proveedor
@@ -1469,30 +1439,20 @@ class DashboardKPIService
     public function comparePOsWithAdvanceCL(array $filters, string $period1Start, string $period1End, string $period2Start, string $period2End): array
     {
         try {
-            $companyId = auth()->user()->company_id ?? null;
-
             // Período 1
-            $query1 = PurchaseOrder::query()
-                ->operationalForDashboard()
+            $query1 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
                 ->whereRaw('date_variable_date < date_theorical_load')
                 ->whereBetween('date_variable_date', [$period1Start, $period1End]);
-            if ($companyId) {
-                $query1->where('company_id', $companyId);
-            }
             $period1Data = $query1->with('vendor')->get();
 
             // Período 2
-            $query2 = PurchaseOrder::query()
-                ->operationalForDashboard()
+            $query2 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
                 ->whereRaw('date_variable_date < date_theorical_load')
                 ->whereBetween('date_variable_date', [$period2Start, $period2End]);
-            if ($companyId) {
-                $query2->where('company_id', $companyId);
-            }
             $period2Data = $query2->with('vendor')->get();
 
             // Agrupar por proveedor
@@ -1840,9 +1800,9 @@ class DashboardKPIService
                 $targetDate = null;
                 switch ($category) {
                     case 'Producción':
-                        // Fecha CL Teórica + 15 días + días de tránsito según matriz
-                        if ($po->date_theorical_load) {
-                            $targetDate = Carbon::parse($po->date_theorical_load)
+                        // Fecha CL variable + 15 días + días de tránsito según matriz
+                        if ($po->date_variable_date) {
+                            $targetDate = Carbon::parse($po->date_variable_date)
                                 ->addDays(15)
                                 ->addDays($transitDays);
                         }

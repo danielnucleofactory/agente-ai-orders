@@ -2087,7 +2087,7 @@ class DashboardKPIManager {
             'Tránsito': '#1AAD8A'
         };
         const stageSubtitles = {
-            'Producción': 'CL Teórica estimada',
+            'Producción': 'CL variable estimada',
             'Booking': 'ETD proyectado',
             'Tránsito': 'ETA confirmado'
         };
@@ -2120,7 +2120,7 @@ class DashboardKPIManager {
         let rows = '';
 
         const stageLabels = {
-            'Producción': 'CL Teórica',
+            'Producción': 'CL variable',
             'Booking': 'ETD',
             'Tránsito': 'ETA'
         };

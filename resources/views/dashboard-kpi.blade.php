@@ -506,7 +506,7 @@
                     <div class="kpi-card">
                         <div class="kpi-card-title">En Producción</div>
                         <div class="kpi-card-value" id="proy-produccion-pos">-</div>
-                        <div class="kpi-card-subtitle">CL Teórica estimada</div>
+                        <div class="kpi-card-subtitle">CL variable estimada</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-card-title">En Booking</div>
