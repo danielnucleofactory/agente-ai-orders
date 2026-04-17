@@ -1796,9 +1796,8 @@ class DashboardKPIService
                 }
             }
 
-            // Obtener POs con vendor y company para calcular tiempos de tránsito
             $pos = $this->getBaseQuery($filters)
-                ->with(['kanbanStatus', 'vendor', 'company'])
+                ->with('kanbanStatus')
                 ->get();
 
             foreach ($pos as $po) {
@@ -1813,10 +1812,10 @@ class DashboardKPIService
                     continue;
                 }
 
-                // Obtener país de origen y destino para calcular tránsito
-                $originCountry = $po->vendor->country ?? null;
-                $destinationCountry = $po->company->country ?? null;
-                $transitDays = $this->transitTimeService->getTransitDays($originCountry, $destinationCountry) ?? 0;
+                $transitDays = $this->transitTimeService->getTransitDaysForPorts(
+                    $po->departure_port,
+                    $po->arrival_port
+                ) ?? 0;
 
                 // Determinar fecha según etapa
                 $targetDate = null;

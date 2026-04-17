@@ -117,6 +117,23 @@ class PorthTranslationService
     /**
      * Resuelve nombre maestro sin log (útil en listados con muchas filas, p. ej. dashboard KPI).
      */
+    /**
+     * ISO 3166-1 alpha-2 del país del puerto según código UNLOC (CSV maestro).
+     */
+    public function getPortCountryIso2(?string $unlocCode): ?string
+    {
+        if (empty($unlocCode)) {
+            return null;
+        }
+
+        $port = $this->findPortByCode($unlocCode);
+        if ($port === null || empty($port['country'])) {
+            return null;
+        }
+
+        return strtoupper(trim((string) $port['country']));
+    }
+
     public function translatePortQuiet(?string $porthCode, ?string $porthName = null): ?string
     {
         if (empty($porthCode) && empty($porthName)) {

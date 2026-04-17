@@ -13,6 +13,11 @@ use Illuminate\Support\Facades\Log;
  */
 class TransitTimeService
 {
+    public function __construct(
+        protected PorthTranslationService $porthTranslationService
+    ) {
+    }
+
     /**
      * Cache en memoria por request / worker (se recarga al olvidar OPcache).
      *
@@ -216,6 +221,50 @@ class TransitTimeService
         }
 
         return $this->getDefaultByRegion($origin);
+    }
+
+    /**
+     * Días de tránsito usando puertos (UNLOC): país origen/destino se infieren del CSV de puertos Porth
+     * y se reutiliza la misma matriz CSV país→destino que {@see getTransitDays}.
+     */
+    public function getTransitDaysForPorts(?string $departurePortUnloc, ?string $arrivalPortUnloc): ?int
+    {
+        $dep = $departurePortUnloc !== null ? strtoupper(trim($departurePortUnloc)) : '';
+        $arr = $arrivalPortUnloc !== null ? strtoupper(trim($arrivalPortUnloc)) : '';
+        if ($dep === '' || $arr === '') {
+            return null;
+        }
+
+        $originIso = $this->porthTranslationService->getPortCountryIso2($dep);
+        $destIso = $this->porthTranslationService->getPortCountryIso2($arr);
+
+        if ($originIso === null || $destIso === null) {
+            return null;
+        }
+
+        $originCountry = PorthTranslationService::COUNTRY_CODES[$originIso] ?? null;
+        if ($originCountry === null) {
+            return null;
+        }
+
+        $destinationKey = $this->matrixDestinationKeyFromArrivalCountryIso2($destIso);
+
+        return $this->getTransitDays($originCountry, $destinationKey);
+    }
+
+    /**
+     * Clave de columna "Destino" de la matriz CSV a partir del ISO2 del país del puerto de arribo.
+     */
+    protected function matrixDestinationKeyFromArrivalCountryIso2(string $iso2): string
+    {
+        $iso = strtoupper(trim($iso2));
+
+        return match ($iso) {
+            'CO' => 'Colombia',
+            'VE' => 'VZLA',
+            'CR', 'SV', 'GT' => $iso,
+            default => $iso,
+        };
     }
 
     /**
