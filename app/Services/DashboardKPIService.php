@@ -1520,49 +1520,71 @@ class DashboardKPIService
     }
 
     /**
-     * PO vs TEUs por período (semana actual, anterior, mes actual, anterior)
+     * Fecha de referencia para PO vs TEUs por período: fin del filtro (date_to), o hoy si no hay.
+     * "Mes actual" = mes calendario que contiene esa fecha; "mes anterior" = mes calendario previo.
+     */
+    protected function resolvePoVsTeusPeriodAnchor(array $filters): Carbon
+    {
+        $dateTo = $filters['date_to'] ?? null;
+        if ($dateTo !== null && $dateTo !== '' && $dateTo !== 'null') {
+            return Carbon::parse((string) $dateTo)->startOfDay();
+        }
+
+        return Carbon::now()->startOfDay();
+    }
+
+    /**
+     * PO vs TEUs por período (semana que contiene el ancla, anterior, mes del ancla, mes previo).
+     * Respeta todos los filtros del dashboard salvo date_from/date_to: el ancla es date_to y las
+     * ventanas son meses/semanas calendario completos (no se recorta por el rango del panel).
      */
     public function getPOvsTEUsByPeriod(array $filters = []): array
     {
         try {
-            $now = Carbon::now();
-            $companyId = auth()->user()->company_id ?? null;
+            $anchor = $this->resolvePoVsTeusPeriodAnchor($filters);
+
+            $filtersSansOrderDates = $filters;
+            unset($filtersSansOrderDates['date_from'], $filtersSansOrderDates['date_to']);
+
+            $currentMonthStart = $anchor->copy()->startOfMonth();
+            $currentMonthEnd = $anchor->copy()->endOfMonth();
+            $lastMonthStart = $currentMonthStart->copy()->subMonth()->startOfMonth();
+            $lastMonthEnd = $currentMonthStart->copy()->subMonth()->endOfMonth();
+
+            $monthRowLabel = static function (Carbon $monthStart): string {
+                return $monthStart->copy()->locale(app()->getLocale())->isoFormat('MMMM YYYY');
+            };
 
             $periods = [
                 'current_week' => [
-                    'start' => $now->copy()->startOfWeek(),
-                    'end' => $now->copy()->endOfWeek(),
+                    'start' => $anchor->copy()->startOfWeek(),
+                    'end' => $anchor->copy()->endOfWeek(),
                     'label' => 'Semana Actual',
                 ],
                 'last_week' => [
-                    'start' => $now->copy()->subWeek()->startOfWeek(),
-                    'end' => $now->copy()->subWeek()->endOfWeek(),
+                    'start' => $anchor->copy()->subWeek()->startOfWeek(),
+                    'end' => $anchor->copy()->subWeek()->endOfWeek(),
                     'label' => 'Semana Anterior',
                 ],
                 'current_month' => [
-                    'start' => $now->copy()->startOfMonth(),
-                    'end' => $now->copy()->endOfMonth(),
-                    'label' => 'Mes Actual',
+                    'start' => $currentMonthStart,
+                    'end' => $currentMonthEnd,
+                    'label' => $monthRowLabel($currentMonthStart),
                 ],
                 'last_month' => [
-                    'start' => $now->copy()->subMonth()->startOfMonth(),
-                    'end' => $now->copy()->subMonth()->endOfMonth(),
-                    'label' => 'Mes Anterior',
+                    'start' => $lastMonthStart,
+                    'end' => $lastMonthEnd,
+                    'label' => $monthRowLabel($lastMonthStart),
                 ],
             ];
 
             $result = [];
             foreach ($periods as $key => $period) {
-                $query = PurchaseOrder::query()
-                    ->operationalForDashboard()
+                $query = $this->getBaseQuery($filtersSansOrderDates)
                     ->whereBetween('order_date', [
                         $period['start']->format('Y-m-d'),
                         $period['end']->format('Y-m-d'),
                     ]);
-
-                if ($companyId) {
-                    $query->where('company_id', $companyId);
-                }
 
                 $pos = $query->get();
                 $poCount = $pos->count();
