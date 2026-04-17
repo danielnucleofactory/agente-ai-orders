@@ -621,52 +621,167 @@ class DashboardKPIService
         }
     }
 
+    private const PORTH_PHASE_IN_TRANSIT = '40_in_transit';
+
+    private const PORTH_PHASE_AT_DESTINATION_PORT = '50_at_destination_port';
+
     /**
-     * Puerto de transbordo actual: recorre el itinerario en orden cronológico; cada descarga
-     * (distinta del POD) activa ese puerto; una carga en el mismo puerto la cierra.
+     * Orden cronológico del itinerario Porth (fecha del evento; mismo instante → orden original).
+     *
+     * @param  array<int, array<string, mixed>>  $itinerary
+     * @return array<int, array<string, mixed>>
+     */
+    protected function sortPorthItineraryByDate(array $itinerary): array
+    {
+        $indexed = [];
+        foreach ($itinerary as $i => $event) {
+            $indexed[] = ['i' => $i, 'e' => $event];
+        }
+
+        usort($indexed, function (array $a, array $b): int {
+            $ta = $this->porthItineraryEventTimestamp($a['e']);
+            $tb = $this->porthItineraryEventTimestamp($b['e']);
+            if ($ta !== $tb) {
+                return $ta <=> $tb;
+            }
+
+            return $a['i'] <=> $b['i'];
+        });
+
+        return array_map(static fn (array $x) => $x['e'], $indexed);
+    }
+
+    /**
+     * @param  array<string, mixed>  $event
+     */
+    private function porthItineraryEventTimestamp(array $event): int
+    {
+        $d = $event['date'] ?? null;
+        if ($d === null || $d === '') {
+            return 0;
+        }
+        try {
+            return Carbon::parse($d)->getTimestamp();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    /**
+     * Puerto de transbordo actual: solo eventos entre el primer hito phase=40_in_transit
+     * y el primer phase=50_at_destination_port (excluidos ambos hitos). Así se evita
+     * depender del wording exacto de cada naviera en {@code name}.
      *
      * @param  array<int, array<string, mixed>>  $itinerary
      */
-    protected function resolveCurrentTransshipmentPort(array $itinerary, string $pod): ?string
+    protected function resolveCurrentTransshipmentPort(array $itinerary, string $pod, ?string $porthPodName = null): ?string
     {
+        $pod = strtoupper(trim($pod));
         if ($pod === '') {
+            return null;
+        }
+
+        $sorted = $this->sortPorthItineraryByDate($itinerary);
+
+        $idx40 = null;
+        foreach ($sorted as $i => $event) {
+            if (($event['phase'] ?? '') === self::PORTH_PHASE_IN_TRANSIT) {
+                $idx40 = $i;
+                break;
+            }
+        }
+        if ($idx40 === null) {
+            return null;
+        }
+
+        $idx50 = null;
+        $len = count($sorted);
+        for ($j = $idx40 + 1; $j < $len; $j++) {
+            if (($sorted[$j]['phase'] ?? '') === self::PORTH_PHASE_AT_DESTINATION_PORT) {
+                $idx50 = $j;
+                break;
+            }
+        }
+
+        $start = $idx40 + 1;
+        $endExclusive = $idx50 ?? $len;
+        $sliceLen = max(0, $endExclusive - $start);
+        $slice = array_slice($sorted, $start, $sliceLen);
+        if ($slice === []) {
             return null;
         }
 
         $activePort = null;
 
-        foreach ($itinerary as $event) {
+        foreach ($slice as $event) {
             $name = strtoupper(trim((string) ($event['name'] ?? '')));
             $place = strtoupper(trim((string) ($event['place'] ?? '')));
             $done = (bool) ($event['done'] ?? false);
 
-            if (!$done || $place === '' || $place === $pod) {
+            if (!$done || $place === '' || $this->porthItineraryPlaceIsDestinationPod($place, $pod, $porthPodName)) {
                 continue;
             }
 
-            if (str_contains($name, 'TRANSSHIPMENT DISCHARGED')) {
+            if ($this->itineraryEventLooksLikeTransshipmentDischarge($name)) {
                 $activePort = $place;
 
                 continue;
             }
 
-            if (
-                $activePort !== null
-                && str_contains($name, 'TRANSSHIPMENT')
-                && str_contains($name, 'POSITIONED OUT')
-                && $place === $activePort
-            ) {
-                $activePort = null;
-
-                continue;
-            }
-
-            if (str_contains($name, 'TRANSSHIPMENT LOADED') && $activePort !== null && $place === $activePort) {
+            if ($activePort !== null && $place === $activePort && $this->itineraryEventClosesTransshipmentAtPort($name)) {
                 $activePort = null;
             }
         }
 
         return $activePort;
+    }
+
+    private function porthItineraryPlaceIsDestinationPod(string $place, string $pod, ?string $porthPodName): bool
+    {
+        if ($place === $pod) {
+            return true;
+        }
+        $pn = strtoupper(trim((string) ($porthPodName ?? '')));
+        if ($pn === '') {
+            return false;
+        }
+        // p.ej. place "LA GUAIRA" vs pod UNLOC "VELAG" y nombre "La Guaira"
+        if (str_contains($pn, $place) || str_contains($place, $pn)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function itineraryEventLooksLikeTransshipmentDischarge(string $name): bool
+    {
+        return str_contains($name, 'DISCHARG');
+    }
+
+    private function itineraryEventClosesTransshipmentAtPort(string $name): bool
+    {
+        if (str_contains($name, 'TRANSSHIPMENT') && str_contains($name, 'POSITIONED OUT')) {
+            return true;
+        }
+        if (str_contains($name, 'LOADED ON BOARD')
+            || str_contains($name, 'TRANSSHIPMENT LOADED')
+            || str_contains($name, 'FULL TRANSSHIPMENT LOADED')) {
+            return true;
+        }
+        // "Load" suelto (p. ej. Hapag); evitar coincidir "LOAD" dentro de "DOWNLOAD".
+        foreach (preg_split('/\s+/', $name) as $token) {
+            if ($token === 'LOAD') {
+                return true;
+            }
+        }
+        if (str_contains($name, 'VESSEL DEPARTURE')) {
+            return true;
+        }
+        if (str_contains($name, 'DEPARTURE') && !str_contains($name, 'EMPTY TO SHIPPER')) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -704,7 +819,7 @@ class DashboardKPIService
         }
 
         $cacheKey = sprintf(
-            'dashboard_kpi:transshipment:v4:%s:%s:%s',
+            'dashboard_kpi:transshipment:v5:%s:%s:%s',
             hash('sha256', $filtersKey),
             (string) ($user->company_id ?? '0'),
             (string) $user->id
@@ -746,18 +861,18 @@ class DashboardKPIService
                 // Si ya tiene ATA, no está "actualmente" en transbordo.
                 ->whereNull('date_ata');
 
-            // PostgreSQL: filtrar por evento en el array JSON sin CAST del blob completo a TEXT (más barato en tablas grandes).
+            // PostgreSQL: al menos un hito 40_in_transit (ventana marítima Porth); el detalle es en PHP.
             if (DB::connection()->getDriverName() === 'pgsql') {
                 $query->whereRaw(
                     "jsonb_typeof(porth_itinerary::jsonb) = 'array' AND EXISTS ("
                     .'SELECT 1 FROM jsonb_array_elements(porth_itinerary::jsonb) AS t(elem) '
-                    ."WHERE COALESCE(elem->>'name', '') ILIKE ?)",
-                    ['%TRANSSHIPMENT DISCHARGED%']
+                    .'WHERE COALESCE(elem->>\'phase\', \'\') = ?)',
+                    [self::PORTH_PHASE_IN_TRANSIT]
                 );
             }
-            // Fuera de PostgreSQL aplicamos filtro LIKE para reducir dataset (evita scan completo).
+            // Fuera de PostgreSQL: filtro laxo sobre JSON serializado.
             if (DB::connection()->getDriverName() !== 'pgsql') {
-                $query->where('porth_itinerary', 'like', '%TRANSSHIPMENT DISCHARGED%');
+                $query->where('porth_itinerary', 'like', '%"' . self::PORTH_PHASE_IN_TRANSIT . '"%');
             }
 
             // Columnas mínimas + JSON de itinerario; evita hidratar el modelo completo.
@@ -806,7 +921,11 @@ class DashboardKPIService
                 }
 
                 $pod = strtoupper(trim($po->porth_pod ?? ''));
-                $transshipmentPort = $this->resolveCurrentTransshipmentPort($itinerary, $pod);
+                $transshipmentPort = $this->resolveCurrentTransshipmentPort(
+                    $itinerary,
+                    $pod,
+                    $po->porth_pod_name ?? null
+                );
 
                 if ($transshipmentPort === null) {
                     continue;
