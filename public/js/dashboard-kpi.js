@@ -1237,14 +1237,16 @@ class DashboardKPIManager {
         let rows = '';
         ports.forEach(port => {
             const value = port[valueField];
-            const portDetails = details.filter(d => d.transshipment_port === port.port);
+            // Para performance: el endpoint no envía details por defecto.
+            // Se cargan bajo demanda al expandir una fila.
+            const portDetails = details.length ? details.filter(d => d.transshipment_port === port.port) : [];
             const hasDetails = portDetails.length > 0;
             const portDisplay = port.port_label || port.port;
 
             rows += `
-                <tr class="${hasDetails ? 'expandable-row' : ''}" ${hasDetails ? 'onclick="toggleSubTable(this)"' : ''}>
+                <tr class="expandable-row" data-transshipment-port="${port.port}" onclick="toggleSubTable(this); window.dashboardKPIManager && window.dashboardKPIManager.ensureTransshipmentDetails && window.dashboardKPIManager.ensureTransshipmentDetails(this, ${isTeus ? 'true' : 'false'});">
                     <td style="padding: 12px; border: 1px solid #e5e7eb;">
-                        ${hasDetails ? '<span class="expand-icon">▶</span>' : ''}${portDisplay}
+                        <span class="expand-icon">▶</span>${portDisplay}
                     </td>
                     <td class="align-right number" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #1AAD8A;">
                         ${value.toLocaleString()}
@@ -1252,36 +1254,15 @@ class DashboardKPIManager {
                 </tr>
             `;
 
-            if (hasDetails) {
+            // placeholder subtable; se rellena al expandir
+            {
                 const subColspan = isTeus ? 2 : 2;
                 rows += `
                     <tr class="sub-table-row">
                         <td colspan="2" class="sub-table-cell" style="padding: 0;">
-                            <table class="sub-table" style="width: 100%; margin: 12px 0; border: 1px solid #e8edec; border-radius: 6px; overflow: hidden;">
-                                <thead style="background: #f0f3f2;">
-                                    <tr>
-                                        <th style="padding: 10px 12px; color: #2d3436; font-size: 12px;">Número de PO</th>
-                                        <th style="padding: 10px 12px; color: #2d3436; font-size: 12px;">Proveedor</th>
-                                        <th style="padding: 10px 12px; color: #2d3436; font-size: 12px;">Naviera</th>
-                                        <th style="padding: 10px 12px; color: #2d3436; font-size: 12px;">Puerto Destino</th>
-                                        ${isTeus ? '<th style="padding: 10px 12px; color: #2d3436; font-size: 12px; text-align: right;">TEUs</th>' : ''}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${portDetails.map(d => {
-                                        const destDisplay = d.destination_port_label || d.destination_port || '';
-                                        return `
-                                        <tr style="background: white;">
-                                            <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.order_number}</td>
-                                            <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.vendor}</td>
-                                            <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.shipping_line}</td>
-                                            <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${destDisplay}</td>
-                                            ${isTeus ? `<td class="number" style="padding: 10px 12px; font-size: 12px; color: #636e72; text-align: right;">${d.teus}</td>` : ''}
-                                        </tr>
-                                    `;
-                                    }).join('')}
-                                </tbody>
-                            </table>
+                            <div class="sub-table-loading" style="padding: 12px; color:#6b7280; display:none;">Cargando detalles...</div>
+                            <div class="sub-table-error" style="padding: 12px; color:#ff3459; display:none;">No se pudieron cargar los detalles.</div>
+                            <div class="sub-table-container"></div>
                         </td>
                     </tr>
                 `;
@@ -1290,6 +1271,71 @@ class DashboardKPIManager {
 
         tableBody.innerHTML = rows;
         this.decorateSubTables(tableBody);
+    }
+
+    /**
+     * Carga detalles de transbordo bajo demanda (por puerto).
+     */
+    async ensureTransshipmentDetails(row, isTeus) {
+        const port = row?.dataset?.transshipmentPort;
+        if (!port) return;
+        const subTableRow = row.nextElementSibling;
+        if (!subTableRow || !subTableRow.classList.contains('sub-table-row')) return;
+
+        const container = subTableRow.querySelector('.sub-table-container');
+        const loading = subTableRow.querySelector('.sub-table-loading');
+        const error = subTableRow.querySelector('.sub-table-error');
+        if (!container || !loading || !error) return;
+
+        if (container.dataset.loaded === '1') return;
+
+        loading.style.display = 'block';
+        error.style.display = 'none';
+
+        const res = await this.fetchData('/transshipment', 'GET', null, {
+            include_details: '1',
+            details_port: port,
+            details_limit: '400',
+        });
+
+        loading.style.display = 'none';
+
+        if (!res || !res.success || !res.data) {
+            error.style.display = 'block';
+            return;
+        }
+
+        const details = res.data.details || [];
+        const rowsHtml = details.map(d => {
+            const destDisplay = d.destination_port_label || d.destination_port || '';
+            return `
+                <tr style="background: white;">
+                    <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.order_number}</td>
+                    <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.vendor}</td>
+                    <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${d.shipping_line}</td>
+                    <td style="padding: 10px 12px; font-size: 12px; color: #636e72;">${destDisplay}</td>
+                    ${isTeus ? `<td class="number" style="padding: 10px 12px; font-size: 12px; color: #636e72; text-align: right;">${d.teus}</td>` : ''}
+                </tr>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <table class="sub-table" style="width: 100%; margin: 12px 0; border: 1px solid #e8edec; border-radius: 6px; overflow: hidden;">
+                <thead style="background: #f0f3f2;">
+                    <tr>
+                        <th style="padding: 10px 12px; color: #2d3436; font-size: 12px;">Número de PO</th>
+                        <th style="padding: 10px 12px; color: #2d3436; font-size: 12px;">Proveedor</th>
+                        <th style="padding: 10px 12px; color: #2d3436; font-size: 12px;">Naviera</th>
+                        <th style="padding: 10px 12px; color: #2d3436; font-size: 12px;">Puerto Destino</th>
+                        ${isTeus ? '<th style="padding: 10px 12px; color: #2d3436; font-size: 12px; text-align: right;">TEUs</th>' : ''}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rowsHtml || `<tr><td colspan="${isTeus ? 5 : 4}" style="padding:12px;color:#6b7280;">Sin detalles.</td></tr>`}
+                </tbody>
+            </table>
+        `;
+        container.dataset.loaded = '1';
     }
 
     renderATATable(data, tableHead, tableBody, isTeus) {

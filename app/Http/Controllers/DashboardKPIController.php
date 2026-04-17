@@ -96,6 +96,10 @@ class DashboardKPIController extends Controller
     public function transshipment(Request $request): JsonResponse
     {
         $filters = $this->extractFilters($request);
+        // Para performance: por defecto no enviar detalles; se piden bajo demanda.
+        $filters['include_details'] = $request->boolean('include_details', false);
+        $filters['details_port'] = $request->input('details_port');
+        $filters['details_limit'] = (int) $request->input('details_limit', 400);
         $data = $this->kpiService->getPOsInTransshipment($filters);
 
         return response()->json([

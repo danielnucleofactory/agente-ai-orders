@@ -1,36 +1,34 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Livewire\Forms\ShowPucharseOrder;
-use App\Livewire\Forms\PucharseOrderDetail;
-use App\Livewire\Settings\Index;
-use App\Livewire\Settings\Notifications;
-use App\Livewire\Settings\Password;
-use App\Http\Controllers\VendorController;
-use App\Livewire\Settings\History;
-use App\Livewire\Settings\Roles;
-use App\Livewire\Settings\RoleEdit;
-use App\Livewire\Forms\PucharseOrderConsolidateDetail;
-use App\Livewire\Settings\ActiveSessions;
-use App\Livewire\Settings\Kanban;
-use App\Livewire\Settings\Profile;
-use App\Livewire\Settings\Stages;
-use App\Livewire\Settings\Users;
-use App\Livewire\Settings\RoleCreate;
-use App\Livewire\Settings\UserCreate;
-use App\Livewire\Settings\Sessions;
-use App\Livewire\Settings\ApiTokens;
 use App\Http\Controllers\AuthorizationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardKPIController;
 use App\Http\Controllers\ForecastController;
-use Illuminate\Support\Facades\Auth;
+use App\Livewire\Forms\PucharseOrderConsolidateDetail;
+use App\Livewire\Forms\PucharseOrderDetail;
+use App\Livewire\Forms\ShowPucharseOrder;
+use App\Livewire\Settings\ActiveSessions;
+use App\Livewire\Settings\ApiTokens;
+use App\Livewire\Settings\History;
+use App\Livewire\Settings\Index;
+use App\Livewire\Settings\Kanban;
+use App\Livewire\Settings\Notifications;
+use App\Livewire\Settings\Password;
+use App\Livewire\Settings\RoleEdit;
+use App\Livewire\Settings\Roles;
+use App\Livewire\Settings\Sessions;
+use App\Livewire\Settings\Stages;
+use App\Livewire\Settings\UserCreate;
+use App\Livewire\Settings\Users;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     if (Auth::check()) {
         return redirect()->route('dashboard');
     }
+
     return redirect()->route('login');
 });
 
@@ -40,16 +38,16 @@ Route::middleware(['auth', 'verified', 'permission:has_view_dashboard'])->group(
     Route::view('dashboard', 'dashboard-kpi')->name('dashboard');
     // Mantener rutas del dashboard antiguo por compatibilidad (si se necesitan)
     Route::get('dashboard/data', [DashboardController::class, 'getData'])->name('dashboard.data');
-    Route::get('dashboard/export', [DashboardController::class, 'export'])->name('dashboard.export');
+    Route::match(['get', 'post'], 'dashboard/export', [DashboardController::class, 'export'])->name('dashboard.export');
     // Mantener ruta dashboard-kpi como alias
     Route::view('dashboard-kpi', 'dashboard-kpi')->name('dashboard.kpi');
-    
+
     // Dashboard KPI API endpoints (para consumir desde JavaScript)
     Route::prefix('dashboard-kpi/api')->group(function () {
         Route::get('/', [DashboardKPIController::class, 'index'])->name('dashboard.kpi.api');
         Route::get('/filter-options', [DashboardKPIController::class, 'getFilterOptions'])->name('dashboard.kpi.filter-options');
         Route::get('/kpi-summary', [DashboardKPIController::class, 'getKPISummary'])->name('dashboard.kpi.summary');
-        
+
         // Vista Tendencia - Cantidad de PO
         Route::get('/pos-by-stage', [DashboardKPIController::class, 'posByStage'])->name('dashboard.kpi.pos-by-stage');
         Route::get('/pos-delay-cl', [DashboardKPIController::class, 'posDelayCL'])->name('dashboard.kpi.pos-delay-cl');
@@ -58,19 +56,19 @@ Route::middleware(['auth', 'verified', 'permission:has_view_dashboard'])->group(
         Route::get('/transshipment', [DashboardKPIController::class, 'transshipment'])->name('dashboard.kpi.transshipment');
         Route::get('/pos-with-ata', [DashboardKPIController::class, 'posWithATA'])->name('dashboard.kpi.pos-with-ata');
         Route::get('/transit-time', [DashboardKPIController::class, 'transitTime'])->name('dashboard.kpi.transit-time');
-        
+
         // Vista Comparativo
         Route::post('/compare-atd', [DashboardKPIController::class, 'compareATD'])->name('dashboard.kpi.compare-atd');
         Route::post('/compare-ata', [DashboardKPIController::class, 'compareATA'])->name('dashboard.kpi.compare-ata');
         Route::post('/compare-delay-cl', [DashboardKPIController::class, 'compareDelayCL'])->name('dashboard.kpi.compare-delay-cl');
         Route::post('/compare-advance-cl', [DashboardKPIController::class, 'compareAdvanceCL'])->name('dashboard.kpi.compare-advance-cl');
-        
+
         // Vista PO vs TEUs
         Route::get('/po-vs-teus/stage', [DashboardKPIController::class, 'poVsTeusByStage'])->name('dashboard.kpi.po-vs-teus-stage');
         Route::get('/po-vs-teus/period', [DashboardKPIController::class, 'poVsTeusByPeriod'])->name('dashboard.kpi.po-vs-teus-period');
         Route::get('/po-vs-teus/vendor', [DashboardKPIController::class, 'poVsTeusByVendor'])->name('dashboard.kpi.po-vs-teus-vendor');
         Route::get('/po-vs-teus/shipping-line', [DashboardKPIController::class, 'poVsTeusByShippingLine'])->name('dashboard.kpi.po-vs-teus-shipping-line');
-        
+
         // Vista Proyección
         Route::get('/future-arrivals', [DashboardKPIController::class, 'futureArrivals'])->name('dashboard.kpi.future-arrivals');
     });
@@ -262,7 +260,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('settings/api-tokens', ApiTokens::class)
         ->name('settings.api-tokens');
 
-    Route::get('settings/profile', function() {
+    Route::get('settings/profile', function () {
         return view('profile.index');
     })->middleware('permission:has_view_profile')->name('settings.profile');
 
@@ -302,6 +300,7 @@ Route::middleware(['auth'])->group(function () {
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect('/')->with('message', 'Has cerrado sesión correctamente.');
     })->name('logout-session');
 });
@@ -317,7 +316,7 @@ Route::middleware(['auth'])->group(function () {
     Route::view('historical-data', 'historical-data.index')
         ->middleware('permission:has_view_historical_data')
         ->name('historical-data.index');
-    
+
     Route::get('historical-data/export', [\App\Http\Controllers\HistoricalDataController::class, 'export'])
         ->middleware('permission:has_view_historical_data')
         ->name('historical-data.export');
@@ -353,4 +352,4 @@ Route::get('/po-confirmation-test', function () {
     return view('po-confirmation-test');
 })->name('po.confirmation.test');
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

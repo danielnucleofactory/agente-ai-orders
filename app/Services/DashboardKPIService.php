@@ -29,6 +29,37 @@ class DashboardKPIService
     }
 
     /**
+     * Normaliza filtros para caché:
+     * - Elimina nulos / vacíos / false
+     * - Ordena keys para estabilidad
+     *
+     * Esto evita "cache miss" cuando distintos callers mandan el mismo set lógico de filtros
+     * pero con keys extra o valores vacíos (p.ej. export vs dashboard-kpi/api).
+     *
+     * @param array<string, mixed> $filters
+     * @return array<string, mixed>
+     */
+    protected function normalizeFiltersForCache(array $filters): array
+    {
+        $normalized = [];
+        foreach ($filters as $k => $v) {
+            if ($v === null || $v === '' || $v === false) {
+                continue;
+            }
+            if (is_array($v)) {
+                $v = array_values(array_filter($v, static fn ($x) => $x !== null && $x !== '' && $x !== false));
+                if ($v === []) {
+                    continue;
+                }
+            }
+            $normalized[$k] = $v;
+        }
+
+        ksort($normalized);
+        return $normalized;
+    }
+
+    /**
      * Código UN/LOC con nombre legible entre paréntesis (maestro CSV / traducción Porth).
      */
     protected function formatUnlocWithPortName(string $unloc, ?string $porthNameFallback = null): string
@@ -602,31 +633,11 @@ class DashboardKPIService
             return null;
         }
 
-        $indexed = [];
-        foreach ($itinerary as $idx => $event) {
-            $dateStr = $event['date'] ?? null;
-            $ts = $dateStr ? strtotime((string) $dateStr) : false;
-            $indexed[] = [
-                'i' => $idx,
-                'ts' => $ts !== false ? $ts : PHP_INT_MAX,
-                'event' => $event,
-            ];
-        }
-
-        usort($indexed, function ($a, $b) {
-            if ($a['ts'] === $b['ts']) {
-                return $a['i'] <=> $b['i'];
-            }
-
-            return $a['ts'] <=> $b['ts'];
-        });
-
         $activePort = null;
 
-        foreach ($indexed as $row) {
-            $event = $row['event'];
-            $name = strtoupper(trim($event['name'] ?? ''));
-            $place = strtoupper(trim($event['place'] ?? ''));
+        foreach ($itinerary as $event) {
+            $name = strtoupper(trim((string) ($event['name'] ?? '')));
+            $place = strtoupper(trim((string) ($event['place'] ?? '')));
             $done = (bool) ($event['done'] ?? false);
 
             if (!$done || $place === '' || $place === $pod) {
@@ -677,19 +688,50 @@ class DashboardKPIService
             return $this->computePOsInTransshipment($filters);
         }
 
-        $filtersKey = json_encode($filters);
+        // No contaminar caché con payloads grandes (details). El caché es para la vista base.
+        $includeDetails = (bool) ($filters['include_details'] ?? false);
+        if ($includeDetails) {
+            // Details bajo demanda: no cachear el resultado completo (puede ser grande y degradar la DB cache).
+            return $this->computePOsInTransshipment($filters);
+        }
+
+        $cacheFilters = $this->normalizeFiltersForCache($filters);
+        unset($cacheFilters['include_details'], $cacheFilters['details_port'], $cacheFilters['details_limit']);
+
+        $filtersKey = json_encode($cacheFilters);
         if ($filtersKey === false) {
             $filtersKey = '';
         }
 
         $cacheKey = sprintf(
-            'dashboard_kpi:transshipment:v3:%s:%s:%s',
+            'dashboard_kpi:transshipment:v4:%s:%s:%s',
             hash('sha256', $filtersKey),
             (string) ($user->company_id ?? '0'),
             (string) $user->id
         );
 
-        return Cache::remember($cacheKey, now()->addSeconds($ttl), fn () => $this->computePOsInTransshipment($filters));
+        $startedAt = microtime(true);
+        $hit = Cache::has($cacheKey);
+
+        $result = Cache::remember(
+            $cacheKey,
+            now()->addSeconds($ttl),
+            function () use ($filters) {
+                // Forzar que la ruta cacheada jamás genere details.
+                $filters['include_details'] = false;
+                unset($filters['details_port'], $filters['details_limit']);
+
+                return $this->computePOsInTransshipment($filters);
+            }
+        );
+
+        Log::info('DashboardKPI transshipment cache', [
+            'hit' => $hit,
+            'ttl_seconds' => $ttl,
+            'elapsed_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+        ]);
+
+        return $result;
     }
 
     /**
@@ -700,7 +742,9 @@ class DashboardKPIService
         try {
             $query = $this->getBaseQuery($filters)
                 ->whereNotNull('porth_itinerary')
-                ->whereNotNull('porth_pod');
+                ->whereNotNull('porth_pod')
+                // Si ya tiene ATA, no está "actualmente" en transbordo.
+                ->whereNull('date_ata');
 
             // PostgreSQL: filtrar por evento en el array JSON sin CAST del blob completo a TEXT (más barato en tablas grandes).
             if (DB::connection()->getDriverName() === 'pgsql') {
@@ -711,7 +755,10 @@ class DashboardKPIService
                     ['%TRANSSHIPMENT DISCHARGED%']
                 );
             }
-            // Fuera de PostgreSQL no se aplica filtro SQL al JSON (comportamiento previo del servicio).
+            // Fuera de PostgreSQL aplicamos filtro LIKE para reducir dataset (evita scan completo).
+            if (DB::connection()->getDriverName() !== 'pgsql') {
+                $query->where('porth_itinerary', 'like', '%TRANSSHIPMENT DISCHARGED%');
+            }
 
             // Columnas mínimas + JSON de itinerario; evita hidratar el modelo completo.
             $query->select([
@@ -748,6 +795,9 @@ class DashboardKPIService
             $totalTEUs = 0;
             $byPort = [];
             $details = [];
+            $includeDetails = (bool) ($filters['include_details'] ?? false);
+            $detailsPort = is_string($filters['details_port'] ?? null) ? strtoupper(trim((string) $filters['details_port'])) : null;
+            $detailsLimit = max(0, (int) ($filters['details_limit'] ?? 400));
 
             foreach ($pos as $po) {
                 $itinerary = $po->porth_itinerary;
@@ -772,16 +822,24 @@ class DashboardKPIService
                 $byPort[$transshipmentPort]['count']++;
                 $byPort[$transshipmentPort]['teus'] += $teus;
 
-                $details[] = [
-                    'order_number' => $po->order_number,
-                    'vendor'       => $po->vendor->name ?? 'N/A',
-                    'shipping_line' => $po->shipping_line ?? 'N/A',
-                    'transshipment_port' => $transshipmentPort,
-                    'transshipment_port_label' => $label($transshipmentPort),
-                    'destination_port'   => $pod,
-                    'destination_port_label' => $label($pod, $po->porth_pod_name),
-                    'teus' => round($teus, 2),
-                ];
+                if ($includeDetails) {
+                    if ($detailsPort !== null && $detailsPort !== $transshipmentPort) {
+                        continue;
+                    }
+                    if ($detailsLimit > 0 && count($details) >= $detailsLimit) {
+                        continue;
+                    }
+                    $details[] = [
+                        'order_number' => $po->order_number,
+                        'vendor'       => $po->vendor->name ?? 'N/A',
+                        'shipping_line' => $po->shipping_line ?? 'N/A',
+                        'transshipment_port' => $transshipmentPort,
+                        'transshipment_port_label' => $label($transshipmentPort),
+                        'destination_port'   => $pod,
+                        'destination_port_label' => $label($pod, $po->porth_pod_name),
+                        'teus' => round($teus, 2),
+                    ];
+                }
             }
 
             $portData = [];
@@ -1024,8 +1082,11 @@ class DashboardKPIService
     /**
      * Helper para clasificar días de tránsito en rangos
      */
-    protected function getTimeRange(int $days): string
+    protected function getTimeRange(int|float $days): string
     {
+        // En algunos escenarios diff/aggregations pueden producir float; normalizamos para clasificar.
+        $days = (int) round($days);
+
         if ($days <= 10) return '0-10';
         if ($days <= 20) return '11-20';
         if ($days <= 30) return '21-30';

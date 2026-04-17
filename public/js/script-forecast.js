@@ -94,7 +94,7 @@ class ForecastManager {
         if (vendorGroup && filterOptions.vendors) {
             const optionsBox = vendorGroup.querySelector('.multi-select-options');
             while (optionsBox.firstChild) optionsBox.removeChild(optionsBox.firstChild);
-            sortByLabelEs(filterOptions.vendors, (v) => String(v.name ? ? '')).forEach(vendor => {
+            sortByLabelEs(filterOptions.vendors, (v) => String(v.name ?? '')).forEach(vendor => {
                 const label = document.createElement('label');
                 label.className = 'multi-select-option';
                 label.innerHTML = `<input type="checkbox" value="${vendor.id}"> ${vendor.name}`;
@@ -107,7 +107,7 @@ class ForecastManager {
         if (productGroup && filterOptions.products) {
             const optionsBox = productGroup.querySelector('.multi-select-options');
             while (optionsBox.firstChild) optionsBox.removeChild(optionsBox.firstChild);
-            sortByLabelEs(filterOptions.products, (p) => String(p.name ? ? '')).forEach(product => {
+            sortByLabelEs(filterOptions.products, (p) => String(p.name ?? '')).forEach(product => {
                 const label = document.createElement('label');
                 label.className = 'multi-select-option';
                 label.innerHTML = `<input type="checkbox" value="${product.id}"> ${product.name} (${product.material_id})`;
@@ -125,7 +125,7 @@ class ForecastManager {
                 materials = Object.values(materials);
             }
             if (materials && Array.isArray(materials)) {
-                sortByLabelEs(materials, (m) => String(m ? ? '')).forEach(material => {
+                sortByLabelEs(materials, (m) => String(m ?? '')).forEach(material => {
                     const label = document.createElement('label');
                     label.className = 'multi-select-option';
                     label.innerHTML = `<input type="checkbox" value="${material}"> ${material}`;
@@ -308,8 +308,8 @@ class ForecastManager {
         console.log('Vendor clicked:', vendorName);
 
         // Find vendor ID from filter options
-        const filterOptions = window.forecastData ? .filterOptions;
-        if (!filterOptions ? .vendors) return;
+        const filterOptions = window.forecastData?.filterOptions;
+        if (!filterOptions?.vendors) return;
 
         const vendor = filterOptions.vendors.find(v => v.name === vendorName);
         if (!vendor) {
@@ -771,8 +771,8 @@ class ForecastManager {
             // Apply opacity effect based on vendor filters (using dashboard principal logic)
             let backgroundColors = colors.slice();
             if (this.activeFilters.vendor_id.length > 0) {
-                const filterOptions = window.forecastData ? .filterOptions;
-                if (filterOptions ? .vendors) {
+                const filterOptions = window.forecastData?.filterOptions;
+                if (filterOptions?.vendors) {
                     backgroundColors = data.map((item, index) => {
                         const vendor = filterOptions.vendors.find(v => v.name === item.name);
                         const isSelected = vendor && this.activeFilters.vendor_id.includes(vendor.id);
@@ -835,8 +835,8 @@ class ForecastManager {
 
                 // Apply opacity effect to legend based on vendor filters (using dashboard principal logic)
                 if (this.activeFilters.vendor_id.length > 0) {
-                    const filterOptions = window.forecastData ? .filterOptions;
-                    if (filterOptions ? .vendors) {
+                    const filterOptions = window.forecastData?.filterOptions;
+                    if (filterOptions?.vendors) {
                         const vendor = filterOptions.vendors.find(v => v.name === item.name);
                         const isSelected = vendor && this.activeFilters.vendor_id.includes(vendor.id);
                         vendorItem.style.opacity = isSelected ? '1' : '0.3';
