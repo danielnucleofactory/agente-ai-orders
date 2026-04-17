@@ -259,6 +259,8 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
             }
         };
 
+        $purchaseIncotermValue = $po->price_incoterm ?? $po->payment_terms ?? '';
+
         return [
             $po->kanbanStatus->name ?? '',
             $po->order_number ?? '',
@@ -267,7 +269,7 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
             $date($po->created_at),
             $po->currency ?? '',
             $po->incoterms ?? '',
-            $po->payment_terms ?? '',
+            $purchaseIncotermValue,
             $po->logistics_incoterm ?? '',
             $po->departure_port ?? '',
             $po->arrival_port ?? '',

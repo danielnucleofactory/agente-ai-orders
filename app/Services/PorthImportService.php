@@ -138,7 +138,8 @@ class PorthImportService
 
     /**
      * Actualiza una PurchaseOrder con datos de Porth.
-     * Porth SIEMPRE sobrescribe los campos de negocio (fechas, puertos, naviera, etc.)
+     * Porth sobrescribe los campos de negocio (fechas, puertos, naviera, etc.),
+     * salvo date_eta_initial: solo se asigna desde firstEta si aún está vacía en la PO.
      * Los cambios quedan registrados en el historial con el usuario "Next Orders".
      */
     protected function updatePurchaseOrder(PurchaseOrder $po, array $data): void
@@ -161,16 +162,20 @@ class PorthImportService
             $fieldsToUpdate[$field] = $value;
         }
         
-        // Fechas principales desde payload - siempre sobrescribir
+        // Fechas principales desde payload (ETA inicial: solo si aún no hay valor en la PO)
         $payloadValues = $this->helper->buildPurchaseOrderPayloadValues($data);
         $fieldsMap = $this->helper->getPurchaseOrderFieldsMap();
-        
+
         foreach ($fieldsMap as $payloadKey => $poField) {
             $value = $payloadValues[$payloadKey] ?? null;
-            if ($value !== null) {
-                $originalValues[$poField] = $po->$poField;
-                $fieldsToUpdate[$poField] = $value;
+            if ($value === null) {
+                continue;
             }
+            if ($poField === 'date_eta_initial' && $this->purchaseOrderEtaInitialAlreadySet($po)) {
+                continue;
+            }
+            $originalValues[$poField] = $po->$poField;
+            $fieldsToUpdate[$poField] = $value;
         }
         
         // Campos de maestros traducidos - siempre sobrescribir
@@ -505,6 +510,14 @@ class PorthImportService
             'last_porth_sync_at' => now(),
             'freight_type' => $this->helper->getTranslatedFreightType($data['freightType'] ?? null),
         ];
+    }
+
+    /**
+     * Si la PO ya tiene ETA inicial, Porth no debe volver a escribir date_eta_initial.
+     */
+    private function purchaseOrderEtaInitialAlreadySet(PurchaseOrder $po): bool
+    {
+        return filled($po->date_eta_initial);
     }
 
     /**
