@@ -1222,6 +1222,7 @@ class DashboardKPIManager {
 
         const ports = data.by_port || [];
         const details = data.details || [];
+        const summary = data.summary || {};
 
         if (ports.length === 0) {
             tableBody.innerHTML = `
@@ -1268,6 +1269,19 @@ class DashboardKPIManager {
                 `;
             }
         });
+
+        const totalValue = isTeus ? summary.total_teus : summary.total_pos;
+        const totalFallback = ports.reduce((acc, p) => acc + (Number(p[valueField]) || 0), 0);
+        const totalDisplay = totalValue != null ? totalValue : totalFallback;
+
+        rows += `
+            <tr style="background-color: #f8faf9; font-weight: 700;">
+                <td style="padding: 12px; border: 1px solid #e5e7eb; color: #374151;">Total</td>
+                <td class="align-right number" style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; color: #1AAD8A;">
+                    ${(totalDisplay || 0).toLocaleString()}
+                </td>
+            </tr>
+        `;
 
         tableBody.innerHTML = rows;
         this.decorateSubTables(tableBody);
