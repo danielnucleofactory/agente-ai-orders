@@ -176,7 +176,62 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         overlay.style.display = 'flex';
     };
+    const hideNavLoadingOverlay = () => {
+        const overlay = document.getElementById('nav-loading-overlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+    };
     window.showNavLoadingOverlay = showNavLoadingOverlay;
+
+    const isPurchaseOrdersRoute = (urlString) => {
+        try {
+            const url = new URL(urlString, window.location.origin);
+            if (url.origin !== window.location.origin) return false;
+            return url.pathname === '/purchase-orders' || url.pathname.startsWith('/purchase-orders/');
+        } catch (e) {
+            return false;
+        }
+    };
+
+    // Breadcrumbs, links internos u otros accesos (además del sidebar explícito).
+    document.addEventListener('click', (event) => {
+        const link = event.target?.closest?.('a[href]');
+        if (!link) return;
+        if (link.dataset.navLoading === 'true') return; // ya tiene handler específico
+        if (event.defaultPrevented) return;
+        if (event.button !== 0) return; // solo click izquierdo
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        if (link.target && link.target !== '_self') return;
+        if (link.hasAttribute('download')) return;
+
+        const href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+        if (!isPurchaseOrdersRoute(href)) return;
+
+        showNavLoadingOverlay('Cargando tablero de órdenes...');
+    }, true);
+
+    // Botones atrás/adelante del navegador.
+    window.addEventListener('popstate', () => {
+        if (isPurchaseOrdersRoute(window.location.href)) {
+            showNavLoadingOverlay('Cargando tablero de órdenes...');
+        }
+    });
+
+    // Cuando se vuelve con atrás/adelante y el destino es Kanban de POs, mostrar feedback
+    // aunque la navegación provenga del historial del navegador (incluye bfcache).
+    window.addEventListener('pageshow', (event) => {
+        const navigationEntry = performance.getEntriesByType('navigation')[0];
+        const isBackForward = event.persisted || navigationEntry?.type === 'back_forward';
+        if (!isBackForward) return;
+        if (!isPurchaseOrdersRoute(window.location.href)) return;
+
+        showNavLoadingOverlay('Cargando tablero de órdenes...');
+        setTimeout(() => {
+            hideNavLoadingOverlay();
+        }, 900);
+    });
 
     document.querySelectorAll('a[data-nav-loading="true"]').forEach((link) => {
         link.addEventListener('click', (event) => {
