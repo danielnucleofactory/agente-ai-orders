@@ -132,6 +132,67 @@ document.addEventListener('alpine:init', () => {
 // Sidebar
 // =============================================================================
 document.addEventListener('DOMContentLoaded', function () {
+    const ensureNavLoadingOverlay = () => {
+        let overlay = document.getElementById('nav-loading-overlay');
+        if (overlay) {
+            return overlay;
+        }
+
+        overlay = document.createElement('div');
+        overlay.id = 'nav-loading-overlay';
+        overlay.style.cssText = [
+            'position: fixed',
+            'inset: 0',
+            'z-index: 9999',
+            'display: none',
+            'align-items: center',
+            'justify-content: center',
+            'background: rgba(247,247,247,0.92)',
+            'backdrop-filter: blur(1px)',
+        ].join(';');
+        overlay.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 20px;border-radius:10px;background:#fff;border:1px solid #e5e7eb;box-shadow:0 8px 24px rgba(0,0,0,.08);">
+                <div style="width:28px;height:28px;border:3px solid #d1fae5;border-top-color:#1AAD8A;border-radius:9999px;animation:navLoaderSpin .8s linear infinite;"></div>
+                <p id="nav-loading-overlay-message" style="margin:0;color:#374151;font-size:13px;font-weight:600;">Cargando...</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        if (!document.getElementById('nav-loading-overlay-style')) {
+            const style = document.createElement('style');
+            style.id = 'nav-loading-overlay-style';
+            style.textContent = '@keyframes navLoaderSpin { to { transform: rotate(360deg); } }';
+            document.head.appendChild(style);
+        }
+
+        return overlay;
+    };
+
+    const showNavLoadingOverlay = (message) => {
+        const overlay = ensureNavLoadingOverlay();
+        const messageEl = document.getElementById('nav-loading-overlay-message');
+        if (messageEl) {
+            messageEl.textContent = message || 'Cargando...';
+        }
+        overlay.style.display = 'flex';
+    };
+    window.showNavLoadingOverlay = showNavLoadingOverlay;
+
+    document.querySelectorAll('a[data-nav-loading="true"]').forEach((link) => {
+        link.addEventListener('click', (event) => {
+            const href = link.getAttribute('href');
+            if (!href || href.startsWith('#')) {
+                return;
+            }
+
+            event.preventDefault();
+            showNavLoadingOverlay(link.dataset.navLoadingMessage);
+            setTimeout(() => {
+                window.location.href = href;
+            }, 30);
+        });
+    });
+
     const sidebar = document.querySelector('.main-sidebar');
     if (sidebar) {
         if (localStorage.getItem('sidebarExpanded') === 'true') {

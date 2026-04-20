@@ -68,7 +68,11 @@
 
             @if(auth()->user()->can('has_view_orders') || auth()->user()->can('has_create_orders') || auth()->user()->can('has_view_products') || auth()->user()->can('has_view_forecast'))
             <li>
-                <x-sidebar-dropdown active="{{ request()->is('purchase-orders') || request()->is('purchase-orders/*') }}" route="{{ route('purchase-orders.index') }}">
+                <x-sidebar-dropdown
+                    active="{{ request()->is('purchase-orders') || request()->is('purchase-orders/*') }}"
+                    route="{{ route('purchase-orders.index') }}"
+                    loadingMessage="Cargando tablero de órdenes..."
+                >
                     <x-slot:icon>
                         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="18" viewBox="0 0 16 20 "
                             fill="none">
@@ -101,7 +105,12 @@
 
                         @can('has_view_orders')
                         <li>
-                            <x-sidebar-dropdown-item href="{{ route('purchase-orders.index') }}" :active="request()->routeIs('purchase-orders.index')">
+                            <x-sidebar-dropdown-item
+                                href="{{ route('purchase-orders.index') }}"
+                                :active="request()->routeIs('purchase-orders.index')"
+                                data-nav-loading="true"
+                                data-nav-loading-message="Cargando tablero de órdenes..."
+                            >
                                 Seguimiento Órdenes
                             </x-sidebar-dropdown-item>
                         </li>

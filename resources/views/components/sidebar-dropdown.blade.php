@@ -1,4 +1,4 @@
-@props(['active' => false, 'route' => ''])
+@props(['active' => false, 'route' => '', 'loadingMessage' => ''])
 
 @php
     $path = parse_url($route, PHP_URL_PATH);
@@ -12,6 +12,9 @@
             this.open = !this.open;
         } else {
             // Si el sidebar no está expandido, redirigir a /$route
+            if ('{{ $loadingMessage }}' && typeof window.showNavLoadingOverlay === 'function') {
+                window.showNavLoadingOverlay('{{ $loadingMessage }}');
+            }
             window.location.href = '{{ $path }}';
             document.querySelector('.main-sidebar').classList.toggle('sidebar-expanded'); localStorage.setItem('sidebarExpanded', document.querySelector('.main-sidebar').classList.contains('sidebar-expanded'));
         }
