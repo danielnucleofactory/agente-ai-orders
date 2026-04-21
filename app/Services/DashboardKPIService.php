@@ -681,39 +681,9 @@ class DashboardKPIService
             return null;
         }
 
-        $sorted = $this->sortPorthItineraryByDate($itinerary);
-
-        $idx40 = null;
-        foreach ($sorted as $i => $event) {
-            if (($event['phase'] ?? '') === self::PORTH_PHASE_IN_TRANSIT) {
-                $idx40 = $i;
-                break;
-            }
-        }
-        if ($idx40 === null) {
-            return null;
-        }
-
-        $idx50 = null;
-        $len = count($sorted);
-        for ($j = $idx40 + 1; $j < $len; $j++) {
-            if (($sorted[$j]['phase'] ?? '') === self::PORTH_PHASE_AT_DESTINATION_PORT) {
-                $idx50 = $j;
-                break;
-            }
-        }
-
-        $start = $idx40 + 1;
-        $endExclusive = $idx50 ?? $len;
-        $sliceLen = max(0, $endExclusive - $start);
-        $slice = array_slice($sorted, $start, $sliceLen);
-        if ($slice === []) {
-            return null;
-        }
-
         $activePort = null;
 
-        foreach ($slice as $event) {
+        foreach ($itinerary as $event) {
             $name = strtoupper(trim((string) ($event['name'] ?? '')));
             $place = strtoupper(trim((string) ($event['place'] ?? '')));
             $done = (bool) ($event['done'] ?? false);
@@ -819,7 +789,7 @@ class DashboardKPIService
         }
 
         $cacheKey = sprintf(
-            'dashboard_kpi:transshipment:v5:%s:%s:%s',
+            'dashboard_kpi:transshipment:v4:%s:%s:%s',
             hash('sha256', $filtersKey),
             (string) ($user->company_id ?? '0'),
             (string) $user->id
@@ -870,9 +840,9 @@ class DashboardKPIService
                     [self::PORTH_PHASE_IN_TRANSIT]
                 );
             }
-            // Fuera de PostgreSQL: filtro laxo sobre JSON serializado.
+            // Fuera de PostgreSQL aplicamos filtro LIKE para reducir dataset (evita scan completo).
             if (DB::connection()->getDriverName() !== 'pgsql') {
-                $query->where('porth_itinerary', 'like', '%"' . self::PORTH_PHASE_IN_TRANSIT . '"%');
+                $query->where('porth_itinerary', 'like', '%TRANSSHIPMENT DISCHARGED%');
             }
 
             // Columnas mínimas + JSON de itinerario; evita hidratar el modelo completo.

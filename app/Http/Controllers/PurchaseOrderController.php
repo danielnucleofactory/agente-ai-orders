@@ -1852,7 +1852,7 @@ class PurchaseOrderController extends Controller
 
     public function index( Request $request ): JsonResponse
     {
-        $query = PurchaseOrder::with(['vendor', 'products']);
+        $query = PurchaseOrder::with(['vendor', 'products', 'comments']);
 
         // Si viene con filtros (query parameters), aplicarlos
         if ($request->has('order_number') || $request->has('company')) {
