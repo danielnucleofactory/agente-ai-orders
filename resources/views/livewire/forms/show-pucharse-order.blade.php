@@ -264,10 +264,6 @@
                     <p class="text-lg">{{ $purchaseOrder->date_atd ? formatDateOnly($purchaseOrder->date_atd) : 'N/A' }}</p>
                 </div>
                 <div>
-                    <p class="text-sm font-medium text-gray-500">ETA</p>
-                    <p class="text-lg">{{ $purchaseOrder->date_eta ? formatDateOnly($purchaseOrder->date_eta) : 'N/A' }}</p>
-                </div>
-                <div>
                     <p class="text-sm font-medium text-gray-500">ETA Inicial</p>
                     <p class="text-lg">{{ $purchaseOrder->date_eta_initial ? formatDateOnly($purchaseOrder->date_eta_initial) : 'N/A' }}</p>
                 </div>

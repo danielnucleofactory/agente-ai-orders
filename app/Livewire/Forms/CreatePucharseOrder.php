@@ -1899,38 +1899,63 @@ class CreatePucharseOrder extends Component
                 'date_eta_initial' => $this->date_eta_initial
             ]);
 
-            // Validación para actualización
+            // Validación alineada con creación + fechas de carga lista
+            $companyId = auth()->user()->company_id ?? 1;
+            $allowedIncoterms = implode(',', array_keys($this->tiposIncotermArray));
+
             $this->validate([
+                'order_number' => [
+                    'required',
+                    'string',
+                    'unique:purchase_orders,order_number,' . $id . ',id,company_id,' . $companyId,
+                ],
+                'trading_company' => 'required|string',
+                'incoterms' => "required|string|in:$allowedIncoterms",
+                'logistics_incoterm' => "required|string|in:$allowedIncoterms",
+                'price_incoterm' => "required|string|in:$allowedIncoterms",
+                'vendor_id' => 'required',
+                'currency' => 'required|string',
+                'category' => 'nullable|string',
+                'factory_proforma_number' => 'nullable|string',
+                'route_label' => 'required|string',
                 'date_theorical_load' => [
-                    'nullable', // Cambiar a nullable para evitar errores si no está sincronizado
+                    'required',
+                    'date',
+                    function ($attribute, $value, $fail) {
+                        $emisionDate = $this->emision_date_po;
+
+                        if ($emisionDate && $value < $emisionDate) {
+                            $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                        }
+                    },
+                ],
+                'date_variable_date' => [
+                    'nullable',
                     'date',
                     function ($attribute, $value, $fail) {
                         if ($value) {
                             $emisionDate = $this->emision_date_po;
 
                             if ($emisionDate && $value < $emisionDate) {
-                                $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                                $fail('La fecha de carga lista variable no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
                             }
                         }
-                    }
+                    },
                 ],
-            'date_variable_date' => [
-                'nullable',
-                'date',
-                function ($attribute, $value, $fail) {
-                    if ($value) {
-                        $emisionDate = $this->emision_date_po;
-
-                        if ($emisionDate && $value < $emisionDate) {
-                            $fail('La fecha de carga lista variable no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
-                        }
-                    }
-                }
-            ],
-            'carga_lista_validada' => 'nullable|boolean',
-        ], [
-            'date_theorical_load.required' => 'La fecha de Carga Lista Teorica es requerida',
-        ]);
+                'carga_lista_validada' => 'nullable|boolean',
+                'reason' => 'nullable|string',
+            ], [
+                'order_number.required' => 'El número de orden es requerido',
+                'order_number.unique' => 'Este número de orden ya existe. Por favor, use un número diferente.',
+                'trading_company.required' => 'El campo Cliente es requerido',
+                'incoterms.required' => 'El incoterm de compra es requerido',
+                'logistics_incoterms.required' => 'El incoterms de logística es requerido',
+                'price_incoterm.required' => 'El incoterm de precio es requerido',
+                'vendor_id.required' => 'El vendor es requerido',
+                'currency.required' => 'La moneda es requerida',
+                'route_label.required' => 'La ruta es requerida',
+                'date_theorical_load.required' => 'La fecha de Carga Lista Teorica es requerida',
+            ]);
 
         $this->computeDateDiffs();
 
@@ -2356,6 +2381,8 @@ class CreatePucharseOrder extends Component
                 // RETORNAR UN VALOR PARA INDICAR ERROR
                 return ['success' => false, 'message' => $e->getMessage()];
             }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             \Log::error('Error crítico en updatePurchaseOrder: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),

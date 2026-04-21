@@ -491,10 +491,6 @@
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Arribo a destino</h4>
             <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="mb-1 text-gray-500">ETA</p>
-                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_eta) }}</p>
-                </div>
-                <div>
                     <p class="mb-1 text-gray-500">ETA Inicial</p>
                     <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_eta_initial) }}</p>
                 </div>
