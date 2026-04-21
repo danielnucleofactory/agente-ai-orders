@@ -269,7 +269,7 @@
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">ETA Variable</p>
-                    <p class="text-lg">{{ $purchaseOrder->date_eta_updated ? formatDateOnly($purchaseOrder->date_eta_updated) : 'N/A' }}</p>
+                    <p class="text-lg">{{ ($purchaseOrder->date_eta ?? $purchaseOrder->date_eta_updated) ? formatDateOnly($purchaseOrder->date_eta ?? $purchaseOrder->date_eta_updated) : 'N/A' }}</p>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-gray-500">ATA</p>
