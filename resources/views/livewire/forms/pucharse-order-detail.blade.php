@@ -496,7 +496,7 @@
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">ETA Variable</p>
-                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_eta ?? $purchaseOrder->date_eta_updated) }}</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_eta) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">ATA</p>

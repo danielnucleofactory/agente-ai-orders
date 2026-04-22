@@ -288,12 +288,12 @@ class PucharseOrderDetail extends Component
         try {
             // Obtener identificadores de la PO o del shipping document
             $porthId = $this->purchaseOrder->porth_id ?? null;
-            $trackingId = $this->purchaseOrder->tracking_id 
-                ?? ($this->shippingDocument->tracking_id ?? null);
-            $mblNumber = $this->purchaseOrder->mbl_number 
-                ?? ($this->shippingDocument->mbl_number ?? null);
+            $trackingId = $this->purchaseOrder->tracking_id
+                ?? ($this->shippingDocument?->tracking_id ?? null);
+            $mblNumber = $this->purchaseOrder->mbl_number
+                ?? ($this->shippingDocument?->mbl_number ?? null);
             $containerNumber = $this->purchaseOrder->container_number
-                ?? ($this->shippingDocument->container_number ?? null);
+                ?? ($this->shippingDocument?->container_number ?? null);
 
             Log::info('Loading tracking data for purchase order (Porth):', [
                 'purchase_order_id' => $this->purchaseOrder->id ?? null,
@@ -320,7 +320,7 @@ class PucharseOrderDetail extends Component
                 ]);
                 $this->trackingData = null; // Asegurar que sea null, no array vacío
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error loading tracking data (Porth)', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()

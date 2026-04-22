@@ -91,7 +91,7 @@ class TrackingService
             $response = Http::withHeaders([
                 'apikey' => $this->porthApiKey,
                 'Accept' => 'application/json'
-            ])->timeout(15)->get("https://api.porth.app/api/shipment/byId/{$trackingNumber}");
+            ])->timeout(15)->get('https://api.porth.app/api/shipment/byId/' . rawurlencode((string) $trackingNumber));
 
             if ($response->failed()) {
                 \Log::error('API request failed:', [
@@ -128,7 +128,7 @@ class TrackingService
             $response = Http::withHeaders([
                 'apikey' => $this->porthApiKey,
                 'Accept' => 'application/json'
-            ])->timeout(15)->get("https://api.porth.app/api/shipment/byMasterBl/{$masterBl}");
+            ])->timeout(15)->get('https://api.porth.app/api/shipment/byMasterBl/' . rawurlencode((string) $masterBl));
 
             if ($response->failed()) {
                 \Log::error('MasterBl API request failed:', [
@@ -336,7 +336,9 @@ class TrackingService
             $response = Http::withHeaders([
                 'apikey' => $this->porthApiKey,
                 'Accept' => 'application/json'
-            ])->timeout(15)->get("https://api.porth.app/api/shipment/byContainer/{$containerNumber}");
+            ])->timeout(15)->get(
+                'https://api.porth.app/api/shipment/byContainer/' . rawurlencode(trim((string) $containerNumber))
+            );
 
             if ($response->failed()) {
                 \Log::error('Container number API request failed:', [
@@ -391,25 +393,25 @@ class TrackingService
         }
 
         // Si no tenemos datos por porth_id, intentamos con el MBL
-        if (!$trackingData && $mblNumber) {
+        if (! $trackingData && $mblNumber) {
             \Log::info('Attempting to get Porth tracking data using Master BL', ['mbl' => $mblNumber]);
             $trackingData = $this->getPorthTrackingByMasterBl($mblNumber);
         }
 
         // Si no tenemos datos por MBL, intentamos con container number
-        if (!$trackingData && $containerNumber) {
+        if (! $trackingData && $containerNumber) {
             \Log::info('Attempting to get Porth tracking data using container number', ['container' => $containerNumber]);
             $trackingData = $this->getPorthTrackingByContainerNumber($containerNumber);
         }
 
         // Si no tenemos datos por container, intentamos con tracking ID
-        if (!$trackingData && $trackingId) {
+        if (! $trackingData && $trackingId) {
             \Log::info('Attempting to get Porth tracking data using ID', ['id' => $trackingId]);
             $trackingData = $this->getPorthTracking($trackingId);
         }
 
         // Si todos los métodos fallan, devolver null (no datos mock)
-        if (!$trackingData) {
+        if (! $trackingData) {
             \Log::info('All API calls failed, no tracking data available in Porth', [
                 'porth_id' => $porthId,
                 'tracking_id' => $trackingId,
