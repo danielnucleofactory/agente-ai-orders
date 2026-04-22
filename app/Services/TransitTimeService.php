@@ -9,7 +9,11 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Servicio para calcular tiempos de tránsito marítimo esperados
- * a partir del CSV de matriz (región, país origen, destino, días).
+ * a partir del CSV de matriz (región, país origen, ISO origen, destino, ISO destino, días).
+ *
+ * La matriz se indexa internamente por los ISO2 de origen y destino
+ * (columnas `PaisOrigenISO` y `PaisDestinoISO` del CSV) para un lookup
+ * determinístico independiente del idioma/alias del nombre del país.
  */
 class TransitTimeService
 {
@@ -19,11 +23,18 @@ class TransitTimeService
     }
 
     /**
-     * Cache en memoria por request / worker (se recarga al olvidar OPcache).
+     * Matriz indexada por [originISO2][destinationISO2] => días.
      *
      * @var array<string, array<string, int>>|null
      */
     private static ?array $transitTimesCache = null;
+
+    /**
+     * Mapa ISO2 origen -> Región (derivado del CSV en el primer load).
+     *
+     * @var array<string, string>|null
+     */
+    private static ?array $originIsoToRegionCache = null;
 
     /**
      * Tiempos por defecto por región (fallback cuando no hay ruta específica en el CSV)
@@ -35,91 +46,164 @@ class TransitTimeService
     ];
 
     /**
-     * Mapeo de países a regiones
+     * Fallback ISO2 -> Región, usado sólo si el CSV no informa la región.
      */
-    protected const COUNTRY_TO_REGION = [
+    protected const COUNTRY_ISO_TO_REGION = [
         // Asia
-        'CHINA' => 'Asia',
-        'VIETNAM' => 'Asia',
-        'KOREA' => 'Asia',
-        'INDIA' => 'Asia',
-        'PHILIPPINES' => 'Asia',
-        'TAIWAN' => 'Asia',
-        'UNITED ARAB EMIRATES' => 'Asia',
-        'SINGAPORE' => 'Asia',
+        'CN' => 'Asia',
+        'VN' => 'Asia',
+        'KR' => 'Asia',
+        'IN' => 'Asia',
+        'PH' => 'Asia',
+        'TW' => 'Asia',
+        'AE' => 'Asia',
+        'SG' => 'Asia',
+        'JP' => 'Asia',
+        'TH' => 'Asia',
+        'ID' => 'Asia',
+        'MY' => 'Asia',
+        'HK' => 'Asia',
 
         // America
-        'MEXICO' => 'America',
-        'PANAMA' => 'America',
-        'GUATEMALA' => 'America',
-        'COLOMBIA' => 'America',
-        'BRAZIL' => 'America',
-        'COSTA RICA' => 'America',
-        'CANADA' => 'America',
-        'UNITED STATES' => 'America',
-        'CHILE' => 'America',
-        'EL SALVADOR' => 'America',
-        'VENEZUELA' => 'America',
-        'PERU' => 'America',
-        'ECUADOR' => 'America',
+        'MX' => 'America',
+        'PA' => 'America',
+        'GT' => 'America',
+        'CO' => 'America',
+        'BR' => 'America',
+        'CR' => 'America',
+        'CA' => 'America',
+        'US' => 'America',
+        'CL' => 'America',
+        'SV' => 'America',
+        'VE' => 'America',
+        'PE' => 'America',
+        'EC' => 'America',
+        'AR' => 'America',
+        'UY' => 'America',
+        'DO' => 'America',
+        'HN' => 'America',
+        'NI' => 'America',
 
         // Europa
-        'ITALY' => 'Europa',
-        'GERMANY' => 'Europa',
-        'BELGIUM' => 'Europa',
-        'ISRAEL' => 'Europa',
-        'NETHERLANDS' => 'Europa',
-        'HUNGARY' => 'Europa',
-        'SPAIN' => 'Europa',
-        'PORTUGAL' => 'Europa',
-        'CZECH REPUBLIC' => 'Europa',
+        'IT' => 'Europa',
+        'DE' => 'Europa',
+        'BE' => 'Europa',
+        'IL' => 'Europa',
+        'NL' => 'Europa',
+        'HU' => 'Europa',
+        'ES' => 'Europa',
+        'PT' => 'Europa',
+        'CZ' => 'Europa',
+        'FR' => 'Europa',
+        'GB' => 'Europa',
+        'PL' => 'Europa',
+        'AT' => 'Europa',
+        'CH' => 'Europa',
+        'DK' => 'Europa',
+        'SE' => 'Europa',
+        'NO' => 'Europa',
+        'FI' => 'Europa',
+        'IE' => 'Europa',
+        'GR' => 'Europa',
+        'TR' => 'Europa',
     ];
 
     /**
-     * Alias de países para manejar variaciones de nombres
+     * Mapa nombre de país (MAYÚSCULAS, sin tilde opcional) -> ISO2.
+     *
+     * Se usa cuando los callers todavía pasan nombres de país en vez de ISO2.
+     * Cubre variantes en español, inglés y alias comunes.
      */
-    protected const COUNTRY_ALIASES = [
-        // Variaciones con tilde
-        'MÉXICO' => 'MEXICO',
-        'PANAMÁ' => 'PANAMA',
-        'PERÚ' => 'PERU',
-        'BÉLGICA' => 'BELGIUM',
-        'ALEMANIA' => 'GERMANY',
-        'ESPAÑA' => 'SPAIN',
-        'PAÍSES BAJOS' => 'NETHERLANDS',
-        'REPÚBLICA CHECA' => 'CZECH REPUBLIC',
-        'HUNGRÍA' => 'HUNGARY',
-        'ITALIA' => 'ITALY',
-        'BRASIL' => 'BRAZIL',
+    protected const COUNTRY_NAME_TO_ISO = [
+        // Asia
+        'CHINA' => 'CN',
+        'VIETNAM' => 'VN',
+        'KOREA' => 'KR',
+        'SOUTH KOREA' => 'KR',
+        'COREA' => 'KR',
+        'COREA DEL SUR' => 'KR',
+        'INDIA' => 'IN',
+        'PHILIPPINES' => 'PH',
+        'FILIPINAS' => 'PH',
+        'TAIWAN' => 'TW',
+        'UNITED ARAB EMIRATES' => 'AE',
+        'EMIRATOS ARABES UNIDOS' => 'AE',
+        'EMIRATOS ÁRABES UNIDOS' => 'AE',
+        'UAE' => 'AE',
+        'SINGAPORE' => 'SG',
+        'SINGAPUR' => 'SG',
+        'JAPAN' => 'JP',
+        'JAPON' => 'JP',
+        'JAPÓN' => 'JP',
+        'THAILAND' => 'TH',
+        'TAILANDIA' => 'TH',
+        'INDONESIA' => 'ID',
+        'MALAYSIA' => 'MY',
+        'MALASIA' => 'MY',
+        'HONG KONG' => 'HK',
 
-        // Nombres en español
-        'ESTADOS UNIDOS' => 'UNITED STATES',
-        'EMIRATOS ARABES UNIDOS' => 'UNITED ARAB EMIRATES',
-        'EMIRATOS ÁRABES UNIDOS' => 'UNITED ARAB EMIRATES',
-        'FILIPINAS' => 'PHILIPPINES',
-        'COREA' => 'KOREA',
-        'COREA DEL SUR' => 'KOREA',
-        'SOUTH KOREA' => 'KOREA',
-        'SINGAPUR' => 'SINGAPORE',
-
-        // Variaciones comunes
-        'USA' => 'UNITED STATES',
-        'US' => 'UNITED STATES',
-        'UAE' => 'UNITED ARAB EMIRATES',
-        'NEDERLAND' => 'NETHERLANDS',
-        'HOLLAND' => 'NETHERLANDS',
-    ];
-
-    /**
-     * Alias de destinos para manejar variaciones
-     */
-    protected const DESTINATION_ALIASES = [
-        'COSTA RICA' => 'CR',
-        'EL SALVADOR' => 'SV',
+        // America
+        'MEXICO' => 'MX',
+        'MÉXICO' => 'MX',
+        'PANAMA' => 'PA',
+        'PANAMÁ' => 'PA',
         'GUATEMALA' => 'GT',
-        'VENEZUELA' => 'VZLA',
-        'CO' => 'Colombia',
-        'COLOMBIA' => 'Colombia',
+        'COLOMBIA' => 'CO',
+        'BRAZIL' => 'BR',
+        'BRASIL' => 'BR',
+        'COSTA RICA' => 'CR',
+        'CANADA' => 'CA',
+        'CANADÁ' => 'CA',
+        'UNITED STATES' => 'US',
+        'ESTADOS UNIDOS' => 'US',
+        'USA' => 'US',
+        'EEUU' => 'US',
+        'CHILE' => 'CL',
+        'EL SALVADOR' => 'SV',
+        'VENEZUELA' => 'VE',
+        'VZLA' => 'VE',
+        'PERU' => 'PE',
+        'PERÚ' => 'PE',
+        'ECUADOR' => 'EC',
+        'ARGENTINA' => 'AR',
+        'URUGUAY' => 'UY',
+        'DOMINICAN REPUBLIC' => 'DO',
+        'REPUBLICA DOMINICANA' => 'DO',
+        'REPÚBLICA DOMINICANA' => 'DO',
+        'HONDURAS' => 'HN',
+        'NICARAGUA' => 'NI',
+
+        // Europa
+        'ITALY' => 'IT',
+        'ITALIA' => 'IT',
+        'GERMANY' => 'DE',
+        'ALEMANIA' => 'DE',
+        'BELGIUM' => 'BE',
+        'BÉLGICA' => 'BE',
+        'BELGICA' => 'BE',
+        'ISRAEL' => 'IL',
+        'NETHERLANDS' => 'NL',
+        'NEDERLAND' => 'NL',
+        'HOLLAND' => 'NL',
+        'HOLANDA' => 'NL',
+        'PAÍSES BAJOS' => 'NL',
+        'PAISES BAJOS' => 'NL',
+        'HUNGARY' => 'HU',
+        'HUNGRIA' => 'HU',
+        'HUNGRÍA' => 'HU',
+        'SPAIN' => 'ES',
+        'ESPAÑA' => 'ES',
+        'ESPANA' => 'ES',
+        'PORTUGAL' => 'PT',
+        'CZECH REPUBLIC' => 'CZ',
+        'REPUBLICA CHECA' => 'CZ',
+        'REPÚBLICA CHECA' => 'CZ',
+        'FRANCE' => 'FR',
+        'FRANCIA' => 'FR',
+        'UNITED KINGDOM' => 'GB',
+        'REINO UNIDO' => 'GB',
+        'POLAND' => 'PL',
+        'POLONIA' => 'PL',
     ];
 
     /**
@@ -131,43 +215,59 @@ class TransitTimeService
             return self::$transitTimesCache;
         }
 
-        return self::$transitTimesCache = $this->loadTransitTimesFromCsv();
+        $this->loadTransitTimesFromCsv();
+
+        return self::$transitTimesCache ?? [];
     }
 
     /**
-     * @return array<string, array<string, int>>
+     * Carga la matriz CSV y cachea tanto el mapa de días como el mapa ISO→Región
+     * derivado de la columna `Region`.
      */
-    protected function loadTransitTimesFromCsv(): array
+    protected function loadTransitTimesFromCsv(): void
     {
         $path = config('services.transit_matrix.csv_path');
         if (!is_string($path) || $path === '' || !is_readable($path)) {
             Log::warning('Transit matrix CSV no encontrado o ilegible', ['path' => $path]);
+            self::$transitTimesCache = [];
+            self::$originIsoToRegionCache = [];
 
-            return [];
+            return;
         }
 
         $matrix = [];
+        $regionByIso = [];
+
         $handle = fopen($path, 'r');
         if ($handle === false) {
             Log::warning('No se pudo abrir el CSV de matriz de tránsito', ['path' => $path]);
+            self::$transitTimesCache = [];
+            self::$originIsoToRegionCache = [];
 
-            return [];
+            return;
         }
 
         try {
             $header = $this->fgetCsvSemicolon($handle);
             if ($header === false) {
-                return [];
+                self::$transitTimesCache = [];
+                self::$originIsoToRegionCache = [];
+
+                return;
             }
 
+            // Esperado: Region;Paises;PaisOrigenISO;Destino;PaisDestinoISO;Dias de tiempo de transito
             while (($row = $this->fgetCsvSemicolon($handle)) !== false) {
-                if (count($row) < 4) {
+                if (count($row) < 6) {
                     continue;
                 }
 
-                $destino = trim((string) $row[2]);
-                $diasRaw = trim((string) $row[3]);
-                if ($destino === '' || $diasRaw === '') {
+                $region = trim((string) ($row[0] ?? ''));
+                $originIso = strtoupper(trim((string) ($row[2] ?? '')));
+                $destIso = strtoupper(trim((string) ($row[4] ?? '')));
+                $diasRaw = trim((string) ($row[5] ?? ''));
+
+                if ($originIso === '' || $destIso === '' || $diasRaw === '') {
                     continue;
                 }
 
@@ -175,15 +275,18 @@ class TransitTimeService
                     continue;
                 }
 
-                $originKey = $this->normalizeCountry(trim((string) $row[1]));
-                $destKey = $this->normalizeDestination($destino);
-                $matrix[$originKey][$destKey] = (int) $diasRaw;
+                $matrix[$originIso][$destIso] = (int) $diasRaw;
+
+                if ($region !== '' && !isset($regionByIso[$originIso])) {
+                    $regionByIso[$originIso] = $region;
+                }
             }
         } finally {
             fclose($handle);
         }
 
-        return $matrix;
+        self::$transitTimesCache = $matrix;
+        self::$originIsoToRegionCache = $regionByIso;
     }
 
     /**
@@ -200,10 +303,12 @@ class TransitTimeService
     }
 
     /**
-     * Obtiene los días de tránsito esperados para una ruta origen-destino
+     * Obtiene los días de tránsito esperados para una ruta origen-destino.
      *
-     * @param string|null $originCountry País de origen
-     * @param string|null $destination Destino (código o nombre)
+     * Acepta tanto ISO2 (ej: "MX", "CO") como nombres de país (ej: "MÉXICO", "Colombia").
+     *
+     * @param string|null $originCountry País de origen (ISO2 o nombre)
+     * @param string|null $destination Destino (ISO2 o nombre)
      * @return int|null Días de tránsito o null si no se encuentra
      */
     public function getTransitDays(?string $originCountry, ?string $destination): ?int
@@ -212,20 +317,24 @@ class TransitTimeService
             return null;
         }
 
-        $origin = $this->normalizeCountry($originCountry);
-        $dest = $this->normalizeDestination($destination);
+        $originIso = $this->resolveIso2($originCountry);
+        $destIso = $this->resolveIso2($destination);
 
-        $times = $this->getTransitTimes();
-        if (isset($times[$origin][$dest])) {
-            return $times[$origin][$dest];
+        if ($originIso === null || $destIso === null) {
+            return $originIso !== null ? $this->getDefaultByRegionIso($originIso) : null;
         }
 
-        return $this->getDefaultByRegion($origin);
+        $times = $this->getTransitTimes();
+        if (isset($times[$originIso][$destIso])) {
+            return $times[$originIso][$destIso];
+        }
+
+        return $this->getDefaultByRegionIso($originIso);
     }
 
     /**
-     * Días de tránsito usando puertos (UNLOC): país origen/destino se infieren del CSV de puertos Porth
-     * y se reutiliza la misma matriz CSV país→destino que {@see getTransitDays}.
+     * Días de tránsito usando puertos (UNLOC): se usan directamente los ISO2
+     * del país de cada puerto para consultar la matriz.
      */
     public function getTransitDaysForPorts(?string $departurePortUnloc, ?string $arrivalPortUnloc): ?int
     {
@@ -242,48 +351,44 @@ class TransitTimeService
             return null;
         }
 
-        $originCountry = PorthTranslationService::COUNTRY_CODES[$originIso] ?? null;
-        if ($originCountry === null) {
-            return null;
+        $originIso = strtoupper($originIso);
+        $destIso = strtoupper($destIso);
+
+        $times = $this->getTransitTimes();
+        if (isset($times[$originIso][$destIso])) {
+            return $times[$originIso][$destIso];
         }
 
-        $destinationKey = $this->matrixDestinationKeyFromArrivalCountryIso2($destIso);
-
-        return $this->getTransitDays($originCountry, $destinationKey);
+        return $this->getDefaultByRegionIso($originIso);
     }
 
     /**
-     * Clave de columna "Destino" de la matriz CSV a partir del ISO2 del país del puerto de arribo.
-     */
-    protected function matrixDestinationKeyFromArrivalCountryIso2(string $iso2): string
-    {
-        $iso = strtoupper(trim($iso2));
-
-        return match ($iso) {
-            'CO' => 'Colombia',
-            'VE' => 'VZLA',
-            'CR', 'SV', 'GT' => $iso,
-            default => $iso,
-        };
-    }
-
-    /**
-     * Obtiene el tiempo de tránsito por defecto según la región del país de origen
+     * Obtiene el tiempo de tránsito por defecto según la región del país de origen.
      *
-     * @param string $country País normalizado
-     * @return int|null Días de tránsito por defecto o null
+     * Se mantiene por compatibilidad con callers externos; acepta ISO2 o nombre.
+     *
+     * @param string $country País (ISO2 o nombre)
      */
     public function getDefaultByRegion(string $country): ?int
     {
-        $region = $this->getRegion($country);
+        $iso = $this->resolveIso2($country);
+
+        return $iso !== null ? $this->getDefaultByRegionIso($iso) : null;
+    }
+
+    /**
+     * Fallback por región usando ISO2 directamente.
+     */
+    protected function getDefaultByRegionIso(string $iso2): ?int
+    {
+        $region = $this->getRegionByIso($iso2);
 
         return $region ? (self::DEFAULT_BY_REGION[$region] ?? null) : null;
     }
 
     /**
-     * Obtiene la región de un país
+     * Obtiene la región de un país (acepta ISO2 o nombre).
      *
-     * @param string|null $country País
      * @return string|null Región (Asia, America, Europa) o null
      */
     public function getRegion(?string $country): ?string
@@ -292,18 +397,29 @@ class TransitTimeService
             return null;
         }
 
-        $normalized = $this->normalizeCountry($country);
+        $iso = $this->resolveIso2($country);
+        if ($iso === null) {
+            return null;
+        }
 
-        return self::COUNTRY_TO_REGION[$normalized] ?? null;
+        return $this->getRegionByIso($iso);
+    }
+
+    protected function getRegionByIso(string $iso2): ?string
+    {
+        $iso = strtoupper($iso2);
+
+        // Preferir región derivada del CSV; caer al mapa estático como fallback.
+        $this->getTransitTimes();
+        if (isset(self::$originIsoToRegionCache[$iso])) {
+            return self::$originIsoToRegionCache[$iso];
+        }
+
+        return self::COUNTRY_ISO_TO_REGION[$iso] ?? null;
     }
 
     /**
      * Calcula la fecha esperada de llegada
-     *
-     * @param Carbon $departureDate Fecha de salida (ATD o ETD)
-     * @param string|null $originCountry País de origen
-     * @param string|null $destination Destino
-     * @return Carbon|null Fecha esperada de llegada o null
      */
     public function getExpectedArrivalDate(Carbon $departureDate, ?string $originCountry, ?string $destination): ?Carbon
     {
@@ -319,10 +435,6 @@ class TransitTimeService
     /**
      * Determina si una carga está a tiempo o atrasada
      *
-     * @param Carbon $departureDate Fecha de salida real (ATD)
-     * @param Carbon|null $actualArrival Fecha de llegada real (ATA) o null si aún no llega
-     * @param string|null $originCountry País de origen
-     * @param string|null $destination Destino
      * @return array{status: string|null, delay_days: int|null, expected_days: int|null}
      */
     public function calculateStatus(
@@ -361,37 +473,28 @@ class TransitTimeService
     }
 
     /**
-     * Normaliza el nombre de un país
+     * Resuelve cualquier input (ISO2 o nombre de país/destino) a su ISO2.
+     *
+     * - Si ya parece un ISO2 válido, se devuelve en mayúsculas.
+     * - Caso contrario, se consulta el mapa nombre→ISO2.
+     * - Devuelve null si no se puede resolver.
      */
-    protected function normalizeCountry(string $country): string
+    protected function resolveIso2(string $input): ?string
     {
-        $normalized = strtoupper(trim($country));
+        $normalized = strtoupper(trim($input));
+        if ($normalized === '') {
+            return null;
+        }
 
-        return self::COUNTRY_ALIASES[$normalized] ?? $normalized;
-    }
-
-    /**
-     * Normaliza el código/nombre de destino
-     */
-    protected function normalizeDestination(string $destination): string
-    {
-        $normalized = strtoupper(trim($destination));
-
-        // Si ya es un código válido, retornarlo
-        if (in_array($normalized, ['CR', 'SV', 'GT', 'VZLA'], true)) {
+        if (preg_match('/^[A-Z]{2}$/', $normalized) === 1) {
             return $normalized;
         }
 
-        // Colombia tiene caso especial (usa nombre completo en la matriz)
-        if ($normalized === 'COLOMBIA' || $normalized === 'CO') {
-            return 'Colombia';
-        }
-
-        return self::DESTINATION_ALIASES[$normalized] ?? $normalized;
+        return self::COUNTRY_NAME_TO_ISO[$normalized] ?? null;
     }
 
     /**
-     * Obtiene todos los países de origen disponibles
+     * Obtiene todos los países de origen disponibles (en ISO2).
      *
      * @return array<string>
      */
@@ -401,29 +504,35 @@ class TransitTimeService
     }
 
     /**
-     * Obtiene todos los destinos disponibles para un país de origen
+     * Obtiene todos los destinos disponibles (ISO2) para un país de origen.
      *
-     * @param string $originCountry País de origen
+     * @param string $originCountry País de origen (ISO2 o nombre)
      * @return array<string>
      */
     public function getAvailableDestinations(string $originCountry): array
     {
-        $origin = $this->normalizeCountry($originCountry);
+        $iso = $this->resolveIso2($originCountry);
+        if ($iso === null) {
+            return [];
+        }
 
-        return array_keys($this->getTransitTimes()[$origin] ?? []);
+        return array_keys($this->getTransitTimes()[$iso] ?? []);
     }
 
     /**
-     * Verifica si existe una ruta específica en la matriz
+     * Verifica si existe una ruta específica en la matriz.
      *
-     * @param string $originCountry País de origen
-     * @param string $destination Destino
+     * @param string $originCountry País de origen (ISO2 o nombre)
+     * @param string $destination Destino (ISO2 o nombre)
      */
     public function hasRoute(string $originCountry, string $destination): bool
     {
-        $origin = $this->normalizeCountry($originCountry);
-        $dest = $this->normalizeDestination($destination);
+        $originIso = $this->resolveIso2($originCountry);
+        $destIso = $this->resolveIso2($destination);
+        if ($originIso === null || $destIso === null) {
+            return false;
+        }
 
-        return isset($this->getTransitTimes()[$origin][$dest]);
+        return isset($this->getTransitTimes()[$originIso][$destIso]);
     }
 }
