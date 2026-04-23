@@ -333,26 +333,25 @@ class TransitTimeService
     }
 
     /**
-     * Días de tránsito usando puertos (UNLOC): se usan directamente los ISO2
-     * del país de cada puerto para consultar la matriz.
+     * Días de tránsito a partir de puertos de origen/destino.
+     *
+     * Acepta múltiples formatos por puerto:
+     *  - Código UNLOC de 5 letras (ej. "CNNGB", "CRCAL").
+     *  - Texto "NOMBRE, PAÍS" como viene en `purchase_orders.departure_port`
+     *    y `arrival_port` (ej. "NINGBO, CHINA", "CALDERA, COSTA RICA").
+     *  - Nombre de país o ISO2 sueltos ("CHINA", "CN").
+     *
+     * Esto permite que el dashboard y otros consumers pasen indistintamente
+     * `porth_pol`/`porth_pod` (UNLOC) o el texto visible del puerto.
      */
-    public function getTransitDaysForPorts(?string $departurePortUnloc, ?string $arrivalPortUnloc): ?int
+    public function getTransitDaysForPorts(?string $departurePort, ?string $arrivalPort): ?int
     {
-        $dep = $departurePortUnloc !== null ? strtoupper(trim($departurePortUnloc)) : '';
-        $arr = $arrivalPortUnloc !== null ? strtoupper(trim($arrivalPortUnloc)) : '';
-        if ($dep === '' || $arr === '') {
-            return null;
-        }
-
-        $originIso = $this->porthTranslationService->getPortCountryIso2($dep);
-        $destIso = $this->porthTranslationService->getPortCountryIso2($arr);
+        $originIso = $this->resolvePortToIso2($departurePort);
+        $destIso = $this->resolvePortToIso2($arrivalPort);
 
         if ($originIso === null || $destIso === null) {
-            return null;
+            return $originIso !== null ? $this->getDefaultByRegionIso($originIso) : null;
         }
-
-        $originIso = strtoupper($originIso);
-        $destIso = strtoupper($destIso);
 
         $times = $this->getTransitTimes();
         if (isset($times[$originIso][$destIso])) {
@@ -360,6 +359,57 @@ class TransitTimeService
         }
 
         return $this->getDefaultByRegionIso($originIso);
+    }
+
+    /**
+     * Resuelve un identificador de puerto a ISO2 de país soportando:
+     *  - UNLOC de 5 letras (consulta el maestro Porth).
+     *  - Formato "NOMBRE, PAÍS" (toma la parte tras la última coma).
+     *  - ISO2 directo o nombre de país en el alias map.
+     */
+    protected function resolvePortToIso2(?string $port): ?string
+    {
+        if ($port === null) {
+            return null;
+        }
+
+        $value = trim($port);
+        if ($value === '') {
+            return null;
+        }
+
+        $upper = strtoupper($value);
+
+        // UNLOC (5 letras): usar maestro Porth.
+        if (preg_match('/^[A-Z]{5}$/', $upper) === 1) {
+            $iso = $this->porthTranslationService->getPortCountryIso2($upper);
+            if ($iso !== null) {
+                return strtoupper($iso);
+            }
+            // Fallback: caer al resto de heurísticas si el UNLOC no está en el maestro.
+        }
+
+        // Formato "NOMBRE, PAÍS" - prioriza la parte tras la última coma.
+        if (str_contains($upper, ',')) {
+            $parts = array_map('trim', explode(',', $upper));
+            $countryText = (string) end($parts);
+            $iso = $this->resolveIso2($countryText);
+            if ($iso !== null) {
+                return $iso;
+            }
+
+            // Si la parte final no resolvió (p. ej. texto extraño), intentar con
+            // alguna de las otras partes como nombre de país de respaldo.
+            foreach (array_reverse($parts) as $part) {
+                $iso = $this->resolveIso2($part);
+                if ($iso !== null) {
+                    return $iso;
+                }
+            }
+        }
+
+        // Cadena simple: puede ser ISO2 ("CN"), nombre de país ("CHINA") o alias.
+        return $this->resolveIso2($upper);
     }
 
     /**

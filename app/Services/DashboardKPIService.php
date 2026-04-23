@@ -1782,9 +1782,16 @@ class DashboardKPIService
                     continue;
                 }
 
+                // Preferir UNLOC (porth_pol/porth_pod) cuando existan: son códigos
+                // normalizados y dan un lookup exacto contra la matriz por ISO2.
+                // Caer al texto visible (departure_port/arrival_port, formato
+                // "NOMBRE, PAÍS") para las POs que todavía no sincronizaron con Porth.
+                $departureRef = ! empty($po->porth_pol) ? $po->porth_pol : $po->departure_port;
+                $arrivalRef = ! empty($po->porth_pod) ? $po->porth_pod : $po->arrival_port;
+
                 $transitDays = $this->transitTimeService->getTransitDaysForPorts(
-                    $po->departure_port,
-                    $po->arrival_port
+                    $departureRef,
+                    $arrivalRef
                 ) ?? 0;
 
                 // Determinar fecha según etapa
