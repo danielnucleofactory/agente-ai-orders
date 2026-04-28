@@ -321,7 +321,7 @@ class TransitTimeService
         $destIso = $this->resolveIso2($destination);
 
         if ($originIso === null || $destIso === null) {
-            return $originIso !== null ? $this->getDefaultByRegionIso($originIso) : null;
+            return null;
         }
 
         $times = $this->getTransitTimes();
@@ -329,7 +329,7 @@ class TransitTimeService
             return $times[$originIso][$destIso];
         }
 
-        return $this->getDefaultByRegionIso($originIso);
+        return null;
     }
 
     /**
@@ -350,7 +350,7 @@ class TransitTimeService
         $destIso = $this->resolvePortToIso2($arrivalPort);
 
         if ($originIso === null || $destIso === null) {
-            return $originIso !== null ? $this->getDefaultByRegionIso($originIso) : null;
+            return null;
         }
 
         $times = $this->getTransitTimes();
@@ -358,7 +358,7 @@ class TransitTimeService
             return $times[$originIso][$destIso];
         }
 
-        return $this->getDefaultByRegionIso($originIso);
+        return null;
     }
 
     /**
