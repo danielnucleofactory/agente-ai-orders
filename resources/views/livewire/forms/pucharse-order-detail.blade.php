@@ -407,15 +407,15 @@
             <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
                     <p class="mb-1 text-gray-500">Solicitud de Booking</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_booking_request) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->date_booking_request) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Autorización Booking</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_booking_authorized) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->date_booking_authorized) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha de asignación de agente de carga</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->forwader_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->forwader_date) }}</p>
                 </div>
             </div>
 
@@ -424,19 +424,19 @@
             <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Inspección</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->inspection_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->inspection_date) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Corte VGM</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->vgm_cut_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->vgm_cut_date) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Carga Lista Teórica</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_theorical_load) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->date_theorical_load) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Carga Lista Variable</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_variable_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->date_variable_date) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Carga Lista Validada</p>
@@ -444,11 +444,11 @@
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha de consolidado</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_consolidation) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->date_consolidation) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha de release</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->release_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->release_date) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Diferencia de fecha de carga lista</p>
@@ -509,19 +509,19 @@
             <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
                     <p class="mb-1 text-gray-500">Ingreso Almacén Fiscal</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->bonded_warehouse_enter) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->bonded_warehouse_enter) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Salida Almacén Fiscal</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->bonded_warehouse_exit) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->bonded_warehouse_exit) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Nota de Recibo</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->receipt_note_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->receipt_note_date) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Disp. Bogeda Estimada</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->estimated_dc_availability_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->estimated_dc_availability_date) }}</p>
                 </div>
             </div>
 
@@ -530,11 +530,11 @@
             <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Pago Balance</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->balance_payment_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->balance_payment_date) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Pago Cargos Locales</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->local_charges_payment_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->local_charges_payment_date) }}</p>
                 </div>
             </div>
 
@@ -730,11 +730,11 @@
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha recepción de factura</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_invoice_received) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->date_invoice_received) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha recepción doc. proveedor</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_vendor_document_received) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->date_vendor_document_received) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Factura Flete</p>

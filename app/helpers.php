@@ -99,6 +99,20 @@ if (!function_exists('formatDateOnly')) {
     }
 }
 
+if (!function_exists('formatPoCalendarDate')) {
+    /**
+     * Fecha operacional de PO: respeta el formato del usuario, pero no aplica su zona horaria.
+     *
+     * @param mixed $date
+     * @param string|null $format
+     * @return string
+     */
+    function formatPoCalendarDate($date, $format = null)
+    {
+        return formatDateOnly($date, $format);
+    }
+}
+
 if (!function_exists('formatDateForInput')) {
     /**
      * Formatea una fecha para inputs HTML (YYYY-MM-DD)
@@ -112,7 +126,6 @@ if (!function_exists('formatDateForInput')) {
         return Carbon::parse($date)->format('Y-m-d');
     }
 }
-
 
 
 

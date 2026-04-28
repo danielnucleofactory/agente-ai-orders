@@ -24,6 +24,7 @@ use App\Listeners\LogUserLogin;
 use App\Listeners\LogUserLogout;
 use App\Listeners\LogFailedLogin;
 use App\Listeners\AddSupportReplyTo;
+use App\Listeners\BlockVendorConfirmationEmails;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -57,6 +58,9 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(Login::class, LogUserLogin::class);
         Event::listen(Logout::class, LogUserLogout::class);
         Event::listen(Failed::class, LogFailedLogin::class);
+
+        // Cortar correos hacia proveedores salvo que se habiliten explícitamente.
+        Event::listen(MessageSending::class, BlockVendorConfirmationEmails::class);
 
         // Agregar Reply-To de soporte a todos los correos salientes (si no tienen uno definido)
         Event::listen(MessageSending::class, AddSupportReplyTo::class);

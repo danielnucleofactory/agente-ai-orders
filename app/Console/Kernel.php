@@ -12,6 +12,10 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
+        if (!config('services.porth.sync_enabled', true)) {
+            return;
+        }
+
         // Sincronizar embarques actualizados desde Porth cada 5 minutos
         $schedule->command('porth:sync-recent --trigger=schedule')
             ->everyFiveMinutes()

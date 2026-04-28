@@ -32,6 +32,13 @@ class PorthImportPending extends Command
 
     public function handle(): int
     {
+        if (!config('services.porth.sync_enabled', true)) {
+            $this->warn('Porth sync deshabilitado por PORTH_SYNC_ENABLED=false.');
+            Log::info('porth_import_pending:disabled_by_config');
+
+            return self::SUCCESS;
+        }
+
         $limit = (int) $this->option('limit');
         $dryRun = (bool) $this->option('dry-run');
 
