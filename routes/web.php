@@ -270,8 +270,12 @@ Route::middleware(['auth'])->group(function () {
     Route::view('settings/po-confirmation', 'po-confirmation-settings')
         ->name('po-confirmation.settings.index');
 
-    Route::view('settings/webhook', 'webhook-settings')
-        ->name('webhook.settings.index');
+        try {
+            Route::view('settings/webhook', 'webhook-settings')
+                ->name('webhook.settings.index');
+        } catch (\Exception $e) {
+            // Si el módulo no está habilitado, no mostramos la vista
+        }
 
     // Companies (permisos dedicados; asignación típica: Super Administrador)
     Route::get('settings/companies', \App\Livewire\Settings\Companies::class)
