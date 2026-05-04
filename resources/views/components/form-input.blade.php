@@ -8,16 +8,24 @@
         </label>
     @endif
 
+    @php
+        $inputClass = 'rounded-xl border-2 border-[#28C7A1] py-[0.625rem] px-3 text-lg text-[#2E2E2E] placeholder:text-[#AFAFAF] leading-none';
+        // type se toma del slot y se imprime aparte para que nunca se pierda (p. ej. type="date" en Fecha Carga Lista Teórica).
+        $inputType = $input->attributes->get('type', 'text');
+        $inputAttrsWithoutType = $input->attributes->except('type')->merge(['class' => $inputClass . ($icon ? ' w-full' : '')]);
+    @endphp
     @if ($icon)
         <div class="relative">
-            <input @if ($input->attributes->has('name')) id="{{ $input->attributes->get('name') }}" @endif
-                {{ $input->attributes->merge(['class' => 'rounded-xl border-2 border-[#28C7A1] py-[0.625rem] px-3 text-lg text-[#2E2E2E] placeholder:text-[#AFAFAF] w-full leading-none', 'type' => 'text']) }}>
+            <input type="{{ $inputType }}"
+                @if ($input->attributes->has('name')) id="{{ $input->attributes->get('name') }}" @endif
+                {{ $inputAttrsWithoutType }}>
 
             {{ $icon }}
         </div>
     @else
-        <input @if ($input->attributes->has('name')) id="{{ $input->attributes->get('name') }}" @endif
-            {{ $input->attributes->merge(['class' => 'rounded-xl border-2 border-[#28C7A1] py-[0.625rem] px-3 text-lg text-[#2E2E2E] placeholder:text-[#AFAFAF] leading-none', 'type' => 'text']) }}>
+        <input type="{{ $inputType }}"
+            @if ($input->attributes->has('name')) id="{{ $input->attributes->get('name') }}" @endif
+            {{ $inputAttrsWithoutType }}>
     @endif
 
     @if ($error)

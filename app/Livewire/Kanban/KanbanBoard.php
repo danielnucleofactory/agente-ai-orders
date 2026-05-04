@@ -2,14 +2,16 @@
 
 namespace App\Livewire\Kanban;
 
+use App\Helpers\ChangeDescriptionHelper;
 use App\Models\KanbanBoard as KanbanBoardModel;
 use App\Models\KanbanStatus;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderComment;
 use App\Services\MaestrosApiService;
-use Livewire\Component;
+use Database\Seeders\KanbanBoardSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Livewire\Component;
 use Livewire\WithFileUploads;
 
 class KanbanBoard extends Component
@@ -17,13 +19,21 @@ class KanbanBoard extends Component
     use WithFileUploads;
 
     public $boardId;
+
     public $board;
+
     public $columns = [];
+
     public $tasks = [];
+
     public $tasksByColumn = [];
+
     public $boardType;
+
     public $currentTaskId;
+
     public $newColumnId;
+
     public $currentTask = null;
 
     public $actual_hub_id;
@@ -33,17 +43,26 @@ class KanbanBoard extends Component
 
     // Producción (id 2)
     public $date_variable_date;
+
     public $date_theorical_load;
+
     public $service_provider;
+
     public $forwarder_name;
+
     public $comment_stage_02;
 
     // Booking (id 3)
     public $date_booking_request;
+
     public $date_booking_authorized;
+
     public $date_etd_initial;
+
     public $date_etd; // ETD Variable (antes date_etd_updated, que ya no existe en la DB)
+
     public $mode;
+
     public $comment_stage_03;
 
     // Consolidador (id 4)
@@ -51,47 +70,63 @@ class KanbanBoard extends Component
 
     // En Tránsito (id 5)
     public $date_atd;
+
     public $date_eta;
+
     public $date_eta_initial;
+
     public $container_type;
+
     public $container_number;
+
     public $mbl_number;
+
     public $bill_of_lading;
-    public $shipment_amount;
+
+    public $freight_amount;
+
     public $shipping_line;
-    public $shipment_status;
-    public $merchandise_invoice;
+
+    public $arrival_status;
+
+    public $factura_merca;
+
     public $tracking_id;
+
     public $departure_port;
+
     public $arrival_port;
+
     public $comment_stage_05;
 
     // Puerto (id 6)
     public $date_ata;
-    public $comment_stage_06;
 
+    public $comment_stage_06;
 
     // Almacén Fiscal (id 7)
     public $bonded_warehouse_enter;
+
     public $bonded_warehouse_exit;
+
     public $comment_stage_07;
 
-
     public $comment_stage_08;
-    
+
     // Recibiendo CDI (id 9)
     public $estimated_dc_availability_date;
-    public $comment_stage_09;
 
+    public $comment_stage_09;
 
     // Ingresada (id 10)
     public $receipt_note;
 
-
     public $comments = [];
+
     public $showCommentModal = false;
 
     public $comment = '';
+
     public $attachment = null;
 
     // Filtros activos
@@ -102,8 +137,11 @@ class KanbanBoard extends Component
 
     // Arrays para dropdowns de la etapa "En Tránsito"
     public $shippingLineArray = [];
+
     public $departurePortArray = [];
+
     public $arrivalPortArray = [];
+
     public $containerTypeArray = [];
 
     // Arrays para dropdowns de la etapa "Booking"
@@ -112,37 +150,63 @@ class KanbanBoard extends Component
     // Estado de carga del modal
     public $isLoadingModalData = false;
 
+    /**
+     * Estado Kanban por defecto del tablero actual (evita query extra en loadTasks).
+     * No es propiedad Livewire pública: se rellena en cada loadColumns().
+     */
+    private ?KanbanStatus $defaultKanbanStatusForBoard = null;
+
+    /**
+     * Columnas mínimas de purchase_orders para tarjetas del Kanban + filtros.
+     */
+    private const KANBAN_PO_SELECT = [
+        'id',
+        'company_id',
+        'order_number',
+        'vendor_id',
+        'kanban_status_id',
+        'order_date',
+        'date_required_in_destination',
+        'total',
+        'created_at',
+        'currency',
+        'incoterms',
+        'planned_hub_id',
+        'actual_hub_id',
+        'material_type',
+        'tracking_id',
+    ];
+
     // Agregar los listeners para los eventos
     protected $listeners = [
         'refreshKanban' => 'loadData',
         'purchaseOrderStatusUpdated' => '$refresh',
         'notificationsUpdated' => '$refresh',
-        'kanbanFiltersChanged' => 'applyFilters'
+        'kanbanFiltersChanged' => 'applyFilters',
     ];
 
-    public function mount($boardId = null)
+    public function mount($boardId = null, ?string $embedBoardType = null)
     {
-        // Determinar el tipo de tablero según la ruta actual
-        $currentRoute = Route::currentRouteName();
-
-        if ($currentRoute === 'purchase-orders.index') {
-            $this->boardType = 'po_stages'; // Etapas PO
-        } // elseif ($currentRoute === 'shipping-documentation.index') {
-            // $this->boardType = 'shipping_documentation'; // Documentación de embarque - Ocultado
-        // } else {
-        else {
-            // Si no es ninguna de las rutas específicas, usar el tipo por defecto
-            $this->boardType = 'purchase_orders';
-        }
+        // Con lazy="on-load", mount() corre en la petición Livewire: Route::currentRouteName()
+        // suele ser "livewire.update", no la vista embebida. Por eso embedBoardType y/o Referer.
+        $this->boardType = $this->determineInitialBoardType($embedBoardType);
 
         // Si no se proporciona un ID de tablero, intentamos obtener el tablero según el tipo
-        if (!$boardId) {
+        if (! $boardId) {
             // Obtener el tablero para la compañía del usuario actual según el tipo
             $companyId = auth()->user()->company_id ?? null;
             $this->board = KanbanBoardModel::where('company_id', $companyId)
                 ->where('type', $this->boardType)
                 ->where('is_active', true)
                 ->first();
+
+            if (! $this->board && $this->boardType === 'po_stages') {
+                (new KanbanBoardSeeder)->ensureBoardsForCompanyId((int) $companyId);
+                $this->board = KanbanBoardModel::where('company_id', $companyId)
+                    ->where('type', $this->boardType)
+                    ->where('is_active', true)
+                    ->first();
+            }
 
             if ($this->board) {
                 $this->boardId = $this->board->id;
@@ -156,27 +220,93 @@ class KanbanBoard extends Component
         $this->loadData();
     }
 
-    public function loadData()
+    /**
+     * Tipo de tablero antes de resolver modelo (mount sin boardId).
+     * Rutas embebidas PO: po_stages; ruta full-page purchase-orders.kanban: purchase_orders.
+     */
+    protected function determineInitialBoardType(?string $embedBoardType): string
     {
-        $this->loadColumns();
-        $this->loadTasks();
-        $this->organizeTasksByColumn();
+        $allowed = ['po_stages', 'purchase_orders'];
+
+        if ($embedBoardType !== null && $embedBoardType !== '' && in_array($embedBoardType, $allowed, true)) {
+            return $embedBoardType;
+        }
+
+        $routeName = Route::currentRouteName();
+
+        if ($routeName === 'purchase-orders.index' || $routeName === 'purchase-orders.tracking') {
+            return 'po_stages';
+        }
+
+        if ($routeName === 'purchase-orders.kanban') {
+            return 'purchase_orders';
+        }
+
+        $fromReferer = $this->boardTypeFromPurchaseOrdersReferer();
+        if ($fromReferer !== null) {
+            return $fromReferer;
+        }
+
+        return 'purchase_orders';
+    }
+
+    private function boardTypeFromPurchaseOrdersReferer(): ?string
+    {
+        $referer = request()->header('Referer');
+        if (! is_string($referer) || $referer === '') {
+            return null;
+        }
+
+        $path = parse_url($referer, PHP_URL_PATH);
+        if (! is_string($path)) {
+            return null;
+        }
+
+        $normalized = '/'.trim($path, '/');
+
+        if ($normalized === '/purchase-orders') {
+            return 'po_stages';
+        }
+
+        if ($normalized === '/purchase-orders/tracking') {
+            return 'po_stages';
+        }
+
+        return null;
+    }
+
+    public function clearKanbanFiltersFromBanner(): void
+    {
+        $this->dispatch('clearKanbanFilters');
+    }
+
+    public function loadData(): void
+    {
+        try {
+            $this->loadColumns();
+            $this->loadTasks();
+            $this->organizeTasksByColumn();
+        } finally {
+            $this->js('window.poKanbanOverlayHide && window.poKanbanOverlayHide()');
+        }
     }
 
     /**
      * Carga las columnas (estados) del tablero Kanban.
-     * 
+     *
      * IMPORTANTE: El orden de las columnas es crítico. La vista blade depende de índices
      * de array ($columns[0], $columns[1], etc.) para mostrar los campos correctos en el modal.
      * Si el orden de las columnas cambia o se eliminan columnas, el modal puede no funcionar
      * correctamente.
-     * 
+     *
      * @return void
      */
     public function loadColumns()
     {
-        if (!$this->board) {
+        if (! $this->board) {
             $this->columns = [];
+            $this->defaultKanbanStatusForBoard = null;
+
             return;
         }
 
@@ -190,11 +320,15 @@ class KanbanBoard extends Component
         if ($statuses->isEmpty()) {
             \Log::warning('KanbanBoard: No se encontraron columnas para el tablero', [
                 'board_id' => $this->board->id,
-                'board_type' => $this->boardType
+                'board_type' => $this->boardType,
             ]);
             $this->columns = [];
+            $this->defaultKanbanStatusForBoard = null;
+
             return;
         }
+
+        $this->defaultKanbanStatusForBoard = $statuses->firstWhere('is_default', true);
 
         $this->columns = $statuses->map(function ($status) {
             return [
@@ -214,24 +348,29 @@ class KanbanBoard extends Component
                 'board_id' => $this->board->id,
                 'columns_count' => count($this->columns),
                 'expected_min' => $expectedMinColumns,
-                'column_names' => collect($this->columns)->pluck('name')->toArray()
+                'column_names' => collect($this->columns)->pluck('name')->toArray(),
             ]);
         }
     }
 
     public function loadTasks()
     {
-        if (!$this->board) {
+        if (! $this->board) {
             $this->tasks = [];
+
             return;
         }
 
-        // Columnas del tablero actual
-        $this->loadColumns();
-        $defaultStatus = $this->board->statuses()->where('is_default', true)->first();
+        if ($this->columns === []) {
+            $this->tasks = [];
+
+            return;
+        }
+
+        $defaultStatus = $this->defaultKanbanStatusForBoard;
 
         // Obtener los IDs de los estados de este tablero
-        $statusIds = collect($this->columns)->pluck('id')->toArray();
+        $statusIds = collect($this->columns)->pluck('id')->all();
 
         // Detectar el ID de la columna "Anulada" en este tablero (fallback 10 si no la encuentra)
         $anuladaStatusId = optional(
@@ -243,28 +382,60 @@ class KanbanBoard extends Component
 
         $companyId = auth()->user()->company_id ?? null;
 
-        // === 1) PO activas (NO borradas) -> van a su columna actual ===
-        $activeQuery = \App\Models\PurchaseOrder::with(['company', 'kanbanStatus', 'vendor'])
-            ->withoutTrashed()
-            ->where('company_id', $companyId);
+        $activeWith = [
+            'company:id,name',
+            'kanbanStatus:id,slug',
+            'vendor:id,name',
+        ];
 
-        // Aplicar filtros si están activos
+        $trashedWith = [
+            'company:id,name',
+            'vendor:id,name',
+        ];
+
+        // === 1) PO activas: solo columnas necesarias + estados de ESTE tablero (o sin estado para asignar default) ===
+        $activeQuery = PurchaseOrder::query()
+            ->select(self::KANBAN_PO_SELECT)
+            ->with($activeWith)
+            ->withoutTrashed()
+            ->where('company_id', $companyId)
+            ->where(function ($q) use ($statusIds) {
+                $q->whereIn('kanban_status_id', $statusIds)
+                    ->orWhereNull('kanban_status_id');
+            });
+
         $this->applyQueryFilters($activeQuery);
 
         $activeOrders = $activeQuery->get();
 
-        // Limpiar el array de tareas
+        // Asignar estado por defecto en bloque (evita N updates + N refresh en el bucle)
+        if ($defaultStatus && $statusIds !== []) {
+            $idsMissingStatus = $activeOrders
+                ->filter(fn (PurchaseOrder $o) => $o->kanban_status_id === null)
+                ->pluck('id')
+                ->all();
+
+            if ($idsMissingStatus !== []) {
+                PurchaseOrder::query()
+                    ->withoutTrashed()
+                    ->where('company_id', $companyId)
+                    ->whereIn('id', $idsMissingStatus)
+                    ->update(['kanban_status_id' => $defaultStatus->id]);
+
+                foreach ($activeOrders as $order) {
+                    if (! in_array($order->id, $idsMissingStatus, true)) {
+                        continue;
+                    }
+                    $order->kanban_status_id = $defaultStatus->id;
+                    $order->setRelation('kanbanStatus', $defaultStatus);
+                }
+            }
+        }
+
         $this->tasks = [];
 
         foreach ($activeOrders as $order) {
-            // Asignar estado por defecto si no tiene
-            if (!$order->kanban_status_id && $defaultStatus) {
-                $order->update(['kanban_status_id' => $defaultStatus->id]);
-                $order->refresh();
-            }
-
-            // Saltar si no tiene estado o no pertenece a este tablero
-            if (!$order->kanban_status_id || !in_array($order->kanban_status_id, $statusIds)) {
+            if (! $order->kanban_status_id || ! in_array((int) $order->kanban_status_id, $statusIds, true)) {
                 continue;
             }
 
@@ -276,7 +447,7 @@ class KanbanBoard extends Component
                 'status' => $order->kanban_status_id,
                 'status_slug' => $order->kanbanStatus->slug ?? 'unknown',
                 'order_date' => $order->order_date ? $order->order_date->format('Y-m-d') : null,
-                'requested_delivery_date' => $order->requested_delivery_date ? $order->requested_delivery_date->format('Y-m-d') : null,
+                'requested_delivery_date' => $order->date_required_in_destination ? $order->date_required_in_destination->format('Y-m-d') : null,
                 'total' => $order->total,
                 'company' => $order->company->name ?? 'N/A',
                 'created_at' => $order->created_at,
@@ -289,11 +460,13 @@ class KanbanBoard extends Component
         }
 
         // === 2) PO ANULADAS = soft-deleted -> SIEMPRE a la columna "Anulada" ===
-        $trashedQuery = \App\Models\PurchaseOrder::onlyTrashed()
-            ->with(['company', 'kanbanStatus', 'vendor'])
+        $trashedQuery = PurchaseOrder::query()
+            ->select(self::KANBAN_PO_SELECT)
+            ->with($trashedWith)
+            ->onlyTrashed()
             ->where('company_id', $companyId);
 
-        $this->applyQueryFilters($trashedQuery); // respeta filtros activos
+        $this->applyQueryFilters($trashedQuery);
 
         $trashedOrders = $trashedQuery->get();
 
@@ -306,7 +479,7 @@ class KanbanBoard extends Component
                 'status' => $anuladaStatusId,          // <- forzamos columna "Anulada"
                 'status_slug' => 'anulada',
                 'order_date' => $order->order_date ? $order->order_date->format('Y-m-d') : null,
-                'requested_delivery_date' => $order->requested_delivery_date ? $order->requested_delivery_date->format('Y-m-d') : null,
+                'requested_delivery_date' => $order->date_required_in_destination ? $order->date_required_in_destination->format('Y-m-d') : null,
                 'total' => $order->total,
                 'company' => $order->company->name ?? 'N/A',
                 'created_at' => $order->created_at,    // para mantener el orden cronológico
@@ -317,9 +490,6 @@ class KanbanBoard extends Component
                 'material_type' => $order->material_type,
             ];
         }
-
-        // Finalmente organizar en columnas y ordenar por created_at desc
-        $this->organizeTasksByColumn();
     }
 
     protected function applyQueryFilters($query)
@@ -353,11 +523,11 @@ class KanbanBoard extends Component
                     $materialType,                      // exacto
                     strtolower($materialType),          // minúsculas
                     strtoupper($materialType),          // mayúsculas
-                    ucfirst(strtolower($materialType))  // primera mayúscula
+                    ucfirst(strtolower($materialType)),  // primera mayúscula
                 ];
 
                 foreach ($searchPatterns as $pattern) {
-                    $q->orWhereRaw('material_type::text LIKE ?', ['%' . $pattern . '%']);
+                    $q->orWhereRaw('material_type::text LIKE ?', ['%'.$pattern.'%']);
                 }
             });
         }
@@ -375,8 +545,14 @@ class KanbanBoard extends Component
                     ->orWhereHas('company', function ($companyQuery) use ($searchText) {
                         $companyQuery->whereRaw('LOWER(name) LIKE LOWER(?)', ["%{$searchText}%"]);
                     })
-                    ->orWhereHas('vendor', function ($vendorQuery) use ($searchText) {
-                        $vendorQuery->whereRaw('LOWER(name) LIKE LOWER(?)', ["%{$searchText}%"]);
+                    ->orWhereExists(function ($subQuery) use ($searchText) {
+                        $subQuery->select(\DB::raw(1))
+                            ->from('vendors')
+                            ->whereColumn('purchase_orders.vendor_id', 'vendors.id')
+                            ->where(function ($vq) use ($searchText) {
+                                $vq->whereRaw('LOWER(vendors.name) LIKE LOWER(?)', ["%{$searchText}%"])
+                                    ->orWhereRaw('LOWER(vendors.vendo_code) LIKE LOWER(?)', ["%{$searchText}%"]);
+                            });
                     });
             });
         }
@@ -429,6 +605,7 @@ class KanbanBoard extends Component
                 // Refresca el kanban para devolver visualmente la tarjeta a su columna
                 $this->dispatch('refreshKanban');
                 session()->flash('message', 'Esta orden está anulada y no puede cambiar de etapa.');
+
                 return;
             }
 
@@ -443,12 +620,12 @@ class KanbanBoard extends Component
             $task->update(['kanban_status_id' => $newStatus]);
 
             // Crear notificación para todos los usuarios (tu servicio actual)
-            \Log::info("Attempting to create notifications for task move", [
+            \Log::info('Attempting to create notifications for task move', [
                 'task_id' => $task->id,
                 'order_number' => $task->order_number,
                 'old_status' => $oldColumnName,
                 'new_status' => $newColumnName,
-                'user' => auth()->user()->name
+                'user' => auth()->user()->name,
             ]);
 
             try {
@@ -456,26 +633,26 @@ class KanbanBoard extends Component
                 $notifications = $notificationService->notifyAll(
                     'task_moved',
                     'Tarea Movida',
-                    "La orden de compra {$task->order_number} fue movida de '{$oldColumnName}' a '{$newColumnName}' por " . auth()->user()->name,
+                    "La orden de compra {$task->order_number} fue movida de '{$oldColumnName}' a '{$newColumnName}' por ".auth()->user()->name,
                     [
-                        'order_id'  => $task->id,
-                        'task_id'   => $task->id,
+                        'order_id' => $task->id,
+                        'task_id' => $task->id,
                         'order_number' => $task->order_number,
                         'po_number' => $task->order_number,
-                        'old_status'=> $oldColumnName,
-                        'new_status'=> $newColumnName,
+                        'old_status' => $oldColumnName,
+                        'new_status' => $newColumnName,
                     ]
                 );
 
-                \Log::info("Notifications created successfully", [
+                \Log::info('Notifications created successfully', [
                     'task_id' => $task->id,
-                    'notifications_count' => count($notifications)
+                    'notifications_count' => count($notifications),
                 ]);
             } catch (\Exception $e) {
-                \Log::error("Error creating notifications", [
+                \Log::error('Error creating notifications', [
                     'task_id' => $task->id,
                     'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ]);
             }
 
@@ -485,26 +662,28 @@ class KanbanBoard extends Component
             $this->dispatch('purchaseOrderStatusUpdated');
             $this->dispatch('notificationsUpdated');
         } catch (\Exception $e) {
-            \Log::error("Error moving task: " . $e->getMessage());
+            \Log::error('Error moving task: '.$e->getMessage());
         }
     }
 
-    //Metodo para guardar datos y luego mover de etapa
-    public function saveAndMove(): void
+    // Metodo para guardar datos y luego mover de etapa
+    public function saveAndMove(): array
     {
-        $poId = (int)($this->currentTaskId ?? 0);
-        $stage = (int)($this->newColumnId ?? 0);
+        $poId = (int) ($this->currentTaskId ?? 0);
+        $stage = (int) ($this->newColumnId ?? 0);
 
         $po = PurchaseOrder::withTrashed()->find($poId);
         if ($po && $po->trashed()) {
             session()->flash('message', 'Esta orden está anulada y no puede cambiar de etapa.');
             $this->dispatch('refreshKanban'); // revierte visualmente el movimiento
-            return;
+
+            return ['success' => false, 'message' => 'Esta orden está anulada y no puede cambiar de etapa.'];
         }
 
-        if (!$poId || !$stage) {
+        if (! $poId || ! $stage) {
             session()->flash('message', 'Falta la PO o la etapa.');
-            return;
+
+            return ['success' => false, 'message' => 'Falta la PO o la etapa.'];
         }
 
         // Validar que la etapa destino no esté oculta
@@ -512,7 +691,8 @@ class KanbanBoard extends Component
         if ($targetStatus && $targetStatus->is_hidden) {
             session()->flash('message', 'No se puede mover a una etapa oculta.');
             $this->dispatch('refreshKanban');
-            return;
+
+            return ['success' => false, 'message' => 'No se puede mover a una etapa oculta.'];
         }
 
         try {
@@ -524,17 +704,19 @@ class KanbanBoard extends Component
         // 1) Guardar comentario + adjunto si existen
         $hasComment = is_string($this->comment ?? '') && trim($this->comment) !== '';
         if ($hasComment || $this->attachment) {
-            $this->setComments($poId, (string)($this->comment ?? ''));
+            // No disparar webhook aquí porque saveDataByModal() lo hará después
+            $this->setComments($poId, (string) ($this->comment ?? ''), false);
         }
 
-        // 2) Guardar campos del formulario de la etapa
-        $saveResult = $this->saveDataByModal(); // ya maneja transacción y payload por etapa
+        // 2) Guardar campos del formulario de la etapa (y consolidar webhook con comentario si aplica)
+        $saveResult = $this->saveDataByModal($hasComment); // ya maneja transacción y payload por etapa
 
-        if (!$saveResult['ok']) {
+        if (! $saveResult['ok']) {
             session()->flash('message', $saveResult['message'] ?? 'No se pudo guardar los datos de la etapa.');
             // NO mover la tarea si el guardado falló
             $this->dispatch('refreshKanban');
-            return;
+
+            return ['success' => false, 'message' => $saveResult['message'] ?? 'No se pudo guardar los datos de la etapa.'];
         }
 
         // 3) Mover a la etapa nueva (y notificar)
@@ -549,8 +731,11 @@ class KanbanBoard extends Component
         $this->comment = '';
         $this->attachment = null;
 
-        // 5) Cerrar el modal unificado
+        // 5) Cerrar el modal unificado y mostrar modal de éxito
         $this->dispatch('close-modal', 'modal-po-stage-change');
+        $this->dispatch('open-modal', 'success-modal');
+
+        return ['success' => true, 'message' => 'PO movida correctamente.'];
     }
 
     /**
@@ -608,7 +793,7 @@ class KanbanBoard extends Component
         // Cerrar el modal y forzar actualización del componente
         $this->dispatch('close-modal', 'modal-po-stage-change');
         $this->dispatch('refreshKanban');
-        
+
         // Forzar re-render del componente para limpiar el estado en el frontend
         $this->dispatch('$refresh');
     }
@@ -642,10 +827,12 @@ class KanbanBoard extends Component
                 $this->loadServiceProviders($po->trading_company, $po->service_provider);
             }
 
-            // Cargar transport types si estamos en la etapa "Booking"
+            // Cargar transport types y shipping lines si estamos en la etapa "Booking"
             if ($newColumnId == 3 && $po->trading_company) {
                 $this->mode = $po->mode;
+                $this->shipping_line = $po->shipping_line;
                 $this->loadTransportTypes($po->trading_company, $po->mode);
+                $this->loadShippingLines($po->trading_company, $po->shipping_line);
             }
 
             // Cargar shipping lines, puertos y container types si estamos en la etapa "En Tránsito"
@@ -656,7 +843,7 @@ class KanbanBoard extends Component
                 $this->departure_port = $po->departure_port;
                 $this->arrival_port = $po->arrival_port;
                 $this->container_type = $po->container_type;
-                
+
                 $this->loadShippingLines($po->trading_company, $po->shipping_line);
                 $this->loadPorts($po->trading_company, $po->departure_port, $po->arrival_port);
                 $this->loadContainerTypes($po->trading_company, $po->container_type);
@@ -686,15 +873,15 @@ class KanbanBoard extends Component
             }
             $this->container_number = $po->container_number;
             $this->mbl_number = $po->mbl_number;
-            $this->shipment_amount = $po->shipment_amount ?? null;
+            $this->freight_amount = $po->freight_amount ?? null;
             // shipping_line, departure_port y arrival_port ya se cargaron arriba si estamos en etapa 5
             if ($newColumnId != 5) {
                 $this->shipping_line = $po->shipping_line;
                 $this->departure_port = $po->departure_port;
                 $this->arrival_port = $po->arrival_port;
             }
-            $this->shipment_status = $po->shipment_status ?? null;
-            $this->merchandise_invoice = $po->merchandise_invoice ?? null;
+            $this->arrival_status = $po->arrival_status ?? null; // Solo lectura
+            $this->factura_merca = $po->factura_merca ?? null;
             $this->tracking_id = $po->tracking_id;
 
             // Puerto - convertir fechas al formato Y-m-d
@@ -709,6 +896,60 @@ class KanbanBoard extends Component
 
             // Ingresada
             $this->receipt_note = $po->receipt_note;
+        }
+    }
+
+    /**
+     * Se ejecuta automáticamente cuando newColumnId cambia.
+     * Recarga los maestros correspondientes a la nueva etapa.
+     */
+    public function updatedNewColumnId($value)
+    {
+        // Solo cargar maestros si hay una tarea actual y una PO válida
+        if (! $this->currentTaskId) {
+            return;
+        }
+
+        $po = PurchaseOrder::find($this->currentTaskId);
+        if (! $po || ! $po->trading_company) {
+            return;
+        }
+
+        $newStage = (int) ($value ?? 0);
+
+        // Limpiar arrays de maestros antes de cargar nuevos
+        $this->serviceProviderArray = [];
+        $this->shippingLineArray = [];
+        $this->departurePortArray = [];
+        $this->arrivalPortArray = [];
+        $this->containerTypeArray = [];
+        $this->transportTypeArray = [];
+
+        // Cargar maestros según la nueva etapa
+        // Etapa 2 (Producción) o 3 (Booking): service_provider
+        if ($newStage == 2 || $newStage == 3) {
+            $this->service_provider = $po->service_provider;
+            $this->loadServiceProviders($po->trading_company, $po->service_provider);
+        }
+
+        // Etapa 3 (Booking): transport_types y shipping_line
+        if ($newStage == 3) {
+            $this->mode = $po->mode;
+            $this->shipping_line = $po->shipping_line;
+            $this->loadTransportTypes($po->trading_company, $po->mode);
+            $this->loadShippingLines($po->trading_company, $po->shipping_line);
+        }
+
+        // Etapa 5 (En Tránsito): shipping_line, puertos, container_type
+        if ($newStage == 5) {
+            $this->shipping_line = $po->shipping_line;
+            $this->departure_port = $po->departure_port;
+            $this->arrival_port = $po->arrival_port;
+            $this->container_type = $po->container_type;
+
+            $this->loadShippingLines($po->trading_company, $po->shipping_line);
+            $this->loadPorts($po->trading_company, $po->departure_port, $po->arrival_port);
+            $this->loadContainerTypes($po->trading_company, $po->container_type);
         }
     }
 
@@ -734,11 +975,42 @@ class KanbanBoard extends Component
 
     public function setActualHubId($taskId, $hubId)
     {
-        \Log::info("Actual Hub ID updated: " . $this->actual_hub_id);
+        \Log::info('Actual Hub ID updated: '.$this->actual_hub_id);
+
+        $po = PurchaseOrder::find($taskId);
+        $oldHubId = $po?->actual_hub_id;
+        $newHubId = $this->actual_hub_id;
 
         DB::table('purchase_orders')
             ->where('id', $taskId)
-            ->update(['actual_hub_id' => $this->actual_hub_id]);
+            ->update(['actual_hub_id' => $newHubId]);
+
+        if ($po && $oldHubId != $newHubId) {
+            try {
+                $description = ChangeDescriptionHelper::generateForPurchaseOrder(
+                    $po,
+                    ['actual_hub_id' => $oldHubId],
+                    ['actual_hub_id' => $newHubId]
+                );
+                if ($description !== '') {
+                    PurchaseOrderComment::create([
+                        'purchase_order_id' => $taskId,
+                        'user_id' => auth()->id(),
+                        'comment' => $description,
+                        'action_type' => 'field_change',
+                        'old_values' => ['actual_hub_id' => $oldHubId],
+                        'new_values' => ['actual_hub_id' => $newHubId],
+                        'ip_address' => request()->ip(),
+                        'user_agent' => request()->userAgent(),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                \Log::error('[KanbanBoard] setActualHubId audit error', [
+                    'po' => $taskId,
+                    'msg' => $e->getMessage(),
+                ]);
+            }
+        }
 
         // Recargar los datos
         $this->loadData();
@@ -753,14 +1025,14 @@ class KanbanBoard extends Component
         $this->dispatch('purchaseOrderStatusUpdated');
     }
 
-    public function setComments($taskId, $comment)
+    public function setComments($taskId, $comment, $dispatchWebhook = true)
     {
         // Si no hay comentario, no hacemos nada y retornamos
         if (empty(trim($comment))) {
             return;
         }
 
-        \Log::info("Setting comments for task $taskId: " . $comment);
+        \Log::info("Setting comments for task $taskId: ".$comment);
 
         try {
             $operacion = $this->getOperacionName($this->newColumnId);
@@ -769,7 +1041,7 @@ class KanbanBoard extends Component
                 'purchase_order_id' => $taskId,
                 'user_id' => auth()->id(),
                 'comment' => $comment,
-                'operacion' => $operacion
+                'operacion' => $operacion,
             ]);
 
             if ($this->attachment) {
@@ -785,7 +1057,9 @@ class KanbanBoard extends Component
             $this->attachment = null;
 
             // Dispatch webhook event for updated purchase order (comment added)
-            if (function_exists('dispatch_webhook')) {
+            // Solo si $dispatchWebhook es true (por defecto true para mantener compatibilidad)
+            // Cuando se llama desde saveAndMove(), se pasa false para evitar duplicados
+            if ($dispatchWebhook && function_exists('dispatch_webhook')) {
                 try {
                     $po = PurchaseOrder::find($taskId);
                     if ($po) {
@@ -816,7 +1090,7 @@ class KanbanBoard extends Component
             }
 
         } catch (\Exception $e) {
-            \Log::error("Error setting comments: " . $e->getMessage());
+            \Log::error('Error setting comments: '.$e->getMessage());
         }
     }
 
@@ -841,7 +1115,6 @@ class KanbanBoard extends Component
         return $operaciones[$columnId] ?? 'Operación no especificada';
     }
 
-
     public function getCommentsWithAttachments($taskId)
     {
         return PurchaseOrderComment::with(['user', 'media'])
@@ -856,35 +1129,95 @@ class KanbanBoard extends Component
                     'created_at' => formatDateTime($comment->created_at),
                     'attachment' => $comment->getAttachment() ? [
                         'name' => $comment->getAttachment()->name,
-                        'url' => $comment->getAttachment()->getUrl()
-                    ] : null
+                        'url' => route('media.download', $comment->getAttachment()->id),
+                    ] : null,
                 ];
             });
     }
 
     public function setPickupDate($taskId, $pickupDate)
     {
-        \Log::info("Setting pickup date for task $taskId: " . $pickupDate);
+        \Log::info("Setting pickup date for task $taskId: ".$pickupDate);
 
         try {
+            $po = PurchaseOrder::find($taskId);
+            $oldDate = $po?->date_actual_pickup;
+
             DB::table('purchase_orders')
                 ->where('id', $taskId)
                 ->update(['date_actual_pickup' => $pickupDate]);
+
+            if ($po && $oldDate != $pickupDate) {
+                try {
+                    $description = ChangeDescriptionHelper::generateForPurchaseOrder(
+                        $po,
+                        ['date_actual_pickup' => $oldDate],
+                        ['date_actual_pickup' => $pickupDate]
+                    );
+                    if ($description !== '') {
+                        PurchaseOrderComment::create([
+                            'purchase_order_id' => $taskId,
+                            'user_id' => auth()->id(),
+                            'comment' => $description,
+                            'action_type' => 'field_change',
+                            'old_values' => ['date_actual_pickup' => $oldDate],
+                            'new_values' => ['date_actual_pickup' => $pickupDate],
+                            'ip_address' => request()->ip(),
+                            'user_agent' => request()->userAgent(),
+                        ]);
+                    }
+                } catch (\Throwable $auditException) {
+                    \Log::error('[KanbanBoard] setPickupDate audit error', [
+                        'po' => $taskId,
+                        'msg' => $auditException->getMessage(),
+                    ]);
+                }
+            }
         } catch (\Exception $e) {
-            \Log::error("Error setting pickup date: " . $e->getMessage());
+            \Log::error('Error setting pickup date: '.$e->getMessage());
         }
     }
 
     public function setTrackingId($taskId, $trackingId)
     {
-        \Log::info("Setting tracking ID for task $taskId: " . $trackingId);
+        \Log::info("Setting tracking ID for task $taskId: ".$trackingId);
 
         try {
+            $po = PurchaseOrder::find($taskId);
+            $oldTrackingId = $po?->tracking_id;
+
             DB::table('purchase_orders')
                 ->where('id', $taskId)
                 ->update(['tracking_id' => $trackingId]);
+
+            if ($po && $oldTrackingId != $trackingId) {
+                try {
+                    $description = ChangeDescriptionHelper::generateForPurchaseOrder(
+                        $po,
+                        ['tracking_id' => $oldTrackingId],
+                        ['tracking_id' => $trackingId]
+                    );
+                    if ($description !== '') {
+                        PurchaseOrderComment::create([
+                            'purchase_order_id' => $taskId,
+                            'user_id' => auth()->id(),
+                            'comment' => $description,
+                            'action_type' => 'field_change',
+                            'old_values' => ['tracking_id' => $oldTrackingId],
+                            'new_values' => ['tracking_id' => $trackingId],
+                            'ip_address' => request()->ip(),
+                            'user_agent' => request()->userAgent(),
+                        ]);
+                    }
+                } catch (\Throwable $auditException) {
+                    \Log::error('[KanbanBoard] setTrackingId audit error', [
+                        'po' => $taskId,
+                        'msg' => $auditException->getMessage(),
+                    ]);
+                }
+            }
         } catch (\Exception $e) {
-            \Log::error("Error setting tracking ID: " . $e->getMessage());
+            \Log::error('Error setting tracking ID: '.$e->getMessage());
         }
     }
 
@@ -893,7 +1226,7 @@ class KanbanBoard extends Component
         return view('livewire.kanban.kanban-board', [
             'tasksByColumn' => $this->tasksByColumn,
             'boardType' => $this->boardType,
-            'hasActiveFilters' => !empty($this->activeFilters)
+            'hasActiveFilters' => ! empty($this->activeFilters),
         ])->layout('layouts.app');
     }
 
@@ -921,16 +1254,15 @@ class KanbanBoard extends Component
     private function fieldsByStage(): array
     {
         return [
-            2 => ['date_variable_date', 'date_theorical_load', 'service_provider', 'forwarder_name'], // Producción
-            3 => ['date_variable_date', 'date_theorical_load', 'service_provider',
-                  'container_number', 'mbl_number', 'tracking_id'], // Booking (mismos campos que Producción + tracking)
+            2 => ['date_variable_date', 'service_provider'], // Producción (removidos: date_theorical_load readonly, forwarder_name hidden)
+            3 => ['date_variable_date', 'service_provider',
+                'container_number', 'mbl_number', 'tracking_id', 'shipping_line'], // Booking (removido: date_theorical_load readonly)
             4 => [], // Consolidador (sin campos específicos)
             5 => [
                 'date_atd', 'date_eta', 'date_eta_initial', 'container_type',
-                'container_number', 'mbl_number',
-                'shipment_amount', 'shipping_line', 'shipment_status', 'merchandise_invoice',
-                'tracking_id', 'departure_port', 'arrival_port',
-            ], // En transito
+                'freight_amount', 'shipping_line', 'factura_merca',
+                'departure_port', 'arrival_port',
+            ], // En transito (removidos: container_number, mbl_number, tracking_id hidden - ya capturados en Booking)
             6 => ['date_ata'], // Puerto
             7 => ['bonded_warehouse_enter', 'bonded_warehouse_exit', 'date_ata'], // Alm. Fiscal
             9 => ['estimated_dc_availability_date'], // Recibiendo CDI
@@ -938,20 +1270,72 @@ class KanbanBoard extends Component
         ];
     }
 
-    public function saveDataByModal(): array
+    /**
+     * Normaliza un valor para comparación, manejando diferentes tipos de datos.
+     * Similar a normalizeValueForComparison en CreatePucharseOrder.php pero más conservador
+     * para evitar falsos positivos con strings que parecen fechas pero no lo son.
+     *
+     * @param  mixed  $value  El valor a normalizar
+     * @return mixed El valor normalizado para comparación
+     */
+    private function normalizeForComparison($value)
     {
-        $poId = (int)($this->currentTaskId ?? 0);
-        $stage = (int)($this->newColumnId ?? 0);
+        if ($value === null || $value === '' || $value === false) {
+            return null;
+        }
 
-        if (!$poId || !$stage) {
+        if ($value instanceof \Carbon\Carbon) {
+            return $value->format('Y-m-d');
+        }
+
+        if ($value instanceof \DateTime) {
+            return $value->format('Y-m-d');
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+            if ($trimmed === '') {
+                return null;
+            }
+
+            // Intentar parsear como fecha solo si tiene formato YYYY-MM-DD...
+            if (preg_match('/^\d{4}-\d{2}-\d{2}/', $trimmed)) {
+                try {
+                    return \Carbon\Carbon::parse($trimmed)->format('Y-m-d');
+                } catch (\Exception $e) {
+                    // Si falla el parseo, continuar con el string original
+                }
+            }
+
+            // Si es numérico, convertir a float con 2 decimales
+            if (is_numeric($trimmed)) {
+                return round((float) $trimmed, 2);
+            }
+
+            return $trimmed;
+        }
+
+        if (is_numeric($value)) {
+            return round((float) $value, 2);
+        }
+
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+
+        return $value;
+    }
+
+    public function saveDataByModal(bool $hasComment = false): array
+    {
+        $poId = (int) ($this->currentTaskId ?? 0);
+        $stage = (int) ($this->newColumnId ?? 0);
+
+        if (! $poId || ! $stage) {
             return ['ok' => false, 'message' => 'Falta la PO o la etapa seleccionada.'];
         }
 
         $fields = $this->fieldsByStage()[$stage] ?? [];
-        if (empty($fields)) {
-            // Esta etapa no tiene campos a persistir
-            return ['ok' => true, 'updated' => 0];
-        }
 
         // Armar payload solo con props existentes y con valor
         $payload = [];
@@ -959,35 +1343,112 @@ class KanbanBoard extends Component
             if (property_exists($this, $name)) {
                 $val = $this->$name;
                 // Filtrar valores especiales que indican "no hay datos"
-                if (!is_null($val) && $val !== '__no_data__' && (!(is_string($val)) || trim($val) !== '')) {
+                if (! is_null($val) && $val !== '__no_data__' && (! (is_string($val)) || trim($val) !== '')) {
                     $payload[$name] = $val;
                 }
             }
         }
 
-        if (empty($payload)) {
+        // Comparar con valores actuales para detectar cambios reales
+        $po = PurchaseOrder::find($poId);
+        if (! $po) {
+            return ['ok' => false, 'message' => 'PO no encontrada.'];
+        }
+
+        $realChanges = [];
+        $oldValues = [];
+        foreach ($payload as $field => $newValue) {
+            $oldValue = $po->$field;
+            if ($this->normalizeForComparison($oldValue) !== $this->normalizeForComparison($newValue)) {
+                $realChanges[$field] = $newValue;
+                $oldValues[$field] = $oldValue;
+            }
+        }
+
+        // Incluir comentario en los cambios para el webhook si se agregó uno
+        // (el comentario ya fue guardado por setComments(), aquí solo se marca para el webhook)
+        if ($hasComment) {
+            $realChanges['comments'] = 'new_comment_added';
+        }
+
+        // Si no hay cambios reales ni comentarios, no actualizar ni enviar webhook
+        if (empty($realChanges)) {
             return ['ok' => true, 'updated' => 0];
         }
 
+        // Separar cambios de BD (columnas reales) de cambios informativos (comments)
+        $dbChanges = $realChanges;
+        unset($dbChanges['comments']); // 'comments' no es columna de purchase_orders
+
         try {
-            DB::beginTransaction();
+            // Solo ejecutar update en BD si hay cambios de columnas reales
+            $updated = 0;
+            if (! empty($dbChanges)) {
+                DB::beginTransaction();
 
-            $updated = DB::table('purchase_orders')
-                ->where('id', $poId)
-                ->update($payload);
+                // Verificar que la PO exista ANTES del update
+                $poExists = DB::table('purchase_orders')->where('id', $poId)->exists();
+                if (! $poExists) {
+                    throw new \RuntimeException('PO no encontrada');
+                }
 
-            // si quieres, puedes verificar que exista la PO
-             if ($updated === 0) { 
-                 throw new \RuntimeException('PO no encontrada'); 
-             }
+                $updated = DB::table('purchase_orders')
+                    ->where('id', $poId)
+                    ->update($dbChanges);
 
-            // NUEVO: Actualizar automáticamente arrival_status y delay_days si se actualizó la ETA
-            $po = PurchaseOrder::find($poId);
-            if ($po && (isset($payload['date_eta']) || isset($payload['date_eta_initial']))) {
-                $po->updateArrivalStatus();
+                // Nota: $updated === 0 es válido si los datos ya tenían los mismos valores
+                // No es un error, simplemente no hubo cambios que hacer
+
+                // Actualizar automáticamente arrival_status y delay_days si se actualizó la ETA
+                if ($po && (isset($dbChanges['date_eta']) || isset($dbChanges['date_eta_initial']))) {
+                    $po->updateArrivalStatus();
+                }
+
+                DB::commit();
+
+                // Registrar auditoría de los cambios guardados desde el modal de etapa
+                try {
+                    $auditOldValues = array_intersect_key($oldValues, $dbChanges);
+                    [$oldForStorage, $newForStorage] = ChangeDescriptionHelper::filterNoiseChangesForStorage($auditOldValues, $dbChanges);
+                    if (! empty($newForStorage)) {
+                        $description = ChangeDescriptionHelper::generateForPurchaseOrder($po, $auditOldValues, $dbChanges);
+                        if ($description !== '') {
+                            PurchaseOrderComment::create([
+                                'purchase_order_id' => $poId,
+                                'user_id' => auth()->id(),
+                                'comment' => $description,
+                                'action_type' => 'field_change',
+                                'old_values' => $oldForStorage,
+                                'new_values' => $newForStorage,
+                                'ip_address' => request()->ip(),
+                                'user_agent' => request()->userAgent(),
+                            ]);
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    \Log::error('[KanbanBoard] saveDataByModal audit error', [
+                        'po' => $poId,
+                        'msg' => $e->getMessage(),
+                    ]);
+                }
             }
 
-            DB::commit();
+            // Push cambios relevantes a Porth (solo container_number y shipping_line)
+            if ($po && ! empty($po->porth_id) && ! empty($dbChanges)) {
+                $porthRelevantFields = ['container_number', 'shipping_line'];
+                $porthChanges = array_intersect_key($dbChanges, array_flip($porthRelevantFields));
+                if (! empty($porthChanges)) {
+                    try {
+                        $porthApi = app(\App\Services\PorthApiService::class);
+                        $porthApi->pushChangesToPorth($po, $porthChanges);
+                    } catch (\Throwable $e) {
+                        \Log::error('kanban:porth_push_error', [
+                            'purchase_order_id' => $po->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
 
             // Dispatch webhook event for updated purchase order
             if ($po && function_exists('dispatch_webhook')) {
@@ -995,20 +1456,42 @@ class KanbanBoard extends Component
                     \Log::info('About to dispatch webhook for PO update from KanbanBoard', [
                         'po_id' => $po->id,
                         'order_number' => $po->order_number,
+                        'changes_keys' => array_keys($realChanges),
                     ]);
 
-                    $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
-                    $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
-
-                    // Convertir a array y asegurar que sea JSON serializable
-                    $poData = $freshPo->toArray();
-                    $poData = json_decode(json_encode($poData), true);
+                    // Si hay comentario, enviar la PO completa con comments para que el webhook los incluya
+                    if ($hasComment) {
+                        $po->load(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $freshPo = $po->fresh(['products', 'vendor', 'shipTo', 'kanbanStatus', 'comments', 'comments.user']);
+                        $poData = $freshPo->toArray();
+                        $poData = json_decode(json_encode($poData), true);
+                        // Aplicar cambios recientes sobre la PO completa
+                        foreach ($realChanges as $field => $value) {
+                            if ($field !== 'comments') {
+                                $poData[$field] = $value;
+                            }
+                        }
+                        $updatedData = $poData;
+                    } else {
+                        // Sin comentario: enviar solo identificadores + campos actualizados
+                        $updatedData = [
+                            'order_number' => $po->order_number,
+                            'trading_company' => $po->trading_company,
+                            'company_id' => $po->company_id,
+                            'current_timestamp' => function_exists('format_webhook_date') ? format_webhook_date(now()) : now()->utc()->format('Y-m-d\TH:i:s.v\Z'),
+                        ];
+                        foreach ($realChanges as $field => $value) {
+                            if ($field !== 'comments') {
+                                $updatedData[$field] = $value;
+                            }
+                        }
+                    }
 
                     dispatch_webhook('purchase_order.updated', [
                         'purchase_order_id' => $po->id,
                         'order_number' => $po->order_number,
-                        'changes' => $payload,
-                        'data' => $poData,
+                        'changes' => $realChanges,
+                        'data' => $updatedData,
                     ]);
 
                     \Log::info('dispatch_webhook completed from KanbanBoard', [
@@ -1028,8 +1511,9 @@ class KanbanBoard extends Component
         } catch (\Throwable $e) {
             DB::rollBack();
             \Log::error('[KanbanBoard] saveDataByModal error', [
-                'po' => $poId, 'stage' => $stage, 'msg' => $e->getMessage()
+                'po' => $poId, 'stage' => $stage, 'msg' => $e->getMessage(),
             ]);
+
             return ['ok' => false, 'message' => 'No se pudo guardar los datos de la etapa.'];
         }
     }
@@ -1053,28 +1537,28 @@ class KanbanBoard extends Component
         return [
             2 => [
                 'date_variable_date' => 'required|date',
-                'service_provider'   => 'nullable|string',
+                'service_provider' => 'nullable|string',
                 // forwarder_name está oculto en la vista, por lo que no debe ser requerido
                 // Los campos de tracking se capturan en el paso a Booking (etapa 3)
             ],
 
             3 => [
                 'date_variable_date' => 'required|date',
-                'service_provider'   => 'nullable|string',
+                'service_provider' => 'nullable|string',
                 // Validación: al menos uno de estos tres campos debe estar presente para habilitar tracking
                 'container_number' => 'nullable|required_without_all:tracking_id,mbl_number|string',
-                'mbl_number'       => 'nullable|required_without_all:tracking_id,container_number|string',
-                'tracking_id'      => 'nullable|required_without_all:container_number,mbl_number|string',
+                'mbl_number' => 'nullable|required_without_all:tracking_id,container_number|string',
+                'tracking_id' => 'nullable|required_without_all:container_number,mbl_number|string',
             ],
 
             5 => [
-                'date_atd'         => 'required|date',
+                'date_atd' => 'required|date',
                 'date_eta_initial' => 'required|date',
-                'date_eta'         => 'required|date',
+                'date_eta' => 'required|date',
                 // Los campos de tracking ya se capturaron en el paso a Booking
-                'shipping_line'    => 'required|string',
-                'departure_port'   => 'required|string',
-                'arrival_port'     => 'required|string',
+                'shipping_line' => 'required|string',
+                'departure_port' => 'required|string',
+                'arrival_port' => 'required|string',
                 // 'container_type' no está como requerido
             ],
 
@@ -1084,8 +1568,8 @@ class KanbanBoard extends Component
 
             7 => [
                 'bonded_warehouse_enter' => 'required|date',
-                'bonded_warehouse_exit'  => 'required|date',
-                'date_ata'               => 'required|date',
+                'bonded_warehouse_exit' => 'nullable|date',
+                'date_ata' => 'required|date',
             ],
 
             8 => [
@@ -1102,31 +1586,31 @@ class KanbanBoard extends Component
     private function fieldAttributeLabels(): array
     {
         return [
-            'date_variable_date'     => 'Carga Lista Variable',
-            'date_theorical_load'    => 'Carga Lista Teórica',
-            'service_provider'       => 'Proveedor de Servicio',
-            'forwarder_name'         => 'Agente de Carga',
-            'date_booking_request'   => 'Solicitud de booking',
-            'date_booking_authorized'=> 'Aut. Booking',
-            'date_etd_initial'       => 'ETD Inicial',
-            'date_etd'               => 'ETD Variable',
-            'mode'                   => 'Modo de transporte',
-            'date_atd'               => 'ETD Real',
-            'date_eta_initial'       => 'ETA Inicial',
-            'date_eta'               => 'ETA Variable',
-            'container_number'       => 'Contenedor',
-            'container_type'         => 'Tipo de contenedor',
-            'mbl_number'             => 'MBL',
-            'bill_of_lading'         => 'BL',
-            'shipping_line'          => 'Naviera',
-            'tracking_id'            => 'Tracking',
-            'departure_port'         => 'Puerto de embarque',
-            'arrival_port'           => 'Puerto de arribo',
-            'date_ata'               => 'ETA Real',
+            'date_variable_date' => 'Carga Lista Variable',
+            'date_theorical_load' => 'Carga Lista Teórica',
+            'service_provider' => 'Proveedor de Servicio',
+            'forwarder_name' => 'Agente de Carga',
+            'date_booking_request' => 'Solicitud de booking',
+            'date_booking_authorized' => 'Aut. Booking',
+            'date_etd_initial' => 'ETD Inicial',
+            'date_etd' => 'ETD Variable',
+            'mode' => 'Modo de transporte',
+            'date_atd' => 'ETD Real',
+            'date_eta_initial' => 'ETA Inicial',
+            'date_eta' => 'ETA Variable',
+            'container_number' => 'Contenedor',
+            'container_type' => 'Tipo de contenedor',
+            'mbl_number' => 'Documento de tránsito',
+            'bill_of_lading' => 'BL',
+            'shipping_line' => 'Naviera',
+            'tracking_id' => 'Tracking',
+            'departure_port' => 'Puerto de embarque',
+            'arrival_port' => 'Puerto de arribo',
+            'date_ata' => 'ETA Real',
             'bonded_warehouse_enter' => 'Ingreso a AF',
-            'bonded_warehouse_exit'  => 'Salida AF',
+            'bonded_warehouse_exit' => 'Salida AF',
             'estimated_dc_availability_date' => 'Fecha Disp. Bodega Estimada',
-            'receipt_note'      => 'Nota de Recibo',
+            'receipt_note' => 'Nota de Recibo',
         ];
     }
 
@@ -1136,8 +1620,8 @@ class KanbanBoard extends Component
      * Si la validación falla, Livewire automáticamente mostrará los errores
      * en la vista y no ejecutará el resto del método saveAndMove().
      *
-     * @param int $stage ID de la etapa (columna KanbanStatus)
-     * @return void
+     * @param  int  $stage  ID de la etapa (columna KanbanStatus)
+     *
      * @throws \Illuminate\Validation\ValidationException Si la validación falla
      */
     private function validateStageRequirements(int $stage): void
@@ -1150,10 +1634,10 @@ class KanbanBoard extends Component
 
         $messages = [
             'required' => 'El campo :attribute es requerido.',
-            'required_without_all' => 'Debe proporcionar al menos uno: Número de Booking, MBL o Número de Contenedor.',
-            'date'     => 'El campo :attribute debe ser una fecha válida.',
-            'string'   => 'El campo :attribute debe ser texto.',
-            'numeric'  => 'El campo :attribute debe ser numérico.',
+            'required_without_all' => 'Debe proporcionar al menos uno: Número de Booking, Documento de tránsito o Número de Contenedor.',
+            'date' => 'El campo :attribute debe ser una fecha válida.',
+            'string' => 'El campo :attribute debe ser texto.',
+            'numeric' => 'El campo :attribute debe ser numérico.',
         ];
 
         $this->validate($rules, $messages, $this->fieldAttributeLabels());
@@ -1169,28 +1653,27 @@ class KanbanBoard extends Component
 
     /**
      * Cargar proveedores de servicio desde la API
-     * 
-     * @param string $tradingCompany
-     * @param string|null $currentServiceProvider Valor actual guardado en la PO (opcional)
-     * @return void
+     *
+     * @param  string|null  $currentServiceProvider  Valor actual guardado en la PO (opcional)
      */
     protected function loadServiceProviders(string $tradingCompany, ?string $currentServiceProvider = null): void
     {
         // PRIMERO: Asegurar que el valor guardado esté en el array desde el inicio
         // Esto garantiza que esté disponible inmediatamente cuando Livewire renderiza el select
         $serviceProviderToAdd = $currentServiceProvider ?? $this->service_provider;
-        
+
         $this->serviceProviderArray = [];
-        
+
         if ($serviceProviderToAdd && trim($serviceProviderToAdd) !== '') {
             $this->serviceProviderArray[$serviceProviderToAdd] = $serviceProviderToAdd;
         }
-        
+
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
             if (empty($this->serviceProviderArray)) {
-                $this->serviceProviderArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente";
+                $this->serviceProviderArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente';
             }
+
             return;
         }
 
@@ -1206,10 +1689,10 @@ class KanbanBoard extends Component
 
             $serviceProvidersResponse = $this->getServiceProvidersWithCustomTimeout($apiService, $apiParams, 8);
             $serviceProvidersArray = $this->processApiResponse($serviceProvidersResponse, 'name', 'name');
-            
+
             // Combinar resultados de la API con el valor guardado (sin sobrescribir)
             foreach ($serviceProvidersArray as $key => $value) {
-                if (!isset($this->serviceProviderArray[$key])) {
+                if (! isset($this->serviceProviderArray[$key])) {
                     $this->serviceProviderArray[$key] = $value;
                 }
             }
@@ -1222,7 +1705,7 @@ class KanbanBoard extends Component
             \Log::error('Error loading service providers in KanbanBoard', [
                 'error' => $e->getMessage(),
                 'trading_company' => $tradingCompanyValue,
-                'array_count' => count($this->serviceProviderArray)
+                'array_count' => count($this->serviceProviderArray),
             ]);
             // Los valores guardados ya están en el array desde el inicio, así que no los perdemos
             if (empty($this->serviceProviderArray)) {
@@ -1233,29 +1716,28 @@ class KanbanBoard extends Component
 
     /**
      * Cargar shipping lines desde la API
-     * 
-     * @param string $tradingCompany
-     * @param string|null $currentShippingLine Valor actual guardado en la PO (opcional)
-     * @return void
+     *
+     * @param  string|null  $currentShippingLine  Valor actual guardado en la PO (opcional)
      */
     protected function loadShippingLines(string $tradingCompany, ?string $currentShippingLine = null): void
     {
         // PRIMERO: Asegurar que el valor guardado esté en el array desde el inicio
         // Esto garantiza que esté disponible inmediatamente cuando Livewire renderiza el select
         $shippingLineToAdd = $currentShippingLine ?? $this->shipping_line;
-        
+
         $this->shippingLineArray = [];
-        
+
         if ($shippingLineToAdd) {
             $this->shippingLineArray[$shippingLineToAdd] = $shippingLineToAdd;
         }
-        
+
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
             // Si no hay trading company y no hay valor guardado, mostrar mensaje
             if (empty($this->shippingLineArray)) {
                 $this->shippingLineArray['__no_data__'] = '⚠️ No hay datos disponibles';
             }
+
             return; // Ya agregamos el valor guardado arriba
         }
 
@@ -1272,30 +1754,28 @@ class KanbanBoard extends Component
             // Intentar solo una vez con timeout más corto (8 segundos)
             $shippingLinesResponse = $this->getShippingLinesWithCustomTimeout($apiService, $apiParams, 8);
             $shippingLinesArray = $this->processApiResponse($shippingLinesResponse, 'name', 'name');
-            
+
             // Combinar los valores de la API con el valor guardado (sin duplicar)
             foreach ($shippingLinesArray as $key => $value) {
-                if (!isset($this->shippingLineArray[$key])) {
+                if (! isset($this->shippingLineArray[$key])) {
                     $this->shippingLineArray[$key] = $value;
                 }
             }
         } catch (\Exception $e) {
             // El valor guardado ya está en el array desde el inicio, así que no lo perdemos
         }
-        
+
         // Si después de todos los intentos el array está vacío (y no hay valor guardado), agregar mensaje informativo
         if (empty($this->shippingLineArray)) {
-            $this->shippingLineArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente "' . $tradingCompanyValue . '"';
+            $this->shippingLineArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente "'.$tradingCompanyValue.'"';
         }
     }
 
     /**
      * Cargar puertos desde la API
-     * 
-     * @param string $tradingCompany
-     * @param string|null $currentDeparturePort Valor actual guardado en la PO para puerto de embarque (opcional)
-     * @param string|null $currentArrivalPort Valor actual guardado en la PO para puerto de arribo (opcional)
-     * @return void
+     *
+     * @param  string|null  $currentDeparturePort  Valor actual guardado en la PO para puerto de embarque (opcional)
+     * @param  string|null  $currentArrivalPort  Valor actual guardado en la PO para puerto de arribo (opcional)
      */
     protected function loadPorts(string $tradingCompany, ?string $currentDeparturePort = null, ?string $currentArrivalPort = null): void
     {
@@ -1303,18 +1783,18 @@ class KanbanBoard extends Component
         // Esto garantiza que estén disponibles inmediatamente cuando Livewire renderiza el select
         $departurePortToAdd = $currentDeparturePort ?? $this->departure_port;
         $arrivalPortToAdd = $currentArrivalPort ?? $this->arrival_port;
-        
+
         $this->departurePortArray = [];
         $this->arrivalPortArray = [];
-        
+
         if ($departurePortToAdd && trim($departurePortToAdd) !== '') {
             $this->departurePortArray[$departurePortToAdd] = $departurePortToAdd;
         }
-        
+
         if ($arrivalPortToAdd && trim($arrivalPortToAdd) !== '') {
             $this->arrivalPortArray[$arrivalPortToAdd] = $arrivalPortToAdd;
         }
-        
+
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
             // Si no hay trading company y no hay valores guardados, mostrar mensaje
@@ -1324,6 +1804,7 @@ class KanbanBoard extends Component
             if (empty($this->arrivalPortArray)) {
                 $this->arrivalPortArray['__no_data__'] = '⚠️ No hay datos disponibles';
             }
+
             return; // Ya agregamos los valores guardados arriba
         }
 
@@ -1340,51 +1821,50 @@ class KanbanBoard extends Component
             // Intentar solo una vez con timeout más corto (8 segundos)
             $portsResponse = $this->getPortsWithCustomTimeout($apiService, $apiParams, 8);
             $portsArray = $this->processApiResponse($portsResponse, 'name', 'name');
-            
+
             // Combinar los valores de la API con los valores guardados (sin duplicar)
             foreach ($portsArray as $key => $value) {
-                if (!isset($this->departurePortArray[$key])) {
+                if (! isset($this->departurePortArray[$key])) {
                     $this->departurePortArray[$key] = $value;
                 }
-                if (!isset($this->arrivalPortArray[$key])) {
+                if (! isset($this->arrivalPortArray[$key])) {
                     $this->arrivalPortArray[$key] = $value;
                 }
             }
         } catch (\Exception $e) {
             // Los valores guardados ya están en los arrays desde el inicio, así que no los perdemos
         }
-        
+
         // Si después de todos los intentos los arrays están vacíos (y no hay valores guardados), agregar mensaje informativo
         if (empty($this->departurePortArray)) {
-            $this->departurePortArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente "' . $tradingCompanyValue . '"';
+            $this->departurePortArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente "'.$tradingCompanyValue.'"';
         }
         if (empty($this->arrivalPortArray)) {
-            $this->arrivalPortArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente "' . $tradingCompanyValue . '"';
+            $this->arrivalPortArray['__no_data__'] = '⚠️ No hay datos disponibles para el cliente "'.$tradingCompanyValue.'"';
         }
     }
 
     /**
      * Cargar tipos de contenedor desde la API
-     * 
-     * @param string $tradingCompany
-     * @param string|null $currentContainerType Valor actual guardado en la PO (opcional)
-     * @return void
+     *
+     * @param  string|null  $currentContainerType  Valor actual guardado en la PO (opcional)
      */
     protected function loadContainerTypes(string $tradingCompany, ?string $currentContainerType = null): void
     {
         $containerTypeToAdd = $currentContainerType ?? $this->container_type;
-        
+
         $this->containerTypeArray = [];
-        
+
         if ($containerTypeToAdd && trim($containerTypeToAdd) !== '') {
             $this->containerTypeArray[$containerTypeToAdd] = $containerTypeToAdd;
         }
-        
+
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
             if (empty($this->containerTypeArray)) {
                 $this->containerTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompany}'";
             }
+
             return;
         }
 
@@ -1400,9 +1880,9 @@ class KanbanBoard extends Component
 
             $containerTypesResponse = $this->getContainerTypesWithCustomTimeout($apiService, $apiParams, 8);
             $containerTypesArray = $this->processApiResponse($containerTypesResponse, 'name', 'name');
-            
+
             foreach ($containerTypesArray as $key => $value) {
-                if (!isset($this->containerTypeArray[$key])) {
+                if (! isset($this->containerTypeArray[$key])) {
                     $this->containerTypeArray[$key] = $value;
                 }
             }
@@ -1420,26 +1900,25 @@ class KanbanBoard extends Component
 
     /**
      * Cargar tipos de transporte desde la API
-     * 
-     * @param string $tradingCompany
-     * @param string|null $currentMode Valor actual guardado en la PO (opcional)
-     * @return void
+     *
+     * @param  string|null  $currentMode  Valor actual guardado en la PO (opcional)
      */
     protected function loadTransportTypes(string $tradingCompany, ?string $currentMode = null): void
     {
         $modeToAdd = $currentMode ?? $this->mode;
-        
+
         $this->transportTypeArray = [];
-        
+
         if ($modeToAdd && trim($modeToAdd) !== '') {
             $this->transportTypeArray[$modeToAdd] = $modeToAdd;
         }
-        
+
         $tradingCompanyValue = trim($tradingCompany ?? '');
         if (empty($tradingCompanyValue)) {
             if (empty($this->transportTypeArray)) {
                 $this->transportTypeArray['__no_data__'] = "⚠️ No hay datos disponibles para el cliente '{$tradingCompany}'";
             }
+
             return;
         }
 
@@ -1455,9 +1934,9 @@ class KanbanBoard extends Component
 
             $transportTypesResponse = $this->getTransportTypesWithCustomTimeout($apiService, $apiParams, 8);
             $transportTypesArray = $this->processApiResponse($transportTypesResponse, 'name', 'name');
-            
+
             foreach ($transportTypesArray as $key => $value) {
-                if (!isset($this->transportTypeArray[$key])) {
+                if (! isset($this->transportTypeArray[$key])) {
                     $this->transportTypeArray[$key] = $value;
                 }
             }
@@ -1475,17 +1954,15 @@ class KanbanBoard extends Component
 
     /**
      * Obtener shipping lines con timeout personalizado
-     * 
-     * @param MaestrosApiService $apiService
-     * @param array $params
-     * @param int $timeout Segundos de timeout
-     * @return array|null
+     *
+     * @param  MaestrosApiService  $apiService
+     * @param  int  $timeout  Segundos de timeout
      */
     protected function getShippingLinesWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
     {
         try {
             $baseUrl = config('services.maestros.base_url');
-            $url = rtrim($baseUrl, '/') . '/api/v1/shipping-lines';
+            $url = rtrim($baseUrl, '/').'/api/v1/shipping-lines';
 
             $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
 
@@ -1499,23 +1976,22 @@ class KanbanBoard extends Component
                 'timeout' => $timeout,
                 'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
 
     /**
      * Obtener puertos con timeout personalizado
-     * 
-     * @param MaestrosApiService $apiService
-     * @param array $params
-     * @param int $timeout Segundos de timeout
-     * @return array|null
+     *
+     * @param  MaestrosApiService  $apiService
+     * @param  int  $timeout  Segundos de timeout
      */
     protected function getPortsWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
     {
         try {
             $baseUrl = config('services.maestros.base_url');
-            $url = rtrim($baseUrl, '/') . '/api/v1/ports';
+            $url = rtrim($baseUrl, '/').'/api/v1/ports';
 
             $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
 
@@ -1529,23 +2005,22 @@ class KanbanBoard extends Component
                 'timeout' => $timeout,
                 'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
 
     /**
      * Obtener container types con timeout personalizado
-     * 
-     * @param MaestrosApiService $apiService
-     * @param array $params
-     * @param int $timeout Segundos de timeout
-     * @return array|null
+     *
+     * @param  MaestrosApiService  $apiService
+     * @param  int  $timeout  Segundos de timeout
      */
     protected function getContainerTypesWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
     {
         try {
             $baseUrl = config('services.maestros.base_url');
-            $url = rtrim($baseUrl, '/') . '/api/v1/container-types';
+            $url = rtrim($baseUrl, '/').'/api/v1/container-types';
 
             $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
 
@@ -1559,23 +2034,22 @@ class KanbanBoard extends Component
                 'timeout' => $timeout,
                 'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
 
     /**
      * Obtener transport types con timeout personalizado
-     * 
-     * @param MaestrosApiService $apiService
-     * @param array $params
-     * @param int $timeout Segundos de timeout
-     * @return array|null
+     *
+     * @param  MaestrosApiService  $apiService
+     * @param  int  $timeout  Segundos de timeout
      */
     protected function getTransportTypesWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
     {
         try {
             $baseUrl = config('services.maestros.base_url');
-            $url = rtrim($baseUrl, '/') . '/api/v1/transport-types';
+            $url = rtrim($baseUrl, '/').'/api/v1/transport-types';
 
             $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
 
@@ -1589,23 +2063,22 @@ class KanbanBoard extends Component
                 'timeout' => $timeout,
                 'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
 
     /**
      * Obtener service providers con timeout personalizado
-     * 
-     * @param MaestrosApiService $apiService
-     * @param array $params
-     * @param int $timeout Segundos de timeout
-     * @return array|null
+     *
+     * @param  MaestrosApiService  $apiService
+     * @param  int  $timeout  Segundos de timeout
      */
     protected function getServiceProvidersWithCustomTimeout($apiService, array $params, int $timeout = 8): ?array
     {
         try {
             $baseUrl = config('services.maestros.base_url');
-            $url = rtrim($baseUrl, '/') . '/api/v1/service-providers';
+            $url = rtrim($baseUrl, '/').'/api/v1/service-providers';
 
             $response = \Illuminate\Support\Facades\Http::timeout($timeout)->get($url, $params);
 
@@ -1619,21 +2092,22 @@ class KanbanBoard extends Component
                 'timeout' => $timeout,
                 'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
 
     /**
      * Process API response and convert to array format for dropdowns
-     * 
-     * @param array|null $response
-     * @param string $keyField Field to use as array key
-     * @param string $valueField Field to use as array value
+     *
+     * @param  array|null  $response
+     * @param  string  $keyField  Field to use as array key
+     * @param  string  $valueField  Field to use as array value
      * @return array
      */
     protected function processApiResponse($response, $keyField = 'name', $valueField = 'name')
     {
-        if (!$response || !isset($response['data'])) {
+        if (! $response || ! isset($response['data'])) {
             return [];
         }
 
@@ -1651,8 +2125,4 @@ class KanbanBoard extends Component
 
         return $result;
     }
-
 }
-
-
-

@@ -10,6 +10,7 @@ use App\Models\Hub;
 use App\Models\Vendor;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -181,6 +182,7 @@ class DashboardService
 
     /**
      * Get trend table data counting PO by stage and month
+     * Supports dynamic date ranges based on filters
      * 
      * @param array $filters Optional filters to apply
      * @return array
@@ -190,34 +192,53 @@ class DashboardService
         try {
             Log::info('DashboardService::getCanceledLinesTrendTable starting', ['filters' => $filters]);
 
-            $currentYear = now()->year;
             $companyId = auth()->user()->company_id ?? null;
             
-            // Obtener todas las PO del año actual (no solo anuladas)
-            $query = PurchaseOrder::withTrashed()
-                ->whereYear('order_date', $currentYear);
+            // Determinar rango de fechas
+            $dateFrom = !empty($filters['date_from']) ? Carbon::parse($filters['date_from']) : Carbon::now()->startOfYear();
+            $dateTo = !empty($filters['date_to']) ? Carbon::parse($filters['date_to']) : Carbon::now()->endOfYear();
             
+            Log::info('Date range for export', [
+                'date_from' => $dateFrom->format('Y-m-d'),
+                'date_to' => $dateTo->format('Y-m-d')
+            ]);
+            
+            // Nombres de meses en español
+            $monthNamesSpanish = [
+                1 => 'Ene', 2 => 'Feb', 3 => 'Mar', 4 => 'Abr',
+                5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Ago',
+                9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dic'
+            ];
+            
+            // Generar lista de meses en el rango (formato: "2025-01", "2025-02", etc.)
+            $monthKeys = [];
+            $monthLabels = [];
+            $currentMonth = $dateFrom->copy()->startOfMonth();
+            while ($currentMonth <= $dateTo) {
+                $key = $currentMonth->format('Y-m');
+                $monthKeys[] = $key;
+                $monthNumber = (int) $currentMonth->format('n');
+                $year = $currentMonth->format('Y');
+                $monthLabels[$key] = $monthNamesSpanish[$monthNumber] . '-' . $year; // Ej: "Ene-2025"
+                $currentMonth->addMonth();
+            }
+            
+            // Construir query base (mismas PO operativas que el dashboard KPI; sin borradas ni ingresada/anulada)
+            $query = PurchaseOrder::query()
+                ->operationalForDashboard()
+                ->whereBetween('order_date', [$dateFrom->format('Y-m-d'), $dateTo->format('Y-m-d')]);
+
             // Filtrar por company_id si el usuario tiene uno asignado
             if ($companyId) {
                 $query->where('company_id', $companyId);
             }
 
-            // Aplicar filtros adicionales
-            // Nota: Los filtros po_retraso_cl y po_adelanto_cl ya no están disponibles
-            // ya que se eliminó el campo date_carga_po y se reemplazó por carga_lista_validada (checkbox)
-            if (!empty($filters['po_retraso_cl'])) {
-                // Este filtro ya no es aplicable sin date_carga_po
-            }
-
-            if (!empty($filters['po_adelanto_cl'])) {
-                // Este filtro ya no es aplicable sin date_carga_po
-            }
-
+            // Aplicar filtros adicionales del panel de filtros
             if (!empty($filters['indicador_capacidad'])) {
                 $query->whereNull('date_etd_initial');
             }
 
-            // Aplicar otros filtros del getBaseQuery si existen
+            // Filtro por proveedor (vendor)
             if (!empty($filters['vendor_id'])) {
                 $vendorIds = is_array($filters['vendor_id']) ? $filters['vendor_id'] : [$filters['vendor_id']];
                 $vendorIds = array_filter($vendorIds);
@@ -226,6 +247,47 @@ class DashboardService
                 }
             }
 
+            // Filtro por trading_company (Cliente)
+            if (!empty($filters['trading_company'])) {
+                $query->where('trading_company', $filters['trading_company']);
+            }
+
+            $this->applyKanbanStageFilter($query, $filters);
+
+            // Filtro por proveedor de servicio
+            if (!empty($filters['service_provider'])) {
+                $query->where(function($q) use ($filters) {
+                    $q->where('forwarder_name', $filters['service_provider'])
+                      ->orWhere('service_provider', $filters['service_provider']);
+                });
+            }
+
+            // Filtro por puerto de embarque
+            if (!empty($filters['departure_port'])) {
+                $query->where('departure_port', $filters['departure_port']);
+            }
+
+            // Filtro por puerto de arribo
+            if (!empty($filters['arrival_port'])) {
+                $query->where('arrival_port', $filters['arrival_port']);
+            }
+
+            // Filtro por naviera
+            if (!empty($filters['shipping_line'])) {
+                $query->where('shipping_line', $filters['shipping_line']);
+            }
+
+            // Filtro por ruta logística
+            if (!empty($filters['route_label'])) {
+                $query->where('route_label', $filters['route_label']);
+            }
+
+            // Filtro por número de orden
+            if (!empty($filters['order_number'])) {
+                $query->where('order_number', 'like', '%' . $filters['order_number'] . '%');
+            }
+
+            // Filtro por hub
             if (!empty($filters['hub_id'])) {
                 $hubIds = is_array($filters['hub_id']) ? $filters['hub_id'] : [$filters['hub_id']];
                 $hubIds = array_filter($hubIds, function($value) {
@@ -250,16 +312,6 @@ class DashboardService
                     });
                 }
             }
-
-            if (!empty($filters['stage'])) {
-                $stages = is_array($filters['stage']) ? $filters['stage'] : [$filters['stage']];
-                $stages = array_filter($stages);
-                if (!empty($stages)) {
-                    $query->whereHas('kanbanStatus', function ($q) use ($stages) {
-                        $q->whereIn('name', $stages);
-                    });
-                }
-            }
             
             $purchaseOrders = $query->with(['kanbanStatus'])->get();
 
@@ -279,21 +331,22 @@ class DashboardService
             
             $kanbanStages = $kanbanStagesQuery->pluck('name', 'id')->toArray();
 
-            // Inicializar estructura de categorías con meses (claves como strings "1" a "12")
-            $monthKeys = array_map('strval', range(1, 12));
-            $categories = [
-                'Producción' => array_fill_keys($monthKeys, 0),
-                'Booking' => array_fill_keys($monthKeys, 0),
-                'Transito' => array_fill_keys($monthKeys, 0),
-                'Puerto' => array_fill_keys($monthKeys, 0),
-                'Recibiendo CDI' => array_fill_keys($monthKeys, 0),
-                'Ingresada' => array_fill_keys($monthKeys, 0),
-                'Anulada' => array_fill_keys($monthKeys, 0),
+            // Inicializar estructura de categorías con meses dinámicos
+            $categoryNames = [
+                'Producción',
+                'Booking',
+                'Transito',
+                'Puerto',
+                'Recibiendo CDI',
             ];
+            
+            $categories = [];
+            foreach ($categoryNames as $catName) {
+                $categories[$catName] = array_fill_keys($monthKeys, 0);
+            }
 
             // Función helper para mapear nombre de etapa a categoría
             $mapStageToCategory = function($stageName) {
-                $stageNameLower = strtolower($stageName);
                 if (stripos($stageName, 'producción') !== false || stripos($stageName, 'produccion') !== false) {
                     return 'Producción';
                 } elseif (stripos($stageName, 'booking') !== false) {
@@ -304,47 +357,47 @@ class DashboardService
                     return 'Puerto';
                 } elseif (stripos($stageName, 'recibiendo cdi') !== false) {
                     return 'Recibiendo CDI';
-                } elseif (stripos($stageName, 'ingresada') !== false) {
-                    return 'Ingresada';
-                } elseif (stripos($stageName, 'anulada') !== false) {
-                    return 'Anulada';
                 }
                 return null;
             };
 
             // Procesar cada PO
             foreach ($purchaseOrders as $po) {
-                // Determinar el mes: usar order_date para todas excepto Anulada que usa deleted_at
-                $dateToUse = $po->deleted_at ? $po->deleted_at : $po->order_date;
+                $dateToUse = $po->order_date;
                 if (!$dateToUse) {
                     continue;
                 }
-                
-                $month = (int) \Carbon\Carbon::parse($dateToUse)->format('n'); // 1-12
-                $monthKey = (string)$month; // Clave como string
+
+                $monthKey = Carbon::parse($dateToUse)->format('Y-m');
+
+                // Verificar que el mes está en el rango
+                if (!in_array($monthKey, $monthKeys)) {
+                    continue;
+                }
 
                 // Categorizar por etapa del kanban
                 if ($po->kanban_status_id && isset($kanbanStages[$po->kanban_status_id])) {
                     $stageName = $kanbanStages[$po->kanban_status_id];
                     $category = $mapStageToCategory($stageName);
-                    
-                    if ($category && isset($categories[$category])) {
-                        $categories[$category][$monthKey] += 1; // Contar PO, no sumar montos
+
+                    if ($category && isset($categories[$category][$monthKey])) {
+                        $categories[$category][$monthKey] += 1;
                     }
-                } elseif ($po->deleted_at) {
-                    // PO anulada sin etapa asignada
-                    $categories['Anulada'][$monthKey] += 1;
                 }
             }
 
-            // Los valores ya son enteros (conteos), no necesitan redondeo
             $result = [
                 'categories' => $categories,
-                'year' => $currentYear,
+                'month_keys' => $monthKeys,
+                'month_labels' => $monthLabels,
+                'date_from' => $dateFrom->format('Y-m-d'),
+                'date_to' => $dateTo->format('Y-m-d'),
             ];
 
             Log::info('DashboardService::getCanceledLinesTrendTable completed', [
-                'year' => $currentYear,
+                'date_from' => $dateFrom->format('Y-m-d'),
+                'date_to' => $dateTo->format('Y-m-d'),
+                'total_months' => count($monthKeys),
                 'total_pos' => $purchaseOrders->count()
             ]);
 
@@ -354,7 +407,14 @@ class DashboardService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            // Retornar estructura vacía en caso de error (con claves como strings)
+            
+            // Retornar estructura vacía en caso de error
+            $currentYear = now()->year;
+            $monthKeys = [];
+            for ($m = 1; $m <= 12; $m++) {
+                $monthKeys[] = $currentYear . '-' . str_pad($m, 2, '0', STR_PAD_LEFT);
+            }
+            
             $emptyCategories = [];
             $categoryNames = [
                 'Producción',
@@ -362,16 +422,17 @@ class DashboardService
                 'Transito',
                 'Puerto',
                 'Recibiendo CDI',
-                'Ingresada',
-                'Anulada'
             ];
             foreach ($categoryNames as $catName) {
-                $emptyCategories[$catName] = array_fill_keys(array_map('strval', range(1, 12)), 0);
+                $emptyCategories[$catName] = array_fill_keys($monthKeys, 0);
             }
-            
+
             return [
                 'categories' => $emptyCategories,
-                'year' => now()->year,
+                'month_keys' => $monthKeys,
+                'month_labels' => [],
+                'date_from' => now()->startOfYear()->format('Y-m-d'),
+                'date_to' => now()->endOfYear()->format('Y-m-d'),
             ];
         }
     }
@@ -402,15 +463,12 @@ class DashboardService
             }
             $rows[] = $header;
             
-            // Filas de datos - orden de las 7 etapas
             $categoryOrder = [
                 'Producción',
                 'Booking',
                 'Transito',
                 'Puerto',
                 'Recibiendo CDI',
-                'Ingresada',
-                'Anulada'
             ];
             
             foreach ($categoryOrder as $categoryName) {
@@ -451,8 +509,6 @@ class DashboardService
                 'Transito',
                 'Puerto',
                 'Recibiendo CDI',
-                'Ingresada',
-                'Anulada'
             ];
             foreach ($categoryOrder as $catName) {
                 $rows[] = array_merge([$catName], array_fill(0, 12, '-'));
@@ -513,7 +569,7 @@ class DashboardService
                 return [
                     'po_number' => $item->order_number, // Show actual PO number instead of count
                     'fecha_salida' => $item->dispatch_date ? formatDate($item->dispatch_date) : '-',
-                    'fecha_estimada' => $item->eta ? formatDate($item->eta) : '-',
+                    'fecha_estimada' => $item->eta ? formatDateOnly($item->eta) : '-',
                     'fecha_real' => '-', // Not used in this aggregated view
                     'cantidad_kg' => number_format((float)($item->total_kgs ?? 0), 2),
                 ];
@@ -551,9 +607,9 @@ class DashboardService
                 ->map(function ($po) {
                     return [
                         $po->order_number,
-                        $po->date_atd ? formatDate($po->date_atd) : '',
-                        $po->date_eta ? formatDate($po->date_eta) : '',
-                        $po->date_ata ? formatDate($po->date_ata) : '',
+                        $po->date_atd ? formatDateOnly($po->date_atd) : '',
+                        $po->date_eta ? formatDateOnly($po->date_eta) : '',
+                        $po->date_ata ? formatDateOnly($po->date_ata) : '',
                         $po->weight_kg ?? 0,
                         $po->status ?? '',
                         $po->plannedHub->name ?? '',
@@ -575,6 +631,19 @@ class DashboardService
     }
 
     /**
+     * Orden alfabético insensible a mayúsculas (orden natural) para filas {id, name}.
+     *
+     * @param  Collection<int, array{id: mixed, name: string}>  $rows
+     * @return Collection<int, array{id: mixed, name: string}>
+     */
+    private function sortFilterRowsByName(Collection $rows): Collection
+    {
+        return $rows
+            ->sort(fn ($a, $b) => strnatcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? '')))
+            ->values();
+    }
+
+    /**
      * Get filter options
      *
      * @return array
@@ -588,21 +657,24 @@ class DashboardService
 
             Log::info('Getting products...');
             $products = Product::select('id', 'short_text as name', 'material_id')
-                ->orderBy('short_text')
+                ->orderByRaw('LOWER(short_text)')
                 ->get();
             Log::info('Products retrieved', ['count' => $products->count()]);
 
             Log::info('Getting hubs...');
             $hubs = Hub::select('id', 'name', 'code')
-                ->orderBy('name')
+                ->orderByRaw('LOWER(name)')
                 ->get();
 
-            // Agregar la opción "Sin Hub" al inicio de la colección
-            $hubs->prepend((object)[
+            // Agregar "Sin Hub" y ordenar todo alfabéticamente por nombre
+            $hubs->push((object) [
                 'id' => 0,
                 'name' => 'Sin Hub',
-                'code' => 'SIN_HUB'
+                'code' => 'SIN_HUB',
             ]);
+            $hubs = $hubs
+                ->sort(fn ($a, $b) => strnatcasecmp((string) ($a->name ?? ''), (string) ($b->name ?? '')))
+                ->values();
 
             Log::info('Hubs retrieved with Sin Hub option', ['count' => $hubs->count()]);
 
@@ -611,7 +683,7 @@ class DashboardService
                 ->when($companyId, function ($query) use ($companyId) {
                     return $query->where('company_id', $companyId);
                 })
-                ->orderBy('name')
+                ->orderByRaw('LOWER(name)')
                 ->get();
             Log::info('Vendors retrieved', ['count' => $vendors->count()]);
 
@@ -620,91 +692,115 @@ class DashboardService
             Log::info('Materials retrieved', ['count' => $materials->count()]);
 
             Log::info('Getting customer types...');
-            $customerTypes = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
-                    return $query->where('company_id', $companyId);
-                })
-                ->whereNotNull('customer_type')
-                ->distinct()
-                ->pluck('customer_type')
-                ->filter()
-                ->map(function ($type) {
-                    return ['id' => $type, 'name' => $type];
-                })
-                ->values();
+            $customerTypes = $this->sortFilterRowsByName(
+                PurchaseOrder::query()
+                    ->operationalForDashboard()
+                    ->when($companyId, function ($query) use ($companyId) {
+                        return $query->where('company_id', $companyId);
+                    })
+                    ->whereNotNull('customer_type')
+                    ->distinct()
+                    ->pluck('customer_type')
+                    ->filter()
+                    ->map(function ($type) {
+                        return ['id' => $type, 'name' => $type];
+                    })
+                    ->values()
+            );
             Log::info('Customer types retrieved', ['count' => $customerTypes->count()]);
 
             Log::info('Getting arrival statuses...');
-            $arrivalStatuses = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
-                    return $query->where('company_id', $companyId);
-                })
-                ->whereNotNull('arrival_status')
-                ->distinct()
-                ->pluck('arrival_status')
-                ->filter()
-                ->map(function ($status) {
-                    return ['id' => $status, 'name' => $status];
-                })
-                ->values();
+            $arrivalStatuses = $this->sortFilterRowsByName(
+                PurchaseOrder::query()
+                    ->operationalForDashboard()
+                    ->when($companyId, function ($query) use ($companyId) {
+                        return $query->where('company_id', $companyId);
+                    })
+                    ->whereNotNull('arrival_status')
+                    ->distinct()
+                    ->pluck('arrival_status')
+                    ->filter()
+                    ->map(function ($status) {
+                        return ['id' => $status, 'name' => $status];
+                    })
+                    ->values()
+            );
             Log::info('Arrival statuses retrieved', ['count' => $arrivalStatuses->count()]);
 
             Log::info('Getting departure ports...');
-            $departurePorts = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
-                    return $query->where('company_id', $companyId);
-                })
-                ->whereNotNull('departure_port')
-                ->distinct()
-                ->pluck('departure_port')
-                ->filter()
-                ->map(function ($port) {
-                    return ['id' => $port, 'name' => $port];
-                })
-                ->values();
+            $departurePorts = $this->sortFilterRowsByName(
+                PurchaseOrder::query()
+                    ->operationalForDashboard()
+                    ->when($companyId, function ($query) use ($companyId) {
+                        return $query->where('company_id', $companyId);
+                    })
+                    ->whereNotNull('departure_port')
+                    ->distinct()
+                    ->pluck('departure_port')
+                    ->filter()
+                    ->map(function ($port) {
+                        return ['id' => $port, 'name' => $port];
+                    })
+                    ->values()
+            );
             Log::info('Departure ports retrieved', ['count' => $departurePorts->count()]);
 
             Log::info('Getting arrival ports...');
-            $arrivalPorts = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
-                    return $query->where('company_id', $companyId);
-                })
-                ->whereNotNull('arrival_port')
-                ->distinct()
-                ->pluck('arrival_port')
-                ->filter()
-                ->map(function ($port) {
-                    return ['id' => $port, 'name' => $port];
-                })
-                ->values();
+            $arrivalPorts = $this->sortFilterRowsByName(
+                PurchaseOrder::query()
+                    ->operationalForDashboard()
+                    ->when($companyId, function ($query) use ($companyId) {
+                        return $query->where('company_id', $companyId);
+                    })
+                    ->whereNotNull('arrival_port')
+                    ->distinct()
+                    ->pluck('arrival_port')
+                    ->filter()
+                    ->map(function ($port) {
+                        return ['id' => $port, 'name' => $port];
+                    })
+                    ->values()
+            );
             Log::info('Arrival ports retrieved', ['count' => $arrivalPorts->count()]);
 
             Log::info('Getting shipping lines...');
-            $shippingLines = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
-                    return $query->where('company_id', $companyId);
-                })
-                ->whereNotNull('shipping_line')
-                ->distinct()
-                ->pluck('shipping_line')
-                ->filter()
-                ->map(function ($line) {
-                    return ['id' => $line, 'name' => $line];
-                })
-                ->values();
+            $shippingLines = $this->sortFilterRowsByName(
+                PurchaseOrder::query()
+                    ->operationalForDashboard()
+                    ->when($companyId, function ($query) use ($companyId) {
+                        return $query->where('company_id', $companyId);
+                    })
+                    ->whereNotNull('shipping_line')
+                    ->distinct()
+                    ->pluck('shipping_line')
+                    ->filter()
+                    ->map(function ($line) {
+                        return ['id' => $line, 'name' => $line];
+                    })
+                    ->values()
+            );
             Log::info('Shipping lines retrieved', ['count' => $shippingLines->count()]);
 
             Log::info('Getting service providers...');
-            $serviceProviders = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
-                    return $query->where('company_id', $companyId);
-                })
-                ->where(function ($query) {
-                    $query->whereNotNull('forwarder_name')
-                          ->orWhereNotNull('service_provider');
-                })
-                ->selectRaw('COALESCE(forwarder_name, service_provider) as provider')
-                ->distinct()
-                ->pluck('provider')
-                ->filter()
-                ->map(function ($provider) {
-                    return ['id' => $provider, 'name' => $provider];
-                })
-                ->values();
+            $serviceProviders = $this->sortFilterRowsByName(
+                PurchaseOrder::query()
+                    ->operationalForDashboard()
+                    ->when($companyId, function ($query) use ($companyId) {
+                        return $query->where('company_id', $companyId);
+                    })
+                    ->where(function ($query) {
+                        $query->whereNotNull('forwarder_name')
+                            ->orWhereNotNull('service_provider');
+                    })
+                    ->selectRaw('COALESCE(forwarder_name, service_provider) as provider')
+                    ->distinct()
+                    ->pluck('provider')
+                    ->filter()
+                    ->map(function ($provider) {
+                        return ['id' => $provider, 'name' => $provider];
+                    })
+                    ->values()
+            );
             Log::info('Service providers retrieved', ['count' => $serviceProviders->count()]);
 
             $result = [
@@ -742,7 +838,9 @@ class DashboardService
         try {
             Log::info('Getting material options for company', ['company_id' => $companyId]);
 
-            $purchaseOrders = PurchaseOrder::when($companyId, function ($query) use ($companyId) {
+            $purchaseOrders = PurchaseOrder::query()
+                ->operationalForDashboard()
+                ->when($companyId, function ($query) use ($companyId) {
                     return $query->where('company_id', $companyId);
                 })
                 ->whereNotNull('material_type')
@@ -779,7 +877,10 @@ class DashboardService
                 }
             }
 
-            $result = collect(array_unique($materialTypes))->values()->sort();
+            $result = collect(array_unique($materialTypes))
+                ->values()
+                ->sort(fn ($a, $b) => strnatcasecmp((string) $a, (string) $b))
+                ->values();
 
             Log::info('Material options retrieved', ['count' => $result->count(), 'materials' => $result->toArray()]);
             return $result;
@@ -793,6 +894,51 @@ class DashboardService
     }
 
     /**
+     * Filtro por etapa Kanban: acepta id numérico y/o nombre (OLO-019).
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function applyKanbanStageFilter(Builder $query, array $filters): void
+    {
+        if (empty($filters['stage'])) {
+            return;
+        }
+
+        $stages = is_array($filters['stage']) ? $filters['stage'] : [$filters['stage']];
+        $stages = array_values(array_filter($stages, fn ($v) => $v !== null && $v !== ''));
+        if ($stages === []) {
+            return;
+        }
+
+        Log::info('Applying stage filter', ['stage' => $filters['stage']]);
+
+        $ids = [];
+        $names = [];
+        foreach ($stages as $s) {
+            if (is_int($s) || (is_string($s) && ctype_digit($s))) {
+                $ids[] = (int) $s;
+            } else {
+                $names[] = (string) $s;
+            }
+        }
+
+        $query->whereHas('kanbanStatus', function ($q) use ($ids, $names) {
+            $q->where(function ($inner) use ($ids, $names) {
+                if ($ids !== []) {
+                    $inner->whereIn('id', $ids);
+                }
+                if ($names !== []) {
+                    if ($ids !== []) {
+                        $inner->orWhereIn('name', $names);
+                    } else {
+                        $inner->whereIn('name', $names);
+                    }
+                }
+            });
+        });
+    }
+
+    /**
      * Get base query with filters applied
      *
      * @param array $filters
@@ -803,7 +949,8 @@ class DashboardService
         try {
             Log::info('getBaseQuery - Filtros recibidos:', $filters);
             $query = PurchaseOrder::query()
-                ->with(['vendor', 'plannedHub', 'actualHub', 'products']);
+                ->with(['vendor', 'plannedHub', 'actualHub', 'products'])
+                ->operationalForDashboard();
 
             // Apply company filter for current user
             $companyId = auth()->user()->company_id ?? null;
@@ -911,16 +1058,18 @@ class DashboardService
                 }
             }
 
-            // Filtro por etapa (nombre de la etapa del kanban_status)
-            if (!empty($filters['stage'])) {
-                Log::info('Applying stage filter', ['stage' => $filters['stage']]);
-                $stages = is_array($filters['stage']) ? $filters['stage'] : [$filters['stage']];
-                $stages = array_filter($stages);
-                if (!empty($stages)) {
-                    $query->whereHas('kanbanStatus', function ($q) use ($stages) {
-                        $q->whereIn('name', $stages);
-                    });
-                }
+            $this->applyKanbanStageFilter($query, $filters);
+
+            if (!empty($filters['trading_company'])) {
+                $query->where('trading_company', $filters['trading_company']);
+            }
+
+            if (!empty($filters['route_label'])) {
+                $query->where('route_label', $filters['route_label']);
+            }
+
+            if (!empty($filters['order_number'])) {
+                $query->where('order_number', 'like', '%' . $filters['order_number'] . '%');
             }
 
             // Filtro por tipo de cliente

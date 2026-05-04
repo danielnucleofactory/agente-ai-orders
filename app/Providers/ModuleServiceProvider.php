@@ -31,6 +31,15 @@ class ModuleServiceProvider extends ServiceProvider
             'routes' => true,
             'views' => true,
         ],
+        'mantenedor_raga' => [
+            'enabled' => false,
+            'path' => 'internal_modules/mantenedor-raga',
+            'provider' => 'RagaOrders\\MantenedorRaga\\MantenedorRagaServiceProvider',
+            'config' => 'mantenedor-raga',
+            'migrations' => true,
+            'routes' => true,
+            'views' => true,
+        ],
     ];
 
     /**
@@ -43,6 +52,7 @@ class ModuleServiceProvider extends ServiceProvider
         // Configurar el estado de cada módulo desde .env
         $modules['po_confirmation']['enabled'] = env('PO_CONFIRMATION_ENABLED', false);
         $modules['webhook']['enabled'] = env('WEBHOOK_MODULE_ENABLED', false);
+        $modules['mantenedor_raga']['enabled'] = env('MANTENEDOR_RAGA_ENABLED', false);
 
         return $modules;
     }
@@ -147,6 +157,8 @@ class ModuleServiceProvider extends ServiceProvider
                     $loader->addPsr4("RagaOrders\\POConfirmation\\", "{$srcPath}/");
                 } elseif ($moduleName === 'webhook') {
                     $loader->addPsr4("RagaOrders\\Webhook\\", "{$srcPath}/");
+                } elseif ($moduleName === 'mantenedor_raga') {
+                    $loader->addPsr4("RagaOrders\\MantenedorRaga\\", "{$srcPath}/");
                 }
                 $this->logModuleInfo($moduleName, "Autoloader registrado para {$moduleName} (siempre disponible)");
             }
@@ -257,6 +269,14 @@ class ModuleServiceProvider extends ServiceProvider
     public function isModuleActive(string $moduleName): bool
     {
         return $this->getModulesConfig()[$moduleName]['enabled'] ?? false;
+    }
+
+    /**
+     * Configuración de todos los módulos (p. ej. comandos Artisan).
+     */
+    public function getRegisteredModules(): array
+    {
+        return $this->getModulesConfig();
     }
 
     /**

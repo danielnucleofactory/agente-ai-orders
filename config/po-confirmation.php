@@ -43,7 +43,8 @@ return [
     | Configuración para la automatización del envío de emails.
     |
     */
-    'auto_send' => env('PO_CONFIRMATION_AUTO_SEND', true),
+    'auto_send' => env('PO_CONFIRMATION_AUTO_SEND', false),
+    'vendor_emails_enabled' => env('PO_CONFIRMATION_VENDOR_EMAILS_ENABLED', false),
     'check_interval' => env('PO_CONFIRMATION_CHECK_INTERVAL', 'hourly'),
 
     /*

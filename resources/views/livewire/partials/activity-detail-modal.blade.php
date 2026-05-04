@@ -63,6 +63,10 @@
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                             Creación
                                         </span>
+                                    @elseif($actionType === 'porth_sync' || $actionTypeLabel === 'Actualización embarque')
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-800">
+                                            Actualización embarque
+                                        </span>
                                     @else
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                             {{ $actionTypeLabel ?: 'Otro' }}
@@ -133,10 +137,10 @@
                                                 {{ $this->getFieldLabel($field) }}
                                             </td>
                                             <td class="px-4 py-3 text-sm text-gray-500">
-                                                {!! $this->formatValue($this->oldValues[$field] ?? null) !!}
+                                                {!! $this->formatValue($this->oldValues[$field] ?? null, $field) !!}
                                             </td>
                                             <td class="px-4 py-3 text-sm text-gray-900 font-medium">
-                                                {!! $this->formatValue($this->newValues[$field] ?? null) !!}
+                                                {!! $this->formatValue($this->newValues[$field] ?? null, $field) !!}
                                             </td>
                                         </tr>
                                         @endforeach

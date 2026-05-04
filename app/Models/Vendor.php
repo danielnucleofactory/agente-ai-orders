@@ -32,6 +32,15 @@ class Vendor extends Model
     ];
 
     /**
+     * Campos excluidos de toArray()/toJson().
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'company_id',
+    ];
+
+    /**
      * The attributes that should be cast.
      *
      * @var array<string, string>
@@ -39,6 +48,34 @@ class Vendor extends Model
     protected $casts = [
         'status' => 'string',
     ];
+
+    /**
+     * Resolución desde la API de PO: vendo_code es único global y coincide con el vendor_id enviado.
+     * Si ya existe una fila con ese vendo_code, se reutiliza; si no, se crea una nueva.
+     *
+     * @param  string|int  $vendorIdRaw  Identificador de proveedor en el sistema origen (p. ej. "399")
+     */
+    public static function findOrCreateFromApiVendorIdentifier(
+        string|int $vendorIdRaw,
+        int $companyIdForNewRow,
+        ?string $vendorName
+    ): self {
+        $vendoCode = (string) $vendorIdRaw;
+
+        $existing = static::query()->where('vendo_code', $vendoCode)->first();
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        return static::query()->create([
+            'company_id' => $companyIdForNewRow,
+            'vendo_code' => $vendoCode,
+            'name' => ($vendorName !== null && $vendorName !== '')
+                ? $vendorName
+                : ('Proveedor ' . $vendoCode),
+            'status' => 'active',
+        ]);
+    }
 
     /**
      * Get the company that owns the vendor.
@@ -50,10 +87,11 @@ class Vendor extends Model
 
     /**
      * Get the purchase orders for the vendor.
+     * purchase_orders.vendor_id = vendors.id
      */
     public function purchaseOrders(): HasMany
     {
-        return $this->hasMany(PurchaseOrder::class);
+        return $this->hasMany(PurchaseOrder::class, 'vendor_id', 'id');
     }
 
     /**

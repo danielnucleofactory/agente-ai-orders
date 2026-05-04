@@ -2,64 +2,92 @@
 
 namespace App\Livewire\Settings;
 
+use App\Livewire\Components\ReusableTable;
 use App\Models\User;
-use Livewire\Component;
-use Spatie\Permission\Models\Role;
+use Illuminate\Database\Eloquent\Builder;
 
-class Users extends Component
+class Users extends ReusableTable
 {
-    public $id;
-    public $userToDelete;
-    public $search = '';
-    public $headers = [
-        'user' => 'Usuario',
-        'date' => 'Fecha',
-        'status' => 'Estado',
-        'role_type' => 'Tipo de Rol',
-        'actions' => 'Acciones'
-    ];
+    public function mount(
+        $headers = [],
+        $sortable = [],
+        $searchable = [],
+        $filterable = [],
+        $filterOptions = [],
+        $withCount = [],
+        $model = null,
+        $rows = [],
+        $relationColumns = [],
+        $actions = false,
+        $baseRoute = '',
+        $routeKeyName = 'id',
+        $actionsView = true,
+        $actionsEdit = true,
+        $actionsDelete = true,
+        $viewPermission = null,
+        $editPermission = null,
+        $deletePermission = null,
+        $showSelectColumn = false,
+        $sortFieldAliases = [],
+        $customActionsView = null,
+        $maestroCatalogKey = null
+    ): void {
+        abort_unless(auth()->user()?->can('has_view_users'), 403);
 
-    // Refresh the table when search input changes
-    public function updatedSearch()
-    {
-        $this->render();
+        parent::mount(
+            headers: [
+                'name' => 'Usuario',
+                'email' => 'Correo',
+                'created_at' => 'Fecha alta',
+                'role_names' => 'Rol',
+                'actions' => 'Acciones',
+            ],
+            sortable: ['name', 'email', 'created_at', 'role_names'],
+            searchable: ['name', 'email'],
+            filterable: [],
+            filterOptions: [],
+            withCount: [],
+            model: User::class,
+            rows: [],
+            relationColumns: ['roles'],
+            actions: true,
+            baseRoute: 'settings.users',
+            routeKeyName: 'id',
+            actionsView: false,
+            actionsEdit: true,
+            actionsDelete: true,
+            editPermission: 'has_edit_users',
+            deletePermission: 'has_delete_users',
+        );
+
+        $this->sortField = 'name';
+        $this->sortDirection = 'asc';
     }
 
-    public function deleteUser($userId)
+    protected function modifyModelQuery(Builder $query): void
     {
-        $user = User::find($userId);
+        $query->with('roles');
+    }
 
-        if ($user) {
-            $user->delete();
-            $this->id = null;
-            $this->userToDelete = null;
-            $this->dispatch('close-modal', 'modal-delete-user');
+    protected function applySortToModelQuery(Builder $query): bool
+    {
+        if ($this->sortField !== 'role_names') {
+            return false;
         }
-    }
 
-    public function openModal($id) {
-        $this->id = $id;
-        $this->userToDelete = User::find($id);
-        $this->dispatch('open-modal', 'modal-delete-user');
-    }
+        $dir = in_array($this->sortDirection, ['asc', 'desc'], true) ? $this->sortDirection : 'asc';
+        $query->orderByRaw(
+            '(SELECT MIN(r.name) FROM model_has_roles mhr INNER JOIN roles r ON r.id = mhr.role_id WHERE mhr.model_id = users.id AND mhr.model_type = ?) ' . $dir,
+            [User::class]
+        );
 
-    public function closeModal() {
-        $this->id = null;
-        $this->userToDelete = null;
-        $this->dispatch('close-modal', 'modal-delete-user');
+        return true;
     }
 
     public function render()
     {
-        $users = User::with('roles')
-            ->when($this->search, function ($query) {
-                return $query->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('email', 'like', '%' . $this->search . '%');
-            })
-            ->get();
-
         return view('livewire.settings.users', [
-            'users' => $users
+            'processedRows' => $this->getProcessedRowsProperty(),
         ])->layout('layouts.settings.user-management');
     }
 }

@@ -17,14 +17,42 @@ class KanbanBoardSeeder extends Seeder
      */
     public function run(): void
     {
-        // Desactivar temporalmente las restricciones de clave foránea
         Schema::disableForeignKeyConstraints();
 
         try {
-            // Obtener todas las compañías
-            $companies = Company::all();
+            foreach (Company::all() as $company) {
+                $this->seedKanbanBoardsForCompany($company);
+            }
+        } finally {
+            Schema::enableForeignKeyConstraints();
+        }
+    }
 
-            foreach ($companies as $company) {
+    /**
+     * Garantiza tableros Kanban (po_stages + documentación) para una compañía creada después del seed inicial (OLO-017).
+     */
+    public function ensureBoardsForCompanyId(int $companyId): void
+    {
+        $company = Company::find($companyId);
+        if (!$company) {
+            return;
+        }
+        if (KanbanBoard::where('company_id', $companyId)->where('type', 'po_stages')->exists()) {
+            return;
+        }
+        Schema::disableForeignKeyConstraints();
+        try {
+            $this->seedKanbanBoardsForCompany($company);
+        } finally {
+            Schema::enableForeignKeyConstraints();
+        }
+    }
+
+    /**
+     * Crea tableros y estados Kanban para una compañía (misma lógica que el seed masivo).
+     */
+    public function seedKanbanBoardsForCompany(Company $company): void
+    {
                 // 1. Crear un tablero Kanban para Etapas PO
                 $boardPO = KanbanBoard::create([
                     'name' => 'Etapas PO',
@@ -234,10 +262,5 @@ class KanbanBoardSeeder extends Seeder
                         ]);
                     }
                 }
-            }
-        } finally {
-            // Asegurarse de que las restricciones de clave foránea se reactiven
-            Schema::enableForeignKeyConstraints();
-        }
     }
 }

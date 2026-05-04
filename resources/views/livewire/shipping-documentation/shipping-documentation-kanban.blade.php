@@ -147,17 +147,7 @@
 
                 <!-- Nueva -->
                 <div class="{{ (isset($columns[0]) && $newColumnId == $columns[0]['id']) ? '' : 'hidden' }}">
-                    <x-form-input class="mb-4">
-                        <x-slot:label>
-                            Ingrese fecha de release
-                        </x-slot:label>
-
-                        <x-slot:input name="release_date" type="date" placeholder="Ingrese fecha de release" wire:model="release_date" class="pr-10 {{ $errors->has('release_date') ? 'border-red-500' : '' }}"></x-slot:input>
-
-                        <x-slot:error>
-                            {{ $errors->first('release_date') }}
-                        </x-slot:error>
-                    </x-form-input>
+                    <x-date-picker class="mb-4" wire:model="release_date" label="Ingrese fecha de release" :error="$errors->first('release_date')" />
                 </div>
 
                 {{-- Consolidador --}}
@@ -169,18 +159,10 @@
                 <div class="{{ (isset($columns[1]) && $newColumnId == $columns[1]['id']) ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {{-- 1) Carga Lista Variable --}}
-                        <x-form-input class="mb-4">
-                            <x-slot:label>Carga Lista Variable <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="date" wire:model="date_variable_date" class="pr-10 {{ $errors->has('date_variable_date') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('date_variable_date') }}</x-slot:error>
-                        </x-form-input>
+                        <x-date-picker class="mb-4" wire:model="date_variable_date" label="Carga Lista Variable <span class='text-red-500'>*</span>" :error="$errors->first('date_variable_date')" />
 
                         {{-- 2) Carga Lista Teórica --}}
-                        <x-form-input class="mb-4">
-                            <x-slot:label>Carga Lista Teórica</x-slot:label>
-                            <x-slot:input type="date" wire:model="date_theorical_load" class="pr-10 {{ $errors->has('date_theorical_load') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('date_theorical_load') }}</x-slot:error>
-                        </x-form-input>
+                        <x-date-picker class="mb-4" wire:model="date_theorical_load" label="Carga Lista Teórica" :error="$errors->first('date_theorical_load')" />
 
                         {{-- 3) Proveedor de Servicio --}}
                         <x-form-input class="mb-4">
@@ -201,30 +183,13 @@
                 {{-- Booking (ID: 3) --}}
                 <div class="{{ (isset($columns[2]) && $newColumnId == $columns[2]['id']) ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <x-form-input class="mb-4">
-                            <x-slot:label>Solicitud de Booking <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="date" wire:model="date_booking_request" class="pr-10 {{ $errors->has('date_booking_request') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('date_booking_request') }}</x-slot:error>
-                        </x-form-input>
+                        <x-date-picker class="mb-4" wire:model="date_booking_request" label="Solicitud de Booking <span class='text-red-500'>*</span>" :error="$errors->first('date_booking_request')" />
 
-                        <x-form-input class="mb-4">
-                            <x-slot:label>Autorización de Booking <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="date" wire:model="date_booking_authorized" class="pr-10 {{ $errors->has('date_booking_authorized') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('date_booking_authorized') }}</x-slot:error>
-                        </x-form-input>
+                        <x-date-picker class="mb-4" wire:model="date_booking_authorized" label="Autorización de Booking <span class='text-red-500'>*</span>" :error="$errors->first('date_booking_authorized')" />
 
-                        <x-form-input class="mb-4">
-                            <x-slot:label>ETD Inicial <span class="text-red-500">*</span></x-slot:label>
-                            {{-- reutiliza el existente si lo usas en tu flujo --}}
-                            <x-slot:input type="date" wire:model="estimated_departure_date" class="pr-10 {{ $errors->has('estimated_departure_date') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('estimated_departure_date') }}</x-slot:error>
-                        </x-form-input>
+                        <x-date-picker class="mb-4" wire:model="estimated_departure_date" label="ETD Inicial <span class='text-red-500'>*</span>" :error="$errors->first('estimated_departure_date')" />
 
-                        <x-form-input class="mb-4">
-                            <x-slot:label>ETD Variable <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="date" wire:model="date_etd_updated" class="pr-10 {{ $errors->has('date_etd_updated') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('date_etd_updated') }}</x-slot:error>
-                        </x-form-input>
+                        <x-date-picker class="mb-4" wire:model="date_etd_updated" label="ETD Variable <span class='text-red-500'>*</span>" :error="$errors->first('date_etd_updated')" />
 
                         <div>
                             <x-form-select
@@ -239,27 +204,15 @@
                 {{-- Tránsito (ID: 5) --}}
                 <div class="{{ (isset($columns[4]) && $newColumnId == $columns[4]['id']) ? '' : 'hidden' }}">
                     <div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm">
-                        <p><strong>Nota:</strong> Debe proporcionar al menos uno de los siguientes: Número de Booking, MBL o Número de Contenedor.</p>
+                        <p><strong>Nota:</strong> Debe proporcionar al menos uno de los siguientes: Número de Booking, Documento de Embarque o Número de Contenedor.</p>
                     </div>
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {{-- Fechas --}}
-                        <x-form-input class="mb-4">
-                            <x-slot:label>ETD Real (ATD) <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="date" wire:model="actual_departure_date" class="pr-10 {{ $errors->has('actual_departure_date') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('actual_departure_date') }}</x-slot:error>
-                        </x-form-input>
+                        <x-date-picker class="mb-4" wire:model="actual_departure_date" label="ETD Real (ATD) <span class='text-red-500'>*</span>" :error="$errors->first('actual_departure_date')" />
 
-                        <x-form-input class="mb-4">
-                            <x-slot:label>ETA Inicial <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="date" wire:model="estimated_arrival_date" class="pr-10 {{ $errors->has('estimated_arrival_date') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('estimated_arrival_date') }}</x-slot:error>
-                        </x-form-input>
+                        <x-date-picker class="mb-4" wire:model="estimated_arrival_date" label="ETA Inicial <span class='text-red-500'>*</span>" :error="$errors->first('estimated_arrival_date')" />
 
-                        <x-form-input class="mb-4">
-                            <x-slot:label>ETA Variable <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="date" wire:model="date_eta_updated" class="pr-10 {{ $errors->has('date_eta_updated') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('date_eta_updated') }}</x-slot:error>
-                        </x-form-input>
+                        <x-date-picker class="mb-4" wire:model="date_eta_updated" label="ETA Variable <span class='text-red-500'>*</span>" :error="$errors->first('date_eta_updated')" />
 
                         {{-- Equipo / BL / Naviera + montos --}}
                         <x-form-input class="mb-4">
@@ -275,8 +228,8 @@
                         </x-form-input>
 
                         <x-form-input class="mb-4">
-                            <x-slot:label>MBL</x-slot:label>
-                            <x-slot:input type="text" wire:model="bill_of_lading" placeholder="Ingrese MBL" class="pr-10 {{ $errors->has('bill_of_lading') ? 'border-red-500'  : '' }}"></x-slot:input>
+                            <x-slot:label>Documento de Embarque</x-slot:label>
+                            <x-slot:input type="text" wire:model="bill_of_lading" placeholder="Ingrese Documento de Embarque" class="pr-10 {{ $errors->has('bill_of_lading') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('bill_of_lading') }}</x-slot:error>
                         </x-form-input>
 
@@ -326,27 +279,15 @@
 
                 {{-- Puerto (ID: 6) --}}
                 <div class="{{ (isset($columns[5]) && $newColumnId == $columns[5]['id']) ? '' : 'hidden' }}">
-                    <x-form-input class="mb-4">
-                        <x-slot:label>ETA Real (ATA) <span class="text-red-500">*</span></x-slot:label>
-                        <x-slot:input type="date" wire:model="actual_arrival_date" class="pr-10 {{ $errors->has('actual_arrival_date') ? 'border-red-500'  : '' }}"></x-slot:input>
-                        <x-slot:error>{{ $errors->first('actual_arrival_date') }}</x-slot:error>
-                    </x-form-input>
+                    <x-date-picker class="mb-4" wire:model="actual_arrival_date" label="ETA Real (ATA) <span class='text-red-500'>*</span>" :error="$errors->first('actual_arrival_date')" />
                 </div>
 
                 {{-- Almacén Fiscal (ID: 7) --}}
                 <div class="{{ (isset($columns[6]) && $newColumnId == $columns[6]['id']) ? '' : 'hidden' }}">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <x-form-input class="mb-4">
-                            <x-slot:label>Ingreso Almacén Fiscal <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="date" wire:model="bonded_warehouse_enter" class="pr-10 {{ $errors->has('bonded_warehouse_enter') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('bonded_warehouse_enter') }}</x-slot:error>
-                        </x-form-input>
+                        <x-date-picker class="mb-4" wire:model="bonded_warehouse_enter" label="Ingreso Almacén Fiscal <span class='text-red-500'>*</span>" :error="$errors->first('bonded_warehouse_enter')" />
 
-                        <x-form-input class="mb-4">
-                            <x-slot:label>Salida Almacén Fiscal <span class="text-red-500">*</span></x-slot:label>
-                            <x-slot:input type="date" wire:model="bonded_warehouse_exit" class="pr-10 {{ $errors->has('bonded_warehouse_exit') ? 'border-red-500'  : '' }}"></x-slot:input>
-                            <x-slot:error>{{ $errors->first('bonded_warehouse_exit') }}</x-slot:error>
-                        </x-form-input>
+                        <x-date-picker class="mb-4" wire:model="bonded_warehouse_exit" label="Salida Almacén Fiscal <span class='text-red-500'>*</span>" :error="$errors->first('bonded_warehouse_exit')" />
                     </div>
                 </div>
 

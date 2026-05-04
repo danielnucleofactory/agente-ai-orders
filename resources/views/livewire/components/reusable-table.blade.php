@@ -1,16 +1,22 @@
-<div>
-    {{-- In work, do what you enjoy. --}}
-    <div class="flex justify-between mb-4">
-        @if ($showSearch && !empty($searchable))
-            <div class="flex items-center">
-                <div class="relative w-64">
+<div class="flex w-full min-h-0 flex-col gap-4" wire:key="reusable-table-root">
+    @if (session()->has('message'))
+        <div class="shrink-0 rounded border border-green-400 bg-green-100 p-4 text-green-700">
+            {{ session('message') }}
+        </div>
+    @endif
+
+    {{-- Búsqueda / filtros a la izquierda; registros por página arriba a la derecha --}}
+    <div class="flex shrink-0 flex-wrap items-end justify-between gap-4">
+        <div class="flex min-w-0 flex-1 flex-wrap items-center gap-4">
+            @if ($showSearch && !empty($searchable))
+                <div class="relative w-full max-w-xs sm:w-64">
                     <input
                         type="text"
                         placeholder="Buscar"
-                        wire:model.live="search"
-                        class="rounded-xl border-2 border-[#A5A3A3] pl-11 pr-[1.125rem] py-[0.625rem] placeholder:text-[#28C7A1] w-full" />
-                    <div class="pointer-events-none absolute top-1/2 -translate-y-1/2 left-[1.125rem] flex items-center">
-                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        wire:model.live.debounce.300ms="search"
+                        class="w-full rounded-xl border-2 border-[#A5A3A3] py-[0.625rem] pl-11 pr-[1.125rem] placeholder:text-[#28C7A1]" />
+                    <div class="pointer-events-none absolute left-[1.125rem] top-1/2 flex -translate-y-1/2 items-center">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                             xmlns="http://www.w3.org/2000/svg">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -21,23 +27,24 @@
                 @if (!empty($filterable) && !empty($filterOptions))
                     @foreach ($filterable as $filter)
                         @if (isset($filterOptions[$filter]))
-                            <select wire:model="filters.{{ $filter }}"
-                                class="px-4 py-2 ml-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <select wire:model.live="filters.{{ $filter }}"
+                                class="rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">Todos</option>
-                                @foreach ($filterOptions[$filter] as $value => $label)
+                                @foreach (\App\Support\SelectOptions::forSelectAssociative($filterOptions[$filter] ?? []) as $value => $label)
                                     <option value="{{ $value }}">{{ $label }}</option>
                                 @endforeach
                             </select>
                         @endif
                     @endforeach
                 @endif
-            </div>
-        @endif
+            @endif
+        </div>
 
         @if ($showPerPage)
-            <div>
-                <select wire:model="perPage"
-                    class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div class="ml-auto w-full shrink-0 sm:w-auto">
+                <label class="sr-only">Registros por página</label>
+                <select wire:model.live="perPage"
+                    class="ml-auto block w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:ml-0 sm:inline-block sm:w-auto">
                     <option value="10">10 por página</option>
                     <option value="25">25 por página</option>
                     <option value="50">50 por página</option>
@@ -47,215 +54,245 @@
         @endif
     </div>
 
-    <div class="overflow-x-auto rounded-t-xl">
-        <table class="min-w-full divide-y divide-[#D4F5ED]">
-            <thead class="bg-[#D4F5ED]">
-                <tr>
-                    @foreach ($headers as $key => $header)
-                        <th scope="col"
-                            class="{{ in_array($key, $sortable) ? 'cursor-pointer' : '' }} px-6 py-3 text-left text-lg font-bold text-[#121619]"
-                            @if (in_array($key, $sortable)) wire:click="sortBy('{{ $key }}')" @endif>
-                            {{ $header }}
-                            @if (in_array($key, $sortable) && $sortField === $key)
-                                @if ($sortDirection === 'asc')
-                                    <svg class="inline-block w-4 h-4 ml-1" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M5 15l7-7 7 7"></path>
-                                    </svg>
-                                @else
-                                    <svg class="inline-block w-4 h-4 ml-1" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                @endif
-                            @endif
-                        </th>
-                    @endforeach
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-[#D4F5ED] bg-white">
-                @forelse($processedRows as $row)
+    @if ($showSelectColumn && $selectEntireResultSet)
+        <div class="shrink-0 rounded-lg border border-[#1AAD8A] bg-[#D4F5ED] px-4 py-2 text-sm text-[#0F614D]">
+            Todos los registros que coinciden con los filtros actuales están seleccionados ({{ $processedRows->total() }} en total).
+        </div>
+    @endif
+
+    {{-- Tabla con scroll; paginación fija debajo del área con scroll --}}
+    <div
+        class="flex max-h-[min(70vh,calc(100vh-14rem))] min-h-[12rem] flex-1 flex-col overflow-hidden rounded-t-xl border border-[#D4F5ED] bg-white shadow-sm">
+        <div class="min-h-0 flex-1 overflow-auto">
+            <table class="min-w-full divide-y divide-[#D4F5ED]">
+                <thead class="sticky top-0 z-10 bg-[#D4F5ED] shadow-sm">
                     <tr>
                         @foreach ($headers as $key => $header)
-                            <td
-                                class="{{ $key === 'actions' ? 'whitespace-nowrap text-sm font-medium' : '' }} px-6 py-4">
-                                @if ($key === 'actions')
-                                    @if ($showActions)
-                                        <div class="flex items-center space-x-2">
-                                            @if ($actionsEdit)
-                                                <a href="{{ $this->getRouteFor('edit', $row) }}"
-                                                    class="group">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                                        <path d="M1.91732 12.0786C1.94795 11.8029 1.96326 11.6651 2.00497 11.5363C2.04197 11.422 2.09425 11.3132 2.16038 11.2129C2.23493 11.0999 2.33299 11.0018 2.52911 10.8057L11.3333 2.0015C12.0697 1.26512 13.2636 1.26512 14 2.0015C14.7364 2.73788 14.7364 3.93179 14 4.66817L5.19578 13.4724C4.99966 13.6685 4.9016 13.7665 4.78855 13.8411C4.68826 13.9072 4.57949 13.9595 4.46519 13.9965C4.33636 14.0382 4.19853 14.0535 3.92287 14.0841L1.66663 14.3348L1.91732 12.0786Z" stroke="#666666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                                        class="group-hover:stroke-blue-900" />
-                                                    </svg>
-                                                </a>
-                                            @endif
-                                            @if ($actionsView)
-                                                <a href="{{ $this->getRouteFor('view', $row) }}"
-                                                    class="text-[#666666] hover:text-[#0F614D]">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor"
-                                                        viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z">
-                                                        </path>
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2"
-                                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
-                                                        </path>
-                                                    </svg>
-                                                </a>
-                                            @endif
-                                            @if ($actionsDelete)
-                                                <button type="button"
-                                                    wire:click="confirmDelete('{{ $useModel ? $row->{$routeKeyName} : $row[$routeKeyName] ?? '' }}')"
-                                                    class="group">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                                                        <path d="M5 1H9M1 3H13M11.6667 3L11.1991 10.0129C11.129 11.065 11.0939 11.5911 10.8667 11.99C10.6666 12.3412 10.3648 12.6235 10.0011 12.7998C9.58798 13 9.06073 13 8.00623 13H5.99377C4.93927 13 4.41202 13 3.99889 12.7998C3.63517 12.6235 3.33339 12.3412 3.13332 11.99C2.90607 11.5911 2.871 11.065 2.80086 10.0129L2.33333 3" stroke="#666666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                                        class="group-hover:stroke-red-900"
-                                                        />
-                                                    </svg>
-                                                </button>
-                                            @endif
-                                        </div>
-                                    @elseif($useModel && method_exists($row, 'getActionButtons'))
-                                        {!! $row->getActionButtons() !!}
-                                    @elseif(isset($row->{$key . '_html'}) || isset($row[$key . '_html']))
-                                        {!! $useModel ? $row->{$key . '_html'} : $row[$key . '_html'] !!}
-                                    @elseif($useModel && isset($row->$key))
-                                        @if (is_array($row->$key))
-                                            @foreach ($row->$key as $action => $url)
-                                                <a href="{{ $url }}"
-                                                    class="{{ $loop->first ? 'text-[#1AAD8A] hover:text-[#0F614D]' : 'ml-2 text-[#1AAD8A] hover:text-[#0F614D]' }}">{{ $action }}</a>
-                                            @endforeach
+                            <th scope="col"
+                                class="@if ($key === '_select') w-12 px-3 @else px-6 @endif py-3 text-left text-lg font-bold text-[#121619] {{ in_array($key, $sortable, true) ? 'cursor-pointer select-none hover:bg-[#c5ebe0]' : '' }}"
+                                @if (in_array($key, $sortable, true)) wire:click="sortBy('{{ $key }}')" @endif>
+                                @if ($key === '_select')
+                                    <span class="sr-only">Seleccionar fila</span>
+                                    <input type="checkbox" wire:click.prevent="toggleHeaderSelect" wire:loading.attr="disabled"
+                                        @checked($this->headerSelectChecked())
+                                        class="h-4 w-4 rounded border-gray-300 text-[#1AAD8A] focus:ring-[#1AAD8A]" />
+                                @else
+                                    {{ $header }}
+                                    @if (in_array($key, $sortable, true) && $sortField === $key)
+                                        @if ($sortDirection === 'asc')
+                                            <svg class="ml-1 inline-block h-4 w-4" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M5 15l7-7 7 7"></path>
+                                            </svg>
                                         @else
-                                            @php
-                                                $actions = explode(',', $row->$key);
-                                            @endphp
-                                            @foreach ($actions as $index => $action)
-                                                <span
-                                                    class="{{ $index > 0 ? 'ml-2' : '' }} {{ $index === 0 ? 'text-[#1AAD8A] hover:text-[#0F614D]' : 'text-[#1AAD8A] hover:text-[#0F614D]' }}">{{ trim($action) }}</span>
-                                            @endforeach
-                                        @endif
-                                    @elseif(!$useModel && isset($row[$key]))
-                                        @if (is_array($row[$key]))
-                                            @foreach ($row[$key] as $action => $url)
-                                                <a href="{{ $url }}"
-                                                    class="{{ $loop->first ? 'text-[#1AAD8A] hover:text-[#0F614D]' : 'ml-2 text-[#1AAD8A] hover:text-[#0F614D]' }}">{{ $action }}</a>
-                                            @endforeach
-                                        @else
-                                            @php
-                                                $actions = explode(',', $row[$key]);
-                                            @endphp
-                                            @foreach ($actions as $index => $action)
-                                                <span
-                                                    class="{{ $index > 0 ? 'ml-2' : '' }} {{ $index === 0 ? 'text-[#1AAD8A] hover:text-[#0F614D]' : 'text-[#1AAD8A] hover:text-[#0F614D]' }}">{{ trim($action) }}</span>
-                                            @endforeach
+                                            <svg class="ml-1 inline-block h-4 w-4" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 9l-7 7-7-7"></path>
+                                            </svg>
                                         @endif
                                     @endif
-                                @else
-                                    <div class="text-sm text-[#2E2E2E] font-dm-sans">
-                                        @if ($useModel)
-                                            @if (isset($row->{$key . '_formatted'}))
-                                                {!! $row->{$key . '_formatted'} !!}
-                                            @elseif(isset($row->$key))
-                                                @if (is_array($row->$key))
-                                                    @foreach ($row->$key as $item)
-                                                        <span
-                                                            class="mr-2 inline-flex items-center rounded-full bg-[#D4F5ED] px-2.5 py-0.5 text-xs font-medium text-[#0F614D]">
-                                                            {{ $item }}
-                                                        </span>
-                                                    @endforeach
-                                                @elseif($row->$key instanceof \Illuminate\Support\Collection)
-                                                    @foreach ($row->$key as $item)
-                                                        <span
-                                                            class="mr-2 inline-flex items-center rounded-full bg-[#D4F5ED] px-2.5 py-0.5 text-xs font-medium text-[#0F614D]">
-                                                            {{ is_object($item) ? (method_exists($item, '__toString') ? $item : $item->id) : $item }}
-                                                        </span>
-                                                    @endforeach
-                                                @elseif($row->$key instanceof \Carbon\Carbon)
-                                                    {{ formatDate($row->$key) }}
-                                                @elseif(strpos($key, '.') !== false && str_contains($key, '_count'))
-                                                    {{ $row->$key }}
-                                                @elseif(is_object($row->$key))
-                                                    {{ method_exists($row->$key, '__toString') ? $row->$key : $row->$key->id }}
-                                                @elseif((strtolower($key) === 'estado' || strtolower($key) === 'status') && strtolower($row->$key) === 'active')
-                                                    activo
-                                                @else
-                                                    {{ $row->$key }}
+                                @endif
+                            </th>
+                        @endforeach
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#D4F5ED] bg-white">
+                    @forelse($processedRows as $row)
+                        <tr class="hover:bg-gray-50/80">
+                            @foreach ($headers as $key => $header)
+                                <td
+                                    class="@if ($key === '_select') w-12 px-3 @elseif($key === 'actions') whitespace-nowrap px-6 py-4 text-sm font-medium @else px-6 py-4 @endif">
+                                    @if ($key === '_select')
+                                        <input type="checkbox" wire:click="toggleRowSelection(@js($this->getRowSelectionKey($row)))"
+                                            wire:loading.attr="disabled" @checked($this->isRowSelected($row))
+                                            @disabled($selectEntireResultSet)
+                                            class="h-4 w-4 rounded border-gray-300 text-[#1AAD8A] focus:ring-[#1AAD8A]" />
+                                    @elseif ($key === 'actions')
+                                        @if ($customActionsView)
+                                            @include($customActionsView, ['row' => $row, 'useModel' => $useModel])
+                                        @elseif ($showActions)
+                                            <div class="flex items-center space-x-2">
+                                                @if ($actionsEdit)
+                                                    <a href="{{ $this->getRouteFor('edit', $row) }}" class="group">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                                            <path d="M1.91732 12.0786C1.94795 11.8029 1.96326 11.6651 2.00497 11.5363C2.04197 11.422 2.09425 11.3132 2.16038 11.2129C2.23493 11.0999 2.33299 11.0018 2.52911 10.8057L11.3333 2.0015C12.0697 1.26512 13.2636 1.26512 14 2.0015C14.7364 2.73788 14.7364 3.93179 14 4.66817L5.19578 13.4724C4.99966 13.6685 4.9016 13.7665 4.78855 13.8411C4.68826 13.9072 4.57949 13.9595 4.46519 13.9965C4.33636 14.0382 4.19853 14.0535 3.92287 14.0841L1.66663 14.3348L1.91732 12.0786Z" stroke="#666666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                                                class="group-hover:stroke-blue-900" />
+                                                        </svg>
+                                                    </a>
                                                 @endif
-                                            @elseif(strpos($key, '.') !== false)
+                                                @if ($actionsView)
+                                                    <a href="{{ $this->getRouteFor('view', $row) }}"
+                                                        class="text-[#666666] hover:text-[#0F614D]">
+                                                        <svg class="h-5 w-5" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z">
+                                                            </path>
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                                            </path>
+                                                        </svg>
+                                                    </a>
+                                                @endif
+                                                @if ($actionsDelete)
+                                                    <button type="button"
+                                                        wire:click="confirmDelete('{{ $useModel ? $row->{$routeKeyName} : $row[$routeKeyName] ?? '' }}')"
+                                                        class="group">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                                            <path d="M5 1H9M1 3H13M11.6667 3L11.1991 10.0129C11.129 11.065 11.0939 11.5911 10.8667 11.99C10.6666 12.3412 10.3648 12.6235 10.0011 12.7998C9.58798 13 9.06073 13 8.00623 13H5.99377C4.93927 13 4.41202 13 3.99889 12.7998C3.63517 12.6235 3.33339 12.3412 3.13332 11.99C2.90607 11.5911 2.871 11.065 2.80086 10.0129L2.33333 3" stroke="#666666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                                                class="group-hover:stroke-red-900" />
+                                                        </svg>
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @elseif($useModel && method_exists($row, 'getActionButtons'))
+                                            {!! $row->getActionButtons() !!}
+                                        @elseif(isset($row->{$key . '_html'}) || isset($row[$key . '_html']))
+                                            {!! $useModel ? $row->{$key . '_html'} : $row[$key . '_html'] !!}
+                                        @elseif($useModel && isset($row->$key))
+                                            @if (is_array($row->$key))
+                                                @foreach ($row->$key as $action => $url)
+                                                    <a href="{{ $url }}"
+                                                        class="{{ $loop->first ? 'text-[#1AAD8A] hover:text-[#0F614D]' : 'ml-2 text-[#1AAD8A] hover:text-[#0F614D]' }}">{{ $action }}</a>
+                                                @endforeach
+                                            @else
                                                 @php
-                                                    $parts = explode('.', $key);
-                                                    $value = $row;
-                                                    foreach ($parts as $part) {
-                                                        if (is_object($value) && isset($value->$part)) {
-                                                            $value = $value->$part;
-                                                        } elseif (is_array($value) && isset($value[$part])) {
-                                                            $value = $value[$part];
-                                                        } else {
-                                                            $value = null;
-                                                            break;
-                                                        }
-                                                    }
+                                                    $actions = explode(',', $row->$key);
                                                 @endphp
-                                                @if ($value !== null)
-                                                    @if (is_object($value) && method_exists($value, '__toString'))
-                                                        {{ $value }}
-                                                    @elseif(!is_object($value) && !is_array($value))
-                                                        {{ $value }}
+                                                @foreach ($actions as $index => $action)
+                                                    <span
+                                                        class="{{ $index > 0 ? 'ml-2' : '' }} {{ $index === 0 ? 'text-[#1AAD8A] hover:text-[#0F614D]' : 'text-[#1AAD8A] hover:text-[#0F614D]' }}">{{ trim($action) }}</span>
+                                                @endforeach
+                                            @endif
+                                        @elseif(!$useModel && isset($row[$key]))
+                                            @if (is_array($row[$key]))
+                                                @foreach ($row[$key] as $action => $url)
+                                                    <a href="{{ $url }}"
+                                                        class="{{ $loop->first ? 'text-[#1AAD8A] hover:text-[#0F614D]' : 'ml-2 text-[#1AAD8A] hover:text-[#0F614D]' }}">{{ $action }}</a>
+                                                @endforeach
+                                            @else
+                                                @php
+                                                    $actions = explode(',', $row[$key]);
+                                                @endphp
+                                                @foreach ($actions as $index => $action)
+                                                    <span
+                                                        class="{{ $index > 0 ? 'ml-2' : '' }} {{ $index === 0 ? 'text-[#1AAD8A] hover:text-[#0F614D]' : 'text-[#1AAD8A] hover:text-[#0F614D]' }}">{{ trim($action) }}</span>
+                                                @endforeach
+                                            @endif
+                                        @endif
+                                    @else
+                                        <div class="font-dm-sans text-sm text-[#2E2E2E]">
+                                            @if ($useModel)
+                                                @if (isset($row->{$key . '_html'}))
+                                                    {!! $row->{$key . '_html'} !!}
+                                                @elseif(isset($row->{$key . '_formatted'}))
+                                                    {!! $row->{$key . '_formatted'} !!}
+                                                @elseif(isset($row->$key))
+                                                    @if (is_array($row->$key))
+                                                        @foreach ($row->$key as $item)
+                                                            <span
+                                                                class="mr-2 inline-flex items-center rounded-full bg-[#D4F5ED] px-2.5 py-0.5 text-xs font-medium text-[#0F614D]">
+                                                                {{ $item }}
+                                                            </span>
+                                                        @endforeach
+                                                    @elseif($row->$key instanceof \Illuminate\Support\Collection)
+                                                        @foreach ($row->$key as $item)
+                                                            <span
+                                                                class="mr-2 inline-flex items-center rounded-full bg-[#D4F5ED] px-2.5 py-0.5 text-xs font-medium text-[#0F614D]">
+                                                                {{ is_object($item) ? (method_exists($item, '__toString') ? $item : $item->id) : $item }}
+                                                            </span>
+                                                        @endforeach
+                                                    @elseif($row->$key instanceof \Carbon\Carbon)
+                                                        {{ formatDate($row->$key) }}
+                                                    @elseif(strpos($key, '.') !== false && str_contains($key, '_count'))
+                                                        {{ $row->$key }}
+                                                    @elseif(is_object($row->$key))
+                                                        {{ method_exists($row->$key, '__toString') ? $row->$key : $row->$key->id }}
+                                                    @elseif((strtolower($key) === 'estado' || strtolower($key) === 'status') && strtolower($row->$key) === 'active')
+                                                        activo
+                                                    @else
+                                                        {{ $row->$key }}
+                                                    @endif
+                                                @elseif(strpos($key, '.') !== false)
+                                                    @php
+                                                        $parts = explode('.', $key);
+                                                        $value = $row;
+                                                        foreach ($parts as $part) {
+                                                            if (is_object($value) && isset($value->$part)) {
+                                                                $value = $value->$part;
+                                                            } elseif (is_array($value) && isset($value[$part])) {
+                                                                $value = $value[$part];
+                                                            } else {
+                                                                $value = null;
+                                                                break;
+                                                            }
+                                                        }
+                                                    @endphp
+                                                    @if ($value !== null)
+                                                        @if (is_object($value) && method_exists($value, '__toString'))
+                                                            {{ $value }}
+                                                        @elseif(!is_object($value) && !is_array($value))
+                                                            {{ $value }}
+                                                        @endif
+                                                    @endif
+                                                @endif
+                                            @else
+                                                @if (isset($row[$key . '_html']))
+                                                    {!! $row[$key . '_html'] !!}
+                                                @elseif(isset($row[$key . '_formatted']))
+                                                    {!! $row[$key . '_formatted'] !!}
+                                                @elseif(isset($row[$key]))
+                                                    @if (is_array($row[$key]))
+                                                        @foreach ($row[$key] as $item)
+                                                            <span
+                                                                class="mr-2 inline-flex items-center rounded-full bg-[#D4F5ED] px-2.5 py-0.5 text-xs font-medium text-[#0F614D]">
+                                                                {{ $item }}
+                                                            </span>
+                                                        @endforeach
+                                                    @elseif(isset($row[$key . '_formatted']))
+                                                        {!! $row[$key . '_formatted'] !!}
+                                                    @elseif((strtolower($key) === 'estado' || strtolower($key) === 'status') && strtolower($row[$key]) === 'active')
+                                                        activo
+                                                    @else
+                                                        {{ $row[$key] }}
                                                     @endif
                                                 @endif
                                             @endif
-                                        @else
-                                            @if (isset($row[$key]))
-                                                @if (is_array($row[$key]))
-                                                    @foreach ($row[$key] as $item)
-                                                        <span
-                                                            class="mr-2 inline-flex items-center rounded-full bg-[#D4F5ED] px-2.5 py-0.5 text-xs font-medium text-[#0F614D]">
-                                                            {{ $item }}
-                                                        </span>
-                                                    @endforeach
-                                                @elseif(isset($row[$key . '_formatted']))
-                                                    {!! $row[$key . '_formatted'] !!}
-                                                @elseif((strtolower($key) === 'estado' || strtolower($key) === 'status') && strtolower($row[$key]) === 'active')
-                                                    activo
-                                                @else
-                                                    {{ $row[$key] }}
-                                                @endif
-                                            @endif
-                                        @endif
-                                    </div>
-                                @endif
+                                        </div>
+                                    @endif
+                                </td>
+                            @endforeach
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="{{ count($headers) }}" class="px-6 py-4 text-center text-gray-500">
+                                {{ $emptyMessage }}
                             </td>
-                        @endforeach
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="{{ count($headers) }}" class="px-6 py-4 text-center text-gray-500">
-                            {{ $emptyMessage }}
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
 
     @if ($showPagination)
-        <div class="flex items-center justify-between mt-4">
+        <div class="flex shrink-0 flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="text-sm text-gray-700">
-                Mostrando {{ $processedRows->firstItem() ?? 0 }} a {{ $processedRows->lastItem() ?? 0 }} de {{ $processedRows->total() }} resultados
+                Mostrando {{ $processedRows->firstItem() ?? 0 }} a {{ $processedRows->lastItem() ?? 0 }} de
+                {{ $processedRows->total() }} resultados
             </div>
-            <div class="flex items-center space-x-1">
+            <div class="flex flex-wrap items-center gap-1">
                 @if ($processedRows->onFirstPage())
-                    <span class="px-3 py-1 text-gray-500 bg-gray-200 rounded-md cursor-not-allowed">
+                    <span class="cursor-not-allowed rounded-md bg-gray-200 px-3 py-1 text-gray-500">
                         <span class="sr-only">Previous</span>
                         &larr;
                     </span>
                 @else
-                    <button wire:click="previousPage" class="px-3 py-1 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                    <button wire:click="previousPage" type="button"
+                        class="rounded-md border border-gray-300 bg-white px-3 py-1 text-gray-700 hover:bg-gray-50">
                         <span class="sr-only">Previous</span>
                         &larr;
                     </button>
@@ -263,19 +300,21 @@
 
                 @foreach ($processedRows->getUrlRange(max(1, $processedRows->currentPage() - 3), min($processedRows->lastPage(), $processedRows->currentPage() + 3)) as $page => $url)
                     @if ($page == $processedRows->currentPage())
-                        <span class="px-3 py-1 text-white bg-[#1AAD8A] rounded-md">{{ $page }}</span>
+                        <span class="rounded-md bg-[#1AAD8A] px-3 py-1 text-white">{{ $page }}</span>
                     @else
-                        <button wire:click="gotoPage({{ $page }})" class="px-3 py-1 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">{{ $page }}</button>
+                        <button wire:click="gotoPage({{ $page }})" type="button"
+                            class="rounded-md border border-gray-300 bg-white px-3 py-1 text-gray-700 hover:bg-gray-50">{{ $page }}</button>
                     @endif
                 @endforeach
 
                 @if ($processedRows->hasMorePages())
-                    <button wire:click="nextPage" class="px-3 py-1 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                    <button wire:click="nextPage" type="button"
+                        class="rounded-md border border-gray-300 bg-white px-3 py-1 text-gray-700 hover:bg-gray-50">
                         <span class="sr-only">Next</span>
                         &rarr;
                     </button>
                 @else
-                    <span class="px-3 py-1 text-gray-500 bg-gray-200 rounded-md cursor-not-allowed">
+                    <span class="cursor-not-allowed rounded-md bg-gray-200 px-3 py-1 text-gray-500">
                         <span class="sr-only">Next</span>
                         &rarr;
                     </span>
@@ -284,17 +323,70 @@
         </div>
     @endif
 
-    <!-- Modal de confirmación de eliminación -->
+    @if ($showSelectColumn && $showSelectAllModal)
+        <div class="fixed inset-0 z-[60] flex items-center justify-center px-4 py-6 sm:px-0" x-data="{ show: true }" x-show="show"
+            x-transition>
+            <div class="fixed inset-0 bg-[#171717] opacity-40" wire:click="dismissSelectAllModal"></div>
+            <div class="relative z-10 mx-auto w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" @click.stop>
+                <h3 class="mb-2 text-lg font-bold text-gray-900">Selección ampliada</h3>
+                <p class="mb-4 text-sm text-gray-600">
+                    Se seleccionaron los <strong>{{ $selectAllPageCount }}</strong> registros visibles en esta página.
+                    ¿Desea seleccionar también <strong>los {{ $selectAllModalTotal }} registros</strong> que coinciden con la
+                    búsqueda y filtros actuales?
+                </p>
+                <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" wire:click="dismissSelectAllModal"
+                        class="rounded-lg border-2 border-neutral-blue py-2.5 font-medium text-neutral-blue sm:px-4">
+                        No, solo esta página
+                    </button>
+                    <button type="button" wire:click="confirmSelectEntireResultSet"
+                        class="rounded-lg bg-[#1AAD8A] py-2.5 font-medium text-white hover:bg-[#0F614D] sm:px-4">
+                        Sí, seleccionar todos
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
     @if ($confirmingDelete)
         <x-modal-warning :show="$confirmingDelete" title="¿Estás seguro de querer eliminar este registro?" name="modal-warning">
             <div class="flex items-center gap-2">
-                <button class="w-1/2 py-3 font-medium transition duration-200 rounded-lg border-[3px] text-neutral-blue border-neutral-blue" wire:click="cancelDelete">
+                <button class="w-1/2 rounded-lg border-[3px] border-neutral-blue py-3 font-medium text-neutral-blue transition duration-200" wire:click="cancelDelete" type="button">
                     Cancelar
                 </button>
-                <button class="w-1/2 py-3 font-medium text-white transition duration-200 bg-red-600 rounded-lg hover:bg-red-700" wire:click="delete">
+                <button type="button" class="w-1/2 rounded-lg bg-red-600 py-3 font-medium text-white transition duration-200 hover:bg-red-700" wire:click="delete">
                     Eliminar
                 </button>
             </div>
         </x-modal-warning>
+    @endif
+
+    @if ($deleteError)
+        <div class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-4 py-6 sm:px-0" x-data="{ show: true }" x-show="show"
+            x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+            x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+            <div class="fixed inset-0 transform transition-all" wire:click="dismissDeleteError">
+                <div class="absolute inset-0 bg-[#171717] opacity-25"></div>
+            </div>
+            <div class="relative z-10 mx-auto mb-6 w-full max-w-lg transform overflow-hidden rounded-xl bg-white p-9 shadow-[8px_8px_30px_0_rgba(0,0,0,0.28)] transition-all"
+                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" @click.stop>
+                <div class="mb-4 flex flex-col items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="94" height="94" viewBox="0 0 94 94" fill="none">
+                        <path d="M47 20.67v29.33M47 62.67h.02M90.33 47a43.33 43.33 0 1 1-86.66 0 43.33 43.33 0 0 1 86.66 0Z"
+                            stroke="#DC2626" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <h3 class="text-lg font-bold text-red-600">No se puede eliminar</h3>
+                </div>
+                <p class="mb-4 text-center text-gray-700">{{ $deleteError }}</p>
+                <div class="flex justify-center">
+                    <button type="button" class="w-full rounded-lg bg-[#1AAD8A] py-3 font-medium text-white transition duration-200 hover:bg-[#0F614D]" wire:click="dismissDeleteError">
+                        Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
     @endif
 </div>

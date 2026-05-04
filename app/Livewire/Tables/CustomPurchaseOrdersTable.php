@@ -3,6 +3,7 @@
 namespace App\Livewire\Tables;
 
 use App\Models\PurchaseOrder;
+use App\Support\SelectOptions;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
@@ -164,7 +165,7 @@ class CustomPurchaseOrdersTable extends Component
             \DB::commit();
 
             // Show success message
-            session()->flash('message', 'Documento de embarque ' . $shippingDocument->document_number . ' creado exitosamente con ' . count($this->selected) . ' órdenes y un peso total de ' . number_format($totalWeight, 0) . ' kg.');
+            session()->flash('message', 'Documento de tránsito ' . $shippingDocument->document_number . ' creado exitosamente con ' . count($this->selected) . ' órdenes y un peso total de ' . number_format($totalWeight, 0) . ' kg.');
 
             // Reset selection after creating document
             $this->selected = [];
@@ -377,9 +378,8 @@ class CustomPurchaseOrdersTable extends Component
             ->mapWithKeys(function ($statusName) {
                 return [$statusName => $statusName];
             })
-            ->sort()
             ->toArray();
-            
-        return $statuses;
+
+        return SelectOptions::sortAssociative($statuses);
     }
 }

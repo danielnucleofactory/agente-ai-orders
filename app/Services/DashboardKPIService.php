@@ -8,6 +8,7 @@ use App\Models\PurchaseOrder;
 use App\Models\KanbanStatus;
 use App\Models\Company;
 use App\Models\Vendor;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Carbon;
@@ -17,9 +18,63 @@ class DashboardKPIService
 {
     protected TransitTimeService $transitTimeService;
 
-    public function __construct(TransitTimeService $transitTimeService)
-    {
+    protected PorthTranslationService $porthTranslationService;
+
+    public function __construct(
+        TransitTimeService $transitTimeService,
+        PorthTranslationService $porthTranslationService
+    ) {
         $this->transitTimeService = $transitTimeService;
+        $this->porthTranslationService = $porthTranslationService;
+    }
+
+    /**
+     * Normaliza filtros para caché:
+     * - Elimina nulos / vacíos / false
+     * - Ordena keys para estabilidad
+     *
+     * Esto evita "cache miss" cuando distintos callers mandan el mismo set lógico de filtros
+     * pero con keys extra o valores vacíos (p.ej. export vs dashboard-kpi/api).
+     *
+     * @param array<string, mixed> $filters
+     * @return array<string, mixed>
+     */
+    protected function normalizeFiltersForCache(array $filters): array
+    {
+        $normalized = [];
+        foreach ($filters as $k => $v) {
+            if ($v === null || $v === '' || $v === false) {
+                continue;
+            }
+            if (is_array($v)) {
+                $v = array_values(array_filter($v, static fn ($x) => $x !== null && $x !== '' && $x !== false));
+                if ($v === []) {
+                    continue;
+                }
+            }
+            $normalized[$k] = $v;
+        }
+
+        ksort($normalized);
+        return $normalized;
+    }
+
+    /**
+     * Código UN/LOC con nombre legible entre paréntesis (maestro CSV / traducción Porth).
+     */
+    protected function formatUnlocWithPortName(string $unloc, ?string $porthNameFallback = null): string
+    {
+        $code = strtoupper(trim($unloc));
+        if ($code === '') {
+            return $unloc;
+        }
+
+        $translated = $this->porthTranslationService->translatePortQuiet($code, $porthNameFallback);
+        if ($translated !== null && $translated !== '') {
+            return sprintf('%s (%s)', $code, $translated);
+        }
+
+        return $code;
     }
 
     /**
@@ -83,6 +138,9 @@ class DashboardKPIService
     {
         $stageNameLower = strtolower($stageName);
 
+        if (str_contains($stageNameLower, 'consolidador')) {
+            return 'Consolidador';
+        }
         if (str_contains($stageNameLower, 'producción') || str_contains($stageNameLower, 'produccion')) {
             return 'Producción';
         }
@@ -92,11 +150,17 @@ class DashboardKPIService
         if (str_contains($stageNameLower, 'tránsito') || str_contains($stageNameLower, 'transito')) {
             return 'Tránsito';
         }
-        if (str_contains($stageNameLower, 'transbordo')) {
-            return 'Transbordo';
+        if (str_contains($stageNameLower, 'alm') || str_contains($stageNameLower, 'fiscal') || str_contains($stageNameLower, 'almac')) {
+            return 'Alm. Fiscal';
+        }
+        if (str_contains($stageNameLower, 'otra zf') || str_contains($stageNameLower, 'otra zona')) {
+            return 'En otra ZF';
+        }
+        if (str_contains($stageNameLower, 'recibiendo') || str_contains($stageNameLower, 'cdi')) {
+            return 'Recibiendo CDI';
         }
         if (str_contains($stageNameLower, 'puerto') || str_contains($stageNameLower, 'arribo')) {
-            return 'Arribo';
+            return 'Puerto';
         }
         if (str_contains($stageNameLower, 'ingresada')) {
             return 'Ingresada';
@@ -121,19 +185,20 @@ class DashboardKPIService
             $query->where('company_id', $companyId);
         }
 
-        Log::info('DashboardKPIService::getBaseQuery', [
+        $query->operationalForDashboard();
+
+        Log::debug('DashboardKPIService::getBaseQuery', [
             'filters' => $filters,
             'company_id' => $companyId,
         ]);
 
-        // Filtros de fecha (usando created_at como fecha de período)
-        // Solo aplicar si se proporcionan explícitamente
+        // Filtros de fecha por fecha de orden (order_date), alineado con el dashboard principal
         if (!empty($filters['date_from']) && $filters['date_from'] !== 'null') {
-            $query->where('created_at', '>=', $filters['date_from']);
+            $query->where('order_date', '>=', $filters['date_from']);
         }
 
         if (!empty($filters['date_to']) && $filters['date_to'] !== 'null') {
-            $query->where('created_at', '<=', $filters['date_to']);
+            $query->where('order_date', '<=', $filters['date_to']);
         }
 
         // Filtro por proveedor de mercancía
@@ -253,11 +318,14 @@ class DashboardKPIService
             ]);
 
             $stages = [
-                'Producción' => ['count' => 0, 'teus' => 0],
-                'Booking' => ['count' => 0, 'teus' => 0],
-                'Tránsito' => ['count' => 0, 'teus' => 0],
-                'Transbordo' => ['count' => 0, 'teus' => 0],
-                'Arribo' => ['count' => 0, 'teus' => 0],
+                'Producción'    => ['count' => 0, 'teus' => 0],  // ID 2
+                'Booking'       => ['count' => 0, 'teus' => 0],  // ID 3
+                'Consolidador'  => ['count' => 0, 'teus' => 0],  // ID 4
+                'Tránsito'      => ['count' => 0, 'teus' => 0],  // ID 5
+                'Puerto'        => ['count' => 0, 'teus' => 0],  // ID 6
+                'Alm. Fiscal'   => ['count' => 0, 'teus' => 0],  // ID 7
+                'En otra ZF'    => ['count' => 0, 'teus' => 0],  // ID 8
+                'Recibiendo CDI'=> ['count' => 0, 'teus' => 0],  // ID 9
             ];
 
             $totalPOs = 0;
@@ -379,7 +447,7 @@ class DashboardKPIService
 
     /**
      * POs con adelanto según Carga Lista (CL)
-     * WHERE date_variable_date <= date_theorical_load
+     * WHERE date_variable_date < date_theorical_load
      */
     public function getPOsWithAdvanceCL(array $filters = []): array
     {
@@ -387,7 +455,7 @@ class DashboardKPIService
             $query = $this->getBaseQuery($filters)
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
-                ->whereRaw('date_variable_date <= date_theorical_load')
+                ->whereRaw('date_variable_date < date_theorical_load')
                 ->with(['vendor', 'kanbanStatus'])
                 ->get();
 
@@ -553,21 +621,343 @@ class DashboardKPIService
         }
     }
 
+    private const PORTH_PHASE_IN_TRANSIT = '40_in_transit';
+
+    private const PORTH_PHASE_AT_DESTINATION_PORT = '50_at_destination_port';
+
     /**
-     * POs en Puerto de Transbordo
-     * Por ahora retorna vacío - pendiente fix integración Porth
+     * Orden cronológico del itinerario Porth (fecha del evento; mismo instante → orden original).
+     *
+     * @param  array<int, array<string, mixed>>  $itinerary
+     * @return array<int, array<string, mixed>>
+     */
+    protected function sortPorthItineraryByDate(array $itinerary): array
+    {
+        $indexed = [];
+        foreach ($itinerary as $i => $event) {
+            $indexed[] = ['i' => $i, 'e' => $event];
+        }
+
+        usort($indexed, function (array $a, array $b): int {
+            $ta = $this->porthItineraryEventTimestamp($a['e']);
+            $tb = $this->porthItineraryEventTimestamp($b['e']);
+            if ($ta !== $tb) {
+                return $ta <=> $tb;
+            }
+
+            return $a['i'] <=> $b['i'];
+        });
+
+        return array_map(static fn (array $x) => $x['e'], $indexed);
+    }
+
+    /**
+     * @param  array<string, mixed>  $event
+     */
+    private function porthItineraryEventTimestamp(array $event): int
+    {
+        $d = $event['date'] ?? null;
+        if ($d === null || $d === '') {
+            return 0;
+        }
+        try {
+            return Carbon::parse($d)->getTimestamp();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    /**
+     * Puerto de transbordo actual: solo eventos entre el primer hito phase=40_in_transit
+     * y el primer phase=50_at_destination_port (excluidos ambos hitos). Así se evita
+     * depender del wording exacto de cada naviera en {@code name}.
+     *
+     * @param  array<int, array<string, mixed>>  $itinerary
+     */
+    protected function resolveCurrentTransshipmentPort(array $itinerary, string $pod, ?string $porthPodName = null): ?string
+    {
+        $pod = strtoupper(trim($pod));
+        if ($pod === '') {
+            return null;
+        }
+
+        $activePort = null;
+
+        foreach ($itinerary as $event) {
+            $name = strtoupper(trim((string) ($event['name'] ?? '')));
+            $place = strtoupper(trim((string) ($event['place'] ?? '')));
+            $done = (bool) ($event['done'] ?? false);
+
+            if (!$done || $place === '' || $this->porthItineraryPlaceIsDestinationPod($place, $pod, $porthPodName)) {
+                continue;
+            }
+
+            if ($this->itineraryEventLooksLikeTransshipmentDischarge($name)) {
+                $activePort = $place;
+
+                continue;
+            }
+
+            if ($activePort !== null && $place === $activePort && $this->itineraryEventClosesTransshipmentAtPort($name)) {
+                $activePort = null;
+            }
+        }
+
+        return $activePort;
+    }
+
+    private function porthItineraryPlaceIsDestinationPod(string $place, string $pod, ?string $porthPodName): bool
+    {
+        if ($place === $pod) {
+            return true;
+        }
+        $pn = strtoupper(trim((string) ($porthPodName ?? '')));
+        if ($pn === '') {
+            return false;
+        }
+        // p.ej. place "LA GUAIRA" vs pod UNLOC "VELAG" y nombre "La Guaira"
+        if (str_contains($pn, $place) || str_contains($place, $pn)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function itineraryEventLooksLikeTransshipmentDischarge(string $name): bool
+    {
+        return str_contains($name, 'DISCHARG');
+    }
+
+    private function itineraryEventClosesTransshipmentAtPort(string $name): bool
+    {
+        if (str_contains($name, 'TRANSSHIPMENT') && str_contains($name, 'POSITIONED OUT')) {
+            return true;
+        }
+        if (str_contains($name, 'LOADED ON BOARD')
+            || str_contains($name, 'TRANSSHIPMENT LOADED')
+            || str_contains($name, 'FULL TRANSSHIPMENT LOADED')) {
+            return true;
+        }
+        // "Load" suelto (p. ej. Hapag); evitar coincidir "LOAD" dentro de "DOWNLOAD".
+        foreach (preg_split('/\s+/', $name) as $token) {
+            if ($token === 'LOAD') {
+                return true;
+            }
+        }
+        if (str_contains($name, 'VESSEL DEPARTURE')) {
+            return true;
+        }
+        if (str_contains($name, 'DEPARTURE') && !str_contains($name, 'EMPTY TO SHIPPER')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * POs en Puerto de Transbordo (último transbordo activo según itinerario Porth).
      */
     public function getPOsInTransshipment(array $filters = []): array
     {
-        // Por ahora retornar estructura vacía - pendiente integración Porth
-        return [
-            'summary' => [
-                'total_pos' => 0,
-                'total_teus' => 0,
-            ],
-            'by_port' => [],
-            'details' => [],
-        ];
+        $user = auth()->user();
+        if ($user === null) {
+            return [
+                'summary' => ['total_pos' => 0, 'total_teus' => 0],
+                'by_port' => [],
+                'details' => [],
+            ];
+        }
+
+        $ttl = (int) config('dashboard.kpi_transshipment_cache_seconds', 120);
+        if ($ttl <= 0) {
+            return $this->computePOsInTransshipment($filters);
+        }
+
+        // No contaminar caché con payloads grandes (details). El caché es para la vista base.
+        $includeDetails = (bool) ($filters['include_details'] ?? false);
+        if ($includeDetails) {
+            // Details bajo demanda: no cachear el resultado completo (puede ser grande y degradar la DB cache).
+            return $this->computePOsInTransshipment($filters);
+        }
+
+        $cacheFilters = $this->normalizeFiltersForCache($filters);
+        unset($cacheFilters['include_details'], $cacheFilters['details_port'], $cacheFilters['details_limit']);
+
+        $filtersKey = json_encode($cacheFilters);
+        if ($filtersKey === false) {
+            $filtersKey = '';
+        }
+
+        $cacheKey = sprintf(
+            'dashboard_kpi:transshipment:v4:%s:%s:%s',
+            hash('sha256', $filtersKey),
+            (string) ($user->company_id ?? '0'),
+            (string) $user->id
+        );
+
+        $startedAt = microtime(true);
+        $hit = Cache::has($cacheKey);
+
+        $result = Cache::remember(
+            $cacheKey,
+            now()->addSeconds($ttl),
+            function () use ($filters) {
+                // Forzar que la ruta cacheada jamás genere details.
+                $filters['include_details'] = false;
+                unset($filters['details_port'], $filters['details_limit']);
+
+                return $this->computePOsInTransshipment($filters);
+            }
+        );
+
+        Log::info('DashboardKPI transshipment cache', [
+            'hit' => $hit,
+            'ttl_seconds' => $ttl,
+            'elapsed_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+        ]);
+
+        return $result;
+    }
+
+    /**
+     * Cálculo pesado de transbordos (sin caché).
+     */
+    protected function computePOsInTransshipment(array $filters = []): array
+    {
+        try {
+            $query = $this->getBaseQuery($filters)
+                ->whereNotNull('porth_itinerary')
+                ->whereNotNull('porth_pod')
+                // Si ya tiene ATA, no está "actualmente" en transbordo.
+                ->whereNull('date_ata');
+
+            // PostgreSQL: al menos un hito 40_in_transit (ventana marítima Porth); el detalle es en PHP.
+            if (DB::connection()->getDriverName() === 'pgsql') {
+                $query->whereRaw(
+                    "jsonb_typeof(porth_itinerary::jsonb) = 'array' AND EXISTS ("
+                    .'SELECT 1 FROM jsonb_array_elements(porth_itinerary::jsonb) AS t(elem) '
+                    .'WHERE COALESCE(elem->>\'phase\', \'\') = ?)',
+                    [self::PORTH_PHASE_IN_TRANSIT]
+                );
+            }
+            // Fuera de PostgreSQL aplicamos filtro LIKE para reducir dataset (evita scan completo).
+            if (DB::connection()->getDriverName() !== 'pgsql') {
+                $query->where('porth_itinerary', 'like', '%TRANSSHIPMENT DISCHARGED%');
+            }
+
+            // Columnas mínimas + JSON de itinerario; evita hidratar el modelo completo.
+            $query->select([
+                'purchase_orders.id',
+                'purchase_orders.order_number',
+                'purchase_orders.container_type',
+                'purchase_orders.shipping_line',
+                'purchase_orders.porth_itinerary',
+                'purchase_orders.porth_pod',
+                'purchase_orders.porth_pod_name',
+                'purchase_orders.vendor_id',
+            ]);
+
+            $chunk = max(50, (int) config('dashboard.kpi_transshipment_lazy_chunk', 400));
+
+            $pos = $query->with([
+                'vendor' => static function ($q) {
+                    $q->select('id', 'name');
+                },
+            ])->lazy($chunk);
+
+            // Misma instancia de servicio puede ser singleton: cache solo en el ámbito de esta petición.
+            $portLabelCache = [];
+            $label = function (string $code, ?string $porthNameFallback = null) use (&$portLabelCache): string {
+                $key = strtoupper(trim($code))."\0".($porthNameFallback ?? '');
+                if (! \array_key_exists($key, $portLabelCache)) {
+                    $portLabelCache[$key] = $this->formatUnlocWithPortName($code, $porthNameFallback);
+                }
+
+                return $portLabelCache[$key];
+            };
+
+            $totalPOs = 0;
+            $totalTEUs = 0;
+            $byPort = [];
+            $details = [];
+            $includeDetails = (bool) ($filters['include_details'] ?? false);
+            $detailsPort = is_string($filters['details_port'] ?? null) ? strtoupper(trim((string) $filters['details_port'])) : null;
+            $detailsLimit = max(0, (int) ($filters['details_limit'] ?? 400));
+
+            foreach ($pos as $po) {
+                $itinerary = $po->porth_itinerary;
+                if (!is_array($itinerary) || empty($itinerary)) {
+                    continue;
+                }
+
+                $pod = strtoupper(trim($po->porth_pod ?? ''));
+                $transshipmentPort = $this->resolveCurrentTransshipmentPort(
+                    $itinerary,
+                    $pod,
+                    $po->porth_pod_name ?? null
+                );
+
+                if ($transshipmentPort === null) {
+                    continue;
+                }
+
+                $teus = $this->calculateTEUs($po->container_type);
+                $totalPOs++;
+                $totalTEUs += $teus;
+
+                if (!isset($byPort[$transshipmentPort])) {
+                    $byPort[$transshipmentPort] = ['count' => 0, 'teus' => 0];
+                }
+                $byPort[$transshipmentPort]['count']++;
+                $byPort[$transshipmentPort]['teus'] += $teus;
+
+                if ($includeDetails) {
+                    if ($detailsPort !== null && $detailsPort !== $transshipmentPort) {
+                        continue;
+                    }
+                    if ($detailsLimit > 0 && count($details) >= $detailsLimit) {
+                        continue;
+                    }
+                    $details[] = [
+                        'order_number' => $po->order_number,
+                        'vendor'       => $po->vendor->name ?? 'N/A',
+                        'shipping_line' => $po->shipping_line ?? 'N/A',
+                        'transshipment_port' => $transshipmentPort,
+                        'transshipment_port_label' => $label($transshipmentPort),
+                        'destination_port'   => $pod,
+                        'destination_port_label' => $label($pod, $po->porth_pod_name),
+                        'teus' => round($teus, 2),
+                    ];
+                }
+            }
+
+            $portData = [];
+            foreach ($byPort as $port => $data) {
+                $portData[] = [
+                    'port'       => $port,
+                    'port_label' => $label($port),
+                    'po_count'   => $data['count'],
+                    'teus'       => round($data['teus'], 2),
+                ];
+            }
+            usort($portData, fn($a, $b) => $b['po_count'] <=> $a['po_count']);
+
+            return [
+                'summary' => [
+                    'total_pos'  => $totalPOs,
+                    'total_teus' => round($totalTEUs, 2),
+                ],
+                'by_port' => $portData,
+                'details' => $details,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error in computePOsInTransshipment', ['error' => $e->getMessage()]);
+            return [
+                'summary' => ['total_pos' => 0, 'total_teus' => 0],
+                'by_port' => [],
+                'details' => [],
+            ];
+        }
     }
 
     /**
@@ -609,8 +999,9 @@ class DashboardKPIService
                 $byRoute[$routeLabel]['count']++;
                 $byRoute[$routeLabel]['teus'] += $teus;
 
-                // Detalles para subtabla
+                // Detalles para subtabla (incluye cliente para agrupar en el dashboard)
                 $details[] = [
+                    'client' => $clientName,
                     'order_number' => $po->order_number,
                     'vendor' => $po->vendor->name ?? 'N/A',
                     'shipping_line' => $po->shipping_line ?? 'N/A',
@@ -780,8 +1171,11 @@ class DashboardKPIService
     /**
      * Helper para clasificar días de tránsito en rangos
      */
-    protected function getTimeRange(int $days): string
+    protected function getTimeRange(int|float $days): string
     {
+        // En algunos escenarios diff/aggregations pueden producir float; normalizamos para clasificar.
+        $days = (int) round($days);
+
         if ($days <= 10) return '0-10';
         if ($days <= 20) return '11-20';
         if ($days <= 30) return '21-30';
@@ -801,24 +1195,16 @@ class DashboardKPIService
     public function comparePOsWithATD(array $filters, string $period1Start, string $period1End, string $period2Start, string $period2End): array
     {
         try {
-            $companyId = auth()->user()->company_id ?? null;
-
             // Período 1
-            $query1 = PurchaseOrder::query()
+            $query1 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_atd')
                 ->whereBetween('date_atd', [$period1Start, $period1End]);
-            if ($companyId) {
-                $query1->where('company_id', $companyId);
-            }
             $period1Data = $query1->with('vendor')->get();
 
             // Período 2
-            $query2 = PurchaseOrder::query()
+            $query2 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_atd')
                 ->whereBetween('date_atd', [$period2Start, $period2End]);
-            if ($companyId) {
-                $query2->where('company_id', $companyId);
-            }
             $period2Data = $query2->with('vendor')->get();
 
             // Agrupar por proveedor
@@ -879,24 +1265,16 @@ class DashboardKPIService
     public function comparePOsWithATA(array $filters, string $period1Start, string $period1End, string $period2Start, string $period2End): array
     {
         try {
-            $companyId = auth()->user()->company_id ?? null;
-
             // Período 1
-            $query1 = PurchaseOrder::query()
+            $query1 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_ata')
                 ->whereBetween('date_ata', [$period1Start, $period1End]);
-            if ($companyId) {
-                $query1->where('company_id', $companyId);
-            }
             $period1Data = $query1->with('vendor')->get();
 
             // Período 2
-            $query2 = PurchaseOrder::query()
+            $query2 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_ata')
                 ->whereBetween('date_ata', [$period2Start, $period2End]);
-            if ($companyId) {
-                $query2->where('company_id', $companyId);
-            }
             $period2Data = $query2->with('vendor')->get();
 
             // Agrupar por proveedor
@@ -957,28 +1335,20 @@ class DashboardKPIService
     public function comparePOsWithDelayCL(array $filters, string $period1Start, string $period1End, string $period2Start, string $period2End): array
     {
         try {
-            $companyId = auth()->user()->company_id ?? null;
-
             // Período 1
-            $query1 = PurchaseOrder::query()
+            $query1 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
                 ->whereRaw('date_variable_date > date_theorical_load')
                 ->whereBetween('date_variable_date', [$period1Start, $period1End]);
-            if ($companyId) {
-                $query1->where('company_id', $companyId);
-            }
             $period1Data = $query1->with('vendor')->get();
 
             // Período 2
-            $query2 = PurchaseOrder::query()
+            $query2 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
                 ->whereRaw('date_variable_date > date_theorical_load')
                 ->whereBetween('date_variable_date', [$period2Start, $period2End]);
-            if ($companyId) {
-                $query2->where('company_id', $companyId);
-            }
             $period2Data = $query2->with('vendor')->get();
 
             // Agrupar por proveedor
@@ -1039,28 +1409,20 @@ class DashboardKPIService
     public function comparePOsWithAdvanceCL(array $filters, string $period1Start, string $period1End, string $period2Start, string $period2End): array
     {
         try {
-            $companyId = auth()->user()->company_id ?? null;
-
             // Período 1
-            $query1 = PurchaseOrder::query()
+            $query1 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
-                ->whereRaw('date_variable_date <= date_theorical_load')
+                ->whereRaw('date_variable_date < date_theorical_load')
                 ->whereBetween('date_variable_date', [$period1Start, $period1End]);
-            if ($companyId) {
-                $query1->where('company_id', $companyId);
-            }
             $period1Data = $query1->with('vendor')->get();
 
             // Período 2
-            $query2 = PurchaseOrder::query()
+            $query2 = $this->getBaseQuery($filters)
                 ->whereNotNull('date_variable_date')
                 ->whereNotNull('date_theorical_load')
-                ->whereRaw('date_variable_date <= date_theorical_load')
+                ->whereRaw('date_variable_date < date_theorical_load')
                 ->whereBetween('date_variable_date', [$period2Start, $period2End]);
-            if ($companyId) {
-                $query2->where('company_id', $companyId);
-            }
             $period2Data = $query2->with('vendor')->get();
 
             // Agrupar por proveedor
@@ -1128,45 +1490,71 @@ class DashboardKPIService
     }
 
     /**
-     * PO vs TEUs por período (semana actual, anterior, mes actual, anterior)
+     * Fecha de referencia para PO vs TEUs por período: fin del filtro (date_to), o hoy si no hay.
+     * "Mes actual" = mes calendario que contiene esa fecha; "mes anterior" = mes calendario previo.
+     */
+    protected function resolvePoVsTeusPeriodAnchor(array $filters): Carbon
+    {
+        $dateTo = $filters['date_to'] ?? null;
+        if ($dateTo !== null && $dateTo !== '' && $dateTo !== 'null') {
+            return Carbon::parse((string) $dateTo)->startOfDay();
+        }
+
+        return Carbon::now()->startOfDay();
+    }
+
+    /**
+     * PO vs TEUs por período (semana que contiene el ancla, anterior, mes del ancla, mes previo).
+     * Respeta todos los filtros del dashboard salvo date_from/date_to: el ancla es date_to y las
+     * ventanas son meses/semanas calendario completos (no se recorta por el rango del panel).
      */
     public function getPOvsTEUsByPeriod(array $filters = []): array
     {
         try {
-            $now = Carbon::now();
-            $companyId = auth()->user()->company_id ?? null;
+            $anchor = $this->resolvePoVsTeusPeriodAnchor($filters);
+
+            $filtersSansOrderDates = $filters;
+            unset($filtersSansOrderDates['date_from'], $filtersSansOrderDates['date_to']);
+
+            $currentMonthStart = $anchor->copy()->startOfMonth();
+            $currentMonthEnd = $anchor->copy()->endOfMonth();
+            $lastMonthStart = $currentMonthStart->copy()->subMonth()->startOfMonth();
+            $lastMonthEnd = $currentMonthStart->copy()->subMonth()->endOfMonth();
+
+            $monthRowLabel = static function (Carbon $monthStart): string {
+                return $monthStart->copy()->locale(app()->getLocale())->isoFormat('MMMM YYYY');
+            };
 
             $periods = [
                 'current_week' => [
-                    'start' => $now->copy()->startOfWeek(),
-                    'end' => $now->copy()->endOfWeek(),
+                    'start' => $anchor->copy()->startOfWeek(),
+                    'end' => $anchor->copy()->endOfWeek(),
                     'label' => 'Semana Actual',
                 ],
                 'last_week' => [
-                    'start' => $now->copy()->subWeek()->startOfWeek(),
-                    'end' => $now->copy()->subWeek()->endOfWeek(),
+                    'start' => $anchor->copy()->subWeek()->startOfWeek(),
+                    'end' => $anchor->copy()->subWeek()->endOfWeek(),
                     'label' => 'Semana Anterior',
                 ],
                 'current_month' => [
-                    'start' => $now->copy()->startOfMonth(),
-                    'end' => $now->copy()->endOfMonth(),
-                    'label' => 'Mes Actual',
+                    'start' => $currentMonthStart,
+                    'end' => $currentMonthEnd,
+                    'label' => $monthRowLabel($currentMonthStart),
                 ],
                 'last_month' => [
-                    'start' => $now->copy()->subMonth()->startOfMonth(),
-                    'end' => $now->copy()->subMonth()->endOfMonth(),
-                    'label' => 'Mes Anterior',
+                    'start' => $lastMonthStart,
+                    'end' => $lastMonthEnd,
+                    'label' => $monthRowLabel($lastMonthStart),
                 ],
             ];
 
             $result = [];
             foreach ($periods as $key => $period) {
-                $query = PurchaseOrder::query()
-                    ->whereBetween('created_at', [$period['start'], $period['end']]);
-
-                if ($companyId) {
-                    $query->where('company_id', $companyId);
-                }
+                $query = $this->getBaseQuery($filtersSansOrderDates)
+                    ->whereBetween('order_date', [
+                        $period['start']->format('Y-m-d'),
+                        $period['end']->format('Y-m-d'),
+                    ]);
 
                 $pos = $query->get();
                 $poCount = $pos->count();
@@ -1176,26 +1564,38 @@ class DashboardKPIService
                     $teusCount += $this->calculateTEUs($po->container_type);
                 }
 
-                $result[] = [
+                $result[$key] = [
                     'period' => $period['label'],
                     'po_count' => $poCount,
                     'teus' => round($teusCount, 2),
                 ];
             }
 
-            // Calcular variaciones
+            // Variaciones semana / mes (siguen usando las cuatro ventanas internas)
             $weekVariation = 0;
-            if ($result[1]['po_count'] > 0) {
-                $weekVariation = round((($result[0]['po_count'] - $result[1]['po_count']) / $result[1]['po_count']) * 100, 1);
+            if (($result['last_week']['po_count'] ?? 0) > 0) {
+                $weekVariation = round(
+                    (($result['current_week']['po_count'] - $result['last_week']['po_count']) / $result['last_week']['po_count']) * 100,
+                    1
+                );
             }
 
             $monthVariation = 0;
-            if ($result[3]['po_count'] > 0) {
-                $monthVariation = round((($result[2]['po_count'] - $result[3]['po_count']) / $result[3]['po_count']) * 100, 1);
+            if (($result['last_month']['po_count'] ?? 0) > 0) {
+                $monthVariation = round(
+                    (($result['current_month']['po_count'] - $result['last_month']['po_count']) / $result['last_month']['po_count']) * 100,
+                    1
+                );
             }
 
+            // Tabla: solo mes actual vs mes anterior (evita solapamiento semana⊂mes, OLO-007)
+            $periodsForTable = [
+                $result['current_month'],
+                $result['last_month'],
+            ];
+
             return [
-                'periods' => $result,
+                'periods' => $periodsForTable,
                 'week_variation' => $weekVariation,
                 'month_variation' => $monthVariation,
             ];
@@ -1316,6 +1716,22 @@ class DashboardKPIService
     // ============================================
 
     /**
+     * Primer día (lunes) de la semana ISO indicada en formato YYYY-Www; si no es válido, semana calendario actual (lunes).
+     */
+    private function resolveProjectionWeekStart(?string $projectionWeek): Carbon
+    {
+        if (is_string($projectionWeek) && preg_match('/^(\d{4})-W(\d{1,2})$/', trim($projectionWeek), $m)) {
+            $year = (int) $m[1];
+            $week = (int) $m[2];
+            if ($week >= 1 && $week <= 53) {
+                return Carbon::now()->setISODate($year, $week)->startOfDay();
+            }
+        }
+
+        return Carbon::now()->startOfWeek(Carbon::MONDAY)->startOfDay();
+    }
+
+    /**
      * Llegadas futuras por etapa y semana
      */
     public function getFutureArrivals(array $filters = []): array
@@ -1324,15 +1740,17 @@ class DashboardKPIService
             $companyId = auth()->user()->company_id ?? null;
             $stageMapping = $this->getStageMapping($companyId);
 
-            // Obtener el rango de semanas (próximas 12 semanas)
-            $now = Carbon::now();
+            // Rango: N semanas (por defecto 12) a partir de la semana ISO elegida (projection_week: YYYY-Www)
+            $weekCount = max(1, min(52, (int) ($filters['week_count'] ?? 12)));
+            $startPoint = $this->resolveProjectionWeekStart($filters['projection_week'] ?? null);
+
             $weeks = [];
-            for ($i = 0; $i < 12; $i++) {
-                $weekStart = $now->copy()->addWeeks($i)->startOfWeek();
+            for ($i = 0; $i < $weekCount; $i++) {
+                $weekStart = $startPoint->copy()->addWeeks($i);
                 $weeks[] = [
                     'week_number' => $weekStart->weekOfYear,
                     'year' => $weekStart->year,
-                    'label' => 'S' . str_pad($weekStart->weekOfYear, 2, '0', STR_PAD_LEFT) . '-' . $weekStart->year,
+                    'label' => 'S' . str_pad((string) $weekStart->weekOfYear, 2, '0', STR_PAD_LEFT) . '-' . $weekStart->year,
                     'start' => $weekStart,
                     'end' => $weekStart->copy()->endOfWeek(),
                 ];
@@ -1348,13 +1766,9 @@ class DashboardKPIService
                 }
             }
 
-            // Obtener POs con vendor y company para calcular tiempos de tránsito
-            $query = PurchaseOrder::query()
-                ->with(['kanbanStatus', 'vendor', 'company']);
-            if ($companyId) {
-                $query->where('company_id', $companyId);
-            }
-            $pos = $query->get();
+            $pos = $this->getBaseQuery($filters)
+                ->with('kanbanStatus')
+                ->get();
 
             foreach ($pos as $po) {
                 if (!$po->kanban_status_id || !isset($stageMapping[$po->kanban_status_id])) {
@@ -1368,18 +1782,25 @@ class DashboardKPIService
                     continue;
                 }
 
-                // Obtener país de origen y destino para calcular tránsito
-                $originCountry = $po->vendor->country ?? null;
-                $destinationCountry = $po->company->country ?? null;
-                $transitDays = $this->transitTimeService->getTransitDays($originCountry, $destinationCountry) ?? 0;
+                // Preferir UNLOC (porth_pol/porth_pod) cuando existan: son códigos
+                // normalizados y dan un lookup exacto contra la matriz por ISO2.
+                // Caer al texto visible (departure_port/arrival_port, formato
+                // "NOMBRE, PAÍS") para las POs que todavía no sincronizaron con Porth.
+                $departureRef = ! empty($po->porth_pol) ? $po->porth_pol : $po->departure_port;
+                $arrivalRef = ! empty($po->porth_pod) ? $po->porth_pod : $po->arrival_port;
+
+                $transitDays = $this->transitTimeService->getTransitDaysForPorts(
+                    $departureRef,
+                    $arrivalRef
+                ) ?? 0;
 
                 // Determinar fecha según etapa
                 $targetDate = null;
                 switch ($category) {
                     case 'Producción':
-                        // Fecha CL Teórica + 15 días + días de tránsito según matriz
-                        if ($po->date_theorical_load) {
-                            $targetDate = Carbon::parse($po->date_theorical_load)
+                        // Fecha CL variable + 15 días + días de tránsito según matriz
+                        if ($po->date_variable_date) {
+                            $targetDate = Carbon::parse($po->date_variable_date)
                                 ->addDays(15)
                                 ->addDays($transitDays);
                         }

@@ -114,6 +114,16 @@
                 background: #127A62 !important;
             }
             
+            /* Animación para el spinner del botón de descarga */
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            
+            #export-btn:disabled {
+                pointer-events: none;
+            }
+            
             /* Estilos para filtros de 150x40 - Máxima especificidad para sobrescribir styles.css */
             .filters-section .filter-group {
                 width: 150px !important;
@@ -177,13 +187,13 @@
 
     <!-- Filter Controls -->
     <div class="filters-section" style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; font-family: 'Lato', sans-serif; margin-bottom: 24px;">
-      <div class="filter-group" data-filter="date-from" style="width: 150px;">
+      <div class="filter-group" data-filter="date-from" style="width: 150px;" x-data="datePicker('')">
         <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Fecha inicio</label>
-        <input type="date" id="startDate" class="date-input" style="height: 40px; width: 150px; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
+        <input x-ref="picker" type="text" id="startDate" class="date-input" style="height: 40px; width: 150px; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
       </div>
-      <div class="filter-group" data-filter="date-to" style="width: 150px;">
+      <div class="filter-group" data-filter="date-to" style="width: 150px;" x-data="datePicker('')">
         <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Fecha fin</label>
-        <input type="date" id="endDate" class="date-input" style="height: 40px; width: 150px; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
+        <input x-ref="picker" type="text" id="endDate" class="date-input" style="height: 40px; width: 150px; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; font-family: 'Lato', sans-serif;">
       </div>
       <div class="filter-group" data-filter="customer-type" style="width: 150px;">
         <label class="filter-label" style="color: #1AAD8A; font-size: 14px;">Tipo de cliente</label>
@@ -348,15 +358,15 @@
             <div class="additional-filters-buttons" style="display: flex; flex-direction: column; gap: 12px;">
               <button type="button" class="filter-button" id="btn-po-retraso-cl" data-filter="po_retraso_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                 <span style="line-height: 1.2; font-size: 15px;">PO Retraso CL</span>
-                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Retraso > 7 días en carga lista</span>
+                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Carga lista real posterior a la planificada.</span>
               </button>
               <button type="button" class="filter-button" id="btn-po-adelanto-cl" data-filter="po_adelanto_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                 <span style="line-height: 1.2; font-size: 15px;">PO Adelanto CL</span>
-                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Adelanto > 7 días en carga lista</span>
+                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Carga lista real previa a la planificada.</span>
               </button>
               <button type="button" class="filter-button" id="btn-indicador-capacidad" data-filter="indicador_capacidad" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                 <span style="line-height: 1.2; font-size: 15px;">Indicador Capacidad</span>
-                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">PO sin fecha ETD</span>
+                <span style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Ordenes con fecha de salida confirmada.</span>
               </button>
             </div>
           </div>
@@ -376,7 +386,7 @@
           </svg>
         </div>
         <h3 class="modal-title success">Archivo descargado exitosamente</h3>
-        <p class="modal-text">El archivo CSV se ha descargado correctamente</p>
+        <p class="modal-text">El archivo Excel se ha descargado correctamente</p>
       </div>
       <button id="closeSuccessBtn" class="modal-btn">Aceptar</button>
     </div>

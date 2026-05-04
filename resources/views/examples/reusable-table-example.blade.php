@@ -91,11 +91,11 @@
             // Opciones de filtro
             $filterOptions = [
                 'status' => [
-                    'draft' => 'Borrador',
-                    'pending' => 'Pendiente',
                     'approved' => 'Aprobado',
+                    'draft' => 'Borrador',
                     'in_transit' => 'En Tránsito',
-                    'delivered' => 'Entregado'
+                    'delivered' => 'Entregado',
+                    'pending' => 'Pendiente',
                 ]
             ];
             @endphp

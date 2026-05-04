@@ -12,9 +12,20 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Sincronizar embarques actualizados desde Porth cada hora
+        if (!config('services.porth.sync_enabled', true)) {
+            return;
+        }
+
+        // Sincronizar embarques actualizados desde Porth cada 5 minutos
         $schedule->command('porth:sync-recent --trigger=schedule')
-            ->hourly()
+            ->everyFiveMinutes()
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Importar datos de POs recién vinculadas cada 5 minutos
+        // Busca POs con porth_id pero sin last_porth_sync_at (pendientes de primera importación)
+        $schedule->command('porth:import-pending --limit=20')
+            ->everyFiveMinutes()
             ->withoutOverlapping()
             ->runInBackground();
     }

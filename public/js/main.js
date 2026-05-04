@@ -1361,8 +1361,23 @@ function populateFilters(filterOptions) {
     selectAll.innerHTML = `<label><input type="checkbox" class="select-all"> Seleccionar todos</label>`;
     optionsBox.appendChild(selectAll);
     
+    const filterLabel = (item) => {
+      if (!valueKey && !labelKey) return String(item ?? '');
+      return String(
+        (labelKey ? item[labelKey] : null) ??
+          (valueKey ? item[valueKey] : null) ??
+          item?.name ??
+          item?.short_text ??
+          item ??
+          ''
+      );
+    };
+    const sortedItems = [...items].sort((a, b) =>
+      filterLabel(a).localeCompare(filterLabel(b), 'es', { sensitivity: 'base', numeric: true })
+    );
+
     // Agregar elementos individuales
-    items.forEach(item => {
+    sortedItems.forEach(item => {
       const label = document.createElement('label');
       label.className = 'multi-select-option';
       const value = valueKey ? item[valueKey] : item;

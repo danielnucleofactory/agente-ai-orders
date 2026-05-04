@@ -7,6 +7,9 @@
     'wireModel' => '',
     'error' => false,
     'showError' => true,
+    'value' => null,
+    /** Ordenar opciones por etiqueta (excepto placeholder y __no_data__). */
+    'alphabetizeOptions' => true,
 ])
 
 <div class="relative flex flex-col">
@@ -21,13 +24,19 @@
         @endif
         {{ $attributes }}>
         <option value="">{{ $optionPlaceholder }}</option>
-        @foreach ($options as $key => $option)
+        @php
+            $selectOptionsList = $alphabetizeOptions
+                ? \App\Support\SelectOptions::forSelectAssociative($options)
+                : $options;
+        @endphp
+        @foreach ($selectOptionsList as $key => $option)
             @if($key === '__no_data__')
                 <option value="" disabled style="color: #ef4444; font-style: italic;">{{ $option }}</option>
             @else
-                <option value="{{ $key }}">{{ $option }}</option>
+                <option value="{{ $key }}" @selected($value !== null && (string)$key === (string)$value)>{{ $option }}</option>
             @endif
         @endforeach
+        
     </select>
 
     @if ($error && $showError)

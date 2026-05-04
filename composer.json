@@ -14,6 +14,7 @@
         "laravel/tinker": "^2.9",
         "livewire/livewire": "^3.4",
         "livewire/volt": "^1.0",
+        "maatwebsite/excel": "^3.1",
         "rappasoft/laravel-livewire-tables": "^3.7",
         "spatie/laravel-medialibrary": "^11.12",
         "spatie/laravel-permission": "^6.16"
@@ -36,7 +37,8 @@
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/",
             "RagaOrders\\POConfirmation\\": "internal_modules/laravel-po-confirmation/src/",
-            "RagaOrders\\Webhook\\": "internal_modules/orders-module-webhook/src/"
+            "RagaOrders\\Webhook\\": "internal_modules/orders-module-webhook/src/",
+            "RagaOrders\\MantenedorRaga\\": "internal_modules/mantenedor-raga/src/"
         },
         "files": [
             "app/helpers.php"

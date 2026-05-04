@@ -3,12 +3,19 @@
 namespace App\Console\Commands;
 
 use App\Models\PurchaseOrder;
+use App\Models\User;
 use App\Services\PorthApiService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class PorthLinkExisting extends Command
 {
+    /**
+     * Email del usuario sistema para sincronizaciones automáticas
+     */
+    protected const SYSTEM_USER_EMAIL = 'apps@raga-x.ai';
+
     protected $signature = 'porth:link-existing 
                             {--dry-run : Modo prueba, no modifica datos}
                             {--limit= : Limitar cantidad de POs a procesar}
@@ -36,6 +43,11 @@ class PorthLinkExisting extends Command
 
         $this->info("Iniciando vinculación de PurchaseOrders existentes con Porth");
         $this->info("Modo: " . ($dryRun ? 'DRY-RUN (no modifica datos)' : 'REAL'));
+
+        // Autenticar usuario sistema para registrar cambios en auditoría
+        if (!$dryRun) {
+            $this->authenticateSystemUser();
+        }
 
         if (!$this->api->isEnabled()) {
             $this->error("API de Porth no configurada. Verifica PORTH_API_KEY en .env");
@@ -151,16 +163,9 @@ class PorthLinkExisting extends Command
     {
         $identifiers = [];
 
-        if (!empty($po->mbl_number)) {
-            $identifiers['mbl'] = $po->mbl_number;
-        }
-
+        // Solo container_number activa vinculación en Porth (mbl_number y tracking_id son solo datos de la PO)
         if (!empty($po->container_number)) {
             $identifiers['container'] = $po->container_number;
-        }
-
-        if (!empty($po->tracking_id)) {
-            $identifiers['tracking_id'] = $po->tracking_id;
         }
 
         return $identifiers;
@@ -168,8 +173,8 @@ class PorthLinkExisting extends Command
 
     protected function findInPorth(array $identifiers): ?array
     {
-        // Prioridad: tracking_id > mbl > container > booking
-        $searchOrder = ['tracking_id', 'mbl', 'container', 'booking'];
+        // Solo container_number se usa para buscar en Porth
+        $searchOrder = ['container'];
 
         foreach ($searchOrder as $type) {
             if (!isset($identifiers[$type])) {
@@ -214,6 +219,27 @@ class PorthLinkExisting extends Command
         if ($dryRun && $this->linked > 0) {
             $this->newLine();
             $this->warn("Modo DRY-RUN: No se modificaron datos. Ejecuta sin --dry-run para aplicar cambios.");
+        }
+    }
+
+    /**
+     * Autentica el usuario sistema "Next Orders" para registrar cambios en auditoría
+     */
+    protected function authenticateSystemUser(): void
+    {
+        try {
+            $systemUser = User::where('email', self::SYSTEM_USER_EMAIL)->first();
+            
+            if ($systemUser) {
+                Auth::login($systemUser);
+                $this->info("Usuario sistema autenticado: {$systemUser->name}");
+            } else {
+                $this->warn("Usuario sistema no encontrado ({self::SYSTEM_USER_EMAIL}). Los cambios no se registrarán en el historial.");
+            }
+        } catch (\Exception $e) {
+            Log::error('porth_link:auth_error', [
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

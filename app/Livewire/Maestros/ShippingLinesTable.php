@@ -11,6 +11,7 @@ use Illuminate\Support\Collection;
 class ShippingLinesTable extends Component
 {
     use WithPagination;
+    use FetchesMaestrosWithCaseInsensitiveSearch;
 
     protected $paginationTheme = 'tailwind';
 
@@ -30,7 +31,7 @@ class ShippingLinesTable extends Component
 
     public function boot()
     {
-        //
+        abort_unless(auth()->user()?->can('has_view_maestros'), 403);
     }
 
     protected function getMaestrosApiService(): MaestrosApiService
@@ -66,22 +67,35 @@ class ShippingLinesTable extends Component
 
     public function render()
     {
-        $params = [
-            'page' => $this->getPage(),
-            'per_page' => $this->perPage,
+        $baseParams = [
             'sort' => $this->sortField,
             'order' => $this->sortDirection,
         ];
-
-        // Only add search if it's not empty
-        if (!empty(trim($this->search))) {
-            $params['search'] = trim($this->search);
-        }
-
-        // Only add active filter if it's not empty - send as string 'true' or 'false'
         if ($this->activeFilter !== '') {
-            $params['active'] = $this->activeFilter; // Already 'true' or 'false' string
+            $baseParams['active'] = $this->activeFilter;
         }
+
+        $searchTrimmed = trim($this->search);
+
+        if ($searchTrimmed !== '') {
+            $shippingLines = $this->fetchAllAndFilterCaseInsensitive(
+                fn (array $params) => $this->getMaestrosApiService()->getShippingLines($params),
+                $searchTrimmed,
+                $this->perPage,
+                $this->getPage(),
+                $this->sortField,
+                $this->sortDirection,
+                $baseParams
+            );
+            return view('livewire.maestros.shipping-lines-table', [
+                'shippingLines' => $shippingLines
+            ]);
+        }
+
+        $params = array_merge($baseParams, [
+            'page' => $this->getPage(),
+            'per_page' => $this->perPage,
+        ]);
 
         $response = $this->getMaestrosApiService()->getShippingLines($params);
 

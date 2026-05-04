@@ -2,48 +2,62 @@
 
 namespace App\Livewire\Forms;
 
-use App\Models\Product;
-use App\Models\Vendor;
-use App\Models\ShipTo;
-use App\Models\Hub;
 use App\Models\BillTo;
+use App\Models\Company;
+use App\Models\Hub;
+use App\Models\Product;
+use App\Models\ShipTo;
+use App\Models\Vendor;
 use App\Services\MaestrosApiService;
 use Livewire\Component;
 
 class CreatePucharseOrder extends Component
 {
     // Arrays para selects
-    public $modalidadArray = ["op1" => "Modalidad 1", "op2" => "Modalidad 2"];
-    public $hubArray = ["1" => "Hub 1", "2" => "Hub 2"];
-    public $paisArray = ["cr" => "Costa Rica", "us" => "Estados Unidos"];
-    public $estadoArray = ["cr" => "San José", "us" => "Miami"];
+    public $modalidadArray = ['op1' => 'Modalidad 1', 'op2' => 'Modalidad 2'];
+
+    public $hubArray = ['1' => 'Hub 1', '2' => 'Hub 2'];
+
+    public $paisArray = ['cr' => 'Costa Rica', 'us' => 'Estados Unidos'];
+
+    public $estadoArray = ['cr' => 'San José', 'us' => 'Miami'];
+
     public $tiposIncotermArray = [
-        "CIF" => "CIF",
-        "CIP" => "CIP",
-        "CFR" => "CFR",
-        "CPT" => "CPT",
-        "DAT" => "DAT",
-        "DAP" => "DAP",
-        "DDP" => "DDP",
-        "DEQ" => "DEQ",
-        "DES" => "DES",
-        "EXD" => "EXD",
-        "EXQ" => "EXQ",
-        "EXW" => "EXW",
-        "FCA" => "FCA",
-        "FOB" => "FOB",
+        'CIF' => 'CIF',
+        'CIP' => 'CIP',
+        'CFR' => 'CFR',
+        'CPT' => 'CPT',
+        'DAT' => 'DAT',
+        'DAP' => 'DAP',
+        'DDP' => 'DDP',
+        'DEQ' => 'DEQ',
+        'DES' => 'DES',
+        'EXD' => 'EXD',
+        'EXQ' => 'EXQ',
+        'EXW' => 'EXW',
+        'FCA' => 'FCA',
+        'FOB' => 'FOB',
     ];
-    public $currencyArray = ["CRC" => "Colones", "USD" => "Dólar Estadounidense", "EUR" => "Euro"];
-    public $paymentTermsArray = ["30" => "30 días", "60" => "60 días", "90" => "90 días"];
+
+    public $currencyArray = ['CRC' => 'Colones', 'USD' => 'Dólar Estadounidense', 'EUR' => 'Euro'];
+
+    public $paymentTermsArray = ['30' => '30 días', '60' => '60 días', '90' => '90 días'];
+
     public $vendorArray = [];
+
     public $shipToArray = [];
 
     // Arrays para dropdowns de datos maestros desde API
     public $tradingCompanyArray = [];
+
     public $departurePortArray = [];
+
     public $arrivalPortArray = [];
+
     public $serviceProviderArray = [];
+
     public $transportTypeArray = [];
+
     public $rateTypeArray = [];
 
     // Arrays para dropdowns de datos maestros (legacy - se reemplazará con API)
@@ -430,81 +444,129 @@ class CreatePucharseOrder extends Component
 
     // Datos generales
     public $order_number;
+
     public $status;
+
     public $notes;
+
     public $company_id;
 
     // Vendor information
     public $vendor_id;
+
     public $vendor_direccion;
+
     public $vendor_pais;
+
     public $vendor_telefono;
 
     // Ship to information
     public $ship_to_id;
+
     public $ship_to_nombre;
+
     public $ship_to_direccion;
+
     public $ship_to_pais;
+
     public $ship_to_telefono;
 
     // Bill to information
     public $bill_to_id;
+
     public $bill_to_nombre;
+
     public $bill_to_direccion;
+
     public $bill_to_pais;
+
     public $bill_to_telefono;
 
     // Order details
     public $order_date;
+
     public $currency;
+
     public $incoterms;
+
     public $payment_terms;
+
     public $order_place;
+
     public $email_agent;
 
     // Totals
     public $net_total = 0.0;
+
     public $additional_cost = 0.0;
+
     public $total = 0.0;
+
     public $insurance_cost = 0.0;
 
     // Dimensiones
     public $largo;
+
     public $ancho;
+
     public $alto;
+
     public $volumen;
+
     public $peso_kg;
+
     public $peso_lb;
 
     // Fechas
     public $date_required_in_destination;
+
     public $date_planned_pickup;
+
     public $date_actual_pickup;
+
     public $date_estimated_hub_arrival;
+
     public $date_actual_hub_arrival;
+
     public $date_etd;
+
     public $date_atd;
+
     public $date_eta;
+
     public $date_ata;
+
     public $date_consolidation;
+
     public $release_date;
 
     // Productos
     public $orderProducts = [];
+
     public $searchTerm = '';
+
     public $searchResults = [];
+
     public $selectedProduct = null;
+
     public $quantity = 1;
+
     public $length_cm = 0;
+
     public $width_cm = 0;
+
     public $height_cm = 0;
 
     public $id;
+
     public $purchaseOrder;
 
     public $planned_hub_id;
+
     public $actual_hub_id;
+
     public $hubsArray = [];
+
     public $billToArray = [];
 
     // Material type options
@@ -512,37 +574,61 @@ class CreatePucharseOrder extends Component
         'dangerous' => 'Peligroso',
         'general' => 'General',
         'exclusive' => 'Exclusivo',
-        'estibable' => 'Estibable'
+        'estibable' => 'Estibable',
     ];
 
     // New fields
     public $material_type = [];
+
     public $ensurence_type;
+
     public $mode;
+
     public $tracking_id;
+
     public $pallet_quantity;
+
     public $pallet_quantity_real;
+
     public $bill_of_lading;
+
     public $ground_transport_cost_1 = 0;
+
     public $ground_transport_cost_2 = 0;
+
     public $cost_nationalization = 0;
+
     public $cost_ofr_estimated = 0;
+
     public $cost_ofr_real = 0;
+
     public $estimated_pallet_cost = 0;
+
     public $real_cost_estimated_po = 0;
+
     public $real_cost_real_po = 0;
+
     public $other_costs = 0;
+
     public $other_expenses = 0;
+
     public $variable_calculare_weight = 0;
+
     public $savings_ofr_fcl = 0;
+
     public $saving_pickup = 0;
+
     public $saving_executed = 0;
+
     public $saving_not_executed = 0;
+
     public $comments;
 
     // Dimensiones
     public $largo_cm;
+
     public $ancho_cm;
+
     public $alto_cm;
 
     // Añade esta propiedad junto con las otras propiedades de dimensiones
@@ -555,98 +641,155 @@ class CreatePucharseOrder extends Component
     protected $listeners = [
         'vendorSelected' => 'onVendorSelected',
         'shipToSelected' => 'onShipToSelected',
-        'billToSelected' => 'onBillToSelected'
+        'billToSelected' => 'onBillToSelected',
     ];
 
     // ===== Campos nuevos para OLO =====
     // Identificadores y transporte
     public $factory_proforma_number;
+
     public $mbl_number;
+
     public $container_type;
+
     public $container_number;
+
     public $shipping_line;
+
     public $port_of_loading_validated = false;
 
-// Flags / opciones
+    // Flags / opciones
     public $is_dropship = false;
+
     public $applies_tlc = false;
+
     public $applies_af = false;
+
     public $has_facture_merca = false;
+
     public $used_rate_ok = false;
+
     public $uses_bonded_warehouse = false;
+
     public $apply_technical_note = false;
+
     public $etd_initial_validated = false;
 
-// Fechas/hitos
+    // Fechas/hitos
     public $date_booking_request;
+
     public $date_booking_authorized;
+
     public $date_theorical_load;
+
     public $date_variable_date;
+
     public $carga_lista_validada = false;
+
     public $date_received;
+
     public $date_etd_initial;
+
     public $inspection_date;
+
     public $vgm_cut_date;
+
     public $balance_payment_date;
+
     public $local_charges_payment_date;
+
     public $bonded_warehouse_enter;
+
     public $bonded_warehouse_exit;
+
     public $receipt_note_date;
+
     public $estimated_dc_availability_date;
 
-// Datos de negocio
+    // Datos de negocio
     public $logistics_incoterm;
+
     public $price_incoterm;
+
     public $reason;
+
     public $category;
+
     public $forwarder_name;
+
     public $cargo_invoice_number;
+
     public $tariff_type;
+
     public $route_label;
+
     public $retail_group;
+
     public $customer_type;
+
     public $trading_company;
+
     public $service_provider;
+
     public $customs_dua;
+
     public $invoice;
+
     public $factura_merca;
+
     public $case_number_file;
+
     public $receipt_note;
+
     public $visibility_notes;
 
-// Puertos
+    // Puertos
     public $departure_port;
+
     public $arrival_port;
 
-// Estado de llegada
+    // Estado de llegada
     public $arrival_status;
+
     public $delay_days;
 
-// Versiones actualizadas ETA/ETD
+    // Versiones actualizadas ETA/ETD
     public $date_eta_initial;
+
     public $date_eta_updated;
 
     // Costos
     public $po_amount = 0.0;        // Monto PO "declarado" (si lo usas)
+
     public $Invoice_amount = 0.0;   // Monto de la factura (mantengo el nombre exacto)
+
     public $freight_amount = 0.0;   // Monto flete
+
     public $total_amount = 0.0;     // Monto total
 
-// Métricas / contadores
+    // Métricas / contadores
     public $container_free_days;        // int
+
     public $etd_dates_difference;       // int (días)
+
     public $eta_dates_difference;       // int (días)
 
     // ===== Documentos (recepción) =====
     public $date_invoice_received;            // Fecha recepción de factura
+
     public $date_vendor_document_received;    // Fecha recepción doc. proveedor
 
-    //Campos extras que faltaban
+    // Campos extras que faltaban
     public $cbm;
+
     public $dif_load_date;
+
     public $consolidator_name;
+
     public $vendor_number;
+
     public $emision_date_po;
+
     public $forwader_date;
 
     public function mount($id = null)
@@ -662,7 +805,6 @@ class CreatePucharseOrder extends Component
         $this->material_type = ['general'];
         $this->ensurence_type = 'pending';
 
-
         if ($this->id) {
             $this->purchaseOrder = \App\Models\PurchaseOrder::with('products')->find($this->id);
 
@@ -673,8 +815,9 @@ class CreatePucharseOrder extends Component
                 $this->notes = $this->purchaseOrder->notes;
                 $this->company_id = $this->purchaseOrder->company_id;
 
-                // Vendor information
-                $this->vendor_id = $this->purchaseOrder->vendor_id;
+                // Vendor information: el select usa vendo_code (código canónico), no vendors.id
+                $this->vendor_number = $this->purchaseOrder->vendor_number ?? $this->purchaseOrder->vendor?->vendo_code ?? '';
+                $this->vendor_id = $this->vendor_number;
                 $this->vendor_direccion = $this->purchaseOrder->vendor_direccion;
                 $this->vendor_pais = $this->purchaseOrder->vendor_pais;
                 $this->vendor_telefono = $this->purchaseOrder->vendor_telefono;
@@ -777,7 +920,7 @@ class CreatePucharseOrder extends Component
                 // Cargar el tipo de seguro
                 $this->ensurence_type = $this->purchaseOrder->ensurence_type ?? 'pending';
 
-                //=== Datos nuevos para OLO ===
+                // === Datos nuevos para OLO ===
                 $this->factory_proforma_number = $this->purchaseOrder->factory_proforma_number;
                 $this->mbl_number = $this->purchaseOrder->mbl_number;
                 $this->container_type = $this->purchaseOrder->container_type;
@@ -800,14 +943,14 @@ class CreatePucharseOrder extends Component
                 $this->date_variable_date = optional($this->purchaseOrder->date_variable_date)?->format('Y-m-d');
                 $this->carga_lista_validada = $this->purchaseOrder->carga_lista_validada ?? false;
                 $this->date_received = optional($this->purchaseOrder->date_received)?->format('Y-m-d');
-                $this->date_etd_initial               = optional($this->purchaseOrder->date_etd_initial)?->format('Y-m-d');
-                $this->inspection_date                = optional($this->purchaseOrder->inspection_date)?->format('Y-m-d');
-                $this->vgm_cut_date                   = optional($this->purchaseOrder->vgm_cut_date)?->format('Y-m-d');
-                $this->balance_payment_date           = optional($this->purchaseOrder->balance_payment_date)?->format('Y-m-d');
-                $this->local_charges_payment_date     = optional($this->purchaseOrder->local_charges_payment_date)?->format('Y-m-d');
-                $this->bonded_warehouse_enter         = optional($this->purchaseOrder->bonded_warehouse_enter)?->format('Y-m-d');
-                $this->bonded_warehouse_exit          = optional($this->purchaseOrder->bonded_warehouse_exit)?->format('Y-m-d');
-                $this->receipt_note_date              = optional($this->purchaseOrder->receipt_note_date)?->format('Y-m-d');
+                $this->date_etd_initial = optional($this->purchaseOrder->date_etd_initial)?->format('Y-m-d');
+                $this->inspection_date = optional($this->purchaseOrder->inspection_date)?->format('Y-m-d');
+                $this->vgm_cut_date = optional($this->purchaseOrder->vgm_cut_date)?->format('Y-m-d');
+                $this->balance_payment_date = optional($this->purchaseOrder->balance_payment_date)?->format('Y-m-d');
+                $this->local_charges_payment_date = optional($this->purchaseOrder->local_charges_payment_date)?->format('Y-m-d');
+                $this->bonded_warehouse_enter = optional($this->purchaseOrder->bonded_warehouse_enter)?->format('Y-m-d');
+                $this->bonded_warehouse_exit = optional($this->purchaseOrder->bonded_warehouse_exit)?->format('Y-m-d');
+                $this->receipt_note_date = optional($this->purchaseOrder->receipt_note_date)?->format('Y-m-d');
                 $this->estimated_dc_availability_date = optional($this->purchaseOrder->estimated_dc_availability_date)?->format('Y-m-d');
 
                 $this->logistics_incoterm = $this->purchaseOrder->logistics_incoterm;
@@ -818,18 +961,18 @@ class CreatePucharseOrder extends Component
                 $this->tariff_type = $this->purchaseOrder->tariff_type;
                 $this->route_label = $this->purchaseOrder->route_label;
                 // Asegurar que el valor guardado esté en el array de opciones
-                if ($this->route_label && !isset($this->routeLabelArray[$this->route_label])) {
+                if ($this->route_label && ! isset($this->routeLabelArray[$this->route_label])) {
                     $this->routeLabelArray[$this->route_label] = $this->route_label;
                 }
-                $this->retail_group     = $this->purchaseOrder->retail_group;
-                $this->customer_type    = $this->purchaseOrder->customer_type;
-                $this->trading_company  = $this->purchaseOrder->trading_company;
+                $this->retail_group = $this->purchaseOrder->retail_group;
+                $this->customer_type = $this->purchaseOrder->customer_type;
+                $this->trading_company = $this->purchaseOrder->trading_company;
                 $this->service_provider = $this->purchaseOrder->service_provider;
-                $this->customs_dua      = $this->purchaseOrder->customs_dua;
-                $this->invoice          = $this->purchaseOrder->invoice;
-                $this->factura_merca    = $this->purchaseOrder->factura_merca;
+                $this->customs_dua = $this->purchaseOrder->customs_dua;
+                $this->invoice = $this->purchaseOrder->invoice;
+                $this->factura_merca = $this->purchaseOrder->factura_merca;
                 $this->case_number_file = $this->purchaseOrder->case_number_file;
-                $this->receipt_note     = $this->purchaseOrder->receipt_note;
+                $this->receipt_note = $this->purchaseOrder->receipt_note;
                 $this->visibility_notes = $this->purchaseOrder->visibility_notes;
 
                 $this->departure_port = $this->purchaseOrder->departure_port;
@@ -839,29 +982,32 @@ class CreatePucharseOrder extends Component
                 $this->delay_days = $this->purchaseOrder->delay_days;
 
                 // Costos
-                $this->po_amount       = (float) $this->purchaseOrder->po_amount;
-                $this->Invoice_amount  = (float) $this->purchaseOrder->Invoice_amount;
-                $this->freight_amount  = (float) $this->purchaseOrder->freight_amount;
-                $this->total_amount    = (float) $this->purchaseOrder->total_amount;
+                $this->po_amount = (float) $this->purchaseOrder->po_amount;
+                $this->Invoice_amount = (float) $this->purchaseOrder->Invoice_amount;
+                $this->freight_amount = (float) $this->purchaseOrder->freight_amount;
+                $this->total_amount = (float) $this->purchaseOrder->total_amount;
 
                 // Métricas / contadores
-                $this->container_free_days  = $this->purchaseOrder->container_free_days;
+                $this->container_free_days = $this->purchaseOrder->container_free_days;
                 $this->etd_dates_difference = $this->purchaseOrder->etd_dates_difference;
                 $this->eta_dates_difference = $this->purchaseOrder->eta_dates_difference;
 
                 $this->date_eta_initial = optional($this->purchaseOrder->date_eta_initial)?->format('Y-m-d');
-                $this->date_eta_updated = optional($this->purchaseOrder->date_eta_updated)?->format('Y-m-d');
+                // ETA Variable se guarda en date_eta, no en date_eta_updated (que no existe en BD)
+                // Cargar desde date_eta en lugar de date_eta_updated
+                $this->date_eta_updated = optional($this->purchaseOrder->date_eta)?->format('Y-m-d');
 
-                //Campos extras que faltaban
-                $this->cbm               = $this->purchaseOrder->cbm;
+                // Campos extras que faltaban
+                $this->cbm = $this->purchaseOrder->cbm;
                 $this->consolidator_name = $this->purchaseOrder->consolidator_name;
-                $this->vendor_number     = $this->purchaseOrder->vendor_number;
+                // No sobrescribir vendor_number si la PO lo tiene vacío (mantener el asignado desde vendor en mount)
+                $this->vendor_number = $this->purchaseOrder->vendor_number ?? $this->vendor_number;
 
-                $this->dif_load_date     = optional($this->purchaseOrder->dif_load_date)?->format('Y-m-d');
-                $this->emision_date_po   = optional($this->purchaseOrder->emision_date_po)?->format('Y-m-d');
-                $this->forwader_date     = optional($this->purchaseOrder->forwader_date)?->format('Y-m-d');
+                $this->dif_load_date = optional($this->purchaseOrder->dif_load_date)?->format('Y-m-d');
+                $this->emision_date_po = optional($this->purchaseOrder->emision_date_po)?->format('Y-m-d');
+                $this->forwader_date = optional($this->purchaseOrder->forwader_date)?->format('Y-m-d');
 
-                //Recalcular las fechas
+                // Recalcular las fechas
                 $this->computeDateDiffs();
 
                 // Cargar opciones de maestros usando el trading_company guardado
@@ -878,7 +1024,7 @@ class CreatePucharseOrder extends Component
                         'short_text' => $product->short_text,
                         'price_per_unit' => $product->pivot->unit_price,
                         'quantity' => $product->pivot->quantity,
-                        'subtotal' => $product->pivot->unit_price * $product->pivot->quantity
+                        'subtotal' => $product->pivot->unit_price * $product->pivot->quantity,
                     ];
                 }
             }
@@ -886,11 +1032,11 @@ class CreatePucharseOrder extends Component
             // Inicializar el array de productos vacío
             $this->orderProducts = [];
 
-            // El campo trading_company se deja vacío para que el usuario lo llene
-            // Al escribir el nombre del cliente, se cargarán las opciones de maestros automáticamente
+            // Catálogos maestros: sin trading_company aún, usar empresa del usuario (OLO-009 / OLO-020)
+            $this->loadMaestrosOptions();
 
             // Generar un número de orden único
-            //$this->generateUniqueOrderNumber();
+            // $this->generateUniqueOrderNumber();
         }
     }
 
@@ -900,6 +1046,25 @@ class CreatePucharseOrder extends Component
     protected function getMaestrosApiService(): MaestrosApiService
     {
         return app(MaestrosApiService::class);
+    }
+
+    /**
+     * Valor de compañía/cliente para consultar maestros: trading_company si tiene ≥2 caracteres; si no, nombre de la empresa del usuario.
+     */
+    protected function resolveMaestrosTradingCompanyForApi(): string
+    {
+        $trading = trim((string) ($this->trading_company ?? ''));
+        if (strlen($trading) >= 2) {
+            return $trading;
+        }
+        $user = auth()->user();
+        if ($user && $user->company_id) {
+            $name = Company::query()->whereKey($user->company_id)->value('name');
+
+            return trim((string) ($name ?? ''));
+        }
+
+        return '';
     }
 
     protected function loadHubs()
@@ -921,10 +1086,8 @@ class CreatePucharseOrder extends Component
      */
     protected function loadMaestrosOptions()
     {
-        // Si no hay trading_company, no cargar opciones de la API
-        $tradingCompanyValue = trim($this->trading_company ?? '');
-        if (empty($tradingCompanyValue)) {
-            // Limpiar los arrays si no hay cliente
+        $tradingCompanyValue = $this->resolveMaestrosTradingCompanyForApi();
+        if ($tradingCompanyValue === '') {
             $this->departurePortArray = [];
             $this->arrivalPortArray = [];
             $this->shippingLineArray = [];
@@ -932,6 +1095,7 @@ class CreatePucharseOrder extends Component
             $this->serviceProviderArray = [];
             $this->transportTypeArray = [];
             $this->rateTypeArray = [];
+
             return;
         }
 
@@ -954,10 +1118,10 @@ class CreatePucharseOrder extends Component
 
             // Al editar, asegurar que los valores guardados estén en los arrays
             if ($this->id) {
-                if ($this->departure_port && !isset($this->departurePortArray[$this->departure_port])) {
+                if ($this->departure_port && ! isset($this->departurePortArray[$this->departure_port])) {
                     $this->departurePortArray[$this->departure_port] = $this->departure_port;
                 }
-                if ($this->arrival_port && !isset($this->arrivalPortArray[$this->arrival_port])) {
+                if ($this->arrival_port && ! isset($this->arrivalPortArray[$this->arrival_port])) {
                     $this->arrivalPortArray[$this->arrival_port] = $this->arrival_port;
                 }
             }
@@ -965,35 +1129,35 @@ class CreatePucharseOrder extends Component
             // Cargar Shipping Lines
             $shippingLinesResponse = $apiService->getShippingLines($apiParams);
             $this->shippingLineArray = $this->processApiResponse($shippingLinesResponse, 'name', 'name');
-            if ($this->id && $this->shipping_line && !isset($this->shippingLineArray[$this->shipping_line])) {
+            if ($this->id && $this->shipping_line && ! isset($this->shippingLineArray[$this->shipping_line])) {
                 $this->shippingLineArray[$this->shipping_line] = $this->shipping_line;
             }
 
             // Cargar Container Types
             $containerTypesResponse = $apiService->getContainerTypes($apiParams);
             $this->containerTypeArray = $this->processApiResponse($containerTypesResponse, 'name', 'name');
-            if ($this->id && $this->container_type && !isset($this->containerTypeArray[$this->container_type])) {
+            if ($this->id && $this->container_type && ! isset($this->containerTypeArray[$this->container_type])) {
                 $this->containerTypeArray[$this->container_type] = $this->container_type;
             }
 
             // Cargar Service Providers
             $serviceProvidersResponse = $apiService->getServiceProviders($apiParams);
             $this->serviceProviderArray = $this->processApiResponse($serviceProvidersResponse, 'name', 'name');
-            if ($this->id && $this->service_provider && !isset($this->serviceProviderArray[$this->service_provider])) {
+            if ($this->id && $this->service_provider && ! isset($this->serviceProviderArray[$this->service_provider])) {
                 $this->serviceProviderArray[$this->service_provider] = $this->service_provider;
             }
 
             // Cargar Transport Types
             $transportTypesResponse = $apiService->getTransportTypes($apiParams);
             $this->transportTypeArray = $this->processApiResponse($transportTypesResponse, 'name', 'name');
-            if ($this->id && $this->mode && !isset($this->transportTypeArray[$this->mode])) {
+            if ($this->id && $this->mode && ! isset($this->transportTypeArray[$this->mode])) {
                 $this->transportTypeArray[$this->mode] = $this->mode;
             }
 
             // Cargar Rate Types
             $rateTypesResponse = $apiService->getRateTypes($apiParams);
             $this->rateTypeArray = $this->processApiResponse($rateTypesResponse, 'name', 'name');
-            if ($this->id && $this->tariff_type && !isset($this->rateTypeArray[$this->tariff_type])) {
+            if ($this->id && $this->tariff_type && ! isset($this->rateTypeArray[$this->tariff_type])) {
                 $this->rateTypeArray[$this->tariff_type] = $this->tariff_type;
             }
 
@@ -1033,14 +1197,14 @@ class CreatePucharseOrder extends Component
      * Process API response and convert to array format for dropdowns
      * Los resultados se ordenan alfabéticamente
      *
-     * @param array|null $response
-     * @param string $keyField Field to use as array key
-     * @param string $valueField Field to use as array value
+     * @param  array|null  $response
+     * @param  string  $keyField  Field to use as array key
+     * @param  string  $valueField  Field to use as array value
      * @return array
      */
     protected function processApiResponse($response, $keyField = 'name', $valueField = 'name')
     {
-        if (!$response || !isset($response['data'])) {
+        if (! $response || ! isset($response['data'])) {
             return [];
         }
 
@@ -1063,7 +1227,7 @@ class CreatePucharseOrder extends Component
      * Filtrar valores especiales '__no_data__' para evitar guardarlos en la base de datos
      * Convierte '__no_data__' o strings vacíos a null
      *
-     * @param mixed $value
+     * @param  mixed  $value
      * @return mixed
      */
     protected function filterNoDataValue($value)
@@ -1071,6 +1235,7 @@ class CreatePucharseOrder extends Component
         if ($value === '__no_data__' || $value === '') {
             return null;
         }
+
         return $value;
     }
 
@@ -1079,11 +1244,11 @@ class CreatePucharseOrder extends Component
         $companyId = auth()->user()->company_id ?? 1;
 
         // Formato: PO-YYYYMMDD-XXXX donde XXXX es un número secuencial
-        $prefix = 'PO-' . date('Ymd') . '-';
+        $prefix = 'PO-'.date('Ymd').'-';
 
         // Obtener el último número de orden con este prefijo para esta compañía
         $lastOrder = \App\Models\PurchaseOrder::where('company_id', $companyId)
-            ->where('order_number', 'like', $prefix . '%')
+            ->where('order_number', 'like', $prefix.'%')
             ->orderBy('order_number', 'desc')
             ->first();
 
@@ -1091,22 +1256,22 @@ class CreatePucharseOrder extends Component
             // Extraer el número secuencial y aumentarlo en 1
             $lastNumber = substr($lastOrder->order_number, strlen($prefix));
             $newNumber = intval($lastNumber) + 1;
-            $this->order_number = $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+            $this->order_number = $prefix.str_pad($newNumber, 4, '0', STR_PAD_LEFT);
         } else {
             // Si no hay órdenes previas con este prefijo, empezar con 0001
-            $this->order_number = $prefix . '0001';
+            $this->order_number = $prefix.'0001';
         }
 
         // Verificar que el número generado sea único (precaución extra)
         $attempts = 0;
         while (\App\Models\PurchaseOrder::where('company_id', $companyId)
-                ->where('order_number', $this->order_number)
-                ->exists() && $attempts < 100) {
+            ->where('order_number', $this->order_number)
+            ->exists() && $attempts < 100) {
 
             $attempts++;
             $lastNumber = substr($this->order_number, strlen($prefix));
             $newNumber = intval($lastNumber) + 1;
-            $this->order_number = $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+            $this->order_number = $prefix.str_pad($newNumber, 4, '0', STR_PAD_LEFT);
         }
 
         // Clear any previous validation errors for order_number
@@ -1116,7 +1281,7 @@ class CreatePucharseOrder extends Component
     public function onVendorSelected()
     {
         if ($this->vendor_id) {
-            $vendor = Vendor::find($this->vendor_id);
+            $vendor = Vendor::where('vendo_code', $this->vendor_id)->first();
             if ($vendor) {
                 $this->vendor_direccion = $vendor->vendor_direccion ?? null;
                 $this->vendor_pais = $vendor->vendor_pais ?? null;
@@ -1190,15 +1355,9 @@ class CreatePucharseOrder extends Component
     {
         $tradingCompanyValue = trim($this->trading_company ?? '');
 
-        // Si el campo está vacío o tiene menos de 2 caracteres, limpiar los arrays
         if (strlen($tradingCompanyValue) < 2) {
-            $this->departurePortArray = [];
-            $this->arrivalPortArray = [];
-            $this->shippingLineArray = [];
-            $this->containerTypeArray = [];
-            $this->serviceProviderArray = [];
-            $this->transportTypeArray = [];
-            $this->rateTypeArray = [];
+            $this->loadMaestrosOptions();
+
             return;
         }
 
@@ -1239,7 +1398,7 @@ class CreatePucharseOrder extends Component
                 ");
             }
         } catch (\Exception $e) {
-            \Log::error('Error al cargar maestros: ' . $e->getMessage());
+            \Log::error('Error al cargar maestros: '.$e->getMessage());
             $errorMessage = addslashes($e->getMessage());
             $this->js("
                 window.dispatchEvent(new CustomEvent('show-error', {
@@ -1254,8 +1413,8 @@ class CreatePucharseOrder extends Component
     public function searchProducts()
     {
         if (strlen($this->searchTerm) >= 2) {
-            $this->searchResults = Product::where('material_id', 'like', '%' . $this->searchTerm . '%')
-                ->orWhere('short_text', 'like', '%' . $this->searchTerm . '%')
+            $this->searchResults = Product::where('material_id', 'like', '%'.$this->searchTerm.'%')
+                ->orWhere('short_text', 'like', '%'.$this->searchTerm.'%')
                 ->take(5)
                 ->get();
         } else {
@@ -1294,7 +1453,7 @@ class CreatePucharseOrder extends Component
                     'short_text' => $this->selectedProduct->short_text,
                     'price_per_unit' => $this->selectedProduct->price_per_unit,
                     'quantity' => $this->quantity,
-                    'subtotal' => $this->selectedProduct->price_per_unit * $this->quantity
+                    'subtotal' => $this->selectedProduct->price_per_unit * $this->quantity,
                 ];
             }
 
@@ -1383,7 +1542,7 @@ class CreatePucharseOrder extends Component
             'date_eta',
             'date_ata',
             'date_consolidation',
-            'release_date'
+            'release_date',
         ];
 
         foreach ($dateFields as $field) {
@@ -1400,7 +1559,7 @@ class CreatePucharseOrder extends Component
             'actual_hub_id' => $this->actual_hub_id,
             'planned_hub_id' => $this->planned_hub_id,
             'order_number' => $this->order_number,
-            'user_id' => auth()->id()
+            'user_id' => auth()->id(),
         ]);
 
         // Get company ID for validation
@@ -1410,61 +1569,77 @@ class CreatePucharseOrder extends Component
         $this->computeDateDiffs();
 
         try {
-            //Para validar incoterms
+            // Para validar incoterms
             $allowedIncoterms = implode(',', array_keys($this->tiposIncotermArray));
 
             // Validación básica
             $this->validate([
                 'order_number' => [
                     'required',
-                    'unique:purchase_orders,order_number,NULL,id,company_id,' . $companyId
+                    'unique:purchase_orders,order_number,NULL,id,company_id,'.$companyId,
                 ],
                 'trading_company' => 'required|string',
                 'incoterms' => "required|string|in:$allowedIncoterms",
                 'logistics_incoterm' => "required|string|in:$allowedIncoterms",
                 'price_incoterm' => "required|string|in:$allowedIncoterms",
                 'vendor_id' => 'required',
-                'currency'               => 'required|string',
-                'category'               => 'nullable|string',
-                'factory_proforma_number'=> 'nullable|string',
-                'route_label'            => 'required|string',
-                'date_theorical_load'    => [
+                'currency' => 'required|string',
+                'category' => 'nullable|string',
+                'factory_proforma_number' => 'nullable|string',
+                'route_label' => 'required|string',
+                'date_theorical_load' => [
                     'required',
                     'date',
                     function ($attribute, $value, $fail) {
                         $emisionDate = $this->emision_date_po;
 
                         if ($emisionDate && $value < $emisionDate) {
-                            $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                            $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO ('.formatDate($emisionDate).')');
                         }
-                    }
+                    },
                 ],
                 'carga_lista_validada' => 'nullable|boolean',
-                'reason'                 => 'nullable|string',
+                'reason' => 'nullable|string',
             ], [
                 'order_number.required' => 'El número de orden es requerido',
                 'order_number.unique' => 'Este número de orden ya existe. Por favor, use un número diferente.',
                 'trading_company.required' => 'El campo Cliente es requerido',
                 'incoterms.required' => 'El incoterm de compra es requerido',
-                'logistics_incoterms.required' => 'El incoterms de logística es requerido',
+                'logistics_incoterm.required' => 'El incoterm logístico es obligatorio.',
+                'logistics_incoterm.in' => 'El incoterm logístico seleccionado no es válido.',
                 'price_incoterm.required' => 'El incoterm de precio es requerido',
                 'vendor_id.required' => 'El vendor es requerido',
-                'currency.required'      => 'La moneda es requerida',
-                'route_label.required'            => 'La ruta es requerida',
-                'date_theorical_load.required'    => 'La fecha de Carga Lista Teorica es requerida',
+                'currency.required' => 'La moneda es requerida',
+                'route_label.required' => 'La ruta es requerida',
+                'date_theorical_load.required' => 'La fecha de Carga Lista Teorica es requerida',
             ]);
 
             try {
                 // Usar transacción para asegurar integridad
                 \DB::beginTransaction();
 
+                // Resolver o crear vendor (vendor_id en form = vendo_code; DB espera vendors.id)
+                $vendor = null;
+                if ($this->vendor_id) {
+                    $vendor = Vendor::where('vendo_code', $this->vendor_id)->first();
+                    if (! $vendor) {
+                        $vendor = Vendor::create([
+                            'company_id' => $companyId,
+                            'vendo_code' => (string) $this->vendor_id,
+                            'name' => 'Proveedor '.$this->vendor_id,
+                            'status' => 'active',
+                        ]);
+                    }
+                }
+
                 // Preparar los datos para la orden de compra
                 $poData = [
                     'company_id' => $companyId,
                     'order_number' => $this->order_number,
                     'status' => $this->id ? $this->status : 'draft',
+                    'kanban_status_id' => $this->id ? $this->kanban_status_id : 2,
                     'notes' => $this->notes,
-                    'vendor_id' => $this->vendor_id,
+                    'vendor_id' => $vendor?->id,
                     'ship_to_id' => $this->ship_to_id,
                     'bill_to_id' => $this->bill_to_id,
                     'order_date' => $this->order_date,
@@ -1521,16 +1696,16 @@ class CreatePucharseOrder extends Component
                     'width_cm' => $this->width_cm,
                     'height_cm' => $this->height_cm,
 
-                    //=== Campos nuevos para OLO ===
+                    // === Campos nuevos para OLO ===
                     'factory_proforma_number' => $this->factory_proforma_number,
                     'mbl_number' => $this->mbl_number,
                     'container_type' => $this->filterNoDataValue($this->container_type),
                     'container_number' => $this->container_number,
                     'shipping_line' => $this->filterNoDataValue($this->shipping_line),
 
-                    'is_dropship'  => (bool) ($this->is_dropship ?? false),
-                    'applies_tlc'  => (bool) ($this->applies_tlc ?? false),
-                    'applies_af'   => (bool) ($this->applies_af ?? false),
+                    'is_dropship' => (bool) ($this->is_dropship ?? false),
+                    'applies_tlc' => (bool) ($this->applies_tlc ?? false),
+                    'applies_af' => (bool) ($this->applies_af ?? false),
 
                     'date_booking_request' => $this->date_booking_request,
                     'date_booking_authorized' => $this->date_booking_authorized,
@@ -1558,60 +1733,63 @@ class CreatePucharseOrder extends Component
                     'date_eta_updated' => $this->date_eta_updated,
 
                     'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
-                    'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
-                    'used_rate_ok'              => (bool) ($this->used_rate_ok ?? false),
-                    'uses_bonded_warehouse'     => (bool) ($this->uses_bonded_warehouse ?? false),
-                    'apply_technical_note'      => (bool) ($this->apply_technical_note ?? false),
-                    'etd_initial_validated'     => (bool) ($this->etd_initial_validated ?? false),
+                    'has_facture_merca' => (bool) ($this->has_facture_merca ?? false),
+                    'used_rate_ok' => (bool) ($this->used_rate_ok ?? false),
+                    'uses_bonded_warehouse' => (bool) ($this->uses_bonded_warehouse ?? false),
+                    'apply_technical_note' => (bool) ($this->apply_technical_note ?? false),
+                    'etd_initial_validated' => (bool) ($this->etd_initial_validated ?? false),
 
-                    'date_etd_initial'               => $this->date_etd_initial,
-                    'inspection_date'                => $this->inspection_date,
-                    'vgm_cut_date'                   => $this->vgm_cut_date,
-                    'balance_payment_date'           => $this->balance_payment_date,
-                    'local_charges_payment_date'     => $this->local_charges_payment_date,
-                    'bonded_warehouse_enter'         => $this->bonded_warehouse_enter,
-                    'bonded_warehouse_exit'          => $this->bonded_warehouse_exit,
-                    'receipt_note_date'              => $this->receipt_note_date,
+                    'date_etd_initial' => $this->date_etd_initial,
+                    'inspection_date' => $this->inspection_date,
+                    'vgm_cut_date' => $this->vgm_cut_date,
+                    'balance_payment_date' => $this->balance_payment_date,
+                    'local_charges_payment_date' => $this->local_charges_payment_date,
+                    'bonded_warehouse_enter' => $this->bonded_warehouse_enter,
+                    'bonded_warehouse_exit' => $this->bonded_warehouse_exit,
+                    'receipt_note_date' => $this->receipt_note_date,
                     'estimated_dc_availability_date' => $this->estimated_dc_availability_date,
 
-                    'retail_group'     => $this->retail_group,
-                    'customer_type'    => $this->customer_type,
-                    'trading_company'  => $this->trading_company,
+                    'retail_group' => $this->retail_group,
+                    'customer_type' => $this->customer_type,
+                    'trading_company' => $this->trading_company,
                     'service_provider' => $this->filterNoDataValue($this->service_provider),
-                    'customs_dua'      => $this->customs_dua,
-                    'invoice'          => $this->invoice,
-                    'factura_merca'    => $this->factura_merca,
+                    'customs_dua' => $this->customs_dua,
+                    'invoice' => $this->invoice,
+                    'factura_merca' => $this->factura_merca,
                     'case_number_file' => $this->case_number_file,
-                    'receipt_note'     => $this->receipt_note,
+                    'receipt_note' => $this->receipt_note,
                     'visibility_notes' => $this->visibility_notes,
 
-                    'po_amount'       => $this->po_amount,
-                    'Invoice_amount'  => $this->Invoice_amount,
-                    'freight_amount'  => $this->freight_amount,
-                    'total_amount'    => $this->total_amount,
+                    'po_amount' => $this->po_amount,
+                    'Invoice_amount' => $this->Invoice_amount,
+                    'freight_amount' => $this->freight_amount,
+                    'total_amount' => $this->total_amount,
 
-                    'container_free_days'   => $this->container_free_days,
-                    'etd_dates_difference'  => $this->etd_dates_difference,
-                    'eta_dates_difference'  => $this->eta_dates_difference,
-                    'date_invoice_received'            => $this->date_invoice_received,
-                    'date_vendor_document_received'    => $this->date_vendor_document_received,
+                    'container_free_days' => $this->container_free_days,
+                    'etd_dates_difference' => $this->etd_dates_difference,
+                    'eta_dates_difference' => $this->eta_dates_difference,
+                    'date_invoice_received' => $this->date_invoice_received,
+                    'date_vendor_document_received' => $this->date_vendor_document_received,
 
-                    'cbm'               => $this->cbm,
+                    'cbm' => $this->cbm,
                     'consolidator_name' => $this->consolidator_name,
-                    'vendor_number'     => $this->vendor_number,
-                    'dif_load_date'     => $this->dif_load_date,
-                    'emision_date_po'   => $this->emision_date_po,
-                    'forwader_date'     => $this->forwader_date,
+                    'vendor_number' => $this->vendor_number,
+                    'dif_load_date' => $this->dif_load_date,
+                    'emision_date_po' => $this->emision_date_po,
+                    'forwader_date' => $this->forwader_date,
 
                 ];
+                // po_amount no está en PurchaseOrder::$fillable ni en la tabla; no enviarlo a create()
+                unset($poData['po_amount']);
 
                 // Filtrar valores nulos o vacíos para evitar errores
                 // Mantener valores 0, 0.0, false, y strings vacíos que puedan ser necesarios
-                $poData = array_filter($poData, function($value) {
+                $poData = array_filter($poData, function ($value) {
                     // Mantener valores numéricos (incluyendo 0), booleanos, y arrays
                     if (is_numeric($value) || is_bool($value) || is_array($value)) {
                         return true;
                     }
+
                     // Eliminar solo null y strings vacíos
                     return $value !== null && $value !== '';
                 });
@@ -1620,7 +1798,7 @@ class CreatePucharseOrder extends Component
                     'order_number' => $poData['order_number'] ?? 'N/A',
                     'vendor_id' => $poData['vendor_id'] ?? 'N/A',
                     'company_id' => $poData['company_id'] ?? 'N/A',
-                    'campos_count' => count($poData)
+                    'campos_count' => count($poData),
                 ]);
 
                 // Crear nueva orden
@@ -1632,7 +1810,7 @@ class CreatePucharseOrder extends Component
                         'error' => $createException->getMessage(),
                         'trace' => $createException->getTraceAsString(),
                         'data_keys' => array_keys($poData),
-                        'order_number' => $poData['order_number'] ?? 'N/A'
+                        'order_number' => $poData['order_number'] ?? 'N/A',
                     ]);
                     throw $createException;
                 }
@@ -1647,7 +1825,7 @@ class CreatePucharseOrder extends Component
                 foreach ($this->orderProducts as $product) {
                     $purchaseOrder->products()->attach($product['id'], [
                         'quantity' => $product['quantity'] ?? 0,
-                        'unit_price' => $product['price_per_unit'] ?? 0
+                        'unit_price' => $product['price_per_unit'] ?? 0,
                     ]);
                 }
                 \DB::commit();
@@ -1696,7 +1874,7 @@ class CreatePucharseOrder extends Component
                     \Log::info('Verificando diferencia de hubs', [
                         'actual_hub_id' => $this->actual_hub_id,
                         'planned_hub_id' => $this->planned_hub_id,
-                        'order_number' => $this->order_number
+                        'order_number' => $this->order_number,
                     ]);
 
                     $actualHub = \App\Models\Hub::find($this->actual_hub_id);
@@ -1705,7 +1883,7 @@ class CreatePucharseOrder extends Component
                     if ($actualHub && $plannedHub) {
                         \Log::info('Hubs encontrados, enviando notificación', [
                             'actual_hub' => $actualHub->name,
-                            'planned_hub' => $plannedHub->name
+                            'planned_hub' => $plannedHub->name,
                         ]);
 
                         try {
@@ -1721,13 +1899,13 @@ class CreatePucharseOrder extends Component
                                     'planned_hub' => $plannedHub->name,
                                     'actual_hub' => $actualHub->name,
                                     'order_id' => $purchaseOrder->id,
-                                    'type' => 'hub_change'
+                                    'type' => 'hub_change',
                                 ]
                             );
 
                             \Log::info('Notificación enviada correctamente', [
                                 'notifications' => $notifications,
-                                'type' => 'po_hub_real'
+                                'type' => 'po_hub_real',
                             ]);
 
                             // Dispatch events to refresh notifications
@@ -1735,64 +1913,64 @@ class CreatePucharseOrder extends Component
                             $this->dispatch('refresh-notifications');
                             $this->dispatch('notification-received');
                         } catch (\Exception $e) {
-                            \Log::error('Error al enviar notificación: ' . $e->getMessage(), [
-                                'trace' => $e->getTraceAsString()
+                            \Log::error('Error al enviar notificación: '.$e->getMessage(), [
+                                'trace' => $e->getTraceAsString(),
                             ]);
                         }
                     }
                 }
 
                 // Dispatch success notification
-                $this->dispatch('show-success', 'Orden de compra creada exitosamente con número: ' . $this->order_number);
+                $this->dispatch('show-success', 'Orden de compra creada exitosamente con número: '.$this->order_number);
                 $this->dispatch('open-modal', 'modal-purchase-order-created');
 
             } catch (\Illuminate\Validation\ValidationException $e) {
                 \DB::rollBack();
                 \Log::warning('ValidationException capturada en try interno', [
                     'errors' => $e->errors(),
-                    'message' => $e->getMessage()
+                    'message' => $e->getMessage(),
                 ]);
                 // Re-lanzar la ValidationException para que Livewire la maneje automáticamente
                 throw $e;
             } catch (\Exception $e) {
                 \DB::rollBack();
-                \Log::error('Error en createPurchaseOrder (try interno): ' . $e->getMessage(), [
+                \Log::error('Error en createPurchaseOrder (try interno): '.$e->getMessage(), [
                     'trace' => $e->getTraceAsString(),
                     'class' => get_class($e),
                     'file' => $e->getFile(),
-                    'line' => $e->getLine()
+                    'line' => $e->getLine(),
                 ]);
 
                 // Check if it's a duplicate key error
-                if (strpos($e->getMessage(), 'duplicate key value violates unique constraint') !== false || 
+                if (strpos($e->getMessage(), 'duplicate key value violates unique constraint') !== false ||
                     strpos($e->getMessage(), 'SQLSTATE[23505]') !== false) {
                     $this->addError('order_number', 'Este número de orden ya existe. Por favor, use un número diferente.');
                     $this->dispatch('show-error', 'Este número de orden ya existe. Por favor, use un número diferente.');
                 } else {
-                    $errorMessage = 'Error al guardar la orden: ' . $e->getMessage();
+                    $errorMessage = 'Error al guardar la orden: '.$e->getMessage();
                     session()->flash('error', $errorMessage);
                     $this->dispatch('show-error', $errorMessage);
                 }
-                
+
                 // No re-lanzar aquí, ya se manejó el error
                 return;
             }
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::warning('Error de validación capturado en catch externo', [
                 'errors' => $e->errors(),
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ]);
             // Re-lanzar para que Livewire muestre automáticamente los errores en los campos
             throw $e;
         } catch (\Exception $e) {
-            \Log::error('Error inesperado en createPurchaseOrder (catch externo): ' . $e->getMessage(), [
+            \Log::error('Error inesperado en createPurchaseOrder (catch externo): '.$e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
                 'class' => get_class($e),
                 'file' => $e->getFile(),
-                'line' => $e->getLine()
+                'line' => $e->getLine(),
             ]);
-            
-            $errorMessage = 'Error inesperado al crear la orden: ' . $e->getMessage();
+
+            $errorMessage = 'Error inesperado al crear la orden: '.$e->getMessage();
             session()->flash('error', $errorMessage);
             $this->dispatch('show-error', $errorMessage);
         }
@@ -1808,7 +1986,7 @@ class CreatePucharseOrder extends Component
                 'company_id' => auth()->user()->company_id ?? 1,
                 'order_number' => $this->order_number ?? 'TEST-'.time(),
                 'order_date' => now(),
-                'status' => 'draft'
+                'status' => 'draft',
             ];
 
             \Log::info('Intentando guardar datos mínimos', $minimalData);
@@ -1817,10 +1995,11 @@ class CreatePucharseOrder extends Component
             $order = \App\Models\PurchaseOrder::create($minimalData);
             \Log::info('Orden creada con Eloquent', ['id' => $order->id]);
 
-            session()->flash('message', 'Prueba de guardado exitosa. ID: ' . $order->id);
+            session()->flash('message', 'Prueba de guardado exitosa. ID: '.$order->id);
+
             return redirect()->route('purchase-orders.index');
         } catch (\Exception $e) {
-            \Log::error('Error en prueba de guardado simple: ' . $e->getMessage());
+            \Log::error('Error en prueba de guardado simple: '.$e->getMessage());
             \Log::error($e->getTraceAsString());
 
             // Intento 2: Si falla Eloquent, intentar con una consulta SQL directa
@@ -1829,25 +2008,34 @@ class CreatePucharseOrder extends Component
                 $id = \DB::table('purchase_orders')->insertGetId($minimalData);
                 \Log::info('Orden creada con SQL directo', ['id' => $id]);
 
-                session()->flash('message', 'Prueba de guardado SQL exitosa. ID: ' . $id);
+                session()->flash('message', 'Prueba de guardado SQL exitosa. ID: '.$id);
+
                 return redirect()->route('purchase-orders.index');
             } catch (\Exception $e2) {
-                \Log::error('Error en prueba SQL: ' . $e2->getMessage());
-                session()->flash('error', 'Error en ambos métodos: ' . $e->getMessage() . ' y ' . $e2->getMessage());
+                \Log::error('Error en prueba SQL: '.$e2->getMessage());
+                session()->flash('error', 'Error en ambos métodos: '.$e->getMessage().' y '.$e2->getMessage());
             }
         }
     }
 
-    public function updatePurchaseOrder($id) {
+    public function updatePurchaseOrder($id)
+    {
         try {
-            // #region agent log
-            file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_1','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:1843','message'=>'updatePurchaseOrder ENTRY','data'=>['po_id'=>$id,'date_eta_updated_value'=>$this->date_eta_updated,'date_eta_value'=>$this->date_eta,'date_ata_value'=>$this->date_ata,'date_eta_initial_value'=>$this->date_eta_initial],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
-            // #endregion
+            // Red de seguridad: si estamos editando y date_theorical_load está vacío pero existe en BD, recargar desde la PO
+            if ($this->id && empty($this->date_theorical_load)) {
+                $po = $this->purchaseOrder ?? \App\Models\PurchaseOrder::find($id);
+                if ($po?->date_theorical_load) {
+                    $this->date_theorical_load = $po->date_theorical_load->format('Y-m-d');
+                }
+            }
+
             \Log::info('=== INICIO updatePurchaseOrder ===', [
                 'id' => $id,
                 'order_number' => $this->order_number,
                 'date_theorical_load' => $this->date_theorical_load,
                 'date_variable_date' => $this->date_variable_date,
+                'date_variable_date_type' => gettype($this->date_variable_date),
+                'date_variable_date_empty' => empty($this->date_variable_date),
                 'carga_lista_validada' => $this->carga_lista_validada,
                 'emision_date_po' => $this->emision_date_po,
                 'forwader_date' => $this->forwader_date,
@@ -1856,49 +2044,90 @@ class CreatePucharseOrder extends Component
                 'date_eta_updated' => $this->date_eta_updated,
                 'date_eta' => $this->date_eta,
                 'date_ata' => $this->date_ata,
-                'date_eta_initial' => $this->date_eta_initial
+                'date_eta_initial' => $this->date_eta_initial,
             ]);
 
-            // Validación para actualización
+            // Validación alineada con creación + fechas de carga lista
+            $companyId = auth()->user()->company_id ?? 1;
+            $allowedIncoterms = implode(',', array_keys($this->tiposIncotermArray));
+
             $this->validate([
+                'order_number' => [
+                    'required',
+                    'string',
+                    'unique:purchase_orders,order_number,'.$id.',id,company_id,'.$companyId,
+                ],
+                'trading_company' => 'required|string',
+                'incoterms' => "required|string|in:$allowedIncoterms",
+                'logistics_incoterm' => "required|string|in:$allowedIncoterms",
+                'price_incoterm' => "required|string|in:$allowedIncoterms",
+                'vendor_id' => 'required',
+                'currency' => 'required|string',
+                'category' => 'nullable|string',
+                'factory_proforma_number' => 'nullable|string',
+                'route_label' => 'required|string',
                 'date_theorical_load' => [
-                    'nullable', // Cambiar a nullable para evitar errores si no está sincronizado
+                    'required',
+                    'date',
+                    function ($attribute, $value, $fail) {
+                        $emisionDate = $this->emision_date_po;
+
+                        if ($emisionDate && $value < $emisionDate) {
+                            $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO ('.formatDate($emisionDate).')');
+                        }
+                    },
+                ],
+                'date_variable_date' => [
+                    'nullable',
                     'date',
                     function ($attribute, $value, $fail) {
                         if ($value) {
                             $emisionDate = $this->emision_date_po;
 
                             if ($emisionDate && $value < $emisionDate) {
-                                $fail('La fecha de carga lista teórica no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
+                                $fail('La fecha de carga lista variable no puede ser anterior a la fecha de emisión de la PO ('.formatDate($emisionDate).')');
                             }
                         }
-                    }
+                    },
                 ],
-            'date_variable_date' => [
-                'nullable',
-                'date',
-                function ($attribute, $value, $fail) {
-                    if ($value) {
-                        $emisionDate = $this->emision_date_po;
+                'carga_lista_validada' => 'nullable|boolean',
+                'reason' => 'nullable|string',
+            ], [
+                'order_number.required' => 'El número de orden es requerido',
+                'order_number.unique' => 'Este número de orden ya existe. Por favor, use un número diferente.',
+                'trading_company.required' => 'El campo Cliente es requerido',
+                'incoterms.required' => 'El incoterm de compra es requerido',
+                'logistics_incoterm.required' => 'El incoterm logístico es obligatorio.',
+                'logistics_incoterm.in' => 'El incoterm logístico seleccionado no es válido.',
+                'price_incoterm.required' => 'El incoterm de precio es requerido',
+                'vendor_id.required' => 'El vendor es requerido',
+                'currency.required' => 'La moneda es requerida',
+                'route_label.required' => 'La ruta es requerida',
+                'date_theorical_load.required' => 'La fecha de Carga Lista Teorica es requerida',
+            ]);
 
-                        if ($emisionDate && $value < $emisionDate) {
-                            $fail('La fecha de carga lista variable no puede ser anterior a la fecha de emisión de la PO (' . formatDate($emisionDate) . ')');
-                        }
-                    }
+            $this->computeDateDiffs();
+
+            // Resolver vendor_id: el form usa vendo_code, la BD espera vendors.id
+            $vendor = null;
+            if ($this->vendor_id) {
+                $vendor = Vendor::where('vendo_code', $this->vendor_id)->first();
+                if (! $vendor) {
+                    $companyId = auth()->user()->company_id ?? 1;
+                    $vendor = Vendor::create([
+                        'company_id' => $companyId,
+                        'vendo_code' => (string) $this->vendor_id,
+                        'name' => 'Proveedor '.$this->vendor_id,
+                        'status' => 'active',
+                    ]);
                 }
-            ],
-            'carga_lista_validada' => 'nullable|boolean',
-        ], [
-            'date_theorical_load.required' => 'La fecha de Carga Lista Teorica es requerida',
-        ]);
+            }
 
-        $this->computeDateDiffs();
-            
             $poData = [
                 'order_number' => $this->order_number,
                 'status' => $this->id ? $this->status : 'draft',
                 'notes' => $this->notes,
-                'vendor_id' => $this->vendor_id,
+                'vendor_id' => $vendor?->id,
                 'ship_to_id' => $this->ship_to_id,
                 'bill_to_id' => $this->bill_to_id,
                 'order_date' => $this->order_date,
@@ -1958,23 +2187,23 @@ class CreatePucharseOrder extends Component
                 'width_cm' => $this->width_cm,
                 'height_cm' => $this->height_cm,
 
-                //=== Campos nuevos para OLO ===
+                // === Campos nuevos para OLO ===
                 'factory_proforma_number' => $this->factory_proforma_number,
                 'mbl_number' => $this->mbl_number,
                 'container_type' => $this->filterNoDataValue($this->container_type),
                 'container_number' => $this->container_number,
                 'shipping_line' => $this->filterNoDataValue($this->shipping_line),
 
-                'is_dropship'  => (bool) ($this->is_dropship ?? false),
-                'applies_tlc'  => (bool) ($this->applies_tlc ?? false),
-                'applies_af'   => (bool) ($this->applies_af ?? false),
+                'is_dropship' => (bool) ($this->is_dropship ?? false),
+                'applies_tlc' => (bool) ($this->applies_tlc ?? false),
+                'applies_af' => (bool) ($this->applies_af ?? false),
 
-                'date_booking_request' => $this->date_booking_request,
-                'date_booking_authorized' => $this->date_booking_authorized,
-                'date_theorical_load' => $this->date_theorical_load,
-                'date_variable_date' => $this->date_variable_date,
+                'date_booking_request' => ! empty($this->date_booking_request) ? $this->date_booking_request : null,
+                'date_booking_authorized' => ! empty($this->date_booking_authorized) ? $this->date_booking_authorized : null,
+                'date_theorical_load' => ! empty($this->date_theorical_load) ? $this->date_theorical_load : null,
+                'date_variable_date' => ! empty($this->date_variable_date) ? $this->date_variable_date : null,
                 'carga_lista_validada' => $this->carga_lista_validada ?? false,
-                'date_received' => $this->date_received,
+                'date_received' => ! empty($this->date_received) ? $this->date_received : null,
 
                 'logistics_incoterm' => $this->logistics_incoterm,
                 'price_incoterm' => $this->price_incoterm,
@@ -1991,53 +2220,56 @@ class CreatePucharseOrder extends Component
                 'arrival_status' => $this->arrival_status,
                 'delay_days' => $this->delay_days,
 
-                'date_eta_initial' => $this->date_eta_initial,
+                'date_eta_initial' => ! empty($this->date_eta_initial) ? $this->date_eta_initial : null,
                 // ETA Variable se guarda en date_eta, no en date_eta_updated
                 // Si date_eta_updated tiene valor, se usa para date_eta
-                'date_eta' => $this->date_eta_updated ?: $this->date_eta,
+                'date_eta' => ! empty($this->date_eta_updated) ? $this->date_eta_updated : (! empty($this->date_eta) ? $this->date_eta : null),
 
                 'port_of_loading_validated' => (bool) ($this->port_of_loading_validated ?? false),
-                'has_facture_merca'         => (bool) ($this->has_facture_merca ?? false),
-                'used_rate_ok'              => (bool) ($this->used_rate_ok ?? false),
-                'uses_bonded_warehouse'     => (bool) ($this->uses_bonded_warehouse ?? false),
-                'apply_technical_note'      => (bool) ($this->apply_technical_note ?? false),
-                'etd_initial_validated'     => (bool) ($this->etd_initial_validated ?? false),
-                'date_etd_initial'             => $this->date_etd_initial,
-                'inspection_date'              => $this->inspection_date,
-                'vgm_cut_date'                 => $this->vgm_cut_date,
-                'balance_payment_date'         => $this->balance_payment_date,
-                'local_charges_payment_date'   => $this->local_charges_payment_date,
-                'bonded_warehouse_enter'       => $this->bonded_warehouse_enter,
-                'bonded_warehouse_exit'        => $this->bonded_warehouse_exit,
-                'receipt_note_date'            => $this->receipt_note_date,
-                'estimated_dc_availability_date'=> $this->estimated_dc_availability_date,
-                'retail_group'                 => $this->retail_group,
-                'customer_type'                => $this->customer_type,
-                'trading_company'              => $this->trading_company,
-                'service_provider'             => $this->filterNoDataValue($this->service_provider),
-                'customs_dua'                  => $this->customs_dua,
-                'invoice'                      => $this->invoice,
-                'factura_merca'                => $this->factura_merca,
-                'case_number_file'             => $this->case_number_file,
-                'receipt_note'                 => $this->receipt_note,
-                'visibility_notes'             => $this->visibility_notes,
-                'po_amount'                    => $this->po_amount,
-                'Invoice_amount'               => $this->Invoice_amount,
-                'freight_amount'               => $this->freight_amount,
-                'total_amount'                 => $this->total_amount,
-                'container_free_days'          => $this->container_free_days,
-                'etd_dates_difference'         => $this->etd_dates_difference,
-                'eta_dates_difference'         => $this->eta_dates_difference,
+                'has_facture_merca' => (bool) ($this->has_facture_merca ?? false),
+                'used_rate_ok' => (bool) ($this->used_rate_ok ?? false),
+                'uses_bonded_warehouse' => (bool) ($this->uses_bonded_warehouse ?? false),
+                'apply_technical_note' => (bool) ($this->apply_technical_note ?? false),
+                'etd_initial_validated' => (bool) ($this->etd_initial_validated ?? false),
+                'date_etd_initial' => ! empty($this->date_etd_initial) ? $this->date_etd_initial : null,
+                'inspection_date' => ! empty($this->inspection_date) ? $this->inspection_date : null,
+                'vgm_cut_date' => ! empty($this->vgm_cut_date) ? $this->vgm_cut_date : null,
+                'balance_payment_date' => ! empty($this->balance_payment_date) ? $this->balance_payment_date : null,
+                'local_charges_payment_date' => ! empty($this->local_charges_payment_date) ? $this->local_charges_payment_date : null,
+                'bonded_warehouse_enter' => ! empty($this->bonded_warehouse_enter) ? $this->bonded_warehouse_enter : null,
+                'bonded_warehouse_exit' => ! empty($this->bonded_warehouse_exit) ? $this->bonded_warehouse_exit : null,
+                'receipt_note_date' => ! empty($this->receipt_note_date) ? $this->receipt_note_date : null,
+                'estimated_dc_availability_date' => ! empty($this->estimated_dc_availability_date) ? $this->estimated_dc_availability_date : null,
+                'retail_group' => $this->retail_group,
+                'customer_type' => $this->customer_type,
+                'trading_company' => $this->trading_company,
+                'service_provider' => $this->filterNoDataValue($this->service_provider),
+                'customs_dua' => $this->customs_dua,
+                'invoice' => $this->invoice,
+                'factura_merca' => $this->factura_merca,
+                'case_number_file' => $this->case_number_file,
+                'receipt_note' => $this->receipt_note,
+                'visibility_notes' => $this->visibility_notes,
+                'po_amount' => $this->po_amount,
+                'Invoice_amount' => $this->Invoice_amount,
+                'freight_amount' => $this->freight_amount,
+                'total_amount' => $this->total_amount,
+                'container_free_days' => $this->container_free_days,
+                'etd_dates_difference' => $this->etd_dates_difference,
+                'eta_dates_difference' => $this->eta_dates_difference,
 
-                'date_invoice_received'            => $this->date_invoice_received,
-                'date_vendor_document_received'    => $this->date_vendor_document_received,
-                'cbm'               => $this->cbm,
+                'date_invoice_received' => ! empty($this->date_invoice_received) ? $this->date_invoice_received : null,
+                'date_vendor_document_received' => ! empty($this->date_vendor_document_received) ? $this->date_vendor_document_received : null,
+                'cbm' => $this->cbm,
                 'consolidator_name' => $this->consolidator_name,
-                'vendor_number'     => $this->vendor_number,
-                'dif_load_date'     => $this->dif_load_date,
-                'emision_date_po'   => $this->emision_date_po,
-                'forwader_date'     => $this->forwader_date,
+                'vendor_number' => $this->vendor_number,
+                'dif_load_date' => ! empty($this->dif_load_date) ? $this->dif_load_date : null,
+                'emision_date_po' => ! empty($this->emision_date_po) ? $this->emision_date_po : null,
+                'forwader_date' => ! empty($this->forwader_date) ? $this->forwader_date : null,
             ];
+
+            // Evitar overflow numérico en PostgreSQL (decimal 10,2 = max 99.999.999,99)
+            $poData = $this->clampDecimalFieldsForDb($poData);
 
             try {
                 // Usar transacción para asegurar integridad
@@ -2045,25 +2277,114 @@ class CreatePucharseOrder extends Component
 
                 $purchaseOrder = \App\Models\PurchaseOrder::findOrFail($id);
 
-                // #region agent log
-                file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_2','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:2040','message'=>'ANTES fill - poData contiene','data'=>['date_eta_in_poData'=>isset($poData['date_eta']),'date_eta_value'=>$poData['date_eta']??'NOT_SET','date_ata_in_poData'=>isset($poData['date_ata']),'date_ata_value'=>$poData['date_ata']??'NOT_SET','date_eta_initial_in_poData'=>isset($poData['date_eta_initial']),'date_eta_initial_value'=>$poData['date_eta_initial']??'NOT_SET'],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
-                // #endregion
+                // Log antes de fill para ver el valor original
+                \Log::info('Antes de fill - date_variable_date', [
+                    'po_id' => $id,
+                    'valor_original_bd' => $purchaseOrder->date_variable_date,
+                    'valor_original_tipo' => gettype($purchaseOrder->date_variable_date),
+                    'valor_en_poData' => $poData['date_variable_date'] ?? 'NO ESTÁ EN poData',
+                    'valor_formulario' => $this->date_variable_date,
+                ]);
+
                 // Usar getDirty() para obtener solo campos que realmente cambiaron
                 // Asignar valores primero sin guardar para que Eloquent detecte cambios
                 $purchaseOrder->fill($poData);
-                // #region agent log
-                file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_3','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:2043','message'=>'DESPUES fill - valores en modelo','data'=>['date_eta_in_model'=>isset($purchaseOrder->date_eta),'date_eta_value'=>$purchaseOrder->date_eta?($purchaseOrder->date_eta instanceof \Carbon\Carbon?$purchaseOrder->date_eta->format('Y-m-d'):$purchaseOrder->date_eta):'NOT_SET','date_ata_in_model'=>isset($purchaseOrder->date_ata),'date_ata_value'=>$purchaseOrder->date_ata?($purchaseOrder->date_ata instanceof \Carbon\Carbon?$purchaseOrder->date_ata->format('Y-m-d'):$purchaseOrder->date_ata):'NOT_SET','date_eta_initial_in_model'=>isset($purchaseOrder->date_eta_initial),'date_eta_initial_value'=>$purchaseOrder->date_eta_initial?($purchaseOrder->date_eta_initial instanceof \Carbon\Carbon?$purchaseOrder->date_eta_initial->format('Y-m-d'):$purchaseOrder->date_eta_initial):'NOT_SET'],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
-                // #endregion
                 $dirtyFields = $purchaseOrder->getDirty();
-                // #region agent log
-                file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_4','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:2045','message'=>'getDirty campos modificados','data'=>['dirty_fields'=>array_keys($dirtyFields),'date_eta_is_dirty'=>isset($dirtyFields['date_eta']),'date_ata_is_dirty'=>isset($dirtyFields['date_ata']),'date_eta_initial_is_dirty'=>isset($dirtyFields['date_eta_initial'])],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
-                // #endregion
+
+                \Log::info('Después de fill - date_variable_date', [
+                    'po_id' => $id,
+                    'en_dirtyFields' => isset($dirtyFields['date_variable_date']),
+                    'valor_en_dirtyFields' => $dirtyFields['date_variable_date'] ?? null,
+                    'todos_dirtyFields' => array_keys($dirtyFields),
+                ]);
+
+                // Campos computados automáticamente que no deben enviarse como cambios del usuario
+                // (se guardan en la BD pero no se reportan en el webhook como cambios del usuario)
+                $computedFields = [
+                    'arrival_status',
+                    'delay_days',
+                    'etd_dates_difference',
+                    'eta_dates_difference',
+                ];
 
                 // Construir array de cambios solo con campos que realmente cambiaron
+                // Filtrar campos donde el valor nuevo es igual al valor original (para evitar falsos positivos)
                 $changes = [];
+                $filteredOut = [];
                 foreach ($dirtyFields as $field => $newValue) {
-                    $changes[$field] = $newValue;
+                    // Excluir campos computados del webhook
+                    if (in_array($field, $computedFields)) {
+                        $filteredOut[$field] = [
+                            'old' => $purchaseOrder->getOriginal($field),
+                            'new' => $newValue,
+                            'reason' => 'computed_field',
+                        ];
+
+                        continue;
+                    }
+
+                    $oldValue = $purchaseOrder->getOriginal($field);
+
+                    // Excluir cambios ruidosos (null→0 en montos/campos numéricos)
+                    if (\App\Helpers\ChangeDescriptionHelper::isNoiseChange($field, $oldValue, $newValue)) {
+                        $filteredOut[$field] = [
+                            'old' => $oldValue,
+                            'new' => $newValue,
+                            'reason' => 'noise_change',
+                        ];
+
+                        continue;
+                    }
+
+                    // Normalizar valores para comparación
+                    $normalizedOld = $this->normalizeValueForComparison($oldValue);
+                    $normalizedNew = $this->normalizeValueForComparison($newValue);
+
+                    // Solo incluir si realmente cambió
+                    if ($normalizedOld !== $normalizedNew) {
+                        $changes[$field] = $newValue;
+                    } else {
+                        // Log campos que fueron filtrados (no cambiaron realmente)
+                        $filteredOut[$field] = [
+                            'old' => $oldValue,
+                            'new' => $newValue,
+                            'normalized_old' => $normalizedOld,
+                            'normalized_new' => $normalizedNew,
+                        ];
+                    }
                 }
+
+                // IMPORTANTE: Si después del filtrado no hay cambios reales, no guardar ni disparar webhook
+                if (empty($changes)) {
+                    \DB::rollBack();
+                    \Log::info('No hay cambios reales después del filtrado, cancelando actualización', [
+                        'po_id' => $id,
+                        'dirty_fields_count' => count($dirtyFields),
+                        'filtered_out_count' => count($filteredOut),
+                    ]);
+
+                    return [
+                        'success' => true,
+                        'message' => 'No se detectaron cambios reales',
+                        'no_changes' => true,
+                    ];
+                }
+
+                \Log::info('Filtrado de cambios en updatePurchaseOrder', [
+                    'po_id' => $id,
+                    'order_number' => $this->order_number,
+                    'dirty_fields_count' => count($dirtyFields),
+                    'dirty_fields' => array_keys($dirtyFields),
+                    'real_changes_count' => count($changes),
+                    'real_changes' => array_keys($changes),
+                    'real_changes_values' => $changes,
+                    'filtered_out_count' => count($filteredOut),
+                    'filtered_out_fields' => array_keys($filteredOut),
+                    'date_variable_date_dirty' => isset($dirtyFields['date_variable_date']),
+                    'date_variable_date_in_changes' => isset($changes['date_variable_date']),
+                    'date_variable_date_form_value' => $this->date_variable_date,
+                    'date_variable_date_po_value' => $purchaseOrder->getOriginal('date_variable_date'),
+                ]);
 
                 \Log::info('Actualizando PO', [
                     'id' => $id,
@@ -2079,30 +2400,23 @@ class CreatePucharseOrder extends Component
                     'date_ata_in_changes' => isset($changes['date_ata']),
                 ]);
 
-                // #region agent log
-                file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_5a','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:2077','message'=>'ANTES save - intentando guardar','data'=>['po_id'=>$purchaseOrder->id,'date_eta_before_save'=>$purchaseOrder->date_eta?($purchaseOrder->date_eta instanceof \Carbon\Carbon?$purchaseOrder->date_eta->format('Y-m-d'):$purchaseOrder->date_eta):'NULL','date_ata_before_save'=>$purchaseOrder->date_ata?($purchaseOrder->date_ata instanceof \Carbon\Carbon?$purchaseOrder->date_ata->format('Y-m-d'):$purchaseOrder->date_ata):'NULL','date_eta_type'=>gettype($purchaseOrder->date_eta),'date_ata_type'=>gettype($purchaseOrder->date_ata)],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
-                // #endregion
                 try {
                     $purchaseOrder->save();
-                    // #region agent log
-                    file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_5b','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:2079','message'=>'DESPUES save - save() ejecutado','data'=>['po_id'=>$purchaseOrder->id,'save_success'=>true],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
-                    // #endregion
                 } catch (\Exception $saveException) {
-                    // #region agent log
-                    file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_5c','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:2081','message'=>'ERROR en save()','data'=>['po_id'=>$purchaseOrder->id,'error_message'=>$saveException->getMessage(),'error_class'=>get_class($saveException)],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
-                    // #endregion
                     throw $saveException;
                 }
-                // #region agent log
-                file_put_contents('/Users/daniel/Projects/Olo Orders/olo-raga-orders/.cursor/debug.log', json_encode(['id'=>'log_'.time().'_5','timestamp'=>time()*1000,'location'=>'CreatePucharseOrder.php:2058','message'=>'DESPUES save - valores guardados en BD','data'=>['po_id'=>$purchaseOrder->id,'date_eta_guardado'=>$purchaseOrder->fresh()->date_eta?$purchaseOrder->fresh()->date_eta->format('Y-m-d'):'NULL','date_ata_guardado'=>$purchaseOrder->fresh()->date_ata?$purchaseOrder->fresh()->date_ata->format('Y-m-d'):'NULL','date_eta_initial_guardado'=>$purchaseOrder->fresh()->date_eta_initial?$purchaseOrder->fresh()->date_eta_initial->format('Y-m-d'):'NULL'],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
-                // #endregion
 
+                $freshPo = $purchaseOrder->fresh();
                 \Log::info('PO actualizada exitosamente', [
                     'id' => $purchaseOrder->id,
                     'forwader_date_guardado' => $purchaseOrder->forwader_date?->format('Y-m-d'),
-                    'date_eta_guardado' => $purchaseOrder->fresh()->date_eta?->format('Y-m-d'),
-                    'date_ata_guardado' => $purchaseOrder->fresh()->date_ata?->format('Y-m-d'),
-                    'date_eta_initial_guardado' => $purchaseOrder->fresh()->date_eta_initial?->format('Y-m-d')
+                    'date_eta_guardado' => $freshPo->date_eta?->format('Y-m-d'),
+                    'date_ata_guardado' => $freshPo->date_ata?->format('Y-m-d'),
+                    'date_eta_initial_guardado' => $freshPo->date_eta_initial?->format('Y-m-d'),
+                    'date_variable_date_guardado' => $freshPo->date_variable_date?->format('Y-m-d'),
+                    'date_variable_date_en_cambios' => isset($changes['date_variable_date']),
+                    'date_variable_date_valor_en_cambios' => $changes['date_variable_date'] ?? null,
+                    'date_variable_date_valor_formulario' => $this->date_variable_date,
                 ]);
 
                 // Eliminar productos existentes
@@ -2112,7 +2426,7 @@ class CreatePucharseOrder extends Component
                 foreach ($this->orderProducts as $product) {
                     $purchaseOrder->products()->attach($product['id'], [
                         'quantity' => $product['quantity'] ?? 0,
-                        'unit_price' => $product['price_per_unit'] ?? 0
+                        'unit_price' => $product['price_per_unit'] ?? 0,
                     ]);
                 }
 
@@ -2143,13 +2457,16 @@ class CreatePucharseOrder extends Component
 
                         \Log::info('Calling dispatch_webhook from Livewire', [
                             'po_id' => $purchaseOrder->id,
-                            'has_data' => isset($poData['id']),
+                            'has_data' => isset($poDataForWebhook['id']),
+                            'changes_count' => count($changes),
+                            'changes_keys' => array_keys($changes),
+                            'changes' => $changes,
                         ]);
 
                         dispatch_webhook('purchase_order.updated', [
                             'purchase_order_id' => $purchaseOrder->id,
                             'order_number' => $purchaseOrder->order_number,
-                            'changes' => $changes,
+                            'changes' => $changes, // Array de cambios filtrados
                             'data' => $poDataForWebhook,
                         ]);
 
@@ -2181,14 +2498,14 @@ class CreatePucharseOrder extends Component
                                 'order_number' => $this->order_number,
                                 'planned_hub' => $plannedHub->name,
                                 'actual_hub' => $actualHub->name,
-                                'order_id' => $purchaseOrder->id
+                                'order_id' => $purchaseOrder->id,
                             ]
                         );
                     }
                 }
 
                 // Dispatch success notification and open modal
-                $this->dispatch('show-success', 'Orden de compra actualizada exitosamente con número: ' . $this->order_number);
+                $this->dispatch('show-success', 'Orden de compra actualizada exitosamente con número: '.$this->order_number);
                 $this->dispatch('open-modal', 'modal-purchase-order-created');
 
                 // RETORNAR UN VALOR EXPLÍCITO PARA INDICAR ÉXITO
@@ -2198,66 +2515,84 @@ class CreatePucharseOrder extends Component
                 \DB::rollBack();
                 \Log::error('Error de validación en updatePurchaseOrder', [
                     'errors' => $e->errors(),
-                    'order_number' => $this->order_number ?? 'N/A'
+                    'order_number' => $this->order_number ?? 'N/A',
                 ]);
                 throw $e; // Re-lanzar para que Livewire muestre los errores
             } catch (\Exception $e) {
                 \DB::rollBack();
-                \Log::error('Error en updatePurchaseOrder: ' . $e->getMessage(), [
+                \Log::error('Error en updatePurchaseOrder: '.$e->getMessage(), [
                     'trace' => $e->getTraceAsString(),
                     'order_number' => $this->order_number ?? 'N/A',
-                    'id' => $id ?? 'N/A'
+                    'id' => $id ?? 'N/A',
                 ]);
 
                 // Mostrar error al usuario
-                $this->dispatch('show-error', 'Error al actualizar la orden: ' . $e->getMessage());
-                session()->flash('error', 'Error al actualizar la orden: ' . $e->getMessage());
-                
+                $this->dispatch('show-error', 'Error al actualizar la orden: '.$e->getMessage());
+                session()->flash('error', 'Error al actualizar la orden: '.$e->getMessage());
+
                 // RETORNAR UN VALOR PARA INDICAR ERROR
                 return ['success' => false, 'message' => $e->getMessage()];
             }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
-            \Log::error('Error crítico en updatePurchaseOrder: ' . $e->getMessage(), [
+            \Log::error('Error crítico en updatePurchaseOrder: '.$e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
                 'order_number' => $this->order_number ?? 'N/A',
-                'id' => $id ?? 'N/A'
+                'id' => $id ?? 'N/A',
             ]);
 
             // Mostrar error al usuario
-            $this->dispatch('show-error', 'Error al actualizar la orden: ' . $e->getMessage());
-            session()->flash('error', 'Error al actualizar la orden: ' . $e->getMessage());
-            
+            $this->dispatch('show-error', 'Error al actualizar la orden: '.$e->getMessage());
+            session()->flash('error', 'Error al actualizar la orden: '.$e->getMessage());
+
             // RETORNAR UN VALOR PARA INDICAR ERROR
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
 
-    public function closeModal() {
+    public function closeModal()
+    {
         $this->dispatch('close-modal', 'modal-purchase-order-created');
 
         // Si tenemos un ID, redirigir a la página de detalle
         if ($this->id) {
             return redirect()->route('purchase-orders.detail', $this->id);
         } else {
-            // Si no hay ID, redirigir al listado de POs
-            return redirect()->route('purchase-orders.index');
+            // Si no hay ID, redirigir al listado de POs sin parámetros de query
+            // Esto evita que los filtros anteriores queden "pegados"
+            // Usamos to() para construir una URL limpia sin parámetros de query
+            return redirect()->to(route('purchase-orders.index'));
         }
     }
 
-    public function render() {
+    public function render()
+    {
         // Cargar los vendors y ship tos desde la base de datos
         $companyId = auth()->user()->company_id ?? 1;
 
         // Obtener los vendors y formatearlos para el selector
         $vendors = Vendor::where('company_id', $companyId)
-                          ->where('status', 'active')
-                          ->get();
-        $this->vendorArray = $vendors->pluck('name', 'id')->toArray();
+            ->where('status', 'active')
+            ->get();
+
+        // Si estamos editando, incluir el vendor actual de la PO aunque sea de otra empresa
+        // (evita que el select muestre otro vendor cuando el actual no está en la lista)
+        // vendor_id almacena vendo_code, no vendors.id
+        if ($this->purchaseOrder && $this->vendor_id) {
+            $currentVendor = Vendor::where('vendo_code', $this->vendor_id)->first();
+            if ($currentVendor && ! $vendors->contains('vendo_code', $this->vendor_id)) {
+                $vendors = $vendors->push($currentVendor);
+            }
+        }
+
+        // Opciones: vendo_code => name (vendor_id en PO = vendo_code)
+        $this->vendorArray = $vendors->filter(fn ($v) => $v->vendo_code !== null)->pluck('name', 'vendo_code')->toArray();
 
         // Obtener los ship tos y formatearlos para el selector
         $shipTos = ShipTo::where('company_id', $companyId)
-                          ->where('status', 'active')
-                          ->get();
+            ->where('status', 'active')
+            ->get();
         $this->shipToArray = $shipTos->pluck('name', 'id')->toArray();
 
         // Las opciones de maestros se cargan solo cuando cambia trading_company (en updatedTradingCompany)
@@ -2310,23 +2645,43 @@ class CreatePucharseOrder extends Component
     public function calculateSavings()
     {
         // Ahorros OFR FCL = Costo OFR Real - Costo OFR Estimado
-        $this->savings_ofr_fcl =  floatval($this->cost_ofr_estimated) - floatval($this->cost_ofr_real);
+        $this->savings_ofr_fcl = floatval($this->cost_ofr_estimated) - floatval($this->cost_ofr_real);
 
         // Ahorro en Recogida → Ahorro pickup = Costo Transporte Terrestre 2 - Costo Transporte Terrestre 1
-        $this->saving_pickup =  floatval($this->ground_transport_cost_1) - floatval($this->ground_transport_cost_2);
+        $this->saving_pickup = floatval($this->ground_transport_cost_1) - floatval($this->ground_transport_cost_2);
 
         // Costo OFR Estimado = Costo Estimado de Pallets * Cantidad Real de Pallets
-        if (!empty($this->pallet_quantity_real) && !empty($this->estimated_pallet_cost)) {
+        if (! empty($this->pallet_quantity_real) && ! empty($this->estimated_pallet_cost)) {
             $this->cost_ofr_estimated = floatval($this->estimated_pallet_cost) * floatval($this->pallet_quantity_real);
         }
     }
-    public function updatedFreightAmount()         { $this->calculateTotals(); }
-    public function updatedCostNationalization()   { $this->calculateTotals(); }
-    public function updatedOtherCosts()            { $this->calculateTotals(); }
+
+    public function updatedFreightAmount()
+    {
+        $this->calculateTotals();
+    }
+
+    public function updatedCostNationalization()
+    {
+        $this->calculateTotals();
+    }
+
+    public function updatedOtherCosts()
+    {
+        $this->calculateTotals();
+    }
 
     // NUEVO: Listeners para actualizar arrival_status automáticamente cuando cambie la ETA
-    public function updatedDateEta()               { $this->computeDateDiffs(); }
-    public function updatedDateEtaInitial()        { $this->computeDateDiffs(); }
+    public function updatedDateEta()
+    {
+        $this->computeDateDiffs();
+    }
+
+    public function updatedDateEtaInitial()
+    {
+        $this->computeDateDiffs();
+    }
+
     protected function computeDateDiffs(): void
     {
         try {
@@ -2334,7 +2689,7 @@ class CreatePucharseOrder extends Component
             $etdInitial = $this->date_etd_initial ? \Carbon\Carbon::parse($this->date_etd_initial) : null;
             $etdUpdated = $this->date_etd ? \Carbon\Carbon::parse($this->date_etd) : null;
 
-            $etaBase    = $this->date_eta ? \Carbon\Carbon::parse($this->date_eta) : null;
+            $etaBase = $this->date_eta ? \Carbon\Carbon::parse($this->date_eta) : null;
             $etaUpdated = $this->date_eta_initial ? \Carbon\Carbon::parse($this->date_eta_initial) : null;
 
             $this->etd_dates_difference = ($etdInitial && $etdUpdated)
@@ -2348,7 +2703,7 @@ class CreatePucharseOrder extends Component
             // NUEVO: Calcular automáticamente arrival_status y delay_days
             $this->calculateArrivalStatus();
         } catch (\Exception $e) {
-            \Log::warning('Error en computeDateDiffs: ' . $e->getMessage(), [
+            \Log::warning('Error en computeDateDiffs: '.$e->getMessage(), [
                 'date_etd_initial' => $this->date_etd_initial,
                 'date_etd' => $this->date_etd,
                 'date_eta' => $this->date_eta,
@@ -2368,48 +2723,51 @@ class CreatePucharseOrder extends Component
     protected function calculateArrivalStatus(): void
     {
         $transitService = app(\App\Services\TransitTimeService::class);
-        
+
         // Obtener país de origen (del vendor) y destino (de company)
         $originCountry = $this->vendor_pais;
         $destinationCountry = null;
-        
+
         if ($this->company_id) {
             $company = \App\Models\Company::find($this->company_id);
             $destinationCountry = $company?->country;
         }
-        
+
         // Obtener tiempo de tránsito esperado
         $expectedTransitDays = $transitService->getTransitDays($originCountry, $destinationCountry);
-        
+
         // Fecha de salida real (ATD)
         $atd = $this->date_atd ?? null;
-        
+
         // Si tenemos ATD y tiempos esperados, calcular basándose en la matriz
         if ($atd && $expectedTransitDays !== null) {
             $expectedArrival = \Carbon\Carbon::parse($atd)->addDays($expectedTransitDays);
-            
+
             // Usar ATA si existe, si no usar la fecha actual
             $compareDate = $this->date_ata ? \Carbon\Carbon::parse($this->date_ata) : now();
-            
+
             if ($compareDate->startOfDay()->gt($expectedArrival->startOfDay())) {
                 // Atrasado respecto al tiempo esperado
                 $delayDays = $expectedArrival->diffInDays($compareDate);
                 $this->arrival_status = 'Atrasado';
                 $this->delay_days = (int) $delayDays;
+
                 return;
             }
-            
+
             $this->arrival_status = 'A tiempo';
             $this->delay_days = 0;
+
             return;
         }
-        
+
         // Fallback: usar ETA si no hay ATD o tiempos esperados
         $eta = $this->date_eta_initial ?? $this->date_eta ?? null;
 
-        if (!$eta) {
+        if (! $eta) {
             $this->arrival_status = null;
             $this->delay_days = null;
+
             return;
         }
 
@@ -2467,17 +2825,30 @@ class CreatePucharseOrder extends Component
             if ($trimmed === '') {
                 return null;
             }
-            // Try to parse as number if it looks like one
+            // Check numeric FIRST to avoid Carbon::parse("0.00") returning "1970-01-01"
             if (is_numeric($trimmed)) {
                 $floatValue = (float) $trimmed;
+
                 return round($floatValue, 2);
             }
+            // Try to parse as date only if it looks like a date (starts with YYYY-MM-DD pattern)
+            if (preg_match('/^\d{4}-\d{2}-\d{2}/', $trimmed)) {
+                try {
+                    $parsedDate = \Carbon\Carbon::parse($trimmed);
+
+                    return $parsedDate->format('Y-m-d');
+                } catch (\Exception $e) {
+                    // Not a date, continue
+                }
+            }
+
             return $trimmed;
         }
 
         // Handle numeric values - normalize to float with 2 decimal places
         if (is_numeric($value)) {
             $floatValue = (float) $value;
+
             return round($floatValue, 2);
         }
 
@@ -2499,4 +2870,61 @@ class CreatePucharseOrder extends Component
         return $value;
     }
 
+    /**
+     * Clamp numeric fields to avoid PostgreSQL overflow (decimal precision).
+     * decimal(10,2) max = 99.999.999,99 | decimal(12,2) max = 9.999.999.999,99 | decimal(8,2) max = 99.999,99
+     */
+    protected function clampDecimalFieldsForDb(array $poData): array
+    {
+        $max10_2 = 99999999.99;
+        $max12_2 = 9999999999.99;
+        $max8_2 = 999999.99;
+
+        $decimal10_2 = [
+            'cost_ofr_estimated', 'cost_ofr_real', 'estimated_pallet_cost', 'real_cost_estimated_po',
+            'real_cost_real_po', 'other_costs', 'other_expenses', 'variable_calculare_weight',
+            'savings_ofr_fcl', 'saving_pickup', 'saving_executed', 'saving_not_executed',
+            'insurance_cost', 'ground_transport_cost_1', 'ground_transport_cost_2', 'cost_nationalization',
+            'Invoice_amount', 'freight_amount', 'cbm', 'length_cm', 'width_cm', 'height_cm',
+        ];
+        $decimal12_2 = ['net_total', 'additional_cost', 'total', 'total_amount'];
+        $decimal8_2 = ['length', 'width', 'height', 'weight_kg', 'weight_lb'];
+        $decimal10_3 = ['volume'];
+
+        foreach ($decimal10_2 as $field) {
+            if (isset($poData[$field]) && is_numeric($poData[$field])) {
+                $v = (float) $poData[$field];
+                if (abs($v) > $max10_2) {
+                    $poData[$field] = $v < 0 ? -$max10_2 : $max10_2;
+                }
+            }
+        }
+        foreach ($decimal12_2 as $field) {
+            if (isset($poData[$field]) && is_numeric($poData[$field])) {
+                $v = (float) $poData[$field];
+                if (abs($v) > $max12_2) {
+                    $poData[$field] = $v < 0 ? -$max12_2 : $max12_2;
+                }
+            }
+        }
+        foreach ($decimal8_2 as $field) {
+            if (isset($poData[$field]) && is_numeric($poData[$field])) {
+                $v = (float) $poData[$field];
+                if (abs($v) > $max8_2) {
+                    $poData[$field] = $v < 0 ? -$max8_2 : $max8_2;
+                }
+            }
+        }
+        $max10_3 = 9999999.999;
+        foreach ($decimal10_3 as $field) {
+            if (isset($poData[$field]) && is_numeric($poData[$field])) {
+                $v = (float) $poData[$field];
+                if (abs($v) > $max10_3) {
+                    $poData[$field] = $v < 0 ? -$max10_3 : $max10_3;
+                }
+            }
+        }
+
+        return $poData;
+    }
 }

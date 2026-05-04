@@ -21,9 +21,9 @@
 
     $isTrashed = $purchaseOrder?->trashed() ?? false;
 
-    // Helper para formatear fechas solo si existen
+    // Fechas ETD/ETA/ATA/ATD: calendario según valor guardado (sin TZ del perfil de usuario)
     $fmt = function ($date) {
-        return $date ? formatDate($date) : null;
+        return $date ? formatDateOnly($date) : null;
     };
 
     // Valores seguros
@@ -93,7 +93,7 @@
             @if($mblNumber || $containerNumber || ($trackingIdCode && $trackingIdCode !== 'N/A'))
                 <div class="text-xs text-gray-600 space-y-0.5">
                     @if($mblNumber)
-                        <p>MBL: {{ $mblNumber }}</p>
+                        <p>Documento de tránsito: {{ $mblNumber }}</p>
                     @endif
                     @if($containerNumber)
                         <p>Contenedor: {{ $containerNumber }}</p>

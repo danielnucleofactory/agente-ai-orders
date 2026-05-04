@@ -39,6 +39,11 @@ return [
         'api_key' => env('SHIP24_API_KEY'),
     ],
 
+    'po_bulk_update' => [
+        'api_url' => env('PO_BULK_UPDATE_API_URL', 'https://olo.md.orders.raga-x.ai/api/v1/po/bulk-orders'),
+        'api_token' => env('PO_BULK_UPDATE_API_TOKEN'),
+    ],
+
     'porth' => [
         'api_key' => env('PORTH_API_KEY'),
         'api_url' => env('PORTH_API_URL', 'https://api.porth.app'),
@@ -51,6 +56,13 @@ return [
         'sync_dry_run' => env('PORTH_SYNC_DRY_RUN', false),
         'sync_lookback_hours' => env('PORTH_SYNC_LOOKBACK_HOURS', 2),
         'notification_user_ids' => env('PORTH_SYNC_NOTIFICATION_USER_IDS', ''),
+        // Automatización de transiciones Kanban según estado Porth
+        'kanban_auto_transition' => env('PORTH_KANBAN_AUTO_TRANSITION', true),
+        'kanban_stages' => [
+            'consolidador' => ['Consolidador', 'Booking', 'Consolidación', 'Pick Up'], // Etapa 4 → transición a En tránsito cuando Porth in_transit
+            'en_transito' => ['En Tránsito', 'En tránsito', 'En tránsito terrestre'], // Etapa 5 → transición a Puerto cuando Porth at_destination_port
+            'puerto' => ['Puerto', 'Llegada al hub'], // Etapa 6 - destino cuando Porth at_destination_port
+        ],
     ],
 
     'whatsapp' => [
@@ -59,6 +71,13 @@ return [
 
     'maestros' => [
         'base_url' => env('MAESTROS_API_BASE_URL', 'https://olo.md.orders.raga-x.ai'),
+    ],
+
+    'transit_matrix' => [
+        'csv_path' => env(
+            'TRANSIT_MATRIX_CSV_PATH',
+            base_path('Matriz de regiones y puertos para validar tiempo de transito.csv')
+        ),
     ],
 
 ];

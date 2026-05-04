@@ -58,15 +58,17 @@ class RequestApproved extends Component {
 
         $requests = $query->latest()->paginate(15);
 
-        // Obtener operaciones únicas para el filtro, solo de solicitudes procesadas
         $operationTypes = Authorization::whereIn('status', ['approved', 'rejected'])
-                                           ->select('operation_type')
-                                           ->distinct()
-                                           ->pluck('operation_type');
+            ->select('operation_type')
+            ->whereNotNull('operation_type')
+            ->groupBy('operation_type')
+            ->orderByRaw('LOWER(operation_type)')
+            ->pluck('operation_type')
+            ->values();
 
         return view('livewire.tables.request-approved', [
             'requests' => $requests,
-            'operationTypes' => $operationTypes
+            'operationTypes' => $operationTypes,
         ]);
     }
 }

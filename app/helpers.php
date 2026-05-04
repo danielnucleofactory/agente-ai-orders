@@ -56,7 +56,8 @@ if (!function_exists('formatDate')) {
     {
         if (!$date) return '-';
         $format = $format ?? getUserDateFormat();
-        return Carbon::parse($date)->format($format);
+        $userTz = auth()->check() ? (auth()->user()->time_zone ?? 'UTC') : 'UTC';
+        return Carbon::parse($date)->setTimezone($userTz)->format($format);
     }
 }
 
@@ -73,7 +74,42 @@ if (!function_exists('formatDateTime')) {
     {
         if (!$date) return '-';
         $format = $format ?? getUserDateTimeFormat();
+        $userTz = auth()->check() ? (auth()->user()->time_zone ?? 'UTC') : 'UTC';
+        return Carbon::parse($date)->setTimezone($userTz)->format($format);
+    }
+}
+
+if (!function_exists('formatDateOnly')) {
+    /**
+     * Fecha de calendario (campos Eloquent casteados como `date`): sin cambio de zona horaria.
+     * Evita mostrar un día de menos/más respecto al valor guardado (p. ej. emision_date_po, order_date).
+     *
+     * @param mixed $date
+     * @param string|null $format
+     * @return string
+     */
+    function formatDateOnly($date, $format = null)
+    {
+        if (!$date) {
+            return '-';
+        }
+        $format = $format ?? getUserDateFormat();
+
         return Carbon::parse($date)->format($format);
+    }
+}
+
+if (!function_exists('formatPoCalendarDate')) {
+    /**
+     * Fecha operacional de PO: respeta el formato del usuario, pero no aplica su zona horaria.
+     *
+     * @param mixed $date
+     * @param string|null $format
+     * @return string
+     */
+    function formatPoCalendarDate($date, $format = null)
+    {
+        return formatDateOnly($date, $format);
     }
 }
 
@@ -90,7 +126,6 @@ if (!function_exists('formatDateForInput')) {
         return Carbon::parse($date)->format('Y-m-d');
     }
 }
-
 
 
 

@@ -3,6 +3,7 @@
 namespace App\Livewire\ShippingDocumentation;
 
 use App\Models\Hub;
+use App\Support\SelectOptions;
 use App\Models\PurchaseOrder;
 use App\Models\ShippingDocument;
 use Illuminate\Support\Facades\DB;
@@ -108,19 +109,12 @@ class ShippingDocumentationFilter extends Component
             }
         }
 
-        // Ordenar valores
-        sort($currencies);
-        sort($incoterms);
-        sort($materialTypes);
-        asort($plannedHubOptions);
-        asort($actualHubOptions);
-
-        // Asignar a las propiedades del componente
-        $this->currencies = $currencies;
-        $this->incoterms = $incoterms;
-        $this->plannedHubs = $plannedHubOptions;
-        $this->actualHubs = $actualHubOptions;
-        $this->materialTypes = $materialTypes;
+        // Asignar a las propiedades del componente (orden alfabético por etiqueta)
+        $this->currencies = SelectOptions::sortList($currencies);
+        $this->incoterms = SelectOptions::sortList($incoterms);
+        $this->plannedHubs = SelectOptions::sortAssociative($plannedHubOptions);
+        $this->actualHubs = SelectOptions::sortAssociative($actualHubOptions);
+        $this->materialTypes = SelectOptions::sortList($materialTypes);
     }
 
     public function applyFilters()

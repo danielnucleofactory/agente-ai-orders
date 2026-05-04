@@ -2,17 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\HistoricalPurchaseOrdersExport;
 use App\Models\HistoricalPurchaseOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
 
 class HistoricalDataController extends Controller
 {
     /**
-     * Export historical data to CSV/Excel
+     * Export historical data to Excel (.xlsx).
      *
-     * @param Request $request
-     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\Response
      */
     public function export(Request $request)
     {
@@ -24,14 +25,14 @@ class HistoricalDataController extends Controller
 
             $query = HistoricalPurchaseOrder::query();
 
-            // Aplicar búsqueda
+            // Aplicar búsqueda (case-insensitive)
             if ($request->has('search') && !empty($request->search)) {
-                $search = $request->search;
-                $query->where(function($q) use ($search) {
-                    $q->where('order_number', 'like', '%' . $search . '%')
-                      ->orWhere('vendor_name', 'like', '%' . $search . '%')
-                      ->orWhere('container_number', 'like', '%' . $search . '%')
-                      ->orWhere('mbl_number', 'like', '%' . $search . '%');
+                $searchTerm = '%' . strtolower(trim($request->search)) . '%';
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->whereRaw('LOWER(order_number) LIKE ?', [$searchTerm])
+                      ->orWhereRaw('LOWER(vendor_name) LIKE ?', [$searchTerm])
+                      ->orWhereRaw('LOWER(container_number) LIKE ?', [$searchTerm])
+                      ->orWhereRaw('LOWER(mbl_number) LIKE ?', [$searchTerm]);
                 });
             }
 
@@ -61,47 +62,9 @@ class HistoricalDataController extends Controller
                 'rows_count' => $data->count()
             ]);
 
-            $filename = 'historico_datos_' . now()->format('Y-m-d_H-i-s') . '.csv';
+            $filename = 'historico_datos_' . now(config('app.timezone'))->format('Y-m-d_H-i-s') . '.xlsx';
 
-            return response()->streamDownload(function () use ($data) {
-                $handle = fopen('php://output', 'w');
-
-                // Add BOM for proper UTF-8 encoding in Excel
-                fwrite($handle, "\xEF\xBB\xBF");
-
-                // Headers
-                fputcsv($handle, [
-                    'Orden',
-                    'Proveedor',
-                    'Fecha Emisión',
-                    'Total Neto',
-                    'Moneda',
-                    'Contenedor',
-                    'ETD',
-                    'ETA',
-                    'Empresa'
-                ], ';');
-
-                // Data rows
-                foreach ($data as $record) {
-                    fputcsv($handle, [
-                        $record->order_number ?? '',
-                        $record->vendor_name ?? '',
-                        $record->emision_date_po ? $record->emision_date_po->format('Y-m-d') : 'N/A',
-                        $record->net_total ? number_format($record->net_total, 2, '.', '') : '',
-                        $record->currency ?? '',
-                        $record->container_number ?? 'N/A',
-                        $record->date_etd ? $record->date_etd->format('Y-m-d') : 'N/A',
-                        $record->date_eta ? $record->date_eta->format('Y-m-d') : 'N/A',
-                        $record->trading_company ?? 'N/A'
-                    ], ';');
-                }
-
-                fclose($handle);
-            }, $filename, [
-                'Content-Type' => 'text/csv; charset=UTF-8',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            ]);
+            return Excel::download(new HistoricalPurchaseOrdersExport($data), $filename);
         } catch (\Exception $e) {
             Log::error('Error exporting historical data', [
                 'error' => $e->getMessage(),

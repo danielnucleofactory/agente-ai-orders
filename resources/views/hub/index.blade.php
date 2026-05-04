@@ -14,11 +14,13 @@
             </x-slot:content>
         </x-view-title>
 
-        <a href="{{ route('hub.create') }}">
-            <x-primary-button>
-                Nuevo Hub
-            </x-primary-button>
-        </a>
+        @can('has_create_hubs')
+            <a href="{{ route('hub.create') }}">
+                <x-primary-button>
+                    Nuevo Hub
+                </x-primary-button>
+            </a>
+        @endcan
     </div>
 
     <!-- Tabs for switching between views -->
@@ -53,6 +55,8 @@
                 :actionsView="false"
                 :actionsEdit="true"
                 :actionsDelete="true"
+                :editPermission="'has_edit_hubs'"
+                :deletePermission="'has_delete_hubs'"
                 :baseRoute="'hub'"
                 :model="\App\Models\Hub::class"
             />

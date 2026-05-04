@@ -4,29 +4,39 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use App\Models\ShippingDocument;
 use App\Models\PurchaseOrder;
+use App\Models\User;
+use App\Services\PorthApiService;
 
 class PorthSyncService
 {
+    /**
+     * Email del usuario sistema para sincronizaciones automáticas
+     */
+    protected const SYSTEM_USER_EMAIL = 'apps@raga-x.ai';
+
     protected $porthApiKey;
     protected $porthBaseUrl;
 
-    public function __construct()
-    {
+    public function __construct(
+        protected PorthTranslationService $translationService
+    ) {
         $this->porthApiKey = config('services.porth.api_key');
-        $this->porthBaseUrl = config('services.porth.base_url', 'https://porth-api.fly.dev');
+        $this->porthBaseUrl = rtrim(config('services.porth.api_url', 'https://api.porth.app'), '/');
     }
 
     /**
      * Sincronizar un documento con Porth
+     * Soporta ShippingDocument y PurchaseOrder
      */
     public function syncDocument($documentId, $documentType)
     {
         try {
-            // Solo procesar ShippingDocument
-            if ($documentType !== ShippingDocument::class) {
-                Log::info('Porth sync skipped - only ShippingDocument supported', [
+            // Solo procesar ShippingDocument o PurchaseOrder
+            if ($documentType !== ShippingDocument::class && $documentType !== PurchaseOrder::class) {
+                Log::info('Porth sync skipped - only ShippingDocument and PurchaseOrder supported', [
                     'document_type' => $documentType,
                     'document_id' => $documentId
                 ]);
@@ -75,7 +85,7 @@ class PorthSyncService
     {
         $identifiers = [];
 
-        // Solo para ShippingDocument
+        // Para ShippingDocument
         if ($document instanceof ShippingDocument) {
             if ($document->tracking_id) {
                 $identifiers[] = ['type' => 'tracking_id', 'value' => $document->tracking_id];
@@ -91,10 +101,12 @@ class PorthSyncService
             }
         }
 
-        // PurchaseOrder no se sincroniza con Porth
+        // Para PurchaseOrder: solo container_number activa creación/vinculación en Porth
+        // (mbl_number y tracking_id son solo datos de la PO, no se envían a Porth)
         if ($document instanceof PurchaseOrder) {
-            Log::info('PurchaseOrder detected - skipping Porth sync (only ShippingDocument supported)');
-            return [];
+            if ($document->container_number) {
+                $identifiers[] = ['type' => 'container_number', 'value' => $document->container_number];
+            }
         }
 
         return $identifiers;
@@ -148,9 +160,9 @@ class PorthSyncService
                     'response_status' => $response->status(),
                     'response_data' => $data,
                     'has_master_bl' => isset($data['masterBl']),
-                    'has_container' => isset($data['container']),
+                    'has_container' => isset($data['containerNumber']) || isset($data['container']),
                     'master_bl_value' => $data['masterBl'] ?? null,
-                    'container_value' => $data['container'] ?? null
+                    'container_value' => $data['containerNumber'] ?? $data['container'] ?? null
                 ]);
                 return $data;
             } else {
@@ -214,44 +226,37 @@ class PorthSyncService
     }
 
     /**
-     * Construir payload para creación
+     * Construir payload para creación.
+     * Solo incluye: name (OROL-{identificador}) y el identificador de seguimiento
+     * (containerNumber, masterBl o bookingNumber).
      */
     private function buildCreatePayload($identifier, $document)
     {
         $basePayload = [
-            'name' => 'GLF-' . $identifier['type'] . '-' . $identifier['value'] . '-' . time(),
-            'freightType' => 'ocean',
-            'incoterm' => 'FCA',
-            'manualTracking' => false,
-            'trackCargo' => true,
-            'priority' => 'normal',
-            'tags' => ['GLF', 'AUTO-CREATED', $identifier['type'] . ':' . $identifier['value']],
-            'meta' => [
-                'source' => 'GLF-auto-sync',
-                'created_at' => now()->toISOString(),
-                'document_id' => $document->id,
-                'document_type' => get_class($document)
-            ]
+            'name' => 'OROL-' . $identifier['value'],
         ];
 
-        // Enriquecer con datos del ShippingDocument
-        if ($document instanceof ShippingDocument) {
-            $basePayload = array_merge($basePayload, [
-                'masterBl' => $document->mbl_number,
-                'houseBl' => $document->hbl_number,
-                'etd' => $document->estimated_departure_date?->toISOString(),
-                'eta' => $document->estimated_arrival_date?->toISOString(),
-                'notes' => $document->notes,
-            ]);
+        // Solo identificadores de seguimiento
+        if (!empty($identifier['value'])) {
+            if ($identifier['type'] === 'container_number') {
+                $basePayload['containerNumber'] = $identifier['value'];
+            } elseif ($identifier['type'] === 'mbl_number') {
+                $basePayload['masterBl'] = $identifier['value'];
+            } elseif ($identifier['type'] === 'booking_code') {
+                $basePayload['bookingNumber'] = $identifier['value'];
+            }
         }
 
-        // PurchaseOrder no se sincroniza con Porth
-        if ($document instanceof PurchaseOrder) {
-            Log::warning('Attempted to build Porth payload for PurchaseOrder - this should not happen');
-            return null;
+        // Incluir carrierCode si el documento tiene shipping_line (ej: "MAERSK" → MAEU)
+        $shippingLine = $document->shipping_line ?? null;
+        if (!empty($shippingLine)) {
+            $carrierCode = $this->translationService->getCarrierCodeFromShippingLineName($shippingLine);
+            if ($carrierCode) {
+                $basePayload['carrierCode'] = $carrierCode;
+            }
         }
 
-        return $basePayload;
+        return array_filter($basePayload, fn ($v) => $v !== null && $v !== '');
     }
 
     /**
@@ -259,28 +264,39 @@ class PorthSyncService
      */
     private function updateDocumentWithPorthData($document, $result)
     {
+        // Guardar usuario actual (si hay uno)
+        $previousUser = Auth::user();
+        
+        // Autenticar usuario sistema para que el Observer registre los cambios
+        $this->authenticateSystemUser();
+
         try {
             // Log detallado de los datos que vienen de Porth
             Log::info('PorthSyncService: updateDocumentWithPorthData called', [
                 'document_id' => $document->id,
-                'document_mbl_number' => $document->mbl_number,
-                'document_container_number' => $document->container_number,
+                'document_type' => get_class($document),
+                'document_mbl_number' => $document->mbl_number ?? null,
+                'document_container_number' => $document->container_number ?? null,
                 'result_data' => $result['data'] ?? null,
                 'result_action' => $result['action'] ?? null,
                 'result_status' => $result['status'] ?? null
             ]);
 
             if (isset($result['data']['id'])) {
-                // Guardar el estado original antes de la actualización
-                $originalMbl = $document->mbl_number;
-                $originalContainer = $document->container_number;
+                $porthId = $result['data']['id'];
                 
-                $document->porth_shipment_id = $result['data']['id'];
+                // Guardar el estado original antes de la actualización
+                $originalMbl = $document->mbl_number ?? null;
+                $originalContainer = $document->container_number ?? null;
+                
+                // Usar porth_id (campo correcto para sincronización)
+                $document->porth_id = $porthId;
                 
                 // Verificar si Porth está devolviendo datos que puedan sobrescribir nuestros campos
                 if (isset($result['data']['masterBl']) && $result['data']['masterBl'] !== $originalMbl) {
                     Log::warning('Porth returned different MBL number', [
                         'document_id' => $document->id,
+                        'document_type' => get_class($document),
                         'local_mbl' => $originalMbl,
                         'porth_mbl' => $result['data']['masterBl'],
                         'action' => 'keeping_local_value'
@@ -288,11 +304,13 @@ class PorthSyncService
                     // NO sobrescribir el mbl_number local
                 }
                 
-                if (isset($result['data']['container']) && $result['data']['container'] !== $originalContainer) {
+                $porthContainer = $result['data']['containerNumber'] ?? $result['data']['container'] ?? null;
+                if ($porthContainer !== null && $porthContainer !== $originalContainer) {
                     Log::warning('Porth returned different container number', [
                         'document_id' => $document->id,
+                        'document_type' => get_class($document),
                         'local_container' => $originalContainer,
-                        'porth_container' => $result['data']['container'],
+                        'porth_container' => $porthContainer,
                         'action' => 'keeping_local_value'
                     ]);
                     // NO sobrescribir el container_number local
@@ -300,17 +318,86 @@ class PorthSyncService
                 
                 $document->save();
 
-                Log::info('Updated document with Porth shipment ID (preserving local values)', [
+                Log::info('Updated document with Porth ID (preserving local values)', [
                     'document_id' => $document->id,
-                    'porth_shipment_id' => $result['data']['id'],
-                    'final_mbl_number' => $document->mbl_number,
-                    'final_container_number' => $document->container_number
+                    'document_type' => get_class($document),
+                    'porth_id' => $porthId,
+                    'final_mbl_number' => $document->mbl_number ?? null,
+                    'final_container_number' => $document->container_number ?? null
                 ]);
+
+                // Push naviera a Porth si el documento la tiene (caso: modal de cambio de etapa
+                // guardó container+shipping_line pero el push se saltó porque aún no había porth_id)
+                if ($document instanceof PurchaseOrder && !empty($document->shipping_line) && !empty($document->porth_id)) {
+                    try {
+                        $porthApi = app(PorthApiService::class);
+                        $porthApi->pushChangesToPorth($document->fresh(), ['shipping_line' => $document->shipping_line]);
+                    } catch (\Throwable $e) {
+                        Log::error('PorthSyncService: failed to push shipping_line after link', [
+                            'document_id' => $document->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                // Nota: La importación de datos completos se hace mediante el cronjob
+                // 'porth:import-pending' que se ejecuta cada 5 minutos.
+                // Esto evita timeouts en la request del usuario.
             }
         } catch (\Exception $e) {
             Log::error('Error updating document with Porth data', [
                 'error' => $e->getMessage(),
-                'document_id' => $document->id
+                'document_id' => $document->id,
+                'document_type' => get_class($document)
+            ]);
+        } finally {
+            // Restaurar usuario anterior o desautenticar
+            $this->restoreUser($previousUser);
+        }
+    }
+
+    /**
+     * Autentica el usuario sistema "Raga-X Apps" para registrar cambios en auditoría
+     */
+    protected function authenticateSystemUser(): void
+    {
+        try {
+            $systemUser = User::where('email', self::SYSTEM_USER_EMAIL)->first();
+            
+            if ($systemUser) {
+                Auth::login($systemUser);
+                Log::debug('porth_sync:system_user_authenticated', [
+                    'user_id' => $systemUser->id,
+                    'user_name' => $systemUser->name,
+                ]);
+            } else {
+                Log::warning('porth_sync:system_user_not_found', [
+                    'email' => self::SYSTEM_USER_EMAIL,
+                    'message' => 'Los cambios no se registrarán en el historial de auditoría',
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('porth_sync:auth_error', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Restaura el usuario anterior o desautentica
+     */
+    protected function restoreUser($previousUser): void
+    {
+        try {
+            if ($previousUser) {
+                Auth::login($previousUser);
+            } else {
+                Auth::logout();
+            }
+        } catch (\Exception $e) {
+            // Ignorar errores de logout en contexto de consola
+            Log::debug('porth_sync:restore_user_skipped', [
+                'reason' => $e->getMessage(),
             ]);
         }
     }

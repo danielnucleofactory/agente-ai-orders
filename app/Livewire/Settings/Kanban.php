@@ -2,124 +2,95 @@
 
 namespace App\Livewire\Settings;
 
-use Livewire\Component;
+use App\Livewire\Components\ReusableTable;
 use App\Models\KanbanBoard;
 use App\Models\KanbanStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
-class Kanban extends Component
+class Kanban extends ReusableTable
 {
-    public $boards = [];
-
-    // Búsqueda, filtrado y ordenamiento
-    public $search = '';
-    public $filter = '';
-    public $sortField = 'name';
-    public $sortDirection = 'asc';
-
     public $selectedBoard = null;
     public $editingStage = null;
     public $stageName = '';
 
-    // Modal states
     public $viewingStages = false;
     public $editingStageModal = false;
 
     protected $listeners = [
-        'refreshBoards' => 'loadBoards',
-        'viewStages' => 'viewStages'
+        'refreshBoards' => '$refresh',
+        'viewStages' => 'viewStages',
     ];
 
     protected $rules = [
         'stageName' => 'required|string|max:255',
     ];
 
-    protected $queryString = [
-        'search' => ['except' => ''],
-        'filter' => ['except' => ''],
-        'sortField' => ['except' => 'name'],
-        'sortDirection' => ['except' => 'asc'],
-    ];
+    public function mount(
+        $headers = [],
+        $sortable = [],
+        $searchable = [],
+        $filterable = [],
+        $filterOptions = [],
+        $withCount = [],
+        $model = null,
+        $rows = [],
+        $relationColumns = [],
+        $actions = false,
+        $baseRoute = '',
+        $routeKeyName = 'id',
+        $actionsView = true,
+        $actionsEdit = true,
+        $actionsDelete = true,
+        $viewPermission = null,
+        $editPermission = null,
+        $deletePermission = null,
+        $showSelectColumn = false,
+        $sortFieldAliases = [],
+        $customActionsView = null,
+        $maestroCatalogKey = null
+    ): void {
+        parent::mount(
+            headers: [
+                'name' => 'Nombre',
+                'description' => 'Descripción',
+                'type_label' => 'Tipo',
+                'stages_count' => 'Número de etapas',
+                'actions' => 'Acciones',
+            ],
+            sortable: [],
+            searchable: ['name', 'description'],
+            filterable: [],
+            filterOptions: [],
+            withCount: ['statuses as stages_count'],
+            model: KanbanBoard::class,
+            rows: [],
+            relationColumns: [],
+            actions: true,
+            baseRoute: '',
+            routeKeyName: 'id',
+            actionsView: false,
+            actionsEdit: false,
+            actionsDelete: false,
+            sortFieldAliases: [
+                'type_label' => 'type',
+                'stages_count' => 'stages_count',
+            ],
+            customActionsView: 'livewire.settings.partials.kanban-board-actions',
+        );
 
-    public function mount()
-    {
-        $this->loadBoards();
+        $this->sortField = 'name';
+        $this->sortDirection = 'asc';
     }
 
-    public function sortBy($field)
+    protected function modifyModelQuery(Builder $query): void
     {
-        if ($this->sortField === $field) {
-            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            $this->sortField = $field;
-            $this->sortDirection = 'asc';
-        }
-
-        $this->loadBoards();
-    }
-
-    public function updatedSearch()
-    {
-        $this->loadBoards();
-    }
-
-    public function updatedFilter()
-    {
-        $this->loadBoards();
-    }
-
-    public function loadBoards()
-    {
-        $companyId = Auth::user()->company_id;
-
-        $query = KanbanBoard::query()
-            ->where('company_id', $companyId)
+        $query->where('company_id', Auth::user()->company_id)
             ->where('is_active', true)
-            ->where('type', '!=', 'shipping_documentation') // Ocultar kanban de embarques
-            ->withCount('statuses as stages_count');
-
-        // Aplicar búsqueda
-        if (!empty($this->search)) {
-            $query->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
-                  ->orWhere('description', 'like', '%' . $this->search . '%');
-            });
-        }
-
-        // Aplicar filtrado
-        if (!empty($this->filter)) {
-            $query->where('type', $this->filter);
-        }
-
-        // Aplicar ordenamiento
-        $query->orderBy($this->sortField, $this->sortDirection);
-
-        // Obtener resultados
-        $boards = $query->get();
-
-        $this->boards = $boards->map(function ($board) {
-            return [
-                'id' => $board->id,
-                'name' => $board->name,
-                'description' => $board->description,
-                'type' => $this->getBoardTypeName($board->type),
-                'raw_type' => $board->type,
-                'stages_count' => $board->stages_count,
-            ];
-        })->toArray();
+            ->where('type', '!=', 'shipping_documentation');
     }
 
-    protected function getBoardTypeName($type)
-    {
-        $types = [
-            'po_stages' => 'Etapas PO',
-            // 'shipping_documentation' => 'Documentación de embarque', // Ocultado
-        ];
-
-        return $types[$type] ?? $type;
-    }
-
-    public function viewStages($boardId)
+    public function viewStages($boardId): void
     {
         $this->selectedBoard = KanbanBoard::with(['statuses' => function ($query) {
             $query->orderBy('position');
@@ -128,7 +99,7 @@ class Kanban extends Component
         $this->viewingStages = true;
     }
 
-    public function startEditStage($stageId)
+    public function startEditStage($stageId): void
     {
         $this->editingStage = KanbanStatus::findOrFail($stageId);
         $this->stageName = $this->editingStage->name;
@@ -136,19 +107,19 @@ class Kanban extends Component
         $this->editingStageModal = true;
     }
 
-    public function updateStageName()
+    public function updateStageName(): void
     {
         $this->validate();
 
         if ($this->editingStage) {
             $this->editingStage->update([
-                'name' => $this->stageName
+                'name' => $this->stageName,
             ]);
 
             $this->editingStageModal = false;
             $this->dispatch('notify', [
                 'type' => 'success',
-                'message' => 'Nombre de etapa actualizado correctamente.'
+                'message' => 'Nombre de etapa actualizado correctamente.',
             ]);
 
             $this->reset(['editingStage', 'stageName']);
@@ -158,18 +129,20 @@ class Kanban extends Component
         }
     }
 
-    public function closeViewingStages()
+    public function closeViewingStages(): void
     {
         $this->viewingStages = false;
     }
 
-    public function closeEditingStage()
+    public function closeEditingStage(): void
     {
         $this->editingStageModal = false;
     }
 
     public function render()
     {
-        return view('livewire.settings.kanban')->layout('layouts.settings.preferences');
+        return view('livewire.settings.kanban', [
+            'processedRows' => $this->getProcessedRowsProperty(),
+        ])->layout('layouts.settings.preferences');
     }
 }

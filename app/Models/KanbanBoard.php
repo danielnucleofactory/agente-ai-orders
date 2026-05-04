@@ -25,6 +25,15 @@ class KanbanBoard extends Model
     ];
 
     /**
+     * Campos excluidos de toArray()/toJson().
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'company_id',
+    ];
+
+    /**
      * The attributes that should be cast.
      *
      * @var array<string, string>
@@ -63,6 +72,19 @@ class KanbanBoard extends Model
     /**
      * Get the purchase orders for this kanban board.
      */
+    /**
+     * Etiqueta legible del tipo de tablero (columna de tabla).
+     */
+    public function getTypeLabelAttribute(): string
+    {
+        $v = $this->attributes['type'] ?? '';
+
+        return match ($v) {
+            'po_stages' => 'Etapas PO',
+            default => (string) $v,
+        };
+    }
+
     public function purchaseOrders(): HasMany
     {
         return $this->hasManyThrough(

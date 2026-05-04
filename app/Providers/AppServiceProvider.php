@@ -19,9 +19,12 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\Failed;
+use Illuminate\Mail\Events\MessageSending;
 use App\Listeners\LogUserLogin;
 use App\Listeners\LogUserLogout;
 use App\Listeners\LogFailedLogin;
+use App\Listeners\AddSupportReplyTo;
+use App\Listeners\BlockVendorConfirmationEmails;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -38,6 +41,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Decorar WebhookService para ocultar date_variable_date y current_timestamp en el payload
+        // (sin modificar internal_modules)
+        if (class_exists(\RagaOrders\Webhook\Services\WebhookService::class)) {
+            $this->app->extend(\RagaOrders\Webhook\Services\WebhookService::class, function ($service) {
+                return new \App\Services\WebhookPayloadFilterDecorator($service);
+            });
+        }
+
         // Registrar observers para auditoría
         PurchaseOrder::observe(PurchaseOrderObserver::class);
         ShippingDocument::observe(ShippingDocumentObserver::class);
@@ -47,6 +58,12 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(Login::class, LogUserLogin::class);
         Event::listen(Logout::class, LogUserLogout::class);
         Event::listen(Failed::class, LogFailedLogin::class);
+
+        // Cortar correos hacia proveedores salvo que se habiliten explícitamente.
+        Event::listen(MessageSending::class, BlockVendorConfirmationEmails::class);
+
+        // Agregar Reply-To de soporte a todos los correos salientes (si no tienen uno definido)
+        Event::listen(MessageSending::class, AddSupportReplyTo::class);
 
         // Registrar componente de breadcrumb explícitamente
         Blade::component('breadcrumb', Breadcrumb::class);

@@ -2,10 +2,14 @@
 
 namespace App\Livewire\Kanban;
 
+use App\Exports\ActivePurchaseOrdersExport;
+use App\Support\SelectOptions;
 use App\Models\Hub;
 use App\Models\PurchaseOrder;
 use Livewire\Component;
 use Illuminate\Support\Facades\Session;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class KanbanFilters extends Component
 {
@@ -37,8 +41,12 @@ class KanbanFilters extends Component
         // Cargar las opciones de filtro iniciales
         $this->loadFilterOptions();
 
-        // Restaurar filtros de la sesión
-        $this->restoreFiltersFromSession();
+        // Limpiar filtros de sesión al montar para que no persistan después de refrescar la página
+        Session::forget('kanban_filters');
+
+        // NO restaurar filtros de la sesión para que no persistan después de refrescar la página
+        // Los filtros solo se mantienen durante la sesión activa, pero se limpian al refrescar
+        // Si se necesita restaurar filtros, se puede hacer manualmente con el botón de aplicar
     }
 
     public function loadFilterOptions()
@@ -51,6 +59,8 @@ class KanbanFilters extends Component
         // Extraer valores únicos para cada filtro
         $this->currencies = $purchaseOrders->pluck('currency')->filter()->unique()->values()->toArray();
         $this->incoterms = $purchaseOrders->pluck('incoterms')->filter()->unique()->values()->toArray();
+        sort($this->currencies, SORT_NATURAL | SORT_FLAG_CASE);
+        sort($this->incoterms, SORT_NATURAL | SORT_FLAG_CASE);
 
         // Obtener los hubs planificados y reales
         $plannedHubIds = $purchaseOrders->pluck('planned_hub_id')->filter()->unique()->values()->toArray();
@@ -62,10 +72,12 @@ class KanbanFilters extends Component
         $this->plannedHubs = $hubs->whereIn('id', $plannedHubIds)
             ->pluck('name', 'id')
             ->toArray();
+        asort($this->plannedHubs, SORT_NATURAL | SORT_FLAG_CASE);
 
         $this->actualHubs = $hubs->whereIn('id', $actualHubIds)
             ->pluck('name', 'id')
             ->toArray();
+        asort($this->actualHubs, SORT_NATURAL | SORT_FLAG_CASE);
 
                                         // Hardcoded types based on database analysis - más confiable que parsing dinámico
         // Basado en los valores reales encontrados: Standard, dangerous, estibable, exclusive, general
@@ -109,14 +121,19 @@ class KanbanFilters extends Component
             $this->materialTypes = array_unique(array_merge($this->materialTypes, $dynamicTypes));
         }
 
-        sort($this->materialTypes);
+        $this->currencies = SelectOptions::sortList($this->currencies);
+        $this->incoterms = SelectOptions::sortList($this->incoterms);
+        $this->plannedHubs = SelectOptions::sortAssociative($this->plannedHubs);
+        $this->actualHubs = SelectOptions::sortAssociative($this->actualHubs);
+        $this->materialTypes = SelectOptions::sortList($this->materialTypes);
     }
 
     public function applyFilters()
     {
         $this->filtersApplied = $this->hasActiveFilters();
         $this->updateFilterCount();
-        $this->saveFiltersToSession();
+        // NO guardar en sesión para que no persistan después de refrescar la página
+        // $this->saveFiltersToSession();
 
         // Emitir evento para que el KanbanBoard actualice sus datos
         $this->dispatch('kanbanFiltersChanged', $this->getActiveFilters());
@@ -134,7 +151,7 @@ class KanbanFilters extends Component
         $this->filtersApplied = false;
         $this->filterCount = 0;
 
-        // Limpiar filtros de sesión
+        // Limpiar filtros de sesión (por si acaso quedó algo)
         Session::forget('kanban_filters');
 
         // Emitir evento para que el KanbanBoard actualice sus datos
@@ -224,6 +241,17 @@ class KanbanFilters extends Component
                 $this->dispatch('kanbanFiltersChanged', $this->getActiveFilters());
             }
         }
+    }
+
+    public function downloadActivePOs(): BinaryFileResponse
+    {
+        $companyId = auth()->user()->company_id ?? 0;
+        $filters   = $this->getActiveFilters();
+
+        return Excel::download(
+            new ActivePurchaseOrdersExport($companyId, $filters),
+            'pos_activas_' . now()->format('Ymd_His') . '.xlsx'
+        );
     }
 
     public function render()

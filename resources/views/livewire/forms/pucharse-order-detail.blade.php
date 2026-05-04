@@ -28,6 +28,7 @@
         </div>
 
         @can('has_edit_orders')
+            @if (! $purchaseOrder->isKanbanIngresadaOrAnulada())
         <div class="flex space-x-4">
             <a href="{{ route('purchase-orders.edit', $purchaseOrder->id) }}" class="relative">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" fill="none"
@@ -39,11 +40,12 @@
                 <x-primary-button class="pl-12">Editar</x-primary-button>
             </a>
         </div>
+            @endif
         @endcan
     </div>
 
     {{-- SECCIÓN: Estado del Envío (Timeline de Porth) --}}
-    @if($this->shouldShowTimeline())
+    @if($this->shouldShowTrackingSection())
     <div class="bg-white rounded-[0.625rem] p-6 shadow-sm mb-8">
         <h3 class="mb-6 text-lg font-bold text-[#1AAD8A]">Estado del Envío</h3>
 
@@ -51,7 +53,7 @@
             <div class="flex justify-center py-8">
                 <div class="w-8 h-8 rounded-full border-b-2 animate-spin border-dark-blue"></div>
             </div>
-        @elseif(!empty($trackingData) && isset($trackingData['timeline']))
+        @elseif($this->shouldShowTimeline())
             <div class="relative">
                 <!-- Timeline track -->
                 <div class="absolute h-[2px] top-6 left-0 right-0 flex">
@@ -113,7 +115,7 @@
                                 </p>
                                 @if($phase['date'])
                                     <p class="mb-1 text-xs font-medium {{ $phase['is_completed'] || $phase['is_current'] ? 'text-gray-600' : 'text-gray-400' }}">
-                                        {{ formatDate($phase['date']) }}
+                                        {{ formatDateOnly($phase['date']) }}
                                         <span class="{{ $phase['is_completed'] || $phase['is_current'] ? 'text-dark-blue font-bold' : 'text-gray-400' }}">
                                             {{ \Carbon\Carbon::parse($phase['date'])->format('H:i') }}
                                         </span>
@@ -137,7 +139,7 @@
                             <div>
                                 <p class="text-sm text-gray-500">Entrega estimada</p>
                                 <p class="text-lg font-bold text-dark-blue">
-                                    {{ isset($trackingData['estimated_delivery']) ? formatDate($trackingData['estimated_delivery']) : 'N/A' }}
+                                    {{ isset($trackingData['estimated_delivery']) ? formatDateOnly($trackingData['estimated_delivery']) : 'N/A' }}
                                 </p>
                             </div>
                         </div>
@@ -159,6 +161,7 @@
         @else
             <div class="py-8 text-center text-gray-500">
                 <p>No hay datos de tracking disponibles</p>
+                <p class="text-sm mt-2">El contenedor, Documento de tránsito o booking no tiene información</p>
             </div>
         @endif
     </div>
@@ -224,7 +227,7 @@
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha emisión PO</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->emision_date_po) }}</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->emision_date_po) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha de creación en Next</p>
@@ -302,9 +305,7 @@
                                {{ $purchaseOrder->port_of_loading_validated ? 'checked' : '' }}
                                disabled
                                class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
-                        <label for="port_of_loading_validated" class="block ml-2 text-sm text-gray-700">
-                            {{ $purchaseOrder->port_of_loading_validated ? 'Validado' : 'No validado' }}
-                        </label>
+                        <label for="port_of_loading_validated" class="block ml-2 text-sm text-gray-700">Validado</label>
                     </div>
                 </div>
                 <div>
@@ -334,7 +335,7 @@
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Identificadores de embarque</h4>
             <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                 <div>
-                    <p class="mb-1 text-gray-500">MBL Number</p>
+                    <p class="mb-1 text-gray-500">Documento de tránsito</p>
                     <p class="font-semibold">{{ $purchaseOrder->mbl_number ?? '-' }}</p>
                 </div>
                 <div>
@@ -361,7 +362,7 @@
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Código de Proveedor</p>
-                    <p class="font-semibold">{{ $purchaseOrder->vendor_number ?? $purchaseOrder->vendor->vendo_code ?? '-' }}</p>
+                    <p class="font-semibold">{{ $purchaseOrder->vendor?->vendo_code ?? '-' }}</p>
                 </div>
             </div>
             </div>
@@ -408,15 +409,15 @@
             <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
                     <p class="mb-1 text-gray-500">Solicitud de Booking</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_booking_request) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->date_booking_request) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Autorización Booking</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_booking_authorized) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->date_booking_authorized) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha de asignación de agente de carga</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->forwader_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->forwader_date) }}</p>
                 </div>
             </div>
 
@@ -425,19 +426,19 @@
             <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Inspección</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->inspection_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->inspection_date) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Corte VGM</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->vgm_cut_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->vgm_cut_date) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Carga Lista Teórica</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_theorical_load) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->date_theorical_load) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Carga Lista Variable</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_variable_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->date_variable_date) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Carga Lista Validada</p>
@@ -445,11 +446,11 @@
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha de consolidado</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_consolidation) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->date_consolidation) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha de release</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->release_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->release_date) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Diferencia de fecha de carga lista</p>
@@ -466,7 +467,7 @@
             <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
                     <p class="mb-1 text-gray-500">ETD Inicial</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_etd_initial) }}</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_etd_initial) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">ETD Inicial Validada</p>
@@ -475,18 +476,16 @@
                                {{ $purchaseOrder->etd_initial_validated ? 'checked' : '' }}
                                disabled
                                class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
-                        <label for="etd_initial_validated" class="block ml-2 text-sm text-gray-700">
-                            {{ $purchaseOrder->etd_initial_validated ? 'Validada' : 'No validada' }}
-                        </label>
+                        <label for="etd_initial_validated" class="block ml-2 text-sm text-gray-700">Validada</label>
                     </div>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">ETD</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_etd) }}</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_etd) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">ATD</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_atd) }}</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_atd) }}</p>
                 </div>
             </div>
 
@@ -494,16 +493,16 @@
             <h4 class="text-sm font-semibold text-[#1AAD8A] mb-3">Arribo a destino</h4>
             <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
-                    <p class="mb-1 text-gray-500">ETA</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_eta) }}</p>
+                    <p class="mb-1 text-gray-500">ETA Inicial</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_eta_initial) }}</p>
                 </div>
                 <div>
-                    <p class="mb-1 text-gray-500">ETA Inicial</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_eta_initial) }}</p>
+                    <p class="mb-1 text-gray-500">ETA Variable</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_eta) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">ATA</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_ata) }}</p>
+                    <p class="font-semibold">{{ formatDateOnly($purchaseOrder->date_ata) }}</p>
                 </div>
             </div>
 
@@ -512,19 +511,19 @@
             <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
                     <p class="mb-1 text-gray-500">Ingreso Almacén Fiscal</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->bonded_warehouse_enter) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->bonded_warehouse_enter) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Salida Almacén Fiscal</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->bonded_warehouse_exit) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->bonded_warehouse_exit) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Nota de Recibo</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->receipt_note_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->receipt_note_date) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Disp. Bogeda Estimada</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->estimated_dc_availability_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->estimated_dc_availability_date) }}</p>
                 </div>
             </div>
 
@@ -533,11 +532,11 @@
             <div class="grid grid-cols-1 gap-4 mb-6 text-sm md:grid-cols-3">
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Pago Balance</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->balance_payment_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->balance_payment_date) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha Pago Cargos Locales</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->local_charges_payment_date) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->local_charges_payment_date) }}</p>
                 </div>
             </div>
 
@@ -688,7 +687,7 @@
                     <p class="mb-1 text-gray-500">Agente de Carga</p>
                     <p class="font-semibold">{{ $purchaseOrder->forwarder_name ?? '-' }}</p>
                 </div>
-                <div class="hidden">
+                <div>
                     <p class="mb-1 text-gray-500">Proveedor de Servicio</p>
                     <p class="font-semibold">{{ $purchaseOrder->service_provider ?? '-' }}</p>
                 </div>
@@ -733,11 +732,11 @@
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha recepción de factura</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_invoice_received) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->date_invoice_received) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Fecha recepción doc. proveedor</p>
-                    <p class="font-semibold">{{ formatDate($purchaseOrder->date_vendor_document_received) }}</p>
+                    <p class="font-semibold">{{ formatPoCalendarDate($purchaseOrder->date_vendor_document_received) }}</p>
                 </div>
                 <div>
                     <p class="mb-1 text-gray-500">Factura Flete</p>
@@ -814,11 +813,46 @@
                     <table class="w-full">
                         <thead class="bg-[#D4F5ED]">
                             <tr>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Fecha</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Usuario</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Tipo</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Comentario</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Archivos</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('created_at')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Fecha
+                                        @if($commentSortField === 'created_at')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('user_name')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Usuario
+                                        @if($commentSortField === 'user_name')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('action_type')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Tipo
+                                        @if($commentSortField === 'action_type')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('comment')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Comentario
+                                        @if($commentSortField === 'comment')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">
+                                    <button type="button" wire:click="sortComments('attachment_name')" class="flex items-center gap-1 hover:text-[#0F614D]">
+                                        Archivos
+                                        @if($commentSortField === 'attachment_name')
+                                            <span>{{ $commentSortDirection === 'desc' ? '↓' : '↑' }}</span>
+                                        @endif
+                                    </button>
+                                </th>
                                 <th class="px-4 py-3 text-sm font-semibold text-left text-gray-900">Acciones</th>
                             </tr>
                         </thead>
@@ -847,6 +881,10 @@
                                         @elseif($comment['action_type'] === 'record_create')
                                             <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-green-800 bg-green-100 rounded-full">
                                                 Creación
+                                            </span>
+                                        @elseif($comment['action_type'] === 'porth_sync')
+                                            <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-sky-800 bg-sky-100 rounded-full">
+                                                Actualización embarque
                                             </span>
                                         @else
                                             <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium text-gray-800 bg-gray-100 rounded-full">

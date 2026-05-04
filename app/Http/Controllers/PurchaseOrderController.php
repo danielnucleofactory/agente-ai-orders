@@ -148,32 +148,29 @@ class PurchaseOrderController extends Controller
                 }
 
                 // 4) Relaciones (se buscan por nombre/código y se crean si no existen)
-                $vendorId = data_get($general, 'vendor_id');
-                $vendorName = data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
+                $vendorId = data_get($general, 'vendor_id') ?? data_get($general, 'vendor.id') ?? data_get($general, 'vendor.vendo_code');
+                $vendorName = data_get($general, 'vendor_name') ?? data_get($general, 'vendor.name');
+                if (!$vendorName && ($v = data_get($general, 'vendor'))) {
+                    $vendorName = is_string($v) ? $v : data_get($v, 'name');
+                }
+                $vendorCompanyId = data_get($general, 'company_id', 1);
+                $vendorCompanyId = ($vendorCompanyId !== null && $vendorCompanyId !== '' && is_numeric($vendorCompanyId)) ? (int) $vendorCompanyId : 1;
+                $tradingCompany = data_get($general, 'trading_company', '');
 
-                // Buscar o crear vendor
+                // Buscar o crear vendor (API): vendo_code global = vendor_id tal cual; sólo crear si no existe
                 $vendor = null;
-                if ($vendorId) {
-                    // Tratar vendor_id del JSON como vendo_code
-                    $vendor = Vendor::where('vendo_code', $vendorId)->first();
-                    if (!$vendor) {
-                        $vendor = Vendor::create([
-                            'company_id' => 1,
-                            'vendo_code' => (string) $vendorId,
-                            'name' => $vendorName ?: ('Proveedor ' . $vendorId),
-                            'status' => 'active',
-                        ]);
-                    }
+                if ($vendorId !== null && $vendorId !== '') {
+                    $vendor = Vendor::findOrCreateFromApiVendorIdentifier(
+                        $vendorId,
+                        $vendorCompanyId,
+                        $vendorName
+                    );
                 } elseif ($vendorName) {
-                    $vendor = Vendor::where('name', $vendorName)->first();
-                    if (!$vendor) {
-                        $vendor = Vendor::create([
-                            'company_id' => 1,
-                            'name' => $vendorName,
-                            'vendo_code' => 'VENDOR_' . time(),
-                            'status' => 'active',
-                        ]);
-                    }
+                    $vendoCode = $tradingCompany ? ($tradingCompany . '-VENDOR_' . time()) : ('VENDOR_' . time());
+                    $vendor = Vendor::firstOrCreate(
+                        ['name' => $vendorName, 'company_id' => $vendorCompanyId],
+                        ['vendo_code' => $vendoCode, 'status' => 'active']
+                    );
                 }
 
                 // 5) Totales
@@ -197,6 +194,20 @@ class PurchaseOrderController extends Controller
                         ->first()
                         ?: $kanbanBoard->defaultStatus();
                     $kanbanStatusId = $status?->id;
+                }
+
+                // Si el status es null o es 1 (etapa "Nuevo" oculta), buscar el primer status visible que no sea 1
+                if ($kanbanStatusId === null || $kanbanStatusId === 1) {
+                    if ($kanbanBoard) {
+                        $firstVisibleStatus = $kanbanBoard->statuses()
+                            ->where('is_hidden', false)
+                            ->where('id', '!=', 1)
+                            ->orderBy('id')
+                            ->first();
+                        $kanbanStatusId = $firstVisibleStatus?->id ?? 2;
+                    } else {
+                        $kanbanStatusId = 2;
+                    }
                 }
 
                 // 7) Campos base
@@ -252,7 +263,7 @@ class PurchaseOrderController extends Controller
                 // 9) ===== NEW FIELDS FOR OLO (boolean) =====
                 foreach ([
                              'is_dropship','applies_tlc','applies_af','port_of_loading_validated','has_facture_merca',
-                             'uses_bonded_warehouse','apply_technical_note','etd_initial_validated',
+                             'uses_bonded_warehouse','apply_technical_note','etd_initial_validated','used_rate_ok',
                          ] as $f) {
                     // Verificar si el campo existe en el array
                     if (array_key_exists($f, $general) || isset($general[$f])) {
@@ -261,8 +272,6 @@ class PurchaseOrderController extends Controller
                         $poData[$f] = false;
                     }
                 }
-                // Forzar used_rate_ok siempre como false
-                $poData['used_rate_ok'] = false;
 
                 // 10) ===== NEW FIELDS FOR OLO (int) =====
                 foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference','pallet_quantity','pallet_quantity_real'] as $f) {
@@ -313,6 +322,14 @@ class PurchaseOrderController extends Controller
                     }
                 }
 
+                // date_carga_po (alias): lo que llega en date_carga_po se replica en date_variable_date
+                if (array_key_exists('date_carga_po', $general) && $general['date_carga_po'] !== null && $general['date_carga_po'] !== '') {
+                    $parsedDate = $parseDate($general['date_carga_po']);
+                    if ($parsedDate !== null) {
+                        $poData['date_variable_date'] = $parsedDate;
+                    }
+                }
+
                 // 13) Cálculo de diferencias (firmadas): positivo = atraso; negativo = adelanto
                 // ETD: preferimos (updated - initial). Si no hay initial, caemos a (updated - etd).
                 $etdBase = $poData['date_etd_initial'] ?? $poData['date_etd'] ?? null;
@@ -347,10 +364,17 @@ class PurchaseOrderController extends Controller
                               'bonded_warehouse_exit', 'receipt_note_date', 'estimated_dc_availability_date',
                               'date_invoice_received', 'date_vendor_document_received', 'dif_load_date', 'emision_date_po',
                               'forwader_date', 'date_consolidation', 'release_date', 'date_required_in_destination'];
-                $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields, $dateFields) {
+                // Campos booleanos que deben preservarse incluso si son false
+                $booleanFields = ['is_dropship', 'applies_tlc', 'applies_af', 'port_of_loading_validated', 'has_facture_merca',
+                                 'uses_bonded_warehouse', 'apply_technical_note', 'etd_initial_validated', 'used_rate_ok'];
+                $poData = array_filter($poData, function($v, $k) use ($optionalTextFields, $numericFields, $dateFields, $booleanFields) {
                     // Permitir null para campos de texto opcionales (para que se guarden explícitamente como null)
                     if (in_array($k, $optionalTextFields)) {
                         return true; // Mantener siempre estos campos, incluso si son null
+                    }
+                    // Mantener campos booleanos (incluso si son false)
+                    if (in_array($k, $booleanFields)) {
+                        return true;
                     }
                     // Permitir valores numéricos 0 (que son válidos)
                     if (in_array($k, $numericFields)) {
@@ -362,7 +386,7 @@ class PurchaseOrderController extends Controller
                         return true;
                     }
                     // Para otros campos, eliminar null y strings vacíos, pero permitir 0 y false
-                    return $v !== null && $v !== '' && $v !== false;
+                    return $v !== null && $v !== '';
                 }, ARRAY_FILTER_USE_BOTH);
 
                 // 15) Crear PO
@@ -513,40 +537,35 @@ class PurchaseOrderController extends Controller
         }
 
         // Relaciones (se buscan por nombre/código y se crean si no existen)
-        $vendorId = data_get($general, 'vendor_id');
-        $vendorName = data_get($general, 'vendor') ?? data_get($general, 'vendor_name');
+        $vendorId = data_get($general, 'vendor_id') ?? data_get($general, 'vendor.id') ?? data_get($general, 'vendor.vendo_code');
+        $vendorName = data_get($general, 'vendor_name') ?? data_get($general, 'vendor.name');
+        if (!$vendorName && ($v = data_get($general, 'vendor'))) {
+            $vendorName = is_string($v) ? $v : data_get($v, 'name');
+        }
         $vendorCompanyId = data_get($general, 'company_id', 1);
-        $vendorCompanyId = is_numeric($vendorCompanyId) ? (int) $vendorCompanyId : 1;
+        $vendorCompanyId = ($vendorCompanyId !== null && $vendorCompanyId !== '' && is_numeric($vendorCompanyId)) ? (int) $vendorCompanyId : 1;
+        $tradingCompany = data_get($general, 'trading_company', '');
 
-        // Buscar o crear vendor
+        // Buscar o crear vendor (API): vendo_code global = vendor_id tal cual; sólo crear si no existe
         $vendor = null;
-        if ($vendorId) {
-            // Primero intentar buscar por ID si es numérico
-            if (is_numeric($vendorId)) {
-                $vendor = Vendor::find($vendorId);
-            }
-            // Si no se encuentra, buscar por código
-            if (!$vendor) {
-                $vendor = Vendor::where('vendo_code', $vendorId)->first();
-            }
-            if (!$vendor) {
-                $vendor = Vendor::create([
-                    'company_id' => $vendorCompanyId,
-                    'vendo_code' => (string) $vendorId,
-                    'name' => $vendorName ?: ('Proveedor ' . $vendorId),
-                    'status' => 'active',
-                ]);
-            }
+        if ($vendorId !== null && $vendorId !== '') {
+            $vendor = Vendor::findOrCreateFromApiVendorIdentifier(
+                $vendorId,
+                $vendorCompanyId,
+                $vendorName
+            );
         } elseif ($vendorName) {
-            $vendor = Vendor::where('name', $vendorName)->first();
-            if (!$vendor) {
-                $vendor = Vendor::create([
-                    'company_id' => $vendorCompanyId,
+            $vendoCode = $tradingCompany ? ($tradingCompany . '-VENDOR_' . time()) : ('VENDOR_' . time());
+            $vendor = Vendor::firstOrCreate(
+                [
                     'name' => $vendorName,
-                    'vendo_code' => 'VENDOR_' . time(),
+                    'company_id' => $vendorCompanyId,
+                ],
+                [
+                    'vendo_code' => $vendoCode,
                     'status' => 'active',
-                ]);
-            }
+                ]
+            );
         }
 
         // Totales
@@ -573,6 +592,20 @@ class PurchaseOrderController extends Controller
                 ->first()
                 ?: $kanbanBoard->defaultStatus();
             $kanbanStatusId = $status?->id;
+        }
+
+        // Si el status es null o es 1 (etapa "Nuevo" oculta), buscar el primer status visible que no sea 1
+        if ($kanbanStatusId === null || $kanbanStatusId === 1) {
+            if ($kanbanBoard) {
+                $firstVisibleStatus = $kanbanBoard->statuses()
+                    ->where('is_hidden', false)
+                    ->where('id', '!=', 1)
+                    ->orderBy('id')
+                    ->first();
+                $kanbanStatusId = $firstVisibleStatus?->id ?? 2;
+            } else {
+                $kanbanStatusId = 2;
+            }
         }
 
         // Campos base
@@ -728,6 +761,14 @@ class PurchaseOrderController extends Controller
                     'exists' => array_key_exists($f, $general),
                     'value' => $general[$f] ?? 'NOT_SET',
                 ]);
+            }
+        }
+
+        // date_carga_po (alias): lo que llega en date_carga_po se replica en date_variable_date
+        if (array_key_exists('date_carga_po', $general) && $general['date_carga_po'] !== null && $general['date_carga_po'] !== '') {
+            $parsedDate = $parseDate($general['date_carga_po']);
+            if ($parsedDate !== null) {
+                $poData['date_variable_date'] = $parsedDate;
             }
         }
 
@@ -1149,6 +1190,7 @@ class PurchaseOrderController extends Controller
             'vgm_cut_date'            => 'vgm_cut_date',
             'date_theorical_load'     => 'date_theorical_load',
             'date_variable_date'      => 'date_variable_date',
+            'date_carga_po'            => 'date_variable_date', // alias: se guarda en date_variable_date
             'carga_lista_validada'    => 'carga_lista_validada',
             'release_date'            => 'release_date',
             'date_consolidation'      => 'date_consolidation',
@@ -1226,23 +1268,16 @@ class PurchaseOrderController extends Controller
 
             switch ($apiField) {
                 case 'vendor_id': {
-                    // Si viene como ID numérico, buscar directamente
-                    if (is_numeric($value)) {
-                        $vendor = \App\Models\Vendor::find($value);
-                        if (!$vendor) {
-                            throw new \Exception("Vendor not found with ID: {$value}");
-                        }
-                        $po->vendor_id = $vendor->id;
-                        $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->id];
-                    } else {
-                        // Si viene como código, buscar por código
-                        $vendor = \App\Models\Vendor::where('vendo_code', $value)->first();
-                        if (!$vendor) {
-                            throw new \Exception("Vendor not found with code: {$value}");
-                        }
-                        $po->vendor_id = $vendor->id;
-                        $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->id];
-                    }
+                    $vendorName = data_get($payload, 'vendor_name');
+                    $companyId = $po->company_id ?? 1;
+                    $vendor = \App\Models\Vendor::findOrCreateFromApiVendorIdentifier(
+                        $value,
+                        (int) $companyId,
+                        is_string($vendorName) ? $vendorName : null
+                    );
+                    $po->vendor_id = $vendor->id;
+                    $po->vendor_number = $vendor->vendo_code;
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->id];
                     break;
                 }
                 case 'vendor_name': {
@@ -1255,10 +1290,13 @@ class PurchaseOrderController extends Controller
                     break;
                 }
                 case 'vendor_number': {
-                    $vendor = \App\Models\Vendor::where('vendo_code', $value)->first();
-                    if (!$vendor) {
-                        throw new \Exception("Vendor not found with code: {$value}");
-                    }
+                    $vendorName = data_get($payload, 'vendor_name');
+                    $companyId = $po->company_id ?? 1;
+                    $vendor = \App\Models\Vendor::findOrCreateFromApiVendorIdentifier(
+                        $value,
+                        (int) $companyId,
+                        is_string($vendorName) ? $vendorName : null
+                    );
                     $po->vendor_id = $vendor->id;
                     $po->vendor_number = $vendor->vendo_code;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => $vendor->vendo_code];
@@ -1275,6 +1313,7 @@ class PurchaseOrderController extends Controller
                 case 'vgm_cut_date':
                 case 'date_theorical_load':
                 case 'date_variable_date':
+                case 'date_carga_po': // alias: se guarda en date_variable_date
                 case 'carga_lista_validada':
                 case 'release_date':
                 case 'date_consolidation':
@@ -1395,6 +1434,11 @@ class PurchaseOrderController extends Controller
         if (isset($payload['emision_date_po'])) {
             $po->order_date = $po->emision_date_po;
         }
+
+        // Filtrar cambios ruidosos (null→0 en montos) para no reportarlos en respuesta, auditoría ni webhook
+        $changes = array_filter($changes, function ($change, $field) {
+            return !\App\Helpers\ChangeDescriptionHelper::isNoiseChange($field, $change['old'], $change['new']);
+        }, ARRAY_FILTER_USE_BOTH);
 
         return $changes;
     }
@@ -1808,7 +1852,7 @@ class PurchaseOrderController extends Controller
 
     public function index( Request $request ): JsonResponse
     {
-        $query = PurchaseOrder::with(['vendor', 'products']);
+        $query = PurchaseOrder::with(['vendor', 'products', 'comments']);
 
         // Si viene con filtros (query parameters), aplicarlos
         if ($request->has('order_number') || $request->has('company')) {

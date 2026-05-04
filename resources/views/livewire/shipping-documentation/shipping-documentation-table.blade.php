@@ -19,11 +19,15 @@
                 class="hidden px-4 py-2 ml-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
                 <option value="">Todos los estados</option>
-                <option value="draft">Borrador</option>
-                <option value="pending">Pendiente</option>
-                <option value="approved">Aprobado</option>
-                <option value="in_transit">En Tránsito</option>
-                <option value="delivered">Entregado</option>
+                @foreach(\App\Support\SelectOptions::sortAssociative([
+                    'draft' => 'Borrador',
+                    'pending' => 'Pendiente',
+                    'approved' => 'Aprobado',
+                    'in_transit' => 'En Tránsito',
+                    'delivered' => 'Entregado',
+                ]) as $statusValue => $statusLabel)
+                    <option value="{{ $statusValue }}">{{ $statusLabel }}</option>
+                @endforeach
             </select>
 
             <div class="relative ml-4">

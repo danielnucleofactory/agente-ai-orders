@@ -11,8 +11,13 @@ use Illuminate\Support\Facades\Log;
 
 class PurchaseOrderObserver
 {
+    /** Email del usuario sistema (sync Porth) para registrar sus actualizaciones en el histórico */
+    protected const PORTH_SYSTEM_USER_EMAIL = 'apps@raga-x.ai';
+
     /**
-     * Campos críticos que se deben trackear para auditoría
+     * Campos que se trackean para el histórico de auditoría (comentarios en purchase_order_comments).
+     * NOTA: Este array NO afecta el webhook. El payload del webhook se construye en los controladores
+     * y componentes Livewire, y usa $hidden del modelo + WebhookPayloadFilterDecorator.
      */
     protected array $trackedFields = [
         // Fechas
@@ -104,6 +109,39 @@ class PurchaseOrderObserver
         'bill_of_lading',
         'consolidator_name',
 
+        // Proveedor (mostrar vendo_code en historial)
+        'vendor_id',
+
+        // Documentos y facturación (visibles en formulario)
+        'cargo_invoice_number',
+        'factura_merca',
+        'invoice',
+        'customs_dua',
+        'case_number_file',
+        'receipt_note',
+        'visibility_notes',
+
+        // Comercialización
+        'retail_group',
+        'customer_type',
+        'trading_company',
+        'service_provider',
+
+        // Dimensiones y cantidades (visibles)
+        'cbm',
+        'weight_kg',
+        'weight_lb',
+        'pallet_quantity',
+        'pallet_quantity_real',
+        'container_free_days',
+
+        // Flags / checkboxes (visibles)
+        'applies_tlc',
+        'has_facture_merca',
+        'used_rate_ok',
+        'uses_bonded_warehouse',
+        'apply_technical_note',
+
         // Otros campos importantes
         'reason',
         'category',
@@ -127,7 +165,18 @@ class PurchaseOrderObserver
             // Filtrar solo campos trackeados
             $trackedChanges = array_intersect_key($changes, array_flip($this->trackedFields));
 
+            // Si no hay cambios en campos trackeados pero el usuario es el sync de Porth,
+            // registrar entrada solo si hay cambios de negocio (excluir last_porth_sync_at y porth_*)
             if (empty($trackedChanges)) {
+                if ($this->isPorthSyncUser() && !empty($changes)) {
+                    $meaningfulChanges = array_filter(array_keys($changes), function ($field) {
+                        return $field !== 'last_porth_sync_at' && !str_starts_with($field, 'porth_');
+                    });
+                    if (!empty($meaningfulChanges)) {
+                        $filteredChanges = array_intersect_key($changes, array_flip($meaningfulChanges));
+                        $this->registerPorthSyncAudit($purchaseOrder, $filteredChanges);
+                    }
+                }
                 return;
             }
 
@@ -179,16 +228,28 @@ class PurchaseOrderObserver
                 $description = "Cambios en " . count($trackedChanges) . " campo(s)";
             }
 
+            // Capturar datos de Auth AHORA, antes del afterCommit
+            // (en contexto de PorthSync, Auth::logout() ocurre antes de que afterCommit se ejecute)
+            $currentUserId = Auth::id();
+
+            // Filtrar cambios ruidosos (null→0) para que el modal "Detalles de la Actividad" solo muestre cambios reales
+            [$oldValuesForStorage, $newValuesForStorage] = ChangeDescriptionHelper::filterNoiseChangesForStorage($oldValues, $trackedChanges);
+
+            // No crear comentario si la descripción quedó vacía (todos los cambios eran ruido)
+            if ($description === '' || empty($newValuesForStorage)) {
+                return;
+            }
+
             // Crear comentario después del commit de la transacción
-            DB::afterCommit(function () use ($purchaseOrder, $actionType, $oldValues, $trackedChanges, $description, $isStatusChange) {
+            DB::afterCommit(function () use ($purchaseOrder, $actionType, $oldValues, $trackedChanges, $oldValuesForStorage, $newValuesForStorage, $description, $isStatusChange, $currentUserId) {
                 try {
                     PurchaseOrderComment::create([
                         'purchase_order_id' => $purchaseOrder->id,
-                        'user_id' => Auth::id(),
+                        'user_id' => $currentUserId,
                         'comment' => $description,
                         'action_type' => $actionType,
-                        'old_values' => $oldValues,
-                        'new_values' => $trackedChanges,
+                        'old_values' => $oldValuesForStorage,
+                        'new_values' => $newValuesForStorage,
                         'ip_address' => request()->ip(),
                         'user_agent' => request()->userAgent(),
                     ]);
@@ -209,6 +270,22 @@ class PurchaseOrderObserver
                     }
                     // NOTE: purchase_order.updated is NOT dispatched here to avoid duplicate webhooks
                     // Controllers and Livewire components handle purchase_order.updated events
+
+                    // Push cambios relevantes a Porth (solo container_number y shipping_line)
+                    // Solo si la PO tiene porth_id y los campos relevantes cambiaron
+                    $porthRelevantFields = ['container_number', 'shipping_line'];
+                    $porthChanges = array_intersect_key($trackedChanges, array_flip($porthRelevantFields));
+                    if (!empty($porthChanges) && !empty($purchaseOrder->porth_id)) {
+                        try {
+                            $porthApi = app(\App\Services\PorthApiService::class);
+                            $porthApi->pushChangesToPorth($purchaseOrder, $porthChanges);
+                        } catch (\Throwable $e) {
+                            Log::error('observer:porth_push_error', [
+                                'purchase_order_id' => $purchaseOrder->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
                 } catch (\Exception $e) {
                     // Si falla la creación del comentario, solo loguear el error
                     // No interrumpir el flujo principal
@@ -226,6 +303,61 @@ class PurchaseOrderObserver
                 'error' => $e->getTraceAsString()
             ]);
         }
+    }
+
+    /**
+     * Indica si el usuario actual es el de sincronización Porth (sistema).
+     */
+    protected function isPorthSyncUser(): bool
+    {
+        $user = Auth::user();
+        return $user && $user->email === self::PORTH_SYSTEM_USER_EMAIL;
+    }
+
+    /**
+     * Registra en el histórico una actualización desde Porth cuando solo cambiaron campos no trackeados
+     * (porth_*, last_porth_sync_at, etc.), para que el usuario vea que hubo sync.
+     */
+    protected function registerPorthSyncAudit(PurchaseOrder $purchaseOrder, array $changes): void
+    {
+        // Guardar valores anteriores y nuevos para que se vean en el modal de detalle
+        $oldValues = [];
+        $newValues = [];
+        foreach ($changes as $field => $newValue) {
+            $original = $purchaseOrder->getOriginal($field);
+            // Serializar Carbon/DateTime a string
+            $oldValues[$field] = ($original instanceof \DateTimeInterface) ? $original->format('Y-m-d H:i:s') : $original;
+            $newValues[$field] = ($newValue instanceof \DateTimeInterface) ? $newValue->format('Y-m-d H:i:s') : $newValue;
+        }
+
+        $changedKeys = array_keys($changes);
+        $description = 'Actualización desde Porth (tracking). Campos: ' . implode(', ', $changedKeys);
+
+        // Capturar Auth::id() AHORA, antes de que DB::afterCommit se ejecute
+        // (PorthImportService hace Auth::logout() en finally, que ocurre antes del afterCommit
+        // cuando save() está dentro de DB::transaction())
+        $userId = Auth::id();
+        $poId = $purchaseOrder->id;
+
+        DB::afterCommit(function () use ($poId, $description, $oldValues, $newValues, $userId) {
+            try {
+                PurchaseOrderComment::create([
+                    'purchase_order_id' => $poId,
+                    'user_id' => $userId,
+                    'comment' => $description,
+                    'action_type' => 'porth_sync',
+                    'old_values' => $oldValues,
+                    'new_values' => $newValues,
+                    'ip_address' => request()->ip(),
+                    'user_agent' => 'PorthSync',
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Error creando comentario de auditoría Porth en PurchaseOrderObserver: ' . $e->getMessage(), [
+                    'purchase_order_id' => $poId,
+                    'error' => $e->getTraceAsString(),
+                ]);
+            }
+        });
     }
 
     /**
@@ -247,17 +379,17 @@ class PurchaseOrderObserver
             return $value->format('Y-m-d H:i:s');
         }
 
-        // Si es string numérico o numérico, convertir a float para comparación
-        // Esto maneja casos como "0.00" vs 0 vs "0"
+        // Si es string numérico o numérico, convertir a float con 2 decimales para comparación
+        // Esto maneja casos como "0.00" vs 0 vs "0" y evita falsos positivos por precisión
         if (is_numeric($value)) {
-            return (float) $value;
+            return round((float) $value, 2);
         }
 
         if (is_string($value)) {
             $trimmed = trim($value);
-            // Si después de trim es numérico, convertir a float
+            // Si después de trim es numérico, convertir a float con 2 decimales
             if (is_numeric($trimmed)) {
-                return (float) $trimmed;
+                return round((float) $trimmed, 2);
             }
             // Si no, devolver el string trimmed
             return $trimmed;

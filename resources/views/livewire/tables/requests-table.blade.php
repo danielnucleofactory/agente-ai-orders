@@ -1,160 +1,5 @@
 <div>
-    @php
-        $headers = [
-            'created_at' => 'Fecha y hora',
-            'operation_id' => 'ID Operación',
-            'authorizable_id' => 'Número de PO',
-            'requester_id' => 'Usuario',
-            'operation_type' => 'Operación',
-            'status' => 'Estado',
-            'actions' => 'Acciones',
-        ];
-
-        $statusClasses = [
-            'pending' => 'inline-flex px-2 text-xs font-semibold leading-5 text-yellow-800 bg-yellow-100 rounded-full',
-            'approved' => 'inline-flex px-2 text-xs font-semibold leading-5 text-green-800 bg-green-100 rounded-full',
-            'rejected' => 'inline-flex px-2 text-xs font-semibold leading-5 text-red-800 bg-red-100 rounded-full',
-        ];
-
-        $statusLabels = [
-            'pending' => 'Pendiente',
-            'approved' => 'Aprobado',
-            'rejected' => 'Rechazado',
-        ];
-    @endphp
-
-    <div class="mt-8 space-y-4">
-        <div class="flex items-center justify-between mb-6">
-            <x-search-input class="w-64" wire:model.debounce.300ms="search" placeholder="Buscar solicitudes..." />
-
-            <div class="flex space-x-4">
-                <select wire:model.live="filters.status" class="border-gray-300 rounded-md">
-                    <option value="">Todos los estados</option>
-                    <option value="pending">Pendientes</option>
-                    <option value="approved">Aprobados</option>
-                    <option value="rejected">Rechazados</option>
-                </select>
-
-                <select wire:model.live="filters.operation" class="border-gray-300 rounded-md">
-                    <option value="">Todas las operaciones</option>
-                    @foreach($requests->pluck('operation_type')->unique() as $operation)
-                        <option value="{{ $operation }}">{{ $operation }}</option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
-
-        <!-- Tabla -->
-        <div class="overflow-x-auto bg-white rounded-lg shadow">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-[#D4F5ED]">
-                    <tr>
-                        @foreach($headers as $key => $label)
-                            <th class="px-6 py-6 text-xs font-bold tracking-wider text-left text-black uppercase">
-                                {{ $label }}
-                            </th>
-                        @endforeach
-                    </tr>
-                </thead>
-
-                <tbody class="divide-y divide-gray-200">
-                    @forelse($requests as $request)
-                        <tr>
-                            <td class="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                                {{ formatDateTime($request->created_at) }}
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $request->operation_id }}
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $request->order_number ?? $request->authorizable_id }}
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $request->requester->name ?? 'Usuario desconocido' }}
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $request->operation_type }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="{{ $statusClasses[$request->status] }}">
-                                    {{ $statusLabels[$request->status] }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                @if($actions && $request->status === 'pending')
-                                    <div class="flex gap-3">
-                                        <button wire:click="openModal('{{ $request->id }}', 'approve')" class="text-green-600 hover:text-green-900">
-                                            Aprobar
-                                        </button> |
-                                        <button wire:click="openModal('{{ $request->id }}', 'reject')" class="text-red-600 hover:text-red-900">
-                                            Rechazar
-                                        </button>
-                                    </div>
-                                @else
-                                @endif
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="{{ count($headers) }}" class="px-6 py-4 text-center text-gray-500">
-                                No hay solicitudes de autorización que mostrar
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        <div class="flex items-center justify-between mt-4">
-            <div class="flex justify-between flex-1 sm:hidden">
-                <button wire:click="previousPage" @if($requests->onFirstPage()) disabled @endif class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 {{ $requests->onFirstPage() ? 'opacity-50 cursor-not-allowed' : '' }}">
-                    Anterior
-                </button>
-                <button wire:click="nextPage" @if(!$requests->hasMorePages()) disabled @endif class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 {{ !$requests->hasMorePages() ? 'opacity-50 cursor-not-allowed' : '' }}">
-                    Siguiente
-                </button>
-            </div>
-            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                    <p class="text-sm text-gray-700">
-                        Mostrando
-                        <span class="font-medium">{{ $requests->firstItem() ?? 0 }}</span>
-                        a
-                        <span class="font-medium">{{ $requests->lastItem() ?? 0 }}</span>
-                        de
-                        <span class="font-medium">{{ $requests->total() }}</span>
-                        resultados
-                    </p>
-                </div>
-                <div>
-                    <nav class="relative z-0 inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                        <!-- Botón Anterior -->
-                        <button wire:click="previousPage" @if($requests->onFirstPage()) disabled @endif class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 {{ $requests->onFirstPage() ? 'opacity-50 cursor-not-allowed' : '' }}">
-                            <span class="sr-only">Anterior</span>
-                            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                            </svg>
-                        </button>
-
-                        <!-- Números de página -->
-                        @for ($i = 1; $i <= $requests->lastPage(); $i++)
-                            <button wire:click="gotoPage({{ $i }})" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium {{ $requests->currentPage() === $i ? 'z-10 bg-[#D4F5ED] border-[#1AAD8A] text-[#1AAD8A]' : 'text-gray-700 hover:bg-gray-50' }}">
-                                {{ $i }}
-                            </button>
-                        @endfor
-
-                        <!-- Botón Siguiente -->
-                        <button wire:click="nextPage" @if(!$requests->hasMorePages()) disabled @endif class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 {{ !$requests->hasMorePages() ? 'opacity-50 cursor-not-allowed' : '' }}">
-                            <span class="sr-only">Siguiente</span>
-                            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                            </svg>
-                        </button>
-                    </nav>
-                </div>
-            </div>
-        </div>
-    </div>
+    @include('livewire.components.reusable-table')
 
     <x-modal-requests name="modal-requests" show="{{ $showModal ?? false }}">
         <x-slot name="title">
@@ -167,15 +12,15 @@
 
         <x-slot name="requester">
             <div class="flex items-center">
-                <div class="flex items-center justify-center w-8 h-8 text-sm font-medium text-white bg-[#1AAD8A] rounded-full">
-                    @if(isset($selectedRequest->requester))
+                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-[#1AAD8A] text-sm font-medium text-white">
+                    @if (isset($selectedRequest->requester))
                         {{ substr($selectedRequest->requester->name ?? 'UN', 0, 2) }}
                     @else
                         {{ 'UN' }}
                     @endif
                 </div>
                 <span class="ml-2 text-gray-700">
-                    @if(isset($selectedRequest->requester))
+                    @if (isset($selectedRequest->requester))
                         {{ $selectedRequest->requester->name }}
                     @else
                         Usuario ID: {{ $selectedRequest->requester_id ?? 'Desconocido' }}
@@ -186,7 +31,7 @@
 
         <x-slot name="date">
             <p class="text-gray-700">
-                @if(isset($selectedRequest->created_at))
+                @if (isset($selectedRequest->created_at))
                     {{ formatDate($selectedRequest->created_at) }}
                 @else
                     --/--/----
@@ -196,7 +41,7 @@
 
         <x-slot name="time">
             <p class="text-gray-700">
-                @if(isset($selectedRequest->created_at))
+                @if (isset($selectedRequest->created_at))
                     {{ \Carbon\Carbon::parse($selectedRequest->created_at)->format('H:i:s') }}
                 @else
                     --:--:--
@@ -211,9 +56,8 @@
         <x-slot name="authorizableInfo">
             <p class="text-gray-700">
                 <span class="font-medium">Número PO:</span>
-                @if(isset($selectedRequest->authorizable_type) && strpos($selectedRequest->authorizable_type, 'PurchaseOrder') !== false && isset($selectedRequest->authorizable_id))
+                @if (isset($selectedRequest->authorizable_type) && str_contains($selectedRequest->authorizable_type, 'PurchaseOrder') && isset($selectedRequest->authorizable_id))
                     @php
-                        // Get the order number from the purchase order model
                         $purchaseOrder = App\Models\PurchaseOrder::find($selectedRequest->authorizable_id);
                         $orderNumber = $purchaseOrder ? $purchaseOrder->order_number : $selectedRequest->authorizable_id;
                     @endphp
@@ -227,11 +71,11 @@
         </x-slot>
 
         <x-slot name="status">
-            @if(isset($selectedRequest->status))
+            @if (isset($selectedRequest->status))
                 <span class="{{ $statusClasses[$selectedRequest->status] ?? '' }}">
                     {{ $statusLabels[$selectedRequest->status] ?? $selectedRequest->status }}
                 </span>
-                @if(isset($selectedRequest->authorized_at))
+                @if (isset($selectedRequest->authorized_at))
                     <p class="mt-1 text-sm text-gray-500">
                         Autorizado: {{ formatDateTime($selectedRequest->authorized_at) }}
                     </p>
@@ -242,22 +86,22 @@
         </x-slot>
 
         <x-slot name="dataContent">
-            @if(isset($selectedRequest->data))
-                <div class="p-3 overflow-auto text-sm text-gray-600 bg-gray-100 rounded-md max-h-40">
+            @if (isset($selectedRequest->data))
+                <div class="max-h-40 overflow-auto rounded-md bg-gray-100 p-3 text-sm text-gray-600">
                     @php
                         $data = is_array($selectedRequest->data)
                             ? $selectedRequest->data
                             : json_decode($selectedRequest->data, true);
                     @endphp
 
-                    @if(is_array($data))
-                        @foreach($data as $key => $value)
+                    @if (is_array($data))
+                        @foreach ($data as $key => $value)
                             <div class="mb-1">
                                 <span class="font-semibold">{{ ucfirst($key) }}:</span>
-                                @if(is_bool($value))
+                                @if (is_bool($value))
                                     <input type="checkbox" {{ $value ? 'checked' : '' }} disabled
-                                           class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A] opacity-75">
-                                @elseif(is_array($value) || is_object($value))
+                                        class="h-4 w-4 rounded border-gray-300 text-[#1AAD8A] opacity-75 focus:ring-[#1AAD8A]">
+                                @elseif (is_array($value) || is_object($value))
                                     <pre class="text-xs">{{ json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
                                 @else
                                     {{ $value }}
@@ -280,13 +124,13 @@
         </x-slot>
 
         <x-slot name="actions">
-            @if($buttonType === 'reject')
-                <button class="w-full py-3 font-medium text-white transition duration-200 bg-red-600 rounded-lg hover:bg-red-700" wire:click="reject('{{ $requestId }}')">
+            @if ($buttonType === 'reject')
+                <button type="button" class="w-full rounded-lg bg-red-600 py-3 font-medium text-white transition duration-200 hover:bg-red-700" wire:click="reject('{{ $requestId }}')">
                     Rechazar
                 </button>
             @endif
-            @if($buttonType === 'approve')
-                <button class="w-full py-3 font-medium text-white transition duration-200 bg-green-600 rounded-lg hover:bg-green-700" wire:click="approve('{{ $requestId }}')">
+            @if ($buttonType === 'approve')
+                <button type="button" class="w-full rounded-lg bg-green-600 py-3 font-medium text-white transition duration-200 hover:bg-green-700" wire:click="approve('{{ $requestId }}')">
                     Aceptar
                 </button>
             @endif

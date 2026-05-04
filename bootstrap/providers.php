@@ -4,6 +4,5 @@ return [
     App\Providers\AppServiceProvider::class,
     App\Providers\VoltServiceProvider::class,
     App\Providers\ModuleServiceProvider::class,
-    RagaOrders\POConfirmation\POConfirmationServiceProvider::class, // Módulo independiente
-    RagaOrders\Webhook\WebhookServiceProvider::class, // Módulo independiente
+    App\Providers\WebhookSettingsRouteFallbackServiceProvider::class,
 ];

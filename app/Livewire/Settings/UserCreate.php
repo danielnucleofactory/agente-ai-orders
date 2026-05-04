@@ -44,8 +44,14 @@ class UserCreate extends Component
 
     public function mount($id = null)
     {
-        $this->roles = Role::all();
-        $this->companies = Company::all();
+        if ($id) {
+            abort_unless(auth()->user()?->can('has_edit_users'), 403);
+        } else {
+            abort_unless(auth()->user()?->can('has_create_users'), 403);
+        }
+
+        $this->roles = Role::query()->orderByRaw('LOWER(name)')->get();
+        $this->companies = Company::query()->orderByRaw('LOWER(name)')->get();
 
         if ($id) {
             $user = User::with('roles', 'companies')->findOrFail($id);
@@ -64,6 +70,12 @@ class UserCreate extends Component
 
     public function save()
     {
+        if ($this->id) {
+            abort_unless(auth()->user()?->can('has_edit_users'), 403);
+        } else {
+            abort_unless(auth()->user()?->can('has_create_users'), 403);
+        }
+
         $this->validate($this->rules(), [
             'name.required' => 'El nombre es requerido',
             'name.min' => 'El nombre debe tener al menos 3 caracteres',
@@ -101,12 +113,18 @@ class UserCreate extends Component
             // Sincronizar empresas
             $user->companies()->sync($this->company_ids);
 
+            // Actualizar company_id si el actual ya no está entre las empresas asignadas
+            if (!in_array((int) $user->company_id, array_map('intval', $this->company_ids))) {
+                $user->update(['company_id' => (int) min($this->company_ids)]);
+            }
+
             $this->dispatch('open-modal', 'modal-user-created');
         } else {
             $user = User::create([
-                'name' => $this->name,
-                'email' => $this->email,
-                'password' => bcrypt($this->password),
+                'name'      => $this->name,
+                'email'     => $this->email,
+                'password'  => bcrypt($this->password),
+                'time_zone' => 'America/Santiago',
             ]);
 
             if (!empty($this->role_id)) {
@@ -114,8 +132,9 @@ class UserCreate extends Component
                 $user->assignRole($role->name);
             }
 
-            // Asociar empresas
+            // Asociar empresas y establecer la primera como activa
             $user->companies()->attach($this->company_ids);
+            $user->setCurrentCompany((int) min($this->company_ids));
 
             $this->dispatch('open-modal', 'modal-user-created');
         }

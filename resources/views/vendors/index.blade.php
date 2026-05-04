@@ -14,11 +14,13 @@
             </x-slot:content>
         </x-view-title>
 
-        <a href="{{ route('vendors.create') }}">
-            <x-primary-button>
-                Nuevo Proveedor
-            </x-primary-button>
-        </a>
+        @can('has_create_vendors')
+            <a href="{{ route('vendors.create') }}">
+                <x-primary-button>
+                    Nuevo Proveedor
+                </x-primary-button>
+            </a>
+        @endcan
     </div>
 
     <!-- Tabs for switching between views -->
@@ -28,19 +30,19 @@
             @php
                 $headers = [
                     'name' => 'Nombre',
+                    'vendo_code' => 'Código',
                     'email' => 'Email',
                     'contact_person' => 'Contacto',
                     'address' => 'Dirección',
                     'phone' => 'Teléfono',
                     'status' => 'Estado',
                     'actions' => 'Acciones',
-                    'actions_html' => '',
                 ];
 
-                $sortable = ['name', 'email', 'phone', 'status'];
-                $searchable = ['name', 'email', 'phone', 'status'];
-                $filterable = ['name', 'email', 'phone', 'status'];
-                $filterOptions = ['name', 'email', 'phone', 'status'];
+                $sortable = [];
+                $searchable = ['name', 'email', 'phone', 'status', 'vendo_code', 'contact_person', 'address'];
+                $filterable = [];
+                $filterOptions = [];
             @endphp
 
 
@@ -54,6 +56,8 @@
                 :actionsView="false"
                 :actionsEdit="true"
                 :actionsDelete="true"
+                :editPermission="'has_edit_vendors'"
+                :deletePermission="'has_delete_vendors'"
                 :model="\App\Models\Vendor::class"
             />
         </div>

@@ -1,3 +1,24 @@
+<div class="flex items-center gap-2">
+
+    <!-- Botón de descarga POs activas -->
+    <button
+        wire:click="downloadActivePOs"
+        wire:loading.attr="disabled"
+        wire:target="downloadActivePOs"
+        title="Descargar POs activas en Excel"
+        class="flex items-center gap-2 rounded-md border border-[#1AAD8A] px-3 py-2 text-sm font-medium text-[#1AAD8A] transition-colors duration-200 hover:bg-[#E6F9F4] disabled:opacity-60 disabled:cursor-not-allowed"
+    >
+        <svg wire:loading.remove wire:target="downloadActivePOs" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        <svg wire:loading wire:target="downloadActivePOs" class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        <span wire:loading.remove wire:target="downloadActivePOs">Exportar</span>
+        <span wire:loading wire:target="downloadActivePOs">Exportando...</span>
+    </button>
+
 <div
     x-data="{
         open: false,
@@ -88,8 +109,8 @@
                 </div>
             @endif
 
-            <!-- Filtro de Hub Planificado -->
-            @if(count($plannedHubs) > 0)
+            {{-- Filtro de Hub Planificado --}}
+            {{-- @if(count($plannedHubs) > 0)
                 <div>
                     <label for="planned-hub-filter" class="block text-sm font-medium text-gray-700">Hub Planificado</label>
                     <select id="planned-hub-filter" wire:model.live="selectedPlannedHub" class="block w-full py-2 pl-3 pr-10 mt-1 text-base border-gray-300 rounded-md focus:border-[#1AAD8A] focus:outline-none focus:ring-[#1AAD8A]">
@@ -99,7 +120,7 @@
                         @endforeach
                     </select>
                 </div>
-            @endif
+            @endif --}}
 
             <!-- Filtro de Hub Real -->
             @if(count($actualHubs) > 0)
@@ -114,8 +135,8 @@
                 </div>
             @endif
 
-            <!-- Filtro de Tipo de Material -->
-            @if(count($materialTypes) > 0)
+            {{-- Filtro de Tipo de Material --}}
+            {{-- @if(count($materialTypes) > 0)
                 <div>
                     <label for="material-type-filter" class="block text-sm font-medium text-gray-700">Tipo de Material</label>
                     <select id="material-type-filter" wire:model.live="selectedMaterialType" class="block w-full py-2 pl-3 pr-10 mt-1 text-base border-gray-300 rounded-md focus:border-[#1AAD8A] focus:outline-none focus:ring-[#1AAD8A]">
@@ -125,21 +146,25 @@
                         @endforeach
                     </select>
                 </div>
-            @endif
+            @endif --}}
         </div>
 
         <div class="flex justify-between pt-4 mt-5 border-t border-gray-200">
             <button
+                type="button"
                 wire:click="resetFilters"
                 @click="close()"
+                onclick="window.poKanbanOverlayShow && window.poKanbanOverlayShow('Limpiando filtros…')"
                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#1AAD8A] focus:ring-offset-2"
             >
                 Limpiar filtros
             </button>
 
             <button
+                type="button"
                 wire:click="applyFilters"
                 @click="close()"
+                onclick="window.poKanbanOverlayShow && window.poKanbanOverlayShow('Aplicando filtros…')"
                 class="px-4 py-2 text-sm font-medium text-white bg-[#1AAD8A] border border-transparent rounded-md shadow-sm hover:bg-[#127A62] focus:outline-none focus:ring-2 focus:ring-[#1AAD8A] focus:ring-offset-2"
             >
                 Aplicar filtros
@@ -147,3 +172,5 @@
         </div>
     </div>
 </div>
+
+</div>{{-- /flex wrapper --}}

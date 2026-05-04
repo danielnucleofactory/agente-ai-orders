@@ -1,36 +1,34 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Livewire\Forms\ShowPucharseOrder;
-use App\Livewire\Forms\PucharseOrderDetail;
-use App\Livewire\Settings\Index;
-use App\Livewire\Settings\Notifications;
-use App\Livewire\Settings\Password;
-use App\Http\Controllers\VendorController;
-use App\Livewire\Settings\History;
-use App\Livewire\Settings\Roles;
-use App\Livewire\Settings\RoleEdit;
-use App\Livewire\Forms\PucharseOrderConsolidateDetail;
-use App\Livewire\Settings\ActiveSessions;
-use App\Livewire\Settings\Kanban;
-use App\Livewire\Settings\Profile;
-use App\Livewire\Settings\Stages;
-use App\Livewire\Settings\Users;
-use App\Livewire\Settings\RoleCreate;
-use App\Livewire\Settings\UserCreate;
-use App\Livewire\Settings\Sessions;
-use App\Livewire\Settings\ApiTokens;
 use App\Http\Controllers\AuthorizationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardKPIController;
 use App\Http\Controllers\ForecastController;
-use Illuminate\Support\Facades\Auth;
+use App\Livewire\Forms\PucharseOrderConsolidateDetail;
+use App\Livewire\Forms\PucharseOrderDetail;
+use App\Livewire\Forms\ShowPucharseOrder;
+use App\Livewire\Settings\ActiveSessions;
+use App\Livewire\Settings\ApiTokens;
+use App\Livewire\Settings\History;
+use App\Livewire\Settings\Index;
+use App\Livewire\Settings\Kanban;
+use App\Livewire\Settings\Notifications;
+use App\Livewire\Settings\Password;
+use App\Livewire\Settings\RoleEdit;
+use App\Livewire\Settings\Roles;
+use App\Livewire\Settings\Sessions;
+use App\Livewire\Settings\Stages;
+use App\Livewire\Settings\UserCreate;
+use App\Livewire\Settings\Users;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     if (Auth::check()) {
         return redirect()->route('dashboard');
     }
+
     return redirect()->route('login');
 });
 
@@ -40,16 +38,16 @@ Route::middleware(['auth', 'verified', 'permission:has_view_dashboard'])->group(
     Route::view('dashboard', 'dashboard-kpi')->name('dashboard');
     // Mantener rutas del dashboard antiguo por compatibilidad (si se necesitan)
     Route::get('dashboard/data', [DashboardController::class, 'getData'])->name('dashboard.data');
-    Route::get('dashboard/export', [DashboardController::class, 'export'])->name('dashboard.export');
+    Route::match(['get', 'post'], 'dashboard/export', [DashboardController::class, 'export'])->name('dashboard.export');
     // Mantener ruta dashboard-kpi como alias
     Route::view('dashboard-kpi', 'dashboard-kpi')->name('dashboard.kpi');
-    
+
     // Dashboard KPI API endpoints (para consumir desde JavaScript)
     Route::prefix('dashboard-kpi/api')->group(function () {
         Route::get('/', [DashboardKPIController::class, 'index'])->name('dashboard.kpi.api');
         Route::get('/filter-options', [DashboardKPIController::class, 'getFilterOptions'])->name('dashboard.kpi.filter-options');
         Route::get('/kpi-summary', [DashboardKPIController::class, 'getKPISummary'])->name('dashboard.kpi.summary');
-        
+
         // Vista Tendencia - Cantidad de PO
         Route::get('/pos-by-stage', [DashboardKPIController::class, 'posByStage'])->name('dashboard.kpi.pos-by-stage');
         Route::get('/pos-delay-cl', [DashboardKPIController::class, 'posDelayCL'])->name('dashboard.kpi.pos-delay-cl');
@@ -58,19 +56,19 @@ Route::middleware(['auth', 'verified', 'permission:has_view_dashboard'])->group(
         Route::get('/transshipment', [DashboardKPIController::class, 'transshipment'])->name('dashboard.kpi.transshipment');
         Route::get('/pos-with-ata', [DashboardKPIController::class, 'posWithATA'])->name('dashboard.kpi.pos-with-ata');
         Route::get('/transit-time', [DashboardKPIController::class, 'transitTime'])->name('dashboard.kpi.transit-time');
-        
+
         // Vista Comparativo
         Route::post('/compare-atd', [DashboardKPIController::class, 'compareATD'])->name('dashboard.kpi.compare-atd');
         Route::post('/compare-ata', [DashboardKPIController::class, 'compareATA'])->name('dashboard.kpi.compare-ata');
         Route::post('/compare-delay-cl', [DashboardKPIController::class, 'compareDelayCL'])->name('dashboard.kpi.compare-delay-cl');
         Route::post('/compare-advance-cl', [DashboardKPIController::class, 'compareAdvanceCL'])->name('dashboard.kpi.compare-advance-cl');
-        
+
         // Vista PO vs TEUs
         Route::get('/po-vs-teus/stage', [DashboardKPIController::class, 'poVsTeusByStage'])->name('dashboard.kpi.po-vs-teus-stage');
         Route::get('/po-vs-teus/period', [DashboardKPIController::class, 'poVsTeusByPeriod'])->name('dashboard.kpi.po-vs-teus-period');
         Route::get('/po-vs-teus/vendor', [DashboardKPIController::class, 'poVsTeusByVendor'])->name('dashboard.kpi.po-vs-teus-vendor');
         Route::get('/po-vs-teus/shipping-line', [DashboardKPIController::class, 'poVsTeusByShippingLine'])->name('dashboard.kpi.po-vs-teus-shipping-line');
-        
+
         // Vista Proyección
         Route::get('/future-arrivals', [DashboardKPIController::class, 'futureArrivals'])->name('dashboard.kpi.future-arrivals');
     });
@@ -128,23 +126,28 @@ Route::middleware(['auth'])->group(function () {
 
     // Rutas para proveedores
     Route::view('vendors', 'vendors.index')
+        ->middleware('permission:has_view_vendors')
         ->name('vendors.index');
 
     Route::view('vendors/create', 'vendors.create')
+        ->middleware('permission:has_create_vendors')
         ->name('vendors.create');
 
     Route::get('vendors/{vendor}/edit', function ($vendor) {
         return view('vendors.edit', ['vendor' => \App\Models\Vendor::findOrFail($vendor)]);
-    })->name('vendors.edit');
+    })->middleware('permission:has_edit_vendors')->name('vendors.edit');
 
     // Rutas para direcciones de envío (ship-to)
     Route::view('ship-to', 'ship-to.index')
+        ->middleware('permission:has_view_ship_to')
         ->name('ship-to.index');
 
     Route::view('ship-to/create', 'ship-to.create')
+        ->middleware('permission:has_create_ship_to')
         ->name('ship-to.create');
 
     Route::view('ship-to/{id}/edit', 'ship-to.edit')
+        ->middleware('permission:has_edit_ship_to')
         ->name('ship-to.edit');
 
     // Route::view('shipping-documentation/requests', 'shipping-documentation.requests')
@@ -194,14 +197,16 @@ Route::middleware(['auth'])->group(function () {
 
     // Rutas para hubs
     Route::view('hub', 'hub.index')
+        ->middleware('permission:has_view_hubs')
         ->name('hub.index');
 
     Route::view('hub/create', 'hub.create')
+        ->middleware('permission:has_create_hubs')
         ->name('hub.create');
 
     Route::get('hub/{id}/edit', function ($id) {
         return view('hub.edit', ['hub' => \App\Models\Hub::findOrFail($id)]);
-    })->name('hub.edit');
+    })->middleware('permission:has_edit_hubs')->name('hub.edit');
 
 });
 
@@ -220,13 +225,15 @@ Route::middleware(['auth'])->group(function () {
         ->name('settings.history');
 
     Route::get('settings/roles', Roles::class)
+        ->middleware('permission:has_view_roles')
         ->name('settings.roles');
 
     Route::get('settings/roles/{roleId}/edit', RoleEdit::class)
+        ->middleware('permission:has_edit_roles')
         ->name('settings.roles.edit');
 
     Route::get('/settings/roles/create', App\Livewire\Settings\RoleCreate::class)
-        ->middleware(['auth'])
+        ->middleware('permission:has_create_roles')
         ->name('settings.roles.create');
 
     Route::get('settings/kanban', Kanban::class)
@@ -236,12 +243,15 @@ Route::middleware(['auth'])->group(function () {
         ->name('settings.stages');
 
     Route::get('settings/users', Users::class)
+        ->middleware('permission:has_view_users')
         ->name('settings.users');
 
     Route::get('settings/users/create', UserCreate::class)
+        ->middleware('permission:has_create_users')
         ->name('settings.users.create');
 
     Route::get('settings/users/{id}/edit', UserCreate::class)
+        ->middleware('permission:has_edit_users')
         ->name('settings.users.edit');
 
     Route::get('settings/active-sessions', ActiveSessions::class)
@@ -250,26 +260,45 @@ Route::middleware(['auth'])->group(function () {
     Route::get('settings/api-tokens', ApiTokens::class)
         ->name('settings.api-tokens');
 
-    Route::get('settings/profile', function() {
+    Route::get('settings/profile', function () {
         return view('profile.index');
     })->middleware('permission:has_view_profile')->name('settings.profile');
 
     Route::get('settings/sessions', Sessions::class)
         ->name('settings.sessions');
 
-    // Companies
+    Route::view('settings/po-confirmation', 'po-confirmation-settings')
+        ->name('po-confirmation.settings.index');
+
+        // try {
+        //     Route::view('settings/webhook', 'webhook-settings')
+        //         ->name('webhook.settings.index');
+        // } catch (\Exception $e) {
+        //     // Si el módulo no está habilitado, no mostramos la vista
+        // }
+
+    // Companies (permisos dedicados; asignación típica: Super Administrador)
     Route::get('settings/companies', \App\Livewire\Settings\Companies::class)
+        ->middleware('permission:has_view_companies')
         ->name('settings.companies');
 
     Route::get('settings/companies/create', \App\Livewire\Settings\CompanyCreate::class)
+        ->middleware('permission:has_create_companies')
         ->name('settings.companies.create');
 
     Route::get('settings/companies/{id}/edit', \App\Livewire\Settings\CompanyCreate::class)
+        ->middleware('permission:has_edit_companies')
         ->name('settings.companies.edit');
 
-    Route::get('/bill-to', [App\Http\Controllers\BillToController::class, 'index'])->name('bill-to.index');
-    Route::get('/bill-to/create', [App\Http\Controllers\BillToController::class, 'create'])->name('bill-to.create');
-    Route::get('/bill-to/{billTo}/edit', [App\Http\Controllers\BillToController::class, 'edit'])->name('bill-to.edit');
+    Route::get('/bill-to', [App\Http\Controllers\BillToController::class, 'index'])
+        ->middleware('permission:has_view_bill_to')
+        ->name('bill-to.index');
+    Route::get('/bill-to/create', [App\Http\Controllers\BillToController::class, 'create'])
+        ->middleware('permission:has_create_bill_to')
+        ->name('bill-to.create');
+    Route::get('/bill-to/{billTo}/edit', [App\Http\Controllers\BillToController::class, 'edit'])
+        ->middleware('permission:has_edit_bill_to')
+        ->name('bill-to.edit');
 
     // Rutas para autorizaciones
     Route::get('/authorizations', [AuthorizationController::class, 'index'])->name('authorizations.index');
@@ -281,39 +310,50 @@ Route::middleware(['auth'])->group(function () {
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect('/')->with('message', 'Has cerrado sesión correctamente.');
     })->name('logout-session');
 });
 
 Route::middleware(['auth'])->group(function () {
+    // Ruta para descargar archivos de media con autenticación
+    Route::get('media/{mediaId}/download', [\App\Http\Controllers\MediaController::class, 'download'])
+        ->name('media.download');
+
     Route::get('support/contact', \App\Livewire\Support\ContactForm::class)
         ->name('support.contact');
 
     Route::view('historical-data', 'historical-data.index')
         ->middleware('permission:has_view_historical_data')
         ->name('historical-data.index');
-    
+
     Route::get('historical-data/export', [\App\Http\Controllers\HistoricalDataController::class, 'export'])
         ->middleware('permission:has_view_historical_data')
         ->name('historical-data.export');
 
     // Rutas para Maestros
     Route::view('maestros/container-types', 'maestros.container-types.index')
+        ->middleware('permission:has_view_maestros')
         ->name('maestros.container-types.index');
 
     Route::view('maestros/ports', 'maestros.ports.index')
+        ->middleware('permission:has_view_maestros')
         ->name('maestros.ports.index');
 
     Route::view('maestros/transport-types', 'maestros.transport-types.index')
+        ->middleware('permission:has_view_maestros')
         ->name('maestros.transport-types.index');
 
     Route::view('maestros/shipping-lines', 'maestros.shipping-lines.index')
+        ->middleware('permission:has_view_maestros')
         ->name('maestros.shipping-lines.index');
 
     Route::view('maestros/service-providers', 'maestros.service-providers.index')
+        ->middleware('permission:has_view_maestros')
         ->name('maestros.service-providers.index');
 
     Route::view('maestros/rate-types', 'maestros.rate-types.index')
+        ->middleware('permission:has_view_maestros')
         ->name('maestros.rate-types.index');
 });
 
@@ -322,4 +362,4 @@ Route::get('/po-confirmation-test', function () {
     return view('po-confirmation-test');
 })->name('po.confirmation.test');
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

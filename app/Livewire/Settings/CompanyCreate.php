@@ -37,6 +37,7 @@ class CompanyCreate extends Component
     public function mount($id = null)
     {
         if ($id) {
+            abort_unless(auth()->user()?->can('has_edit_companies'), 403);
             $company = Company::findOrFail($id);
             $this->id = $id;
             $this->name = $company->name;
@@ -52,11 +53,18 @@ class CompanyCreate extends Component
         } else {
             $this->title = 'Crear Empresa';
             $this->subtitle = 'Ingresa la información de la nueva empresa';
+            abort_unless(auth()->user()?->can('has_create_companies'), 403);
         }
     }
 
     public function save()
     {
+        if ($this->id) {
+            abort_unless(auth()->user()?->can('has_edit_companies'), 403);
+        } else {
+            abort_unless(auth()->user()?->can('has_create_companies'), 403);
+        }
+
         $this->validate($this->rules(), [
             'name.required' => 'El nombre es requerido',
             'name.min' => 'El nombre debe tener al menos 3 caracteres',

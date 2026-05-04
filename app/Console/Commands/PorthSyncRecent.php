@@ -26,6 +26,13 @@ class PorthSyncRecent extends Command
 
     public function handle(): int
     {
+        if (!config('services.porth.sync_enabled', true)) {
+            $this->warn('Porth sync deshabilitado por PORTH_SYNC_ENABLED=false.');
+            Log::info('porth_sync_recent:disabled_by_config');
+
+            return self::SUCCESS;
+        }
+
         $hours = $this->option('hours');
         $hours = $hours !== null ? max(1, (int) $hours) : (int) config('services.porth.sync_lookback_hours', 2);
         $dryRun = (bool) ($this->option('dry-run') ?? config('services.porth.sync_dry_run', false));

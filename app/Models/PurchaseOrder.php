@@ -2,23 +2,24 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasAuthorizations;
 use App\Models\Traits\SoftCascadeDeletes;
+use App\Traits\HasPOConfirmationWrapper;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
-use App\Models\Traits\HasAuthorizations;
-use App\Traits\HasPOConfirmationWrapper;
 
 class PurchaseOrder extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia, HasAuthorizations, HasPOConfirmationWrapper, SoftDeletes, SoftCascadeDeletes;
+    use HasAuthorizations, HasFactory, HasPOConfirmationWrapper, InteractsWithMedia, SoftCascadeDeletes, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -102,7 +103,7 @@ class PurchaseOrder extends Model implements HasMedia
         'update_date_po',
         'confirm_update_date_po',
 
-        //New fields for OLO
+        // New fields for OLO
         'factory_proforma_number',
         'mbl_number',
         'container_type',
@@ -170,7 +171,7 @@ class PurchaseOrder extends Model implements HasMedia
         'vendor_number',
         'consolidator_name',
         'forwader_date',
-        
+
         // Campos de Porth
         'porth_pol',
         'porth_pol_name',
@@ -196,7 +197,146 @@ class PurchaseOrder extends Model implements HasMedia
         'porth_priority',
         'porth_manual_tracking',
         'porth_free_time_at_destination',
+        'porth_itinerary',
         'porth_id',
+        'last_porth_sync_at',
+    ];
+
+    /**
+     * Campos excluidos de toArray()/toJson() (webhook, API, etc.).
+     * - Computados: arrival_status, delay_days, etd_dates_difference, eta_dates_difference (se calculan, no deben enviarse)
+     * - Porth: campos internos de sincronización con Porth
+     * - No Intelix: campos del payload que no están en mapeo_definitivo_intelix.md ni son maestros (xxx)
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'company_id',
+        'arrival_status',
+        'delay_days',
+        'etd_dates_difference',
+        'eta_dates_difference',
+        'variable_calculare_weight',
+        'Invoice_amount',
+        'vendor_number',
+        // No Intelix ni maestros (del payload enviado)
+        'kanban_status_id',
+        'weight_kg',
+        'weight_lb',
+        'saving_pickup',
+        'saving_executed',
+        'saving_not_executed',
+        'category',
+        'invoice',
+        'status',
+        'notes',
+        'vendor_id',
+        'ship_to_id',
+        'bill_to_id',
+        'order_date',
+        'currency',
+        'incoterms',
+        'payment_terms',
+        'order_place',
+        'email_agent',
+        'net_total',
+        'additional_cost',
+        'total',
+        'length',
+        'width',
+        'height',
+        'volume',
+        'date_required_in_destination',
+        'date_planned_pickup',
+        'date_actual_pickup',
+        'date_estimated_hub_arrival',
+        'date_actual_hub_arrival',
+        'date_consolidation',
+        'insurance_cost',
+        'ground_transport_cost_1',
+        'ground_transport_cost_2',
+        'cost_nationalization',
+        'cost_ofr_estimated',
+        'cost_ofr_real',
+        'estimated_pallet_cost',
+        'real_cost_estimated_po',
+        'real_cost_real_po',
+        'other_costs',
+        'other_expenses',
+        'savings_ofr_fcl',
+        'planned_hub_id',
+        'actual_hub_id',
+        'material_type',
+        'ensurence_type',
+        'insurance_type',
+        'tracking_id',
+        'pallet_quantity',
+        'pallet_quantity_real',
+        'bill_of_lading',
+        'pallets',
+        'length_cm',
+        'width_cm',
+        'height_cm',
+        'confirmation_hash',
+        'hash_expires_at',
+        'confirmation_email_sent',
+        'confirmation_email_sent_at',
+        'last_email_type_sent',
+        'last_email_sent_at',
+        'email_sent_history',
+        'update_date_po',
+        'confirm_update_date_po',
+        'factory_proforma_number',
+        'is_dropship',
+        'applies_tlc',
+        'applies_af',
+        'date_received',
+        'reason',
+        'forwarder_name',
+        'route_label',
+        'date_eta_updated',
+        'date_etd_updated',
+        'used_rate_ok',
+        'apply_technical_note',
+        'balance_payment_date',
+        'receipt_note_date',
+        'estimated_dc_availability_date',
+        'retail_group',
+        'customer_type',
+        'customs_dua',
+        'case_number_file',
+        'receipt_note',
+        'total_amount',
+        'date_vendor_document_received',
+        'dif_load_date',
+        'emision_date_po',
+        'consolidator_name',
+        'freight_type',
+        'porth_id',
+        'porth_shipment_number',
+        'porth_carrier_code',
+        'porth_pol',
+        'porth_pod',
+        'porth_pol_name',
+        'porth_pod_name',
+        'porth_phase',
+        'porth_priority',
+        'porth_modality',
+        'porth_vessel_voyage',
+        'porth_origin',
+        'porth_final_destination',
+        'porth_first_eta',
+        'porth_first_etd',
+        'porth_ready',
+        'porth_to_origin_port',
+        'porth_at_origin_port',
+        'porth_in_transit',
+        'porth_at_destination_port',
+        'porth_to_final_destination',
+        'porth_delivered',
+        'porth_free_time_at_destination',
+        'porth_manual_tracking',
+        'porth_itinerary',
         'last_porth_sync_at',
     ];
 
@@ -236,8 +376,7 @@ class PurchaseOrder extends Model implements HasMedia
         'update_date_po' => 'date',
         'confirm_update_date_po' => 'boolean',
 
-
-        //New casts for OLO
+        // New casts for OLO
         'is_dropship' => 'boolean',
         'applies_tlc' => 'boolean',
         'applies_af' => 'boolean',
@@ -257,42 +396,42 @@ class PurchaseOrder extends Model implements HasMedia
 
         'consolidator_name' => 'string',
         'port_of_loading_validated' => 'boolean',
-        'has_facture_merca'         => 'boolean',
-        'used_rate_ok'              => 'boolean',
-        'uses_bonded_warehouse'     => 'boolean',
-        'apply_technical_note'      => 'boolean',
-        'etd_initial_validated'     => 'boolean',
-        'date_etd_initial'                 => 'datetime',
-        'inspection_date'                  => 'datetime',
-        'vgm_cut_date'                     => 'datetime',
-        'balance_payment_date'             => 'datetime',
-        'local_charges_payment_date'       => 'datetime',
-        'bonded_warehouse_enter'           => 'datetime',
-        'bonded_warehouse_exit'            => 'datetime',
-        'receipt_note_date'                => 'datetime',
-        'estimated_dc_availability_date'   => 'datetime',
-        'retail_group'      => 'string',
-        'customer_type'     => 'string',
-        'trading_company'   => 'string',
-        'service_provider'  => 'string',
-        'customs_dua'       => 'string',
-        'invoice'           => 'string',
-        'factura_merca'     => 'string',
-        'case_number_file'  => 'string',
-        'receipt_note'      => 'string',
-        'visibility_notes'  => 'string',
+        'has_facture_merca' => 'boolean',
+        'used_rate_ok' => 'boolean',
+        'uses_bonded_warehouse' => 'boolean',
+        'apply_technical_note' => 'boolean',
+        'etd_initial_validated' => 'boolean',
+        'date_etd_initial' => 'datetime',
+        'inspection_date' => 'datetime',
+        'vgm_cut_date' => 'datetime',
+        'balance_payment_date' => 'datetime',
+        'local_charges_payment_date' => 'datetime',
+        'bonded_warehouse_enter' => 'datetime',
+        'bonded_warehouse_exit' => 'datetime',
+        'receipt_note_date' => 'datetime',
+        'estimated_dc_availability_date' => 'datetime',
+        'retail_group' => 'string',
+        'customer_type' => 'string',
+        'trading_company' => 'string',
+        'service_provider' => 'string',
+        'customs_dua' => 'string',
+        'invoice' => 'string',
+        'factura_merca' => 'string',
+        'case_number_file' => 'string',
+        'receipt_note' => 'string',
+        'visibility_notes' => 'string',
         'Invoice_amount' => 'decimal:2',
         'freight_amount' => 'decimal:2',
-        'container_free_days'   => 'integer',
-        'etd_dates_difference'  => 'integer',
-        'eta_dates_difference'  => 'integer',
+        'container_free_days' => 'integer',
+        'etd_dates_difference' => 'integer',
+        'eta_dates_difference' => 'integer',
         'date_invoice_received' => 'datetime',
         'date_vendor_document_received' => 'datetime',
         'forwader_date' => 'datetime',
         'cbm' => 'decimal:2',
         'dif_load_date' => 'datetime',
         'emision_date_po' => 'date',
-        
+
         // Casts de Porth
         'porth_vessel_voyage' => 'array',
         'porth_manual_tracking' => 'boolean',
@@ -305,6 +444,7 @@ class PurchaseOrder extends Model implements HasMedia
         'porth_at_destination_port' => 'datetime',
         'porth_to_final_destination' => 'datetime',
         'porth_delivered' => 'datetime',
+        'porth_itinerary' => 'array',
         'last_porth_sync_at' => 'datetime',
     ];
 
@@ -313,7 +453,7 @@ class PurchaseOrder extends Model implements HasMedia
         'shippingDocuments',
         'products',
         'boardingDocuments',
-        'trackingData'
+        'trackingData',
     ];
 
     /**
@@ -326,10 +466,11 @@ class PurchaseOrder extends Model implements HasMedia
 
     /**
      * Get the vendor that owns the purchase order.
+     * vendor_id es FK a vendors.id (no vendo_code).
      */
     public function vendor(): BelongsTo
     {
-        return $this->belongsTo(Vendor::class);
+        return $this->belongsTo(Vendor::class, 'vendor_id', 'id');
     }
 
     /**
@@ -393,11 +534,37 @@ class PurchaseOrder extends Model implements HasMedia
     }
 
     /**
+     * Indica si la PO está en etapa Kanban "Ingresada" o "Anulada", o anulada por soft delete.
+     * Criterio alineado con {@see self::scopeOperationalForDashboard()}.
+     */
+    public function isKanbanIngresadaOrAnulada(): bool
+    {
+        if ($this->trashed()) {
+            return true;
+        }
+
+        $status = $this->relationLoaded('kanbanStatus')
+            ? $this->kanbanStatus
+            : $this->kanbanStatus()->first();
+
+        if (! $status) {
+            return false;
+        }
+
+        $slug = strtolower(trim((string) ($status->slug ?? '')));
+        $name = strtolower(trim((string) ($status->name ?? '')));
+        $blocked = ['ingresada', 'anulada'];
+
+        return in_array($slug, $blocked, true) || in_array($name, $blocked, true);
+    }
+
+    /**
      * Move the purchase order to a new kanban status.
      */
     public function moveToKanbanStatus(KanbanStatus $status): self
     {
         $this->update(['kanban_status_id' => $status->id]);
+
         return $this;
     }
 
@@ -409,6 +576,7 @@ class PurchaseOrder extends Model implements HasMedia
         if ($this->kanbanStatus && $nextStatus = $this->kanbanStatus->nextStatus()) {
             return $this->moveToKanbanStatus($nextStatus);
         }
+
         return null;
     }
 
@@ -420,6 +588,7 @@ class PurchaseOrder extends Model implements HasMedia
         if ($this->kanbanStatus && $prevStatus = $this->kanbanStatus->previousStatus()) {
             return $this->moveToKanbanStatus($prevStatus);
         }
+
         return null;
     }
 
@@ -427,8 +596,6 @@ class PurchaseOrder extends Model implements HasMedia
      * Determine if the purchase order is consolidable based on weight.
      *
      * Restricciones eliminadas - todas las órdenes son consolidables sin restricciones de peso
-     *
-     * @return bool
      */
     public function isConsolidable(): bool
     {
@@ -438,8 +605,6 @@ class PurchaseOrder extends Model implements HasMedia
 
     /**
      * Get the total weight in kg.
-     *
-     * @return float
      */
     public function getTotalWeightAttribute(): float
     {
@@ -451,7 +616,7 @@ class PurchaseOrder extends Model implements HasMedia
      *
      * Restricciones eliminadas - todas las órdenes pueden consolidarse sin restricciones
      *
-     * @param \Illuminate\Support\Collection $orders
+     * @param  \Illuminate\Support\Collection  $orders
      * @return bool
      */
     public static function canBeConsolidatedTogether($orders)
@@ -490,6 +655,7 @@ class PurchaseOrder extends Model implements HasMedia
 
     /**
      * Legacy method for backward compatibility
+     *
      * @deprecated Use authorizations() from HasAuthorizations trait instead
      */
     public function authorizationRequests(): MorphMany
@@ -512,50 +678,51 @@ class PurchaseOrder extends Model implements HasMedia
     public function calculateArrivalStatus(): array
     {
         $transitService = app(\App\Services\TransitTimeService::class);
-        
+
         // Obtener país de origen (del vendor) y destino (de company)
         $originCountry = $this->vendor?->country;
         $destinationCountry = $this->company?->country;
-        
+
         // Obtener tiempo de tránsito esperado
         $expectedTransitDays = $transitService->getTransitDays($originCountry, $destinationCountry);
-        
+
         // Fecha de salida real (ATD)
         $atd = $this->date_atd;
-        
+
         // Si tenemos ATD y tiempos esperados, calcular basándose en la matriz
         if ($atd && $expectedTransitDays !== null) {
             $expectedArrival = \Illuminate\Support\Carbon::parse($atd)->addDays($expectedTransitDays);
-            
+
             // Usar ATA si existe, si no usar la fecha actual
             $compareDate = $this->date_ata ? \Illuminate\Support\Carbon::parse($this->date_ata) : now();
-            
+
             if ($compareDate->startOfDay()->gt($expectedArrival->startOfDay())) {
                 // Atrasado respecto al tiempo esperado
                 $delayDays = $expectedArrival->diffInDays($compareDate);
+
                 return [
                     'arrival_status' => 'Atrasado',
                     'delay_days' => (int) $delayDays,
-                    'expected_transit_days' => $expectedTransitDays
+                    'expected_transit_days' => $expectedTransitDays,
                 ];
             }
-            
+
             return [
                 'arrival_status' => 'A tiempo',
                 'delay_days' => 0,
-                'expected_transit_days' => $expectedTransitDays
+                'expected_transit_days' => $expectedTransitDays,
             ];
         }
-        
+
         // Fallback: usar ETA Variable si no hay ATD o tiempos esperados
         // date_eta_updated no existe en BD, usar date_eta (ETA Variable)
         $eta = $this->date_eta ?? null;
 
-        if (!$eta) {
+        if (! $eta) {
             return [
                 'arrival_status' => null,
                 'delay_days' => null,
-                'expected_transit_days' => $expectedTransitDays
+                'expected_transit_days' => $expectedTransitDays,
             ];
         }
 
@@ -565,24 +732,23 @@ class PurchaseOrder extends Model implements HasMedia
         if ($today > $etaDate) {
             // Atrasado respecto a ETA
             $delayDays = $etaDate->diffInDays($today);
+
             return [
                 'arrival_status' => 'Atrasado',
                 'delay_days' => (int) $delayDays,
-                'expected_transit_days' => $expectedTransitDays
+                'expected_transit_days' => $expectedTransitDays,
             ];
         }
-        
+
         return [
             'arrival_status' => 'A tiempo',
             'delay_days' => 0,
-            'expected_transit_days' => $expectedTransitDays
+            'expected_transit_days' => $expectedTransitDays,
         ];
     }
 
     /**
      * Actualiza automáticamente el estado de llegada y días de retraso
-     *
-     * @return bool
      */
     public function updateArrivalStatus(): bool
     {
@@ -592,5 +758,86 @@ class PurchaseOrder extends Model implements HasMedia
         $this->delay_days = $status['delay_days'];
 
         return $this->save();
+    }
+
+    /**
+     * Boot method to add event listeners
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Disparar sincronización automática cuando se crea o actualiza
+        static::saved(function ($purchaseOrder) {
+            static::dispatchPorthSync($purchaseOrder);
+        });
+
+        static::updated(function ($purchaseOrder) {
+            static::dispatchPorthSync($purchaseOrder);
+        });
+    }
+
+    /**
+     * PO operativas para dashboard y export «activas»: excluye etapas Ingresada y Anulada (slug/nombre).
+     * Exige fila de kanban asociada, alineado con ActivePurchaseOrdersExport.
+     */
+    public function scopeOperationalForDashboard(Builder $query): Builder
+    {
+        return $query->whereHas('kanbanStatus', function (Builder $q) {
+            $q->whereRaw("LOWER(COALESCE(slug, '')) NOT IN ('ingresada', 'anulada')")
+                ->whereRaw("LOWER(COALESCE(name, '')) NOT IN ('ingresada', 'anulada')");
+        });
+    }
+
+    /**
+     * Disparar sincronización con Porth
+     */
+    protected static function dispatchPorthSync($purchaseOrder)
+    {
+        // Verificar si la sincronización está habilitada
+        $syncEnabled = config('services.porth.sync_enabled', true);
+        if (! $syncEnabled) {
+            \Log::info('Porth sync disabled by configuration', [
+                'purchase_order_id' => $purchaseOrder->id,
+                'sync_enabled' => $syncEnabled,
+            ]);
+
+            return;
+        }
+
+        // Verificar si hay campos que requieren sincronización
+        // Solo container_number activa creación/vinculación en Porth (mbl_number y tracking_id son solo datos de la PO)
+        $syncFields = ['container_number'];
+        $hasChanges = false;
+        $hasValidIdentifier = false;
+
+        // Verificar si hay algún identificador válido
+        foreach ($syncFields as $field) {
+            if (! empty($purchaseOrder->$field)) {
+                $hasValidIdentifier = true;
+                // Si este campo cambió, es un cambio válido
+                if ($purchaseOrder->isDirty($field)) {
+                    $hasChanges = true;
+                    break;
+                }
+            }
+        }
+
+        // Sincronizar si:
+        // 1. Cambió un campo relevante Y no tiene porth_id, O
+        // 2. Tiene un identificador válido pero no tiene porth_id (por si acaso no se sincronizó antes)
+        if (($hasChanges || $hasValidIdentifier) && empty($purchaseOrder->porth_id)) {
+            \Log::info('Dispatching Porth sync job for PurchaseOrder', [
+                'purchase_order_id' => $purchaseOrder->id,
+                'changed_fields' => array_filter($syncFields, function ($field) use ($purchaseOrder) {
+                    return $purchaseOrder->isDirty($field) && ! empty($purchaseOrder->$field);
+                }),
+            ]);
+
+            // Disparar job de sincronización con delay
+            \App\Jobs\PorthSyncJob::dispatch($purchaseOrder->id, get_class($purchaseOrder))
+                ->onQueue('porth-sync')
+                ->delay(now()->addSeconds(5));
+        }
     }
 }

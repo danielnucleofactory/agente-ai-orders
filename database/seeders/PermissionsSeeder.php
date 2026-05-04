@@ -18,6 +18,11 @@ class PermissionsSeeder extends Seeder
 
         // Definir todos los permisos del sistema
         $permissions = [
+            // Sistema (UI de tablas / listados; suelen asignarse a roles operativos)
+            'read' => 'Leer listados (read)',
+            'export' => 'Exportar desde listados (export)',
+            'filter' => 'Buscar y filtrar en listados (filter)',
+
             // Dashboard
             'has_view_dashboard' => 'Ver dashboard principal',
 
@@ -118,6 +123,18 @@ class PermissionsSeeder extends Seeder
             'has_edit_roles' => 'Editar roles',
             'has_delete_roles' => 'Eliminar roles',
 
+            // Empresas (típicamente solo Super Administrador)
+            'has_view_companies' => 'Ver gestión de empresas',
+            'has_create_companies' => 'Crear empresas',
+            'has_edit_companies' => 'Editar empresas',
+            'has_delete_companies' => 'Eliminar empresas',
+
+            // Maestros (típicamente solo Super Administrador)
+            'has_view_maestros' => 'Ver maestros del sistema',
+            'has_create_maestros' => 'Crear registros en maestros',
+            'has_edit_maestros' => 'Editar registros en maestros',
+            'has_delete_maestros' => 'Eliminar registros en maestros',
+
             // Configuraciones - Sesiones
             'has_view_sessions' => 'Ver sesiones activas',
             'has_manage_sessions' => 'Gestionar sesiones de usuarios',
@@ -167,6 +184,7 @@ class PermissionsSeeder extends Seeder
         // Rol Administrador - Permisos de gestión sin eliminar usuarios/roles críticos
         $admin = Role::firstOrCreate(['name' => 'Administrador']);
         $adminPermissions = [
+            'read', 'export', 'filter',
             'has_view_dashboard',
             'has_create_orders', 'has_view_orders', 'has_show_orders', 'has_edit_orders',
             'has_view_tracking', 'has_view_consolidated_orders', 'has_view_kanban', 'has_manage_kanban',
@@ -197,6 +215,7 @@ class PermissionsSeeder extends Seeder
         // Rol Operador - Permisos operativos sin gestión de usuarios/configuraciones
         $operator = Role::firstOrCreate(['name' => 'Operador']);
         $operatorPermissions = [
+            'read', 'filter',
             'has_view_dashboard',
             'has_create_orders', 'has_view_orders', 'has_show_orders', 'has_edit_orders',
             'has_view_tracking', 'has_view_consolidated_orders', 'has_view_kanban',
@@ -218,6 +237,7 @@ class PermissionsSeeder extends Seeder
         // Rol Lector - Solo permisos de visualización
         $reader = Role::firstOrCreate(['name' => 'Lector']);
         $readerPermissions = [
+            'read', 'filter',
             'has_view_dashboard',
             'has_view_orders', 'has_show_orders',
             'has_view_tracking', 'has_view_consolidated_orders', 'has_view_kanban',
@@ -238,6 +258,7 @@ class PermissionsSeeder extends Seeder
         // Rol Aprobador - Permisos de visualización + aprobaciones
         $approver = Role::firstOrCreate(['name' => 'Aprobador']);
         $approverPermissions = [
+            'read', 'filter',
             'has_view_dashboard',
             'has_view_orders', 'has_show_orders',
             'has_view_tracking', 'has_view_consolidated_orders', 'has_view_kanban',

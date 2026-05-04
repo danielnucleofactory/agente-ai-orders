@@ -61,13 +61,20 @@ class PorthTranslationService
     ];
 
     /**
-     * Mapeo de tipo de transporte Porth → Maestros
+     * Mapeo de tipo de transporte Porth → Maestros.
+     * Valores Maestros: TERRESTRE, MARITIMO, AÉREO.
+     * Incluye variaciones (con/sin acento) que Porth puede enviar.
      */
     const FREIGHT_TYPE_MAP = [
         'ocean' => 'MARITIMO',
-        'air' => 'AEREO',
+        'maritimo' => 'MARITIMO',
+        'marítimo' => 'MARITIMO',
+        'air' => 'AÉREO',
+        'aereo' => 'AÉREO',
+        'aéreo' => 'AÉREO',
         'road' => 'TERRESTRE',
         'ground' => 'TERRESTRE',
+        'terrestre' => 'TERRESTRE',
     ];
 
     /**
@@ -107,13 +114,32 @@ class PorthTranslationService
      * @param string|null $porthName Nombre del puerto de Porth (ej: "Shanghai", "New York")
      * @return string|null Formato: "NOMBRE, PAÍS" (ej: "SHANGHAI, CHINA")
      */
-    public function translatePort(?string $porthCode, ?string $porthName = null): ?string
+    /**
+     * Resuelve nombre maestro sin log (útil en listados con muchas filas, p. ej. dashboard KPI).
+     */
+    /**
+     * ISO 3166-1 alpha-2 del país del puerto según código UNLOC (CSV maestro).
+     */
+    public function getPortCountryIso2(?string $unlocCode): ?string
+    {
+        if (empty($unlocCode)) {
+            return null;
+        }
+
+        $port = $this->findPortByCode($unlocCode);
+        if ($port === null || empty($port['country'])) {
+            return null;
+        }
+
+        return strtoupper(trim((string) $port['country']));
+    }
+
+    public function translatePortQuiet(?string $porthCode, ?string $porthName = null): ?string
     {
         if (empty($porthCode) && empty($porthName)) {
             return null;
         }
 
-        // Intentar buscar por código primero
         if ($porthCode) {
             $port = $this->findPortByCode($porthCode);
             if ($port) {
@@ -121,7 +147,6 @@ class PorthTranslationService
             }
         }
 
-        // Si no hay código o no se encontró, intentar por nombre
         if ($porthName) {
             $port = $this->findPortByName($porthName);
             if ($port) {
@@ -129,17 +154,26 @@ class PorthTranslationService
             }
         }
 
-        Log::warning('porth_translation:port_not_found', [
-            'porth_code' => $porthCode,
-            'porth_name' => $porthName,
-        ]);
-
         return null;
+    }
+
+    public function translatePort(?string $porthCode, ?string $porthName = null): ?string
+    {
+        $result = $this->translatePortQuiet($porthCode, $porthName);
+
+        if ($result === null && (! empty($porthCode) || ! empty($porthName))) {
+            Log::warning('porth_translation:port_not_found', [
+                'porth_code' => $porthCode,
+                'porth_name' => $porthName,
+            ]);
+        }
+
+        return $result;
     }
 
     /**
      * Traduce código de naviera Porth a nombre Maestros
-     * 
+     *
      * @param string|null $carrierCode Código SCAC (ej: MAEU, MEDU, CMDU)
      * @return string|null Nombre de la naviera en formato Maestros
      */
@@ -150,7 +184,7 @@ class PorthTranslationService
         }
 
         $shippingLine = $this->findShippingLineByCode($carrierCode);
-        
+
         if ($shippingLine) {
             return strtoupper(trim($shippingLine['name']));
         }
@@ -163,10 +197,67 @@ class PorthTranslationService
     }
 
     /**
-     * Traduce tipo de transporte Porth a formato Maestros
-     * 
-     * @param string|null $freightType Tipo de transporte de Porth (ocean, air, road, ground)
-     * @return string|null Formato Maestros (MARITIMO, AEREO, TERRESTRE)
+     * Alias comunes de navieras que el usuario puede escribir (ej: "MAERSK") pero que
+     * en el CSV aparecen como "Maersk Line". Garantiza que variaciones cortas funcionen.
+     */
+    private const CARRIER_ALIASES = [
+        'MAERSK' => 'MAEU',
+        'MSC' => 'MEDU',
+        'CMA CGM' => 'CMDU',
+        'HAPAG LLOYD' => 'HLCU',
+        'EVERGREEN' => 'EGLV',
+        'COSCO' => 'COSU',
+        'ONE' => 'ONEY',
+        'HMM' => 'HDMU',
+        'YANG MING' => 'YMLU',
+        'ZIM' => 'ZIMU',
+    ];
+
+    /**
+     * Obtiene el carrierCode (SCAC) a partir del nombre de la naviera en Maestros.
+     * Para usar al crear embarques en Porth; si no se envía carrierCode, Porth puede no traer la información correcta.
+     * Busca: 1) alias explícitos (MAERSK→MAEU), 2) match exacto en CSV, 3) match parcial (MAERSK en "Maersk Line").
+     *
+     * @param string|null $shippingLineName Nombre de la línea (ej: "MAERSK", "CMA CGM", "MSC")
+     * @return string|null Código SCAC (ej: MAEU, CMDU, MEDU) o null si no hay match
+     */
+    public function getCarrierCodeFromShippingLineName(?string $shippingLineName): ?string
+    {
+        if (empty($shippingLineName)) {
+            return null;
+        }
+
+        $normalized = strtoupper(trim($shippingLineName));
+
+        // 1) Alias explícitos para variaciones comunes (ej: "MAERSK" → MAEU)
+        if (isset(self::CARRIER_ALIASES[$normalized])) {
+            return self::CARRIER_ALIASES[$normalized];
+        }
+        $lines = $this->getShippingLinesCache();
+
+        $exact = $lines->first(function ($line) use ($normalized) {
+            return strtoupper(trim($line['name'])) === $normalized;
+        });
+        if ($exact) {
+            return $exact['code'];
+        }
+
+        $partial = $lines->first(function ($line) use ($normalized) {
+            $name = strtoupper(trim($line['name']));
+            return $name === $normalized
+                || str_contains($name, $normalized)
+                || str_contains($normalized, $name);
+        });
+
+        return $partial ? $partial['code'] : null;
+    }
+
+    /**
+     * Traduce tipo de transporte Porth a formato Maestros.
+     * Valores Maestros: TERRESTRE, MARITIMO, AÉREO.
+     *
+     * @param string|null $freightType Tipo de transporte de Porth (ocean, air, maritimo, MARÍTIMO, etc.)
+     * @return string|null Formato Maestros (MARITIMO, AÉREO, TERRESTRE)
      */
     public function translateFreightType(?string $freightType): ?string
     {
@@ -175,8 +266,31 @@ class PorthTranslationService
         }
 
         $normalized = strtolower(trim($freightType));
-        
-        return self::FREIGHT_TYPE_MAP[$normalized] ?? null;
+        $result = self::FREIGHT_TYPE_MAP[$normalized] ?? null;
+
+        // Fallback: intentar sin acentos por si Porth envía variaciones
+        if ($result === null) {
+            $withoutAccents = $this->removeAccents($normalized);
+            foreach (self::FREIGHT_TYPE_MAP as $key => $value) {
+                if ($this->removeAccents($key) === $withoutAccents) {
+                    return $value;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Quita acentos de un string para comparación
+     */
+    protected function removeAccents(string $value): string
+    {
+        $map = [
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n',
+            'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u', 'Ñ' => 'n',
+        ];
+        return strtr(mb_strtolower($value, 'UTF-8'), $map);
     }
 
     /**
@@ -315,9 +429,9 @@ class PorthTranslationService
         }
 
         // Saltar header
-        fgetcsv($handle, 0, ';');
+        fgetcsv($handle, 0, ';', '"', '');
 
-        while (($row = fgetcsv($handle, 0, ';')) !== false) {
+        while (($row = fgetcsv($handle, 0, ';', '"', '')) !== false) {
             if (count($row) < 7 || empty($row[0]) || empty($row[1])) {
                 continue;
             }
@@ -368,9 +482,9 @@ class PorthTranslationService
         }
 
         // Saltar header
-        fgetcsv($handle, 0, ';');
+        fgetcsv($handle, 0, ';', '"', '');
 
-        while (($row = fgetcsv($handle, 0, ';')) !== false) {
+        while (($row = fgetcsv($handle, 0, ';', '"', '')) !== false) {
             if (count($row) < 11 || empty($row[8]) || empty($row[10])) {
                 continue;
             }
@@ -398,6 +512,17 @@ class PorthTranslationService
         Log::info('porth_translation:shipping_lines_loaded', ['count' => $shippingLines->count()]);
 
         return $shippingLines;
+    }
+
+    /**
+     * Devuelve todas las navieras (nombre + código) para uso en Porth u otros listados.
+     * Códigos tipo SCAC usados como carrierCode en creación de embarques Porth.
+     *
+     * @return \Illuminate\Support\Collection<int, array{name: string, code: string}>
+     */
+    public function getShippingLinesForExport(): Collection
+    {
+        return $this->getShippingLinesCache()->values();
     }
 
     /**

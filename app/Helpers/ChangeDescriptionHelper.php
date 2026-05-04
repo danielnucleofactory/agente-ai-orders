@@ -14,6 +14,50 @@ use Carbon\Carbon;
 class ChangeDescriptionHelper
 {
     /**
+     * Fechas de embarque (Porth / ETD-ETA-ATA-ATD): día según valor almacenado, sin TZ del usuario.
+     */
+    protected static array $purchaseOrderDateOnlyFields = [
+        'date_etd',
+        'date_atd',
+        'date_eta',
+        'date_ata',
+        'date_eta_initial',
+        'date_etd_initial',
+        'date_eta_updated',
+        'date_etd_updated',
+        'porth_first_eta',
+        'porth_first_etd',
+        'porth_ready',
+        'porth_to_origin_port',
+        'porth_at_origin_port',
+        'porth_in_transit',
+        'porth_at_destination_port',
+        'porth_to_final_destination',
+        'porth_delivered',
+    ];
+
+    /**
+     * Fechas de embarque en documento de envío: mismo criterio que PO.
+     */
+    protected static array $shippingDocumentDateOnlyFields = [
+        'estimated_departure_date',
+        'estimated_arrival_date',
+        'actual_departure_date',
+        'actual_arrival_date',
+        'date_etd_updated',
+        'date_eta_updated',
+        'porth_first_eta',
+        'porth_first_etd',
+        'porth_ready',
+        'porth_to_origin_port',
+        'porth_at_origin_port',
+        'porth_in_transit',
+        'porth_at_destination_port',
+        'porth_to_final_destination',
+        'porth_delivered',
+    ];
+
+    /**
      * Mapeo de campos técnicos a nombres en español para Purchase Orders
      */
     protected static array $purchaseOrderFieldLabels = [
@@ -97,7 +141,7 @@ class ChangeDescriptionHelper
         'tracking_id' => 'ID de Rastreo',
         'container_number' => 'Número de Contenedor',
         'container_type' => 'Tipo de Contenedor',
-        'mbl_number' => 'Número MBL',
+        'mbl_number' => 'Documento de tránsito',
         'shipping_line' => 'Línea de Envío',
         'arrival_port' => 'Puerto de Llegada',
         'departure_port' => 'Puerto de Salida',
@@ -112,6 +156,36 @@ class ChangeDescriptionHelper
         'category' => 'Categoría',
         'notes' => 'Notas',
         'total_amount' => 'Monto Total',
+
+        // Documentos y facturación
+        'cargo_invoice_number' => 'Factura Flete',
+        'factura_merca' => 'Factura Mercancía',
+        'invoice' => 'Factura',
+        'customs_dua' => 'DUA Internamiento',
+        'case_number_file' => 'Expediente',
+        'receipt_note' => 'Nota de Recibo',
+        'visibility_notes' => 'Notas de Visibilidad',
+
+        // Comercialización
+        'retail_group' => 'Grupo Repositor',
+        'customer_type' => 'Tipo de Cliente',
+        'trading_company' => 'Cliente',
+        'service_provider' => 'Proveedor de Servicio',
+
+        // Dimensiones y cantidades
+        'cbm' => 'CBM',
+        'weight_kg' => 'Peso (kg)',
+        'weight_lb' => 'Peso (lb)',
+        'pallet_quantity' => 'Cantidad estimada de pallets',
+        'pallet_quantity_real' => 'Cantidad Real de Pallets',
+        'container_free_days' => 'Días Libres de Contenedor',
+
+        // Flags
+        'applies_tlc' => 'Aplica TLC',
+        'has_facture_merca' => 'Tiene Factura Mercancía',
+        'used_rate_ok' => 'Tarifa Utilizada OK',
+        'uses_bonded_warehouse' => 'Usa Almacén Fiscal',
+        'apply_technical_note' => 'Aplica Nota Técnica',
     ];
 
     /**
@@ -148,7 +222,7 @@ class ChangeDescriptionHelper
         'tracking_id' => 'ID de Rastreo',
         'container_number' => 'Número de Contenedor',
         'container_type' => 'Tipo de Contenedor',
-        'mbl_number' => 'Número MBL',
+        'mbl_number' => 'Documento de tránsito',
         'hbl_number' => 'Número HBL',
         'booking_code' => 'Código de Booking',
         'shipping_line' => 'Línea de Envío',
@@ -191,6 +265,14 @@ class ChangeDescriptionHelper
             $oldValue = $oldValues[$field] ?? null;
             
             if ($oldValue === $newValue) {
+                continue;
+            }
+            // Para campos numéricos/montos, comparar valores normalizados (evita "12312.00" vs 12312)
+            if (self::valuesAreNumericEqual($oldValue, $newValue)) {
+                continue;
+            }
+            // Omitir cambios ruidosos: null → 0 en montos (valores por defecto del formulario)
+            if (self::isNoiseChange($field, $oldValue, $newValue)) {
                 continue;
             }
             
@@ -244,7 +326,7 @@ class ChangeDescriptionHelper
         // Manejar relaciones
         if ($field === 'vendor_id') {
             $vendor = Vendor::find($value);
-            return $vendor ? $vendor->name : "ID: {$value}";
+            return $vendor ? ($vendor->vendo_code ?? $vendor->name) : "ID: {$value}";
         }
         
         if ($field === 'ship_to_id') {
@@ -264,7 +346,8 @@ class ChangeDescriptionHelper
         
         if ($field === 'kanban_status_id') {
             $status = KanbanStatus::find($value);
-            return $status ? $status->name : "ID: {$value}";
+            // Usar name (ej. "Recibiendo CDI") en lugar de slug (ej. "de-recibiendo-cdi-1") para historial legible
+            return $status ? ($status->name ?? $status->slug) : "ID: {$value}";
         }
         
         // Manejar estados
@@ -272,6 +355,18 @@ class ChangeDescriptionHelper
             return self::$purchaseOrderStatusLabels[$value] ?? $value;
         }
         
+        if (in_array($field, self::$purchaseOrderDateOnlyFields, true)) {
+            if ($value) {
+                try {
+                    return formatDateOnly($value);
+                } catch (\Exception $e) {
+                    return (string) $value;
+                }
+            }
+
+            return 'N/A';
+        }
+
         // Manejar fechas
         if (str_starts_with($field, 'date_') || str_ends_with($field, '_date') || $field === 'order_date' || $field === 'emision_date_po' || $field === 'update_date_po') {
             if ($value) {
@@ -290,6 +385,12 @@ class ChangeDescriptionHelper
                 return number_format((float) $value, 2, '.', ',') . ' USD';
             }
         }
+
+        // Manejar booleanos (flags del formulario)
+        $booleanFields = ['applies_tlc', 'has_facture_merca', 'used_rate_ok', 'uses_bonded_warehouse', 'apply_technical_note', 'carga_lista_validada'];
+        if (in_array($field, $booleanFields, true)) {
+            return ($value === true || $value === 1 || $value === '1') ? 'Sí' : 'No';
+        }
         
         // Valor por defecto
         return (string) $value;
@@ -307,7 +408,8 @@ class ChangeDescriptionHelper
         // Manejar relaciones
         if ($field === 'kanban_status_id') {
             $status = KanbanStatus::find($value);
-            return $status ? $status->name : "ID: {$value}";
+            // Usar name en lugar de slug para historial legible
+            return $status ? ($status->name ?? $status->slug) : "ID: {$value}";
         }
         
         // Manejar estados
@@ -319,6 +421,18 @@ class ChangeDescriptionHelper
             return $value ?: 'N/A';
         }
         
+        if (in_array($field, self::$shippingDocumentDateOnlyFields, true)) {
+            if ($value) {
+                try {
+                    return formatDateOnly($value);
+                } catch (\Exception $e) {
+                    return (string) $value;
+                }
+            }
+
+            return 'N/A';
+        }
+
         // Manejar fechas
         if (str_starts_with($field, 'date_') || str_ends_with($field, '_date') || $field === 'creation_date') {
             if ($value) {
@@ -341,6 +455,80 @@ class ChangeDescriptionHelper
         
         // Valor por defecto
         return (string) $value;
+    }
+
+    /**
+     * Detecta cambios "ruidosos": null/empty → 0 en campos numéricos/montos.
+     * No representan una modificación real del usuario, solo valores por defecto del formulario.
+     */
+    public static function isNoiseChange(string $field, $oldValue, $newValue): bool
+    {
+        $isEmpty = $oldValue === null || $oldValue === '' || $oldValue === false;
+        if (!$isEmpty) {
+            return false;
+        }
+        $isZero = $newValue === 0 || $newValue === 0.0 || $newValue === '0' || $newValue === '0.00';
+        if (!$isZero && is_numeric($newValue) && (float) $newValue === 0.0) {
+            $isZero = true;
+        }
+        if (!$isZero) {
+            return false;
+        }
+        $numericFields = [
+            'saving_pickup', 'saving_executed', 'saving_not_executed',
+            'Invoice_amount', 'freight_amount', 'net_total', 'total', 'additional_cost',
+            'insurance_cost', 'ground_transport_cost_1', 'ground_transport_cost_2',
+            'cost_nationalization', 'cost_ofr_estimated', 'cost_ofr_real',
+            'estimated_pallet_cost', 'real_cost_estimated_po', 'real_cost_real_po',
+            'other_costs', 'other_expenses', 'savings_ofr_fcl', 'total_amount',
+            'cbm', 'weight_kg', 'weight_lb',
+            'container_free_days',
+        ];
+
+        return in_array($field, $numericFields, true);
+    }
+
+    /**
+     * Filtra cambios ruidosos (null→0 en montos) de los arrays para almacenar en BD.
+     * Usado por el Observer para que el modal "Detalles de la Actividad" solo muestre cambios reales.
+     *
+     * @return array{0: array, 1: array} [oldValues filtrados, newValues filtrados]
+     */
+    public static function filterNoiseChangesForStorage(array $oldValues, array $newValues): array
+    {
+        $filteredOld = [];
+        $filteredNew = [];
+        foreach ($newValues as $field => $newValue) {
+            $oldValue = $oldValues[$field] ?? null;
+            if (self::isNoiseChange($field, $oldValue, $newValue)) {
+                continue;
+            }
+            $filteredOld[$field] = $oldValue;
+            $filteredNew[$field] = $newValue;
+        }
+
+        return [$filteredOld, $filteredNew];
+    }
+
+    /**
+     * Compara dos valores como numéricos para detectar igualdad real.
+     * Evita mostrar cambios falsos como "12312.00" vs 12312.
+     */
+    protected static function valuesAreNumericEqual($a, $b): bool
+    {
+        if ($a === $b) {
+            return true;
+        }
+        if (is_numeric($a) && is_numeric($b)) {
+            return round((float) $a, 2) === round((float) $b, 2);
+        }
+        if (is_string($a) && is_numeric(trim($a)) && is_numeric($b)) {
+            return round((float) trim($a), 2) === round((float) $b, 2);
+        }
+        if (is_numeric($a) && is_string($b) && is_numeric(trim($b))) {
+            return round((float) $a, 2) === round((float) trim($b), 2);
+        }
+        return false;
     }
 
     /**

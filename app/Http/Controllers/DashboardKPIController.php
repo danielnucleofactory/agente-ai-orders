@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PurchaseOrder;
 use App\Services\DashboardKPIService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -95,6 +96,10 @@ class DashboardKPIController extends Controller
     public function transshipment(Request $request): JsonResponse
     {
         $filters = $this->extractFilters($request);
+        // Para performance: por defecto no enviar detalles; se piden bajo demanda.
+        $filters['include_details'] = $request->boolean('include_details', false);
+        $filters['details_port'] = $request->input('details_port');
+        $filters['details_limit'] = (int) $request->input('details_limit', 400);
         $data = $this->kpiService->getPOsInTransshipment($filters);
 
         return response()->json([
@@ -347,15 +352,20 @@ class DashboardKPIController extends Controller
                 $stagesQuery->where('kanban_board_id', 1);
             }
 
+            $stagesQuery
+                ->whereRaw("LOWER(COALESCE(slug, '')) NOT IN ('ingresada', 'anulada')")
+                ->whereRaw("LOWER(COALESCE(name, '')) NOT IN ('ingresada', 'anulada')");
+
             $stages = $stagesQuery->select('id', 'name')
-                ->orderBy('name')
+                ->orderByRaw('LOWER(name)')
                 ->get()
-                ->map(function($stage) {
+                ->map(function ($stage) {
                     return ['id' => $stage->id, 'name' => $stage->name];
                 });
 
             // Obtener rutas logísticas
             $routes = \App\Models\PurchaseOrder::query()
+                ->operationalForDashboard()
                 ->when($companyId, function ($q) use ($companyId) {
                     $q->where('company_id', $companyId);
                 })
@@ -366,10 +376,13 @@ class DashboardKPIController extends Controller
                 ->map(function ($route) {
                     return ['id' => $route, 'name' => $route];
                 })
+                ->values()
+                ->sort(fn ($a, $b) => strnatcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? '')))
                 ->values();
 
             // Obtener clientes desde las POs (trading_company en purchase_orders)
             $clients = \App\Models\PurchaseOrder::query()
+                ->operationalForDashboard()
                 ->when($companyId, function ($q) use ($companyId) {
                     $q->where('company_id', $companyId);
                 })
@@ -381,12 +394,32 @@ class DashboardKPIController extends Controller
                 ->map(function ($tradingCompany) {
                     return [
                         'id' => $tradingCompany,
-                        'name' => $tradingCompany
+                        'name' => $tradingCompany,
                     ];
                 })
                 ->values()
-                ->sortBy('name')
+                ->sort(fn ($a, $b) => strnatcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? '')))
                 ->values();
+
+            // PO operativas: asumimos order_date siempre presente; MIN/MAX ignoran filas nulas si las hubiera.
+            $orderDateStats = PurchaseOrder::query()
+                ->operationalForDashboard()
+                ->when($companyId, function ($q) use ($companyId) {
+                    $q->where('company_id', $companyId);
+                })
+                ->selectRaw('MIN(order_date) as min_order_date, MAX(order_date) as max_order_date')
+                ->first();
+
+            $orderDateMin = null;
+            $orderDateMax = null;
+            if ($orderDateStats !== null) {
+                if ($orderDateStats->min_order_date !== null) {
+                    $orderDateMin = \Illuminate\Support\Carbon::parse($orderDateStats->min_order_date)->format('Y-m-d');
+                }
+                if ($orderDateStats->max_order_date !== null) {
+                    $orderDateMax = \Illuminate\Support\Carbon::parse($orderDateStats->max_order_date)->format('Y-m-d');
+                }
+            }
 
             return response()->json([
                 'success' => true,
@@ -399,6 +432,8 @@ class DashboardKPIController extends Controller
                     'stages' => $stages,
                     'routes' => $routes,
                     'clients' => $clients,
+                    'order_date_min' => $orderDateMin,
+                    'order_date_max' => $orderDateMax,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -468,6 +503,8 @@ class DashboardKPIController extends Controller
             'route_label' => $request->input('route_label'),
             'stage' => $request->input('stage'),
             'order_number' => $request->input('order_number'),
+            'projection_week' => $request->input('projection_week'),
+            'week_count' => $request->input('week_count'),
         ];
     }
 }

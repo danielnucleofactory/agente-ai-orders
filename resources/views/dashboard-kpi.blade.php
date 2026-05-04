@@ -3,9 +3,7 @@
         <link rel="stylesheet" href="{{ asset('css/dashboard-kpi.css') }}">
         <style>
             /* Estilos específicos para inputs de períodos de comparación - sobrescribir Flatpickr */
-            .comparison-period-filters input.flatpickr-alt-input,
-            .comparison-period-filters input[type="date"].flatpickr-alt-input,
-            .comparison-period-filters input.flatpickr-input.flatpickr-initialized {
+            .comparison-period-filters input.flatpickr-alt-input {
                 width: 150px !important;
                 height: 40px !important;
                 padding: 8px 14px !important;
@@ -16,19 +14,29 @@
                 box-sizing: border-box !important;
                 margin: 0 !important;
             }
+            
+            /* Animación para el spinner del botón de descarga */
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            
+            #export-btn:disabled {
+                pointer-events: none;
+            }
         </style>
     @endpush
 
     <div class="dashboard-kpi-container">
         <!-- Filtros Globales -->
         <div class="filters-section" id="filtersSection" style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; font-family: 'Lato', sans-serif; margin-bottom: 24px; background: transparent; border: none; padding: 0;">
-            <div class="filter-group">
+            <div class="filter-group" x-data="datePicker('')">
                 <label class="filter-label">Fecha inicio</label>
-                <input type="date" id="filter-date-from" class="date-input filter-input" value="">
+                <input x-ref="picker" type="text" id="filter-date-from" class="date-input filter-input" value="">
             </div>
-            <div class="filter-group">
+            <div class="filter-group" x-data="datePicker('')">
                 <label class="filter-label">Fecha fin</label>
-                <input type="date" id="filter-date-to" class="date-input filter-input" value="">
+                <input x-ref="picker" type="text" id="filter-date-to" class="date-input filter-input" value="">
             </div>
             <div class="filter-group">
                 <label class="filter-label">Cliente</label>
@@ -84,7 +92,7 @@
             </div>
             <div class="action-buttons" style="display: flex; gap: 16px; align-items: flex-end; margin-left: auto;">
                 <button class="btn-primary" id="btn-apply-filters" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: none; background: #1AAD8A; color: #F7F7F7; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; justify-content: center; cursor: pointer;">Aceptar</button>
-                <button class="btn-secondary" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: 2px solid #1AAD8A; background: #fff; color: #1AAD8A; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; gap: 8px; justify-content: center; cursor: pointer;">
+                <button id="export-btn" class="btn-secondary" style="height: 40px; min-width: 100px; padding: 0 18px; font-size: 16px; border-radius: 8px; border: 2px solid #1AAD8A; background: #fff; color: #1AAD8A; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; gap: 8px; justify-content: center; cursor: pointer;">
                     <i class="fas fa-download"></i>
                     Descargar
                 </button>
@@ -94,14 +102,14 @@
         <!-- Tabs de Vistas -->
         <div class="tabs-container">
             <div class="tabs">
-                <button class="tab active" data-view="tendencia">Tendencia</button>
-                <button class="tab" data-view="po-vs-teus">PO vs TEUs</button>
+                <button class="tab active" data-view="tendencia">Tiempo real</button>
+                <button class="tab" data-view="po-vs-teus">PO / TEUs</button>
                 <button class="tab" data-view="comparativo">Comparación por Períodos</button>
                 <button class="tab" data-view="proyeccion">Proyección</button>
             </div>
         </div>
 
-        <!-- Sub-tabs para Tendencia -->
+        <!-- Sub-tabs para Tiempo real -->
         <div class="subtabs-container active" id="subtabs-tendencia">
             <div class="subtabs">
                 <button class="subtab active" data-subtab="tendencia-po">PO</button>
@@ -170,23 +178,23 @@
                                 <div class="additional-filters-buttons" style="display: flex; flex-direction: column; gap: 12px;">
                                     <button type="button" class="filter-button" id="btn-kpi-po-retraso-cl" data-filter="po_retraso_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">PO Retraso CL</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Retraso > 7 días en carga lista</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Carga lista real posterior a la planificada.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-po-adelanto-cl" data-filter="po_adelanto_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">PO Adelanto CL</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Adelanto > 7 días en carga lista</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Carga lista real previa a la planificada.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-indicador-capacidad" data-filter="indicador_capacidad" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">Indicador Capacidad</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">PO sin fecha ETD</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Ordenes con fecha de salida confirmada.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-pos-transbordo" data-filter="pos_transbordo" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">POs en Puerto de Transbordo</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Órdenes en tránsito intermedio</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Ordenes en puerto intermedio.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-pos-ata" data-filter="pos_ata" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">POs con ATA</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Arribos confirmados en puerto final</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Ordenes con fecha de llegada confirmada.</span>
                                     </button>
                                 </div>
                             </div>
@@ -254,23 +262,23 @@
                                 <div class="additional-filters-buttons" style="display: flex; flex-direction: column; gap: 12px;">
                                     <button type="button" class="filter-button" id="btn-kpi-teus-retraso-cl" data-filter="teus_retraso_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">TEUs con Retraso CL</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Retraso > 7 días en carga lista</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Carga lista real posterior a la planificada.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-teus-adelanto-cl" data-filter="teus_adelanto_cl" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">TEUs con Adelanto CL</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Adelanto > 7 días en carga lista</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Carga lista real previa a la planificada.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-teus-capacidad" data-filter="teus_capacidad" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">Capacidad (Allocation) - TEUs</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Volumen con ETD Real dentro del período</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Ordenes con fecha de salida confirmada.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-teus-transbordo" data-filter="teus_transbordo" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">TEUs en Puerto de Transbordo</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Volumen en tránsito intermedio</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Ordenes en puerto intermedio.</span>
                                     </button>
                                     <button type="button" class="filter-button" id="btn-kpi-teus-ata" data-filter="teus_ata" style="width: 100%; min-height: 60px; padding: 12px 16px; font-size: 14px; border-radius: 8px; border: 2px solid #28C7A1; background: #fff; color: #1AAD8A; font-weight: 600; font-family: 'Lato', sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; flex-direction: column; justify-content: center;">
                                         <span class="filter-button-title" style="line-height: 1.2; font-size: 15px;">TEUs con ATA</span>
-                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Arribos confirmados en puerto final</span>
+                                        <span class="filter-button-subtitle" style="font-size: 12px; color: #6b7280; display: block; font-weight: 400; margin-top: 4px; line-height: 1.3;">Ordenes con fecha de llegada confirmada.</span>
                                     </button>
                                 </div>
                             </div>
@@ -281,21 +289,29 @@
             </div>
 
             <!-- VISTA: PO vs TEUs -->
-
-            <!-- VISTA: PO vs TEUs -->
             <div class="view-content" id="po-vs-teus">
-                
+
                 <!-- KPI Cards -->
                 <div class="kpi-cards">
                     <div class="kpi-card">
-                        <div class="kpi-card-title">Proveedor Principal</div>
-                        <div class="kpi-card-value">38.5%</div>
-                        <div class="kpi-card-subtitle">Asia Manufacturing</div>
+                        <div class="kpi-card-title">Total POs</div>
+                        <div class="kpi-card-value" id="povsteus-total-pos">-</div>
+                        <div class="kpi-card-subtitle">Órdenes activas</div>
                     </div>
                     <div class="kpi-card">
-                        <div class="kpi-card-title">Naviera Principal</div>
-                        <div class="kpi-card-value">35.2%</div>
-                        <div class="kpi-card-subtitle">Maersk Line</div>
+                        <div class="kpi-card-title">Total TEUs</div>
+                        <div class="kpi-card-value" id="povsteus-total-teus">-</div>
+                        <div class="kpi-card-subtitle">Contenedores equivalentes</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-card-title">Variación Semana</div>
+                        <div class="kpi-card-value" id="povsteus-week-variation">-</div>
+                        <div class="kpi-card-subtitle">vs semana anterior</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-card-title">Variación Mes</div>
+                        <div class="kpi-card-value" id="povsteus-month-variation">-</div>
+                        <div class="kpi-card-subtitle">vs mes anterior</div>
                     </div>
                 </div>
 
@@ -303,52 +319,13 @@
                 <div class="table-section">
                     <div class="table-header">
                         <div>
-                            <div class="table-title">PO vs TEUs por Etapa</div>
-                            <div class="table-description">
-                                Comparación de cantidad de órdenes y volumen en cada etapa logística
-                            </div>
+                            <div class="table-title">PO / TEUs por Etapa</div>
+                            <div class="table-description">Comparación de cantidad de órdenes y volumen en cada etapa logística</div>
                         </div>
                     </div>
                     <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Etapa</th>
-                                <th class="align-right">Cantidad de PO</th>
-                                <th class="align-right">Cantidad de TEUs</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><span class="badge badge-info">Producción</span></td>
-                                <td class="align-right number">342</td>
-                                <td class="align-right number">782</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-info">Booking</span></td>
-                                <td class="align-right number">189</td>
-                                <td class="align-right number">426</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-info">Tránsito</span></td>
-                                <td class="align-right number">425</td>
-                                <td class="align-right number">971</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-info">Transbordo</span></td>
-                                <td class="align-right number">98</td>
-                                <td class="align-right number">226</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-success">Arribo</span></td>
-                                <td class="align-right number">194</td>
-                                <td class="align-right number">442</td>
-                            </tr>
-                            <tr style="background-color: #f8faf9; font-weight: 700;">
-                                <td style="color: #374151;">Total</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">1,248</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">2,847</td>
-                            </tr>
-                        </tbody>
+                        <thead id="povsteus-stage-head"><tr><th>Cargando...</th></tr></thead>
+                        <tbody id="povsteus-stage-body"><tr><td style="text-align:center;padding:20px;color:#6b7280;">Cargando datos...</td></tr></tbody>
                     </table>
                 </div>
 
@@ -356,53 +333,13 @@
                 <div class="table-section">
                     <div class="table-header">
                         <div>
-                            <div class="table-title">PO vs TEUs por Período</div>
-                            <div class="table-description">
-                                Comparación de volumen entre períodos de tiempo para evaluación de tendencias
-                            </div>
+                            <div class="table-title">PO / TEUs por Período</div>
+                            <div class="table-description">Comparación de volumen entre períodos de tiempo para evaluación de tendencias</div>
                         </div>
                     </div>
                     <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Período</th>
-                                <th class="align-right">Cantidad de PO</th>
-                                <th class="align-right">Cantidad de TEUs</th>
-                                <th class="align-right">Variación PO</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><span class="badge badge-success">Semana Actual</span></td>
-                                <td class="align-right number">287</td>
-                                <td class="align-right number">658</td>
-                                <td class="align-right percentage">+8.5%</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-info">Semana Anterior</span></td>
-                                <td class="align-right number">264</td>
-                                <td class="align-right number">602</td>
-                                <td class="align-right">-</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-success">Mes Actual</span></td>
-                                <td class="align-right number">1,248</td>
-                                <td class="align-right number">2,847</td>
-                                <td class="align-right percentage">+12.3%</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-info">Mes Anterior</span></td>
-                                <td class="align-right number">1,112</td>
-                                <td class="align-right number">2,534</td>
-                                <td class="align-right">-</td>
-                            </tr>
-                            <tr style="background-color: #f8faf9; font-weight: 700;">
-                                <td style="color: #374151;">Total</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">2,911</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">6,641</td>
-                                <td class="align-right">-</td>
-                            </tr>
-                        </tbody>
+                        <thead id="povsteus-period-head"><tr><th>Cargando...</th></tr></thead>
+                        <tbody id="povsteus-period-body"><tr><td style="text-align:center;padding:20px;color:#6b7280;">Cargando datos...</td></tr></tbody>
                     </table>
                 </div>
 
@@ -410,119 +347,27 @@
                 <div class="table-section">
                     <div class="table-header">
                         <div>
-                            <div class="table-title">PO vs TEUs por Proveedor de Mercancía</div>
-                            <div class="table-description">
-                                Análisis de contribución de cada proveedor al volumen total de operaciones
-                            </div>
+                            <div class="table-title">PO / TEUs por Proveedor de Mercancía</div>
+                            <div class="table-description">Análisis de contribución de cada proveedor al volumen total de operaciones</div>
                         </div>
                     </div>
                     <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Proveedor de Mercancía</th>
-                                <th class="align-right">Cantidad de PO</th>
-                                <th class="align-right">Cantidad de TEUs</th>
-                                <th class="align-right">% Participación</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Asia Manufacturing</td>
-                                <td class="align-right number">481</td>
-                                <td class="align-right number">1,096</td>
-                                <td class="align-right percentage">38.5%</td>
-                            </tr>
-                            <tr>
-                                <td>Global Textiles</td>
-                                <td class="align-right number">394</td>
-                                <td class="align-right number">898</td>
-                                <td class="align-right percentage">31.6%</td>
-                            </tr>
-                            <tr>
-                                <td>Electronics Corp</td>
-                                <td class="align-right number">248</td>
-                                <td class="align-right number">566</td>
-                                <td class="align-right percentage">19.9%</td>
-                            </tr>
-                            <tr>
-                                <td>Premium Goods</td>
-                                <td class="align-right number">85</td>
-                                <td class="align-right number">193</td>
-                                <td class="align-right percentage">6.8%</td>
-                            </tr>
-                            <tr>
-                                <td>Fast Logistics</td>
-                                <td class="align-right number">40</td>
-                                <td class="align-right number">94</td>
-                                <td class="align-right percentage">3.2%</td>
-                            </tr>
-                            <tr style="background-color: #f8faf9; font-weight: 700;">
-                                <td style="color: #374151;">Total</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">1,248</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">2,847</td>
-                                <td class="align-right percentage" style="font-weight: 700; color: #0984e3;">100.0%</td>
-                            </tr>
-                        </tbody>
+                        <thead id="povsteus-vendor-head"><tr><th>Cargando...</th></tr></thead>
+                        <tbody id="povsteus-vendor-body"><tr><td style="text-align:center;padding:20px;color:#6b7280;">Cargando datos...</td></tr></tbody>
                     </table>
                 </div>
 
-                <!-- Tabla 4: PO vs TEUs por Naviera -->
+                <!-- Tabla 4: PO / TEUs por Naviera -->
                 <div class="table-section">
                     <div class="table-header">
                         <div>
-                            <div class="table-title">PO vs TEUs por Naviera</div>
-                            <div class="table-description">
-                                Participación y relevancia de cada operador marítimo en el volumen gestionado
-                            </div>
+                            <div class="table-title">PO / TEUs por Naviera</div>
+                            <div class="table-description">Participación y relevancia de cada operador marítimo en el volumen gestionado</div>
                         </div>
                     </div>
                     <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Naviera</th>
-                                <th class="align-right">Cantidad de PO</th>
-                                <th class="align-right">Cantidad de TEUs</th>
-                                <th class="align-right">% Participación</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Maersk Line</td>
-                                <td class="align-right number">439</td>
-                                <td class="align-right number">1,002</td>
-                                <td class="align-right percentage">35.2%</td>
-                            </tr>
-                            <tr>
-                                <td>MSC</td>
-                                <td class="align-right number">362</td>
-                                <td class="align-right number">826</td>
-                                <td class="align-right percentage">29.0%</td>
-                            </tr>
-                            <tr>
-                                <td>CMA CGM</td>
-                                <td class="align-right number">287</td>
-                                <td class="align-right number">655</td>
-                                <td class="align-right percentage">23.0%</td>
-                            </tr>
-                            <tr>
-                                <td>Hapag-Lloyd</td>
-                                <td class="align-right number">112</td>
-                                <td class="align-right number">256</td>
-                                <td class="align-right percentage">9.0%</td>
-                            </tr>
-                            <tr>
-                                <td>ONE</td>
-                                <td class="align-right number">48</td>
-                                <td class="align-right number">108</td>
-                                <td class="align-right percentage">3.8%</td>
-                            </tr>
-                            <tr style="background-color: #f8faf9; font-weight: 700;">
-                                <td style="color: #374151;">Total</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">1,248</td>
-                                <td class="align-right number" style="font-weight: 700; color: #1AAD8A;">2,847</td>
-                                <td class="align-right percentage" style="font-weight: 700; color: #0984e3;">100.0%</td>
-                            </tr>
-                        </tbody>
+                        <thead id="povsteus-line-head"><tr><th>Cargando...</th></tr></thead>
+                        <tbody id="povsteus-line-body"><tr><td style="text-align:center;padding:20px;color:#6b7280;">Cargando datos...</td></tr></tbody>
                     </table>
                 </div>
 
@@ -560,31 +405,31 @@
                         <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
                             <!-- Período A -->
                             <div style="display: flex; align-items: flex-end; gap: 8px;">
-                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; flex-direction: column; gap: 4px;" x-data="datePicker('')">
                                     <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Inicio</label>
-                                    <input type="date" id="comp-period-a-from" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                    <input x-ref="picker" type="text" id="comp-period-a-from" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
                                 </div>
-                                <div style="display: flex; flex-direction: column; gap: 4px; position: relative;">
+                                <div style="display: flex; flex-direction: column; gap: 4px; position: relative;" x-data="datePicker('')">
                                     <div style="display: flex; align-items: center; width: 150px; position: relative;">
                                         <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Fin</label>
                                         <span style="font-size: 14px; font-weight: 700; color: #1AAD8A; white-space: nowrap; position: absolute; right: 0;">Período A</span>
                                     </div>
-                                    <input type="date" id="comp-period-a-to" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                    <input x-ref="picker" type="text" id="comp-period-a-to" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
                                 </div>
                             </div>
                             
                             <!-- Período B -->
                             <div style="display: flex; align-items: flex-end; gap: 8px;">
-                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; flex-direction: column; gap: 4px;" x-data="datePicker('')">
                                     <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Inicio</label>
-                                    <input type="date" id="comp-period-b-from" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                    <input x-ref="picker" type="text" id="comp-period-b-from" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
                                 </div>
-                                <div style="display: flex; flex-direction: column; gap: 4px; position: relative;">
+                                <div style="display: flex; flex-direction: column; gap: 4px; position: relative;" x-data="datePicker('')">
                                     <div style="display: flex; align-items: center; width: 150px; position: relative;">
                                         <label style="font-size: 14px; font-weight: 500; color: #1AAD8A; white-space: nowrap;">Fin</label>
                                         <span style="font-size: 14px; font-weight: 700; color: #1AAD8A; white-space: nowrap; position: absolute; right: 0;">Período B</span>
                                     </div>
-                                    <input type="date" id="comp-period-b-to" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
+                                    <input x-ref="picker" type="text" id="comp-period-b-to" class="date-input filter-input" style="width: 150px !important; height: 40px !important; padding: 8px 14px; border: 2px solid #28C7A1; border-radius: 10px; font-size: 16px; color: #222; background: white; font-family: 'Lato', sans-serif; box-sizing: border-box; margin: 0;">
                                 </div>
                             </div>
                         </div>
@@ -650,23 +495,28 @@
 
             <!-- VISTA: PROYECCIÓN -->
             <div class="view-content" id="proyeccion">
-                
+
                 <!-- KPI Cards -->
                 <div class="kpi-cards">
                     <div class="kpi-card">
                         <div class="kpi-card-title">Llegadas Proyectadas</div>
-                        <div class="kpi-card-value">1,842</div>
-                        <div class="kpi-card-subtitle">Próximas 4 semanas</div>
+                        <div class="kpi-card-value" id="proy-total-pos">-</div>
+                        <div class="kpi-card-subtitle">12 semanas desde la semana elegida</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-card-title">En Producción</div>
-                        <div class="kpi-card-value">568</div>
-                        <div class="kpi-card-subtitle">Llegada estimada Q1 2026</div>
+                        <div class="kpi-card-value" id="proy-produccion-pos">-</div>
+                        <div class="kpi-card-subtitle">CL variable estimada</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-card-title">En Booking</div>
-                        <div class="kpi-card-value">342</div>
-                        <div class="kpi-card-subtitle">Próximo embarque</div>
+                        <div class="kpi-card-value" id="proy-booking-pos">-</div>
+                        <div class="kpi-card-subtitle">ETD proyectado</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-card-title">En Tránsito</div>
+                        <div class="kpi-card-value" id="proy-transito-pos">-</div>
+                        <div class="kpi-card-subtitle">ETA confirmado</div>
                     </div>
                 </div>
 
@@ -675,77 +525,39 @@
                     <div class="table-header">
                         <div>
                             <div class="table-title">Proyección de Llegadas Futuras por Semana</div>
-                            <div class="table-description">
-                                Distribución semanal de órdenes por etapa del proceso logístico - horizonte de planificación
+                            <div class="table-description" id="proy-table-description">
+                                Distribución semanal por etapa — 12 semanas a partir de la semana que elijas
                             </div>
                         </div>
+                        <!-- Semana inicial de la proyección -->
+                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <label for="proy-week-start" style="font-size:13px; color:#374151; white-space:nowrap;">Semana desde:</label>
+                                <input type="week" id="proy-week-start" value="{{ now()->format('o-\WW') }}"
+                                    style="min-width:150px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; color:#374151;"
+                                    title="Se mostrarán 12 semanas consecutivas empezando en esta semana (ISO)">
+                            </div>
+                            <button type="button" id="btn-proy-apply"
+                                style="padding:5px 14px; background:#1AAD8A; color:#fff; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; transition:background 0.2s;"
+                                onmouseover="this.style.background='#159a7a'" onmouseout="this.style.background='#1AAD8A'">
+                                Aplicar
+                            </button>
+                        </div>
                     </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Etapa</th>
-                                <th class="align-right">Semana<br>51-2025</th>
-                                <th class="align-right">Semana<br>52-2025</th>
-                                <th class="align-right">Semana<br>01-2026</th>
-                                <th class="align-right">Semana<br>02-2026</th>
-                                <th class="align-right">Semana<br>03-2026</th>
-                                <th class="align-right">Semana<br>04-2026</th>
-                                <th class="align-right">Semana<br>05-2026</th>
-                                <th class="align-right">Semana<br>06-2026</th>
-                                <th class="align-right">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><span class="badge badge-info">Producción</span><br><small>CL Teórica</small></td>
-                                <td class="align-right number">68</td>
-                                <td class="align-right number">72</td>
-                                <td class="align-right number">85</td>
-                                <td class="align-right number">78</td>
-                                <td class="align-right number">82</td>
-                                <td class="align-right number">76</td>
-                                <td class="align-right number">88</td>
-                                <td class="align-right number">94</td>
-                                <td class="align-right number total-cell">643</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-info">Booking</span><br><small>Autorización</small></td>
-                                <td class="align-right number">42</td>
-                                <td class="align-right number">38</td>
-                                <td class="align-right number">52</td>
-                                <td class="align-right number">48</td>
-                                <td class="align-right number">45</td>
-                                <td class="align-right number">51</td>
-                                <td class="align-right number">56</td>
-                                <td class="align-right number">62</td>
-                                <td class="align-right number total-cell">394</td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-info">Tránsito</span><br><small>ETA Estimado</small></td>
-                                <td class="align-right number">156</td>
-                                <td class="align-right number">148</td>
-                                <td class="align-right number">142</td>
-                                <td class="align-right number">138</td>
-                                <td class="align-right number">135</td>
-                                <td class="align-right number">128</td>
-                                <td class="align-right number">132</td>
-                                <td class="align-right number">125</td>
-                                <td class="align-right number total-cell">1,104</td>
-                            </tr>
-                            <tr class="total-row">
-                                <td><strong>Total por Semana</strong></td>
-                                <td class="align-right number">266</td>
-                                <td class="align-right number">258</td>
-                                <td class="align-right number">279</td>
-                                <td class="align-right number">264</td>
-                                <td class="align-right number">262</td>
-                                <td class="align-right number">255</td>
-                                <td class="align-right number">276</td>
-                                <td class="align-right number">281</td>
-                                <td class="align-right number total-cell-final">2,141</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" id="proy-table">
+                            <thead id="proy-table-head">
+                                <tr>
+                                    <th>Cargando...</th>
+                                </tr>
+                            </thead>
+                            <tbody id="proy-table-body">
+                                <tr>
+                                    <td style="text-align:center; padding: 20px; color: #6b7280;">Cargando datos...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
             </div>
@@ -753,8 +565,46 @@
         </div>
     </div>
 
+    <!-- Success Modal -->
+    <div id="successModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px;">
+            <div class="modal-body">
+                <div class="modal-icon success" style="width: 80px; height: 80px; background: #1AAD8A; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 6L9 17L4 12" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h3 class="modal-title success" style="color: #1AAD8A; font-size: 20px; margin-bottom: 10px;">Archivo descargado exitosamente</h3>
+                <p class="modal-text" style="color: #666; margin-bottom: 20px;">El archivo Excel se ha descargado correctamente</p>
+            </div>
+            <button id="closeSuccessBtn" class="modal-btn" style="background: #1AAD8A; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 16px; cursor: pointer;">Aceptar</button>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px;">
+            <div class="modal-body">
+                <div class="modal-icon error" style="width: 80px; height: 80px; background: #FF3459; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2"/>
+                        <path d="M12 8V12M12 16H12.01" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h3 class="modal-title error" style="color: #FF3459; font-size: 20px; margin-bottom: 10px;">¡Ha ocurrido un error!</h3>
+                <p class="modal-text" style="color: #666; margin-bottom: 20px;">No se pudo descargar correctamente el reporte</p>
+            </div>
+            <button id="closeErrorBtn" class="modal-btn" style="background: #FF3459; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 16px; cursor: pointer;">Intentar de nuevo</button>
+        </div>
+    </div>
+
     @push('scripts')
+        <script>
+            // CSRF Token para las peticiones AJAX
+            window.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        </script>
         <script src="{{ asset('js/dashboard-kpi.js') }}"></script>
+        <script src="{{ asset('js/dashboard-dynamic.js') }}"></script>
         <script>
             // Tab switching
             document.querySelectorAll('.tab').forEach(tab => {
@@ -781,10 +631,26 @@
                         
                         // Si se cambia a la vista comparativa, establecer fechas por defecto
                         if (viewId === 'comparativo' && window.dashboardKPIManager) {
-                            // Esperar a que Flatpickr se inicialice
+                            // Esperar a que Flatpickr (Alpine datePicker) esté listo
                             setTimeout(() => {
                                 window.dashboardKPIManager.setDefaultComparisonPeriods();
+                                window.dashboardKPIManager.bindComparativoPeriodFlatpickrHooks();
+                                setTimeout(() => {
+                                    window.dashboardKPIManager.loadComparativoKpiCards();
+                                }, 400);
                             }, 300);
+                        }
+
+                        // Cargar proyección al activar esa vista
+                        if (viewId === 'proyeccion' && window.dashboardKPIManager) {
+                            window.dashboardKPIManager.currentFilters = window.dashboardKPIManager.collectFilters();
+                            window.dashboardKPIManager.loadProyeccion();
+                        }
+
+                        // Cargar PO vs TEUs al activar esa vista
+                        if (viewId === 'po-vs-teus' && window.dashboardKPIManager) {
+                            window.dashboardKPIManager.currentFilters = window.dashboardKPIManager.collectFilters();
+                            window.dashboardKPIManager.loadPoVsTeus();
                         }
                     }
                 });

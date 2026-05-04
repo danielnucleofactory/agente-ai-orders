@@ -234,27 +234,59 @@ class PucharseOrderConsolidateDetail extends Component {
     {
         $this->loadingTracking = true;
 
+        // Obtener porth_id de la primera PO asociada (si existe)
+        $porthId = null;
+        if ($this->shippingDocument && $this->shippingDocument->purchaseOrders->isNotEmpty()) {
+            $porthId = $this->shippingDocument->purchaseOrders->first()->porth_id ?? null;
+        }
         $trackingId = $this->shippingDocument->tracking_id ?? null;
         $mblNumber = $this->shippingDocument->mbl_number ?? null;
+        $containerNumber = $this->shippingDocument->container_number ?? null;
+        
         Log::info('Loading tracking data for document:', [
             'shipping_document_id' => $this->shippingDocument->id ?? null,
+            'porth_id' => $porthId,
             'tracking_id' => $trackingId,
-            'mbl_number' => $mblNumber
+            'mbl_number' => $mblNumber,
+            'container_number' => $containerNumber
         ]);
 
-        $trackingService = new TrackingService();
-        $this->trackingData = $trackingService->getTracking($trackingId, $mblNumber);
+        try {
+            $trackingService = new TrackingService();
+            $this->trackingData = $trackingService->getTracking($trackingId, $mblNumber, $containerNumber, $porthId);
+
+            if ($this->trackingData) {
+                Log::info('Tracking data loaded successfully (Porth)', [
+                    'has_timeline' => isset($this->trackingData['timeline']),
+                    'milestone' => $this->trackingData['current_phase'] ?? 'none'
+                ]);
+            } else {
+                Log::info('No tracking data available in Porth for this shipping document', [
+                    'shipping_document_id' => $this->shippingDocument->id ?? null,
+                    'tracking_id' => $trackingId,
+                    'mbl_number' => $mblNumber,
+                    'container_number' => $containerNumber
+                ]);
+                $this->trackingData = null;
+            }
+        } catch (\Exception $e) {
+            Log::error('Error loading tracking data (Porth)', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->trackingData = null;
+        }
 
         $this->loadingTracking = false;
     }
 
     /**
-     * Verificar si debe mostrarse la línea de tiempo
-     * Solo se muestra si:
+     * Verificar si debe mostrarse la sección de tracking
+     * Se muestra si:
      * 1. Hay identificadores de tracking (tracking_id, mbl_number o container_number)
      * 2. Al menos una PO asociada está en "Booking" (etapa 3) o superior
      */
-    public function shouldShowTimeline()
+    public function shouldShowTrackingSection()
     {
         if (!$this->shippingDocument) {
             return false;
@@ -280,6 +312,19 @@ class PucharseOrderConsolidateDetail extends Component {
     }
 
     /**
+     * Verificar si debe mostrarse la línea de tiempo (timeline) con datos
+     * Solo se muestra si hay datos válidos de tracking cargados
+     */
+    public function shouldShowTimeline()
+    {
+        // Verificar que se hayan cargado datos de tracking con timeline válidos
+        return $this->trackingData !== null 
+            && !empty($this->trackingData) 
+            && isset($this->trackingData['timeline'])
+            && !empty($this->trackingData['timeline']);
+    }
+
+    /**
      * Load comments related to the shipping document
      */
     public function loadComments()
@@ -299,7 +344,7 @@ class PucharseOrderConsolidateDetail extends Component {
                         'filename' => $attachment->file_name,
                         'file_type' => strtoupper(pathinfo($attachment->file_name, PATHINFO_EXTENSION)),
                         'file_size' => $this->formatFileSize($attachment->size),
-                        'url' => $attachment->getUrl()
+                        'url' => route('media.download', $attachment->id)
                     ];
                 })->toArray();
 
@@ -346,7 +391,7 @@ class PucharseOrderConsolidateDetail extends Component {
                     'file_type' => strtoupper(pathinfo($media->file_name, PATHINFO_EXTENSION)),
                     'file_size' => $this->formatFileSize($media->size),
                     'created_at' => $media->created_at,
-                    'url' => $media->getUrl(),
+                    'url' => route('media.download', $media->id),
                     'type' => 'attachment' // Necesario para identificar el tipo en la tabla
                 ];
             })

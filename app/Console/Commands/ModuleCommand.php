@@ -2,12 +2,21 @@
 
 namespace App\Console\Commands;
 
+use App\Providers\ModuleServiceProvider;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-use App\Providers\ModuleServiceProvider;
 
 class ModuleCommand extends Command
 {
+    /**
+     * @var array<string, string>
+     */
+    protected array $moduleEnvKeys = [
+        'po_confirmation' => 'PO_CONFIRMATION_ENABLED',
+        'webhook' => 'WEBHOOK_MODULE_ENABLED',
+        'mantenedor_raga' => 'MANTENEDOR_RAGA_ENABLED',
+    ];
+
     /**
      * The name and signature of the console command.
      *
@@ -50,6 +59,7 @@ class ModuleCommand extends Command
                 break;
             default:
                 $this->error("Acción '{$action}' no válida. Use: list, status, enable, disable, install");
+
                 return 1;
         }
 
@@ -59,17 +69,17 @@ class ModuleCommand extends Command
     /**
      * Lista todos los módulos disponibles
      */
-        protected function listModules(): void
+    protected function listModules(): void
     {
         $this->info('Módulos disponibles:');
         $this->newLine();
 
-        // Crear una instancia del ModuleServiceProvider directamente
         $moduleService = new ModuleServiceProvider($this->laravel);
         $modules = $moduleService->getActiveModules();
 
         if (empty($modules)) {
             $this->warn('No hay módulos activos.');
+
             return;
         }
 
@@ -79,9 +89,9 @@ class ModuleCommand extends Command
         foreach ($modules as $name => $config) {
             $rows[] = [
                 $name,
-                $config['enabled'] ? '✅ Activo' : '❌ Inactivo',
+                $config['enabled'] ? 'Activo' : 'Inactivo',
                 $config['path'],
-                $config['provider'] ?? 'N/A'
+                $config['provider'] ?? 'N/A',
             ];
         }
 
@@ -93,8 +103,9 @@ class ModuleCommand extends Command
      */
     protected function showModuleStatus(?string $moduleName): void
     {
-        if (!$moduleName) {
+        if (! $moduleName) {
             $this->error('Debe especificar un nombre de módulo para ver su estado.');
+
             return;
         }
 
@@ -105,18 +116,20 @@ class ModuleCommand extends Command
         $this->newLine();
 
         if ($isActive) {
-            $this->info("✅ El módulo '{$moduleName}' está ACTIVO");
+            $this->info("El módulo '{$moduleName}' está activo");
 
-            // Verificar si el directorio existe
-            $modulePath = base_path("laravel-po-confirmation");
-            if (File::exists($modulePath)) {
-                $this->info("📁 Directorio del módulo: {$modulePath}");
-                $this->info("📊 Tamaño: " . $this->formatBytes($this->getDirectorySize($modulePath)));
-            } else {
-                $this->warn("⚠️  El directorio del módulo no existe: {$modulePath}");
+            $registered = $moduleService->getRegisteredModules();
+            $relativePath = $registered[$moduleName]['path'] ?? null;
+            $modulePath = $relativePath ? base_path($relativePath) : null;
+
+            if ($modulePath && File::exists($modulePath)) {
+                $this->info("Directorio del módulo: {$modulePath}");
+                $this->info('Tamaño: '.$this->formatBytes($this->getDirectorySize($modulePath)));
+            } elseif ($modulePath) {
+                $this->warn("El directorio del módulo no existe: {$modulePath}");
             }
         } else {
-            $this->warn("❌ El módulo '{$moduleName}' está INACTIVO");
+            $this->warn("El módulo '{$moduleName}' está inactivo");
             $this->info("Para activarlo, ejecute: php artisan module:manage enable {$moduleName}");
         }
     }
@@ -124,93 +137,112 @@ class ModuleCommand extends Command
     /**
      * Habilita un módulo
      */
-    protected function enableModule(string $moduleName): void
+    protected function enableModule(?string $moduleName): void
     {
-        $this->info("Activando módulo '{$moduleName}'...");
+        if (! $moduleName || ! isset($this->moduleEnvKeys[$moduleName])) {
+            $this->error('Especifica un módulo válido: '.implode(', ', array_keys($this->moduleEnvKeys)));
 
-        // Actualizar .env
-        $envPath = base_path('.env');
-        if (!File::exists($envPath)) {
-            $this->error('Archivo .env no encontrado.');
             return;
         }
 
+        $this->info("Activando módulo '{$moduleName}'...");
+
+        $envPath = base_path('.env');
+        if (! File::exists($envPath)) {
+            $this->error('Archivo .env no encontrado.');
+
+            return;
+        }
+
+        $envKey = $this->moduleEnvKeys[$moduleName];
         $envContent = File::get($envPath);
 
-        // Buscar si ya existe la variable
-        if (strpos($envContent, 'PO_CONFIRMATION_ENABLED') !== false) {
+        if (strpos($envContent, $envKey) !== false) {
             $envContent = preg_replace(
-                '/PO_CONFIRMATION_ENABLED\s*=\s*.*/',
-                'PO_CONFIRMATION_ENABLED=true',
+                '/^'.preg_quote($envKey, '/').'\s*=\s*.*$/m',
+                "{$envKey}=true",
                 $envContent
             );
         } else {
-            $envContent .= "\nPO_CONFIRMATION_ENABLED=true";
+            $envContent .= "\n{$envKey}=true";
         }
 
         File::put($envPath, $envContent);
 
-        $this->info("✅ Módulo '{$moduleName}' activado en .env");
-        $this->warn("⚠️  Recuerda reiniciar la aplicación para que los cambios surtan efecto.");
+        $this->info("Módulo '{$moduleName}' activado en .env");
+        $this->warn('Recuerda reiniciar la aplicación para que los cambios surtan efecto.');
     }
 
     /**
      * Deshabilita un módulo
      */
-    protected function disableModule(string $moduleName): void
+    protected function disableModule(?string $moduleName): void
     {
-        $this->info("Desactivando módulo '{$moduleName}'...");
+        if (! $moduleName || ! isset($this->moduleEnvKeys[$moduleName])) {
+            $this->error('Especifica un módulo válido: '.implode(', ', array_keys($this->moduleEnvKeys)));
 
-        // Actualizar .env
-        $envPath = base_path('.env');
-        if (!File::exists($envPath)) {
-            $this->error('Archivo .env no encontrado.');
             return;
         }
 
+        $this->info("Desactivando módulo '{$moduleName}'...");
+
+        $envPath = base_path('.env');
+        if (! File::exists($envPath)) {
+            $this->error('Archivo .env no encontrado.');
+
+            return;
+        }
+
+        $envKey = $this->moduleEnvKeys[$moduleName];
         $envContent = File::get($envPath);
 
-        // Buscar si ya existe la variable
-        if (strpos($envContent, 'PO_CONFIRMATION_ENABLED') !== false) {
+        if (strpos($envContent, $envKey) !== false) {
             $envContent = preg_replace(
-                '/PO_CONFIRMATION_ENABLED\s*=\s*.*/',
-                'PO_CONFIRMATION_ENABLED=false',
+                '/^'.preg_quote($envKey, '/').'\s*=\s*.*$/m',
+                "{$envKey}=false",
                 $envContent
             );
         } else {
-            $envContent .= "\nPO_CONFIRMATION_ENABLED=false";
+            $envContent .= "\n{$envKey}=false";
         }
 
         File::put($envPath, $envContent);
 
-        $this->info("✅ Módulo '{$moduleName}' desactivado en .env");
-        $this->warn("⚠️  Recuerda reiniciar la aplicación para que los cambios surtan efecto.");
+        $this->info("Módulo '{$moduleName}' desactivado en .env");
+        $this->warn('Recuerda reiniciar la aplicación para que los cambios surtan efecto.');
     }
 
     /**
      * Instala un módulo (ejecuta migraciones, etc.)
      */
-        protected function installModule(string $moduleName): void
+    protected function installModule(?string $moduleName): void
     {
+        if (! $moduleName || ! isset($this->moduleEnvKeys[$moduleName])) {
+            $this->error('Especifica un módulo válido: '.implode(', ', array_keys($this->moduleEnvKeys)));
+
+            return;
+        }
+
         $this->info("Instalando módulo '{$moduleName}'...");
 
         $moduleService = new ModuleServiceProvider($this->laravel);
 
-        if (!$moduleService->isModuleActive($moduleName)) {
+        if (! $moduleService->isModuleActive($moduleName)) {
             $this->error("El módulo '{$moduleName}' debe estar activo antes de instalarlo.");
             $this->info("Ejecute: php artisan module:manage enable {$moduleName}");
+
             return;
         }
 
-        // Ejecutar migraciones del módulo
         if ($moduleService->runModuleMigrations($moduleName)) {
-            $this->info("✅ Migraciones del módulo ejecutadas correctamente");
+            $this->info('Migraciones del módulo ejecutadas correctamente');
         } else {
-            $this->error("❌ Error ejecutando migraciones del módulo");
+            $this->error('Error ejecutando migraciones del módulo');
+
             return;
         }
 
-        $this->info("✅ Módulo '{$moduleName}' instalado correctamente");
+        $this->info("Módulo '{$moduleName}' instalado correctamente");
     }
 
     /**
@@ -222,6 +254,7 @@ class ModuleCommand extends Command
         foreach (File::allFiles($path) as $file) {
             $size += $file->getSize();
         }
+
         return $size;
     }
 
@@ -236,6 +269,6 @@ class ModuleCommand extends Command
             $bytes /= 1024;
         }
 
-        return round($bytes, $precision) . ' ' . $units[$i];
+        return round($bytes, $precision).' '.$units[$i];
     }
 }

@@ -44,6 +44,7 @@ class User extends Authenticatable implements HasMedia, CanResetPassword
     protected $hidden = [
         'password',
         'remember_token',
+        'company_id',
     ];
 
     /**
@@ -156,6 +157,20 @@ class User extends Authenticatable implements HasMedia, CanResetPassword
     }
 
     /**
+     * Primera palabra del nombre completo (menú de navegación, saludos, etc.).
+     */
+    public function firstName(): string
+    {
+        $name = trim((string) $this->name);
+        if ($name === '') {
+            return '';
+        }
+        $parts = preg_split('/\s+/u', $name);
+
+        return $parts[0] ?? '';
+    }
+
+    /**
      * Send the password reset notification.
      *
      * @param  string  $token
@@ -164,5 +179,19 @@ class User extends Authenticatable implements HasMedia, CanResetPassword
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new ResetPasswordNotification($token));
+    }
+
+    /**
+     * Nombres de roles para columnas de tabla (requiere eager load roles).
+     */
+    public function getRoleNamesAttribute(): string
+    {
+        if (!$this->relationLoaded('roles')) {
+            $this->load('roles');
+        }
+
+        $names = $this->roles->pluck('name')->filter()->values();
+
+        return $names->isEmpty() ? 'Sin rol' : $names->implode(', ');
     }
 }
