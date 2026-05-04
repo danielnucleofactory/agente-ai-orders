@@ -16,6 +16,7 @@ use App\Observers\PurchaseOrderObserver;
 use App\Observers\ShippingDocumentObserver;
 use App\Observers\VendorObserver;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
@@ -42,8 +43,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Ruta de ajustes Webhooks solo si el módulo interno no la registró (evita duplicar el nombre en prod).
+        // Vista de ajustes Webhooks solo cuando el módulo no debe cargar esa ruta. Si el módulo está
+        // habilitado y existe en disco, no registramos aquí (evita duplicar nombre aunque el módulo
+        // registre la ruta en un booted posterior al nuestro).
         $this->app->booted(function () {
+            $webhookModuleOn = filter_var(env('WEBHOOK_MODULE_ENABLED', false), FILTER_VALIDATE_BOOLEAN);
+            $webhookModulePresent = File::exists(base_path('internal_modules/orders-module-webhook'));
+            if ($webhookModuleOn && $webhookModulePresent) {
+                return;
+            }
+
             if (Route::has('webhook.settings.index')) {
                 return;
             }
