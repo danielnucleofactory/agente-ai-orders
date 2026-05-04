@@ -16,6 +16,7 @@ use App\Observers\PurchaseOrderObserver;
 use App\Observers\ShippingDocumentObserver;
 use App\Observers\VendorObserver;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\Failed;
@@ -41,6 +42,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Ruta de ajustes Webhooks solo si el módulo interno no la registró (evita duplicar el nombre en prod).
+        $this->app->booted(function () {
+            if (Route::has('webhook.settings.index')) {
+                return;
+            }
+
+            Route::middleware(['web', 'auth'])->group(function () {
+                Route::view('settings/webhook', 'webhook-settings')
+                    ->name('webhook.settings.index');
+            });
+        });
+
         // Decorar WebhookService para ocultar date_variable_date y current_timestamp en el payload
         // (sin modificar internal_modules)
         if (class_exists(\RagaOrders\Webhook\Services\WebhookService::class)) {
