@@ -267,6 +267,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('settings/sessions', Sessions::class)
         ->name('settings.sessions');
 
+    Route::view('settings/po-confirmation', 'po-confirmation-settings')
+        ->name('po-confirmation.settings.index');
+
     // Companies (permisos dedicados; asignación típica: Super Administrador)
     Route::get('settings/companies', \App\Livewire\Settings\Companies::class)
         ->middleware('permission:has_view_companies')
