@@ -28,6 +28,7 @@
         </div>
 
         @can('has_edit_orders')
+            @if (! $purchaseOrder->isKanbanIngresadaOrAnulada())
         <div class="flex space-x-4">
             <a href="{{ route('purchase-orders.edit', $purchaseOrder->id) }}" class="relative">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" fill="none"
@@ -39,6 +40,7 @@
                 <x-primary-button class="pl-12">Editar</x-primary-button>
             </a>
         </div>
+            @endif
         @endcan
     </div>
 

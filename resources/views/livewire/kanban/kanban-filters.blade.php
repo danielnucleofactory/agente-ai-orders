@@ -151,16 +151,20 @@
 
         <div class="flex justify-between pt-4 mt-5 border-t border-gray-200">
             <button
+                type="button"
                 wire:click="resetFilters"
                 @click="close()"
+                onclick="window.poKanbanOverlayShow && window.poKanbanOverlayShow('Limpiando filtros…')"
                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#1AAD8A] focus:ring-offset-2"
             >
                 Limpiar filtros
             </button>
 
             <button
+                type="button"
                 wire:click="applyFilters"
                 @click="close()"
+                onclick="window.poKanbanOverlayShow && window.poKanbanOverlayShow('Aplicando filtros…')"
                 class="px-4 py-2 text-sm font-medium text-white bg-[#1AAD8A] border border-transparent rounded-md shadow-sm hover:bg-[#127A62] focus:outline-none focus:ring-2 focus:ring-[#1AAD8A] focus:ring-offset-2"
             >
                 Aplicar filtros

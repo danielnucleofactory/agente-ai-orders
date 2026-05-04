@@ -35,7 +35,9 @@
             <span class="text-sm font-medium text-[#127A62]">Mostrando órdenes filtradas. Los resultados que estás viendo están limitados por los filtros activos.</span>
         </div>
         <button
-            wire:click="$dispatch('clearKanbanFilters')"
+            type="button"
+            wire:click="clearKanbanFiltersFromBanner"
+            onclick="window.poKanbanOverlayShow && window.poKanbanOverlayShow('Limpiando filtros…')"
             class="px-3 py-1 ml-3 text-xs font-medium text-[#127A62] bg-[#D4F5ED] rounded-md hover:bg-[#C0F0E5]"
         >
             Limpiar filtros

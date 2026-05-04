@@ -3,53 +3,75 @@
 namespace App\Livewire\Forms;
 
 use App\Models\PurchaseOrder;
-use Livewire\Component;
-use Illuminate\Support\Facades\Log;
-use App\Services\TrackingService;
-use Livewire\WithFileUploads;
-use App\Services\AuthorizationService;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\DB;
 use App\Models\PurchaseOrderComment;
+use App\Services\AuthorizationService;
+use App\Services\TrackingService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
+use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class PucharseOrderDetail extends Component
 {
     use WithFileUploads;
 
     public $purchaseOrder;
+
     public $purchaseOrderDetails;
+
     public $orderProducts = [];
+
     public $net_total = 0;
+
     public $additional_cost = 0;
+
     public $insurance_cost = 0;
+
     public $total = 0;
+
     public $loadingTracking = false;
+
     public $trackingData = [];
+
     public $shippingDocument;
+
     public $comments = [];
+
     public $attachments = [];
+
     public $commentSortField = 'created_at';
+
     public $commentSortDirection = 'desc';
 
     // Search and sorting variables
     public $search = '';
+
     public $sortField = 'material_id';
+
     public $sortDirection = 'asc';
 
     // Variables para sobre costo y comentario
     public $overCostData = [];
+
     public $totalOverCost = 0;
 
     public $newFile;
+
     public $newComment = '';
+
     public $fileSelected = false;
 
     public $comment = '';
+
     public $attachment = null;
 
     public $fileUploadApproved = false;
+
     public $commentAttachmentApproved = false;
+
     public $approvedCommentData = null;
+
     public $real_lead_time = 0;
 
     protected AuthorizationService $authorizationService;
@@ -62,7 +84,7 @@ class PucharseOrderDetail extends Component
     public function mount($id)
     {
         // Cargar la orden de compra con sus productos y hub relacionados
-        $this->purchaseOrder = PurchaseOrder::with(['products', 'actualHub', 'shippingDocuments', 'vendor'])->findOrFail($id);
+        $this->purchaseOrder = PurchaseOrder::with(['products', 'actualHub', 'shippingDocuments', 'vendor', 'kanbanStatus'])->findOrFail($id);
         $this->purchaseOrderDetails = PurchaseOrder::findOrFail($id);
 
         // Calcular lead time requerido
@@ -104,12 +126,12 @@ class PucharseOrderDetail extends Component
         // y tiene tracking_id, mbl_number o container_number (directamente o en shipping document)
         $kanbanStatusId = $this->purchaseOrder->kanban_status_id ?? 0;
         $hasTrackingData = $this->purchaseOrder->porth_id
-            || $this->purchaseOrder->tracking_id 
-            || $this->purchaseOrder->mbl_number 
+            || $this->purchaseOrder->tracking_id
+            || $this->purchaseOrder->mbl_number
             || $this->purchaseOrder->container_number
             || ($this->shippingDocument && (
-                $this->shippingDocument->tracking_id 
-                || $this->shippingDocument->mbl_number 
+                $this->shippingDocument->tracking_id
+                || $this->shippingDocument->mbl_number
                 || $this->shippingDocument->container_number
             ));
 
@@ -131,7 +153,7 @@ class PucharseOrderDetail extends Component
             'fileUploadApproved' => $this->fileUploadApproved,
             'commentAttachmentApproved' => $this->commentAttachmentApproved,
             'session_comment_id' => Session::get('comment_id'),
-            'session_purchase_order_id' => Session::get('purchase_order_id')
+            'session_purchase_order_id' => Session::get('purchase_order_id'),
         ]);
 
         // Cargar los comentarios y archivos adjuntos después de verificar las aprobaciones
@@ -149,7 +171,7 @@ class PucharseOrderDetail extends Component
                 'short_text' => $product->short_text,
                 'price_per_unit' => $product->pivot->unit_price,
                 'quantity' => $product->pivot->quantity,
-                'subtotal' => $product->pivot->unit_price * $product->pivot->quantity
+                'subtotal' => $product->pivot->unit_price * $product->pivot->quantity,
             ];
         }
     }
@@ -216,7 +238,7 @@ class PucharseOrderDetail extends Component
                     ON poc.purchase_order_id = po.id
                 WHERE poc.comment ILIKE '%Sobre costo%'
                     AND po.id = ANY(?)
-            ", ['{' . implode(',', $purchaseOrderIds) . '}']);
+            ", ['{'.implode(',', $purchaseOrderIds).'}']);
 
             // Procesar los resultados
             foreach ($overCostResults as $result) {
@@ -225,7 +247,7 @@ class PucharseOrderDetail extends Component
                     'order_number' => $result->order_number,
                     'comment' => $result->comment,
                     'amount_usd' => $result->amount_usd ? floatval($result->amount_usd) : 0,
-                    'comment_final' => $result->comment_final ?? ''
+                    'comment_final' => $result->comment_final ?? '',
                 ];
 
                 // Acumular el total
@@ -237,13 +259,13 @@ class PucharseOrderDetail extends Component
             Log::info('Datos de sobre costo cargados', [
                 'purchase_order_ids' => $purchaseOrderIds,
                 'results_count' => count($this->overCostData),
-                'total_over_cost' => $this->totalOverCost
+                'total_over_cost' => $this->totalOverCost,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error al cargar datos de sobre costo', [
                 'error' => $e->getMessage(),
-                'purchase_order_id' => $this->purchaseOrder->id ?? null
+                'purchase_order_id' => $this->purchaseOrder->id ?? null,
             ]);
 
             // Inicializar con valores por defecto en caso de error
@@ -300,30 +322,30 @@ class PucharseOrderDetail extends Component
                 'porth_id' => $porthId,
                 'tracking_id' => $trackingId,
                 'mbl_number' => $mblNumber,
-                'container_number' => $containerNumber
+                'container_number' => $containerNumber,
             ]);
 
-            $trackingService = new TrackingService();
+            $trackingService = new TrackingService;
             $this->trackingData = $trackingService->getTracking($trackingId, $mblNumber, $containerNumber, $porthId);
 
             if ($this->trackingData) {
                 Log::info('Tracking data loaded successfully (Porth)', [
                     'has_timeline' => isset($this->trackingData['timeline']),
-                    'milestone' => $this->trackingData['current_phase'] ?? 'none'
+                    'milestone' => $this->trackingData['current_phase'] ?? 'none',
                 ]);
             } else {
                 Log::info('No tracking data available in Porth for this PO', [
                     'purchase_order_id' => $this->purchaseOrder->id ?? null,
                     'tracking_id' => $trackingId,
                     'mbl_number' => $mblNumber,
-                    'container_number' => $containerNumber
+                    'container_number' => $containerNumber,
                 ]);
                 $this->trackingData = null; // Asegurar que sea null, no array vacío
             }
         } catch (\Throwable $e) {
             Log::error('Error loading tracking data (Porth)', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             $this->trackingData = null; // Cambiar de [] a null para consistencia
         }
@@ -340,7 +362,7 @@ class PucharseOrderDetail extends Component
     public function shouldShowTrackingSection()
     {
         $kanbanStatusId = $this->purchaseOrder->kanban_status_id ?? 0;
-        
+
         // Solo mostrar si está en "Booking" (etapa 3) o superior
         if ($kanbanStatusId < 3) {
             return false;
@@ -348,12 +370,12 @@ class PucharseOrderDetail extends Component
 
         // Verificar si hay identificadores de tracking (incluye porth_id)
         $hasTrackingIdentifiers = $this->purchaseOrder->porth_id
-            || $this->purchaseOrder->tracking_id 
-            || $this->purchaseOrder->mbl_number 
+            || $this->purchaseOrder->tracking_id
+            || $this->purchaseOrder->mbl_number
             || $this->purchaseOrder->container_number
             || ($this->shippingDocument && (
-                $this->shippingDocument->tracking_id 
-                || $this->shippingDocument->mbl_number 
+                $this->shippingDocument->tracking_id
+                || $this->shippingDocument->mbl_number
                 || $this->shippingDocument->container_number
             ));
 
@@ -367,10 +389,10 @@ class PucharseOrderDetail extends Component
     public function shouldShowTimeline()
     {
         // Verificar que se hayan cargado datos de tracking con timeline válidos
-        return $this->trackingData !== null 
-            && !empty($this->trackingData) 
+        return $this->trackingData !== null
+            && ! empty($this->trackingData)
             && isset($this->trackingData['timeline'])
-            && !empty($this->trackingData['timeline']);
+            && ! empty($this->trackingData['timeline']);
     }
 
     protected function loadCommentsAndAttachments()
@@ -378,7 +400,7 @@ class PucharseOrderDetail extends Component
         try {
             // 1. Load all comments from database (both pending and approved)
             \Log::info('Loading comments for PO', [
-                'purchase_order_id' => $this->purchaseOrder->id
+                'purchase_order_id' => $this->purchaseOrder->id,
             ]);
 
             // Get all comments for this purchase order
@@ -390,17 +412,17 @@ class PucharseOrderDetail extends Component
             \Log::info('Comments found', [
                 'count' => $comments->count(),
                 'purchase_order_id' => $this->purchaseOrder->id,
-                'comment_ids' => $comments->pluck('id')->toArray()
+                'comment_ids' => $comments->pluck('id')->toArray(),
             ]);
 
             // Process comments based on their status
-            $processedComments = $comments->map(function($comment) {
+            $processedComments = $comments->map(function ($comment) {
                 // Check for approved attachment first
                 $attachment = $comment->getFirstMedia('attachments');
 
                 // If no approved attachment, check for pending attachment
                 $pendingAttachment = null;
-                if (!$attachment) {
+                if (! $attachment) {
                     $pendingAttachment = $comment->getFirstMedia('pending_attachments');
                 }
 
@@ -416,7 +438,7 @@ class PucharseOrderDetail extends Component
                     'has_approved_attachment' => $attachment ? true : false,
                     'has_pending_attachment' => $pendingAttachment ? true : false,
                     'attachment_approval_status' => $pendingAttachment ? 'pending' : ($attachment ? 'approved' : 'none'),
-                    'comment_text' => $comment->comment
+                    'comment_text' => $comment->comment,
                 ]);
 
                 // Get status from authorization relationship
@@ -435,7 +457,7 @@ class PucharseOrderDetail extends Component
                     'status' => $statusDisplay,
                     'icon_class' => $iconClass,
                     'has_pending_attachment' => $pendingAttachment ? true : false,
-                    'has_approved_attachment' => $attachment ? true : false
+                    'has_approved_attachment' => $attachment ? true : false,
                 ]);
 
                 // Format the comment for display
@@ -452,12 +474,12 @@ class PucharseOrderDetail extends Component
                     'action_type_label' => $comment->getActionTypeLabel(),
                     'old_values' => $comment->old_values ?? null,
                     'new_values' => $comment->new_values ?? null,
-                    'has_changes' => !empty($comment->old_values) || !empty($comment->new_values),
+                    'has_changes' => ! empty($comment->old_values) || ! empty($comment->new_values),
                     'attachment' => $displayAttachment ? [
-                        'name' => $displayAttachment->file_name . ($pendingAttachment ? ' (pendiente de aprobación)' : ''),
+                        'name' => $displayAttachment->file_name.($pendingAttachment ? ' (pendiente de aprobación)' : ''),
                         'url' => $attachment ? route('media.download', $displayAttachment->id) : '#', // Usar ruta de descarga con autenticación
                         'type' => strtoupper($displayAttachment->extension),
-                        'is_pending' => $pendingAttachment ? true : false
+                        'is_pending' => $pendingAttachment ? true : false,
                     ] : null,
                     'attachment_name' => $displayAttachment ? $displayAttachment->file_name : '',
                 ];
@@ -466,7 +488,7 @@ class PucharseOrderDetail extends Component
             $this->comments = $processedComments;
 
             \Log::info('Total comments loaded', [
-                'count' => count($this->comments)
+                'count' => count($this->comments),
             ]);
 
             // Aplicar ordenación (por defecto created_at desc = mayor a menor)
@@ -474,7 +496,7 @@ class PucharseOrderDetail extends Component
         } catch (\Exception $e) {
             \Log::error('Error loading comments and attachments', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             $this->comments = [];
@@ -492,7 +514,7 @@ class PucharseOrderDetail extends Component
 
         $bytes /= pow(1024, $pow);
 
-        return round($bytes, $precision) . ' ' . $units[$pow];
+        return round($bytes, $precision).' '.$units[$pow];
     }
 
     // Método para buscar en comentarios y archivos
@@ -500,19 +522,19 @@ class PucharseOrderDetail extends Component
     {
         $search = strtolower($this->search);
 
-        $filteredComments = empty($search) ? $this->comments : array_filter($this->comments, function($comment) use ($search) {
+        $filteredComments = empty($search) ? $this->comments : array_filter($this->comments, function ($comment) use ($search) {
             return str_contains(strtolower($comment['user_name']), $search) ||
                    str_contains(strtolower($comment['comment']), $search);
         });
 
-        $filteredAttachments = empty($search) ? $this->attachments : array_filter($this->attachments, function($attachment) use ($search) {
+        $filteredAttachments = empty($search) ? $this->attachments : array_filter($this->attachments, function ($attachment) use ($search) {
             return str_contains(strtolower($attachment['user_name']), $search) ||
                    str_contains(strtolower($attachment['filename']), $search);
         });
 
         return [
             'comments' => array_values($filteredComments),
-            'attachments' => array_values($filteredAttachments)
+            'attachments' => array_values($filteredAttachments),
         ];
     }
 
@@ -541,11 +563,13 @@ class PucharseOrderDetail extends Component
             if ($this->commentSortField === 'created_at') {
                 $tsA = $fieldA instanceof \Carbon\Carbon ? $fieldA->timestamp : (is_string($fieldA) ? strtotime($fieldA) : 0);
                 $tsB = $fieldB instanceof \Carbon\Carbon ? $fieldB->timestamp : (is_string($fieldB) ? strtotime($fieldB) : 0);
+
                 return $dir * ($tsA <=> $tsB);
             }
 
             // Resto: comparación alfabética
             $cmp = strcmp((string) $fieldA, (string) $fieldB);
+
             return $dir * $cmp;
         });
     }
@@ -599,7 +623,7 @@ class PucharseOrderDetail extends Component
                 }
             }
         } catch (\Exception $e) {
-            session()->flash('error', 'Error al añadir comentario: ' . $e->getMessage());
+            session()->flash('error', 'Error al añadir comentario: '.$e->getMessage());
         }
     }
 
@@ -623,7 +647,7 @@ class PucharseOrderDetail extends Component
             \Log::info('Archivo subido desde vista previa de PO', [
                 'media_id' => $media->id,
                 'purchase_order_id' => $this->purchaseOrder->id,
-                'file_name' => $this->newFile->getClientOriginalName()
+                'file_name' => $this->newFile->getClientOriginalName(),
             ]);
 
             session()->flash('message', 'Archivo subido correctamente');
@@ -641,13 +665,14 @@ class PucharseOrderDetail extends Component
             \Log::error('Error al subir archivo', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'purchase_order_id' => $this->purchaseOrder->id ?? null
+                'purchase_order_id' => $this->purchaseOrder->id ?? null,
             ]);
-            session()->flash('error', 'Error al subir archivo: ' . $e->getMessage());
+            session()->flash('error', 'Error al subir archivo: '.$e->getMessage());
         }
     }
 
-    public function uploadFileAction() {
+    public function uploadFileAction()
+    {
         $this->validate([
             'newFile' => 'required|file|max:10240', // 10MB max
         ]);
@@ -659,8 +684,8 @@ class PucharseOrderDetail extends Component
     {
         \Log::info('setComments method called', [
             'po_id' => $this->purchaseOrder->id ?? null,
-            'has_comment' => !empty(trim($this->comment ?? '')),
-            'has_attachment' => !empty($this->attachment),
+            'has_comment' => ! empty(trim($this->comment ?? '')),
+            'has_attachment' => ! empty($this->attachment),
             'comment_attachment_approved' => $this->commentAttachmentApproved ?? false,
         ]);
 
@@ -669,14 +694,15 @@ class PucharseOrderDetail extends Component
             $this->validate([
                 'attachment' => 'required|file|max:10240', // 10MB max
             ], [
-                'attachment.required' => 'Por favor, seleccione un archivo para adjuntar al comentario aprobado.'
+                'attachment.required' => 'Por favor, seleccione un archivo para adjuntar al comentario aprobado.',
             ]);
         }
         // In normal mode, we need at least a comment or an attachment
-        elseif (empty(trim($this->comment)) && !$this->attachment) {
+        elseif (empty(trim($this->comment)) && ! $this->attachment) {
             \Log::info('setComments: Early return - no comment and no attachment', [
                 'po_id' => $this->purchaseOrder->id ?? null,
             ]);
+
             return;
         }
 
@@ -687,7 +713,7 @@ class PucharseOrderDetail extends Component
                 'comment_id' => Session::get('comment_id'),
                 'attachment' => $this->attachment ? true : false,
                 'purchase_order_id' => Session::get('purchase_order_id'),
-                'comment_text' => $this->comment
+                'comment_text' => $this->comment,
             ]);
 
             // If there's an attachment and a previous approval, allow direct upload
@@ -701,7 +727,7 @@ class PucharseOrderDetail extends Component
                         \Log::info('Found comment to attach file to', [
                             'comment_id' => $commentId,
                             'purchase_order_id' => $commentModel->purchase_order_id,
-                            'attachment_name' => $this->attachment->getClientOriginalName()
+                            'attachment_name' => $this->attachment->getClientOriginalName(),
                         ]);
 
                         try {
@@ -719,7 +745,7 @@ class PucharseOrderDetail extends Component
                             \Log::info('File attached to comment', [
                                 'media_id' => $media->id,
                                 'comment_id' => $commentModel->id,
-                                'file_name' => $fileName
+                                'file_name' => $fileName,
                             ]);
 
                             session()->flash('message', 'Archivo adjuntado correctamente al comentario');
@@ -767,22 +793,23 @@ class PucharseOrderDetail extends Component
                         } catch (\Exception $mediaException) {
                             \Log::error('Error attaching file to comment', [
                                 'error' => $mediaException->getMessage(),
-                                'trace' => $mediaException->getTraceAsString()
+                                'trace' => $mediaException->getTraceAsString(),
                             ]);
 
                             throw $mediaException;
                         }
                     } else {
-                        \Log::error('Comment not found with ID ' . $commentId);
+                        \Log::error('Comment not found with ID '.$commentId);
                     }
 
                     session()->flash('error', 'No se encontró el comentario aprobado para adjuntar el archivo');
+
                     return;
                 }
             }
 
             // Create the comment regardless of attachment status
-            $commentModel = new \App\Models\PurchaseOrderComment();
+            $commentModel = new \App\Models\PurchaseOrderComment;
             $commentModel->purchase_order_id = $this->purchaseOrder->id;
             $commentModel->user_id = auth()->id();
             $commentModel->comment = $this->comment;
@@ -809,17 +836,17 @@ class PucharseOrderDetail extends Component
                     \Log::info('Archivo adjunto al comentario desde vista previa de PO', [
                         'comment_id' => $commentModel->id,
                         'purchase_order_id' => $this->purchaseOrder->id,
-                        'file_name' => $fileName
+                        'file_name' => $fileName,
                     ]);
 
                     session()->flash('message', 'Comentario creado con archivo adjunto correctamente.');
                 } catch (\Exception $e) {
                     \Log::error('Error al adjuntar archivo al comentario', [
                         'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
+                        'trace' => $e->getTraceAsString(),
                     ]);
 
-                    session()->flash('error', 'Se creó el comentario pero hubo un error al guardar el archivo: ' . $e->getMessage());
+                    session()->flash('error', 'Se creó el comentario pero hubo un error al guardar el archivo: '.$e->getMessage());
                 }
             } else {
                 session()->flash('message', 'Comentario agregado correctamente');
@@ -881,12 +908,12 @@ class PucharseOrderDetail extends Component
             }
 
         } catch (\Exception $e) {
-            \Log::error("Error setting comments: " . $e->getMessage(), [
+            \Log::error('Error setting comments: '.$e->getMessage(), [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'purchase_order_id' => $this->purchaseOrder->id ?? null
+                'purchase_order_id' => $this->purchaseOrder->id ?? null,
             ]);
-            session()->flash('error', 'Error al agregar el comentario: ' . $e->getMessage());
+            session()->flash('error', 'Error al agregar el comentario: '.$e->getMessage());
         }
     }
 
@@ -911,7 +938,7 @@ class PucharseOrderDetail extends Component
             \Log::info('Debug comentarios - Consulta directa', [
                 'purchase_order_id' => $this->purchaseOrder->id,
                 'comment_count' => $comments->count(),
-                'comments' => $comments->toArray()
+                'comments' => $comments->toArray(),
             ]);
 
             // Usar relación del modelo
@@ -920,7 +947,7 @@ class PucharseOrderDetail extends Component
             \Log::info('Debug comentarios - Relación del modelo', [
                 'purchase_order_id' => $this->purchaseOrder->id,
                 'comment_count' => $modelComments->count(),
-                'comments' => $modelComments->toArray()
+                'comments' => $modelComments->toArray(),
             ]);
 
             session()->flash('message', 'Verificación de comentarios completada. Revise los logs para más detalles.');
@@ -930,10 +957,10 @@ class PucharseOrderDetail extends Component
         } catch (\Exception $e) {
             \Log::error('Error en debugComments', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
-            session()->flash('error', 'Error al verificar comentarios: ' . $e->getMessage());
+            session()->flash('error', 'Error al verificar comentarios: '.$e->getMessage());
         }
     }
 
@@ -948,7 +975,7 @@ class PucharseOrderDetail extends Component
                 \Log::info('Archivo seleccionado para diagnóstico', [
                     'file_name' => $this->attachment->getClientOriginalName(),
                     'file_size' => $this->attachment->getSize(),
-                    'mime_type' => $this->attachment->getMimeType()
+                    'mime_type' => $this->attachment->getMimeType(),
                 ]);
             } else {
                 \Log::warning('No hay archivo seleccionado para diagnóstico');
@@ -958,7 +985,7 @@ class PucharseOrderDetail extends Component
             $commentId = Session::get('comment_id');
             if ($commentId) {
                 \Log::info('ID de comentario encontrado en sesión', [
-                    'comment_id' => $commentId
+                    'comment_id' => $commentId,
                 ]);
 
                 // 3. Intentar recuperar el comentario de la BD
@@ -966,7 +993,7 @@ class PucharseOrderDetail extends Component
                 if ($comment) {
                     \Log::info('Comentario encontrado en la BD', [
                         'comment' => $comment->toArray(),
-                        'existing_media' => $comment->getMedia('attachments')->count()
+                        'existing_media' => $comment->getMedia('attachments')->count(),
                     ]);
 
                     // 4. Verificar si la tabla media tiene registros para este comentario
@@ -977,7 +1004,7 @@ class PucharseOrderDetail extends Component
 
                     \Log::info('Media asociados al comentario según tabla media', [
                         'count' => $mediaItems->count(),
-                        'items' => $mediaItems->toArray()
+                        'items' => $mediaItems->toArray(),
                     ]);
 
                     // 5. Si hay archivo seleccionado, intentar adjuntarlo manualmente
@@ -991,7 +1018,7 @@ class PucharseOrderDetail extends Component
 
                             \Log::info('Archivo adjuntado manualmente durante diagnóstico', [
                                 'media_id' => $media->id,
-                                'collection' => 'attachments'
+                                'collection' => 'attachments',
                             ]);
 
                             // Notificar éxito
@@ -1001,13 +1028,13 @@ class PucharseOrderDetail extends Component
                         } catch (\Exception $e) {
                             \Log::error('Error al adjuntar archivo manualmente durante diagnóstico', [
                                 'error' => $e->getMessage(),
-                                'trace' => $e->getTraceAsString()
+                                'trace' => $e->getTraceAsString(),
                             ]);
-                            session()->flash('error', 'Error al adjuntar archivo: ' . $e->getMessage());
+                            session()->flash('error', 'Error al adjuntar archivo: '.$e->getMessage());
                         }
                     }
                 } else {
-                    \Log::warning('El comentario con ID ' . $commentId . ' no existe en la BD');
+                    \Log::warning('El comentario con ID '.$commentId.' no existe en la BD');
                 }
             } else {
                 \Log::warning('No hay ID de comentario en la sesión');
@@ -1017,16 +1044,16 @@ class PucharseOrderDetail extends Component
             \Log::info('Variables de sesión actuales', [
                 'comment_attachment_approved' => Session::has('comment_attachment_approved'),
                 'comment_id' => Session::get('comment_id'),
-                'purchase_order_id' => Session::get('purchase_order_id')
+                'purchase_order_id' => Session::get('purchase_order_id'),
             ]);
 
             session()->flash('message', 'Diagnóstico de archivos adjuntos completado. Verifique los logs.');
         } catch (\Exception $e) {
             \Log::error('Error en debugAttachments', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            session()->flash('error', 'Error durante el diagnóstico: ' . $e->getMessage());
+            session()->flash('error', 'Error durante el diagnóstico: '.$e->getMessage());
         }
     }
 
@@ -1034,9 +1061,9 @@ class PucharseOrderDetail extends Component
     {
         // Filter orderProducts if search is provided
         $filteredProducts = $this->orderProducts;
-        if (!empty($this->search)) {
+        if (! empty($this->search)) {
             $search = strtolower($this->search);
-            $filteredProducts = array_filter($this->orderProducts, function($product) use ($search) {
+            $filteredProducts = array_filter($this->orderProducts, function ($product) use ($search) {
                 return
                     str_contains(strtolower($product['material_id']), $search) ||
                     str_contains(strtolower($product['description']), $search);
@@ -1049,7 +1076,7 @@ class PucharseOrderDetail extends Component
         return view('livewire.forms.pucharse-order-detail', [
             'orderProducts' => $filteredProducts,
             'filteredComments' => $filteredItems['comments'],
-            'filteredAttachments' => $filteredItems['attachments']
+            'filteredAttachments' => $filteredItems['attachments'],
         ])->layout('layouts.app');
     }
 

@@ -131,123 +131,139 @@ document.addEventListener('alpine:init', () => {
 // =============================================================================
 // Sidebar
 // =============================================================================
-document.addEventListener('DOMContentLoaded', function () {
-    const ensureNavLoadingOverlay = () => {
-        let overlay = document.getElementById('nav-loading-overlay');
-        if (overlay) {
-            return overlay;
-        }
+// document.addEventListener('DOMContentLoaded', function () {
+//     const ensureNavLoadingOverlay = () => {
+//         let overlay = document.getElementById('nav-loading-overlay');
+//         if (overlay) {
+//             return overlay;
+//         }
 
-        overlay = document.createElement('div');
-        overlay.id = 'nav-loading-overlay';
-        overlay.style.cssText = [
-            'position: fixed',
-            'inset: 0',
-            'z-index: 9999',
-            'display: none',
-            'align-items: center',
-            'justify-content: center',
-            'background: rgba(247,247,247,0.92)',
-            'backdrop-filter: blur(1px)',
-        ].join(';');
-        overlay.innerHTML = `
-            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 20px;border-radius:10px;background:#fff;border:1px solid #e5e7eb;box-shadow:0 8px 24px rgba(0,0,0,.08);">
-                <div style="width:28px;height:28px;border:3px solid #d1fae5;border-top-color:#1AAD8A;border-radius:9999px;animation:navLoaderSpin .8s linear infinite;"></div>
-                <p id="nav-loading-overlay-message" style="margin:0;color:#374151;font-size:13px;font-weight:600;">Cargando...</p>
-            </div>
-        `;
-        document.body.appendChild(overlay);
+//         overlay = document.createElement('div');
+//         overlay.id = 'nav-loading-overlay';
+//         overlay.style.cssText = [
+//             'position: fixed',
+//             'inset: 0',
+//             'z-index: 9999',
+//             'display: none',
+//             'align-items: center',
+//             'justify-content: center',
+//             'background: rgba(247,247,247,0.92)',
+//             'backdrop-filter: blur(1px)',
+//         ].join(';');
+//         overlay.innerHTML = `
+//             <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 20px;border-radius:10px;background:#fff;border:1px solid #e5e7eb;box-shadow:0 8px 24px rgba(0,0,0,.08);">
+//                 <div style="width:28px;height:28px;border:3px solid #d1fae5;border-top-color:#1AAD8A;border-radius:9999px;animation:navLoaderSpin .8s linear infinite;"></div>
+//                 <p id="nav-loading-overlay-message" style="margin:0;color:#374151;font-size:13px;font-weight:600;">Cargando...</p>
+//             </div>
+//         `;
+//         document.body.appendChild(overlay);
 
-        if (!document.getElementById('nav-loading-overlay-style')) {
-            const style = document.createElement('style');
-            style.id = 'nav-loading-overlay-style';
-            style.textContent = '@keyframes navLoaderSpin { to { transform: rotate(360deg); } }';
-            document.head.appendChild(style);
-        }
+//         if (!document.getElementById('nav-loading-overlay-style')) {
+//             const style = document.createElement('style');
+//             style.id = 'nav-loading-overlay-style';
+//             style.textContent = '@keyframes navLoaderSpin { to { transform: rotate(360deg); } }';
+//             document.head.appendChild(style);
+//         }
 
-        return overlay;
-    };
+//         return overlay;
+//     };
 
-    const showNavLoadingOverlay = (message) => {
-        const overlay = ensureNavLoadingOverlay();
-        const messageEl = document.getElementById('nav-loading-overlay-message');
-        if (messageEl) {
-            messageEl.textContent = message || 'Cargando...';
-        }
-        overlay.style.display = 'flex';
-    };
-    const hideNavLoadingOverlay = () => {
-        const overlay = document.getElementById('nav-loading-overlay');
-        if (overlay) {
-            overlay.style.display = 'none';
-        }
-    };
-    window.showNavLoadingOverlay = showNavLoadingOverlay;
+//     const showNavLoadingOverlay = (message) => {
+//         const overlay = ensureNavLoadingOverlay();
+//         const messageEl = document.getElementById('nav-loading-overlay-message');
+//         if (messageEl) {
+//             messageEl.textContent = message || 'Cargando...';
+//         }
+//         overlay.style.display = 'flex';
+//     };
+//     const hideNavLoadingOverlay = () => {
+//         const overlay = document.getElementById('nav-loading-overlay');
+//         if (overlay) {
+//             overlay.style.display = 'none';
+//         }
+//     };
+//     window.showNavLoadingOverlay = showNavLoadingOverlay;
 
-    const isPurchaseOrdersRoute = (urlString) => {
-        try {
-            const url = new URL(urlString, window.location.origin);
-            if (url.origin !== window.location.origin) return false;
-            return url.pathname === '/purchase-orders' || url.pathname.startsWith('/purchase-orders/');
-        } catch (e) {
-            return false;
-        }
-    };
+//     const isPurchaseOrdersRoute = (urlString) => {
+//         try {
+//             const url = new URL(urlString, window.location.origin);
+//             if (url.origin !== window.location.origin) return false;
+//             return url.pathname === '/purchase-orders' || url.pathname.startsWith('/purchase-orders/');
+//         } catch (e) {
+//             return false;
+//         }
+//     };
 
-    // Breadcrumbs, links internos u otros accesos (además del sidebar explícito).
-    document.addEventListener('click', (event) => {
-        const link = event.target?.closest?.('a[href]');
-        if (!link) return;
-        if (link.dataset.navLoading === 'true') return; // ya tiene handler específico
-        if (event.defaultPrevented) return;
-        if (event.button !== 0) return; // solo click izquierdo
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-        if (link.target && link.target !== '_self') return;
-        if (link.hasAttribute('download')) return;
+//     // Breadcrumbs, links internos u otros accesos (además del sidebar explícito).
+//     document.addEventListener('click', (event) => {
+//         const link = event.target?.closest?.('a[href]');
+//         if (!link) return;
+//         if (link.dataset.navLoading === 'true') return; // ya tiene handler específico
+//         if (event.defaultPrevented) return;
+//         if (event.button !== 0) return; // solo click izquierdo
+//         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+//         if (link.target && link.target !== '_self') return;
+//         if (link.hasAttribute('download')) return;
 
-        const href = link.getAttribute('href');
-        if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
-        if (!isPurchaseOrdersRoute(href)) return;
+//         const href = link.getAttribute('href');
+//         if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+//         if (!isPurchaseOrdersRoute(href)) return;
 
-        showNavLoadingOverlay('Cargando tablero de órdenes...');
-    }, true);
+//         showNavLoadingOverlay('Cargando tablero de órdenes...');
+//     }, true);
 
-    // Botones atrás/adelante del navegador.
-    window.addEventListener('popstate', () => {
-        if (isPurchaseOrdersRoute(window.location.href)) {
-            showNavLoadingOverlay('Cargando tablero de órdenes...');
-        }
-    });
+//     // Botones atrás/adelante del navegador.
+//     window.addEventListener('popstate', () => {
+//         if (isPurchaseOrdersRoute(window.location.href)) {
+//             showNavLoadingOverlay('Cargando tablero de órdenes...');
+//         }
+//     });
 
-    // Cuando se vuelve con atrás/adelante y el destino es Kanban de POs, mostrar feedback
-    // aunque la navegación provenga del historial del navegador (incluye bfcache).
-    window.addEventListener('pageshow', (event) => {
-        const navigationEntry = performance.getEntriesByType('navigation')[0];
-        const isBackForward = event.persisted || navigationEntry?.type === 'back_forward';
-        if (!isBackForward) return;
-        if (!isPurchaseOrdersRoute(window.location.href)) return;
+//     // Cuando se vuelve con atrás/adelante y el destino es Kanban de POs, mostrar feedback
+//     // aunque la navegación provenga del historial del navegador (incluye bfcache).
+//     window.addEventListener('pageshow', (event) => {
+//         const navigationEntry = performance.getEntriesByType('navigation')[0];
+//         const isBackForward = event.persisted || navigationEntry?.type === 'back_forward';
+//         if (!isBackForward) return;
+//         if (!isPurchaseOrdersRoute(window.location.href)) return;
 
-        showNavLoadingOverlay('Cargando tablero de órdenes...');
-        setTimeout(() => {
-            hideNavLoadingOverlay();
-        }, 900);
-    });
+//         showNavLoadingOverlay('Cargando tablero de órdenes...');
+//         setTimeout(() => {
+//             hideNavLoadingOverlay();
+//         }, 900);
+//     });
 
-    document.querySelectorAll('a[data-nav-loading="true"]').forEach((link) => {
-        link.addEventListener('click', (event) => {
-            const href = link.getAttribute('href');
-            if (!href || href.startsWith('#')) {
-                return;
-            }
+//     document.querySelectorAll('a[data-nav-loading="true"]').forEach((link) => {
+//         link.addEventListener('click', (event) => {
+//             const href = link.getAttribute('href');
+//             if (!href || href.startsWith('#')) {
+//                 return;
+//             }
 
-            event.preventDefault();
-            showNavLoadingOverlay(link.dataset.navLoadingMessage);
-            setTimeout(() => {
-                window.location.href = href;
-            }, 30);
-        });
-    });
+//             event.preventDefault();
+//             showNavLoadingOverlay(link.dataset.navLoadingMessage);
+//             setTimeout(() => {
+//                 window.location.href = href;
+//             }, 30);
+//         });
+//     });
 
+//     const sidebar = document.querySelector('.main-sidebar');
+//     if (sidebar) {
+//         if (localStorage.getItem('sidebarExpanded') === 'true') {
+//             sidebar.classList.add('sidebar-expanded');
+//         } else {
+//             sidebar.classList.remove('sidebar-expanded');
+//         }
+
+//         window.toggleSidebarSimple = function () {
+//             sidebar.classList.toggle('sidebar-expanded');
+//             localStorage.setItem('sidebarExpanded', sidebar.classList.contains('sidebar-expanded'));
+//         };
+//     }
+// });
+
+function initSidebar() {
     const sidebar = document.querySelector('.main-sidebar');
     if (sidebar) {
         if (localStorage.getItem('sidebarExpanded') === 'true') {
@@ -255,10 +271,73 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             sidebar.classList.remove('sidebar-expanded');
         }
+    }
+}
 
-        window.toggleSidebarSimple = function () {
-            sidebar.classList.toggle('sidebar-expanded');
-            localStorage.setItem('sidebarExpanded', sidebar.classList.contains('sidebar-expanded'));
-        };
+/**
+ * Overlay de carga del tablero Kanban (PO): mismo elemento en /purchase-orders y vistas con tablero.
+ */
+function poKanbanOverlayShow(message) {
+    const overlay = document.querySelector('.po-kanban-loading-overlay');
+    const msgEl = document.querySelector('.po-kanban-loading-message');
+    if (!overlay) {
+        return;
+    }
+    if (msgEl && typeof message === 'string' && message.length > 0) {
+        msgEl.textContent = message;
+    }
+    overlay.classList.remove('opacity-0', 'pointer-events-none');
+    overlay.classList.add('opacity-100', 'po-kanban-loading-overlay-visible');
+    overlay.setAttribute('aria-busy', 'true');
+}
+
+function poKanbanOverlayHide() {
+    const overlay = document.querySelector('.po-kanban-loading-overlay');
+    if (!overlay) {
+        return;
+    }
+    overlay.classList.remove('opacity-100', 'po-kanban-loading-overlay-visible');
+    overlay.classList.add('opacity-0', 'pointer-events-none');
+    overlay.setAttribute('aria-busy', 'false');
+}
+
+window.poKanbanOverlayShow = poKanbanOverlayShow;
+window.poKanbanOverlayHide = poKanbanOverlayHide;
+
+function revealDeferredContent(el) {
+    if (!el) {
+        return;
+    }
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            el.classList.remove('opacity-0', 'pointer-events-none');
+            el.classList.add('opacity-100');
+        });
+    });
+}
+
+/**
+ * Vistas con tablero Kanban PO: tras DOMContentLoaded, asegura overlay visible y mensaje
+ * hasta que Livewire lazy on-load ejecute mount → loadData (que oculta el overlay en finally).
+ * El arranque real del componente lo dispara Livewire (x-init en el placeholder lazy on-load).
+ */
+function initPoKanbanBoardAfterDomReady() {
+    const host = document.querySelector('[data-po-kanban-board-host]');
+    if (!host) {
+        return;
+    }
+    window.poKanbanOverlayShow?.('Cargando tablero de órdenes…');
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    initSidebar();
+    initPoKanbanBoardAfterDomReady();
+    const poIndexShell = document.getElementById('po-index-content-defer');
+    if (poIndexShell) {
+        revealDeferredContent(poIndexShell);
+    }
+    const poKanbanStandalone = document.querySelector('[data-po-kanban-defer-main]');
+    if (poKanbanStandalone) {
+        revealDeferredContent(poKanbanStandalone);
     }
 });

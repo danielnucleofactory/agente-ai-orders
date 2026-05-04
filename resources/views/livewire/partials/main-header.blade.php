@@ -25,6 +25,7 @@
 
                         <div class="flex items-center justify-center bg-gray-400 rounded-full">
                             @if(auth()->user()->getFirstMediaUrl('profile-photo'))
+                                
                                 <div class="h-[40px] w-[40px] overflow-hidden rounded-full bg-[#190FDB] flex items-center justify-center text-white font-medium">
                                     <img src="{{ auth()->user()->getFirstMediaUrl('profile-photo') }}" alt="Profile" class="object-cover w-full h-full rounded-full">
                                 </div>

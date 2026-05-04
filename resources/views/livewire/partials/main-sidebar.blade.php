@@ -15,9 +15,9 @@
         </button>
     </div>
 
-    <nav class="flex w-full flex-col items-center space-y-2 p-6 text-[#898989]">
+    <nav class="flex w-full flex-col items-left space-y-2 p-6 text-[#898989]">
         @can('has_view_profile')
-            <a href="{{ route('settings.profile') }}" class="flex overflow-hidden items-center mb-10 profile-container">
+            <a href="{{ route('settings.profile') }}" class="flex overflow-hidden items-left mb-10 profile-container">
             <div class="avatar-container h-[2.625rem] w-[2.625rem] overflow-hidden rounded-full bg-[#127A62] flex items-center justify-center text-white font-medium"
                  x-data="{
                      name: '{{ auth()->user()->name }}',
@@ -157,15 +157,6 @@
                             <x-sidebar-dropdown-item href="{{ route('purchase-orders.requests') }}"
                                 :active="request()->routeIs('purchase-orders.requests')">
                                 Solicitudes y aprobaciones
-                            </x-sidebar-dropdown-item>
-                        </li>
-                        @endcan
-
-                        @can('has_view_historical_data')
-                        <li>
-                            <x-sidebar-dropdown-item href="{{ route('historical-data.index') }}"
-                                :active="request()->routeIs('historical-data.index')">
-                                Histórico de Datos
                             </x-sidebar-dropdown-item>
                         </li>
                         @endcan

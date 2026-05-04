@@ -3,6 +3,7 @@
 @endphp
 
 <x-app-layout>
+    <div data-po-kanban-defer-main class="space-y-6 opacity-0 pointer-events-none transition-opacity duration-300 ease-out">
     <div class="flex justify-between items-center">
         <x-view-title>
             <x-slot:title>
@@ -118,7 +119,27 @@
     <x-modal-success title="Operación exitosa"
         content="La operación se encuentra pendiente de aprobación por parte de su supervisor" maxWidth="xs" />
 
-    <div class="flex overflow-auto gap-x-10 w-full">
-        <livewire:kanban.kanban-board />
+    <div class="relative min-h-[24rem] w-full">
+        <div
+            class="po-kanban-loading-overlay po-kanban-loading-overlay-visible absolute inset-0 z-30 flex flex-col items-center justify-start rounded-xl bg-[#F7F7F7]/93 pt-8 backdrop-blur-[2px] transition-opacity duration-300 ease-out opacity-100"
+            aria-busy="true"
+            role="status"
+        >
+            <div
+                class="po-kanban-loading-card flex flex-col items-center gap-4 rounded-xl border border-gray-200 bg-white px-10 py-8"
+            >
+                <div
+                    class="h-11 w-11 rounded-full border-[3px] border-emerald-100 border-t-[#1AAD8A] animate-spin"
+                    aria-hidden="true"
+                ></div>
+                <p class="po-kanban-loading-message m-0 text-center text-sm font-semibold text-gray-700">
+                    Cargando tablero de órdenes…
+                </p>
+            </div>
+        </div>
+        <div class="flex overflow-auto gap-x-10 w-full">
+            <livewire:kanban.kanban-board />
+        </div>
+    </div>
     </div>
 </x-app-layout>
