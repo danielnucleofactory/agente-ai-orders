@@ -299,9 +299,9 @@
                             </li>
                         @endcan
 
-                        @if(config('po-confirmation.enabled', false))
+                        @if(config('po-confirmation.enabled', true))
                         <li>
-                            <x-sidebar-dropdown-item href="{{ route('po-confirmation.settings.index') }}" :active="request()->routeIs('po-confirmation.settings.index')">
+                            <x-sidebar-dropdown-item href="{{ route('po-confirmation.settings.index') || '' }}" :active="request()->routeIs('po-confirmation.settings.index')">
                                 Confirmación PO
                             </x-sidebar-dropdown-item>
                         </li>
