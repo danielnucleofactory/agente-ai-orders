@@ -4,7 +4,7 @@ namespace App\Livewire\Forms;
 
 use App\Models\ShippingDocument;
 use Livewire\Component;
-use App\Services\TrackingService;
+use App\Services\PorthTimelineService;
 use Illuminate\Support\Facades\Log;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Storage;
@@ -252,17 +252,22 @@ class PucharseOrderConsolidateDetail extends Component {
         ]);
 
         try {
-            $trackingService = new TrackingService();
-            $this->trackingData = $trackingService->getTracking($trackingId, $mblNumber, $containerNumber, $porthId);
+            $purchaseOrder = $this->shippingDocument?->purchaseOrders->firstWhere('porth_id', $porthId)
+                ?? $this->shippingDocument?->purchaseOrders->first();
+
+            $this->trackingData = $purchaseOrder
+                ? app(PorthTimelineService::class)->buildForPurchaseOrder($purchaseOrder)
+                : null;
 
             if ($this->trackingData) {
-                Log::info('Tracking data loaded successfully (Porth)', [
+                Log::info('Tracking data loaded successfully from local Porth snapshot', [
                     'has_timeline' => isset($this->trackingData['timeline']),
                     'milestone' => $this->trackingData['current_phase'] ?? 'none'
                 ]);
             } else {
-                Log::info('No tracking data available in Porth for this shipping document', [
+                Log::info('No local Porth tracking data available for this shipping document', [
                     'shipping_document_id' => $this->shippingDocument->id ?? null,
+                    'porth_id' => $porthId,
                     'tracking_id' => $trackingId,
                     'mbl_number' => $mblNumber,
                     'container_number' => $containerNumber
@@ -270,7 +275,7 @@ class PucharseOrderConsolidateDetail extends Component {
                 $this->trackingData = null;
             }
         } catch (\Exception $e) {
-            Log::error('Error loading tracking data (Porth)', [
+            Log::error('Error loading tracking data from local Porth snapshot', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -295,7 +300,12 @@ class PucharseOrderConsolidateDetail extends Component {
         // Verificar si hay identificadores de tracking
         $hasTrackingIdentifiers = $this->shippingDocument->tracking_id 
             || $this->shippingDocument->mbl_number 
-            || $this->shippingDocument->container_number;
+            || $this->shippingDocument->container_number
+            || $this->shippingDocument->purchaseOrders->contains(function ($purchaseOrder) {
+                return filled($purchaseOrder->porth_id)
+                    || filled($purchaseOrder->porth_phase)
+                    || ! empty($purchaseOrder->porth_itinerary);
+            });
 
         if (!$hasTrackingIdentifiers) {
             return false;

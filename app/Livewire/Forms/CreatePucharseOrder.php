@@ -8,11 +8,51 @@ use App\Models\Hub;
 use App\Models\Product;
 use App\Models\ShipTo;
 use App\Models\Vendor;
+use App\Services\AuthorizationService;
 use App\Services\MaestrosApiService;
+use App\Support\ContainerNumber;
 use Livewire\Component;
 
 class CreatePucharseOrder extends Component
 {
+    /**
+     * Campos que nacen desde Seguimiento/API y no deben modificarse manualmente
+     * desde el modo edición de PO.
+     */
+    private const EDIT_LOCKED_API_FIELDS = [
+        'order_number',
+        'vendor_id',
+        'vendor_number',
+        'retail_group',
+        'route_label',
+        'net_total',
+        'total_amount',
+        'currency',
+        'emision_date_po',
+        'category',
+        'incoterms',
+        'date_theorical_load',
+        'factory_proforma_number',
+        'reason',
+        'customer_type',
+    ];
+
+    private const EDIT_LOCKED_TRACKING_DATE_FIELDS = [
+        'date_etd_initial',
+        'date_etd',
+        'date_atd',
+        'date_eta_initial',
+        'date_eta',
+        'date_eta_updated',
+        'date_ata',
+    ];
+
+    private const TRACKING_NOT_APPLICABLE_LOCKED_FIELDS = [
+        'container_type',
+        'container_number',
+        'shipping_line',
+    ];
+
     // Arrays para selects
     public $modalidadArray = ['op1' => 'Modalidad 1', 'op2' => 'Modalidad 2'];
 
@@ -792,6 +832,16 @@ class CreatePucharseOrder extends Component
 
     public $forwader_date;
 
+    public bool $trackingDatesLocked = false;
+
+    public bool $tracking_not_applicable = false;
+
+    public $tracking_not_applicable_reason;
+
+    public bool $trackingNotApplicableApproved = false;
+
+    public bool $trackingNotApplicablePending = false;
+
     public function mount($id = null)
     {
         $this->id = $id;
@@ -809,6 +859,16 @@ class CreatePucharseOrder extends Component
             $this->purchaseOrder = \App\Models\PurchaseOrder::with('products')->find($this->id);
 
             if ($this->purchaseOrder) {
+                $this->trackingDatesLocked = $this->hasPorthTrackingActive($this->purchaseOrder);
+                $this->tracking_not_applicable = (bool) ($this->purchaseOrder->tracking_not_applicable ?? false);
+                $this->trackingNotApplicableApproved = (bool) ($this->purchaseOrder->tracking_not_applicable ?? false);
+                $this->tracking_not_applicable_reason = $this->purchaseOrder->tracking_not_applicable_reason;
+                $this->trackingNotApplicablePending = $this->purchaseOrder->hasAuthorizationPending('tracking_not_applicable');
+                if ($this->trackingNotApplicablePending && blank($this->tracking_not_applicable_reason)) {
+                    $pendingTrackingAuthorization = $this->purchaseOrder->findAuthorizationByType('tracking_not_applicable', \App\Models\Authorization::STATUS_PENDING);
+                    $this->tracking_not_applicable_reason = $pendingTrackingAuthorization?->data['reason'] ?? null;
+                }
+
                 // Cargar datos generales
                 $this->order_number = $this->purchaseOrder->order_number;
                 $this->status = $this->purchaseOrder->status;
@@ -1003,11 +1063,11 @@ class CreatePucharseOrder extends Component
                 // No sobrescribir vendor_number si la PO lo tiene vacío (mantener el asignado desde vendor en mount)
                 $this->vendor_number = $this->purchaseOrder->vendor_number ?? $this->vendor_number;
 
-                $this->dif_load_date = optional($this->purchaseOrder->dif_load_date)?->format('Y-m-d');
+                $this->dif_load_date = $this->purchaseOrder->dif_load_date;
                 $this->emision_date_po = optional($this->purchaseOrder->emision_date_po)?->format('Y-m-d');
                 $this->forwader_date = optional($this->purchaseOrder->forwader_date)?->format('Y-m-d');
 
-                // Recalcular las fechas
+                // Recalcular diferencias derivadas
                 $this->computeDateDiffs();
 
                 // Cargar opciones de maestros usando el trading_company guardado
@@ -1513,7 +1573,7 @@ class CreatePucharseOrder extends Component
         // Ahorros (mantiene tu lógica)
         $this->calculateSavings();
 
-        // Diferencias de fechas ETD/ETA (por si cambió algo)
+        // Diferencias de fechas derivadas (por si cambió algo)
         $this->computeDateDiffs();
     }
 
@@ -1566,6 +1626,7 @@ class CreatePucharseOrder extends Component
         $companyId = auth()->user()->company_id ?? 1;
 
         // Normalizaciones previas a guardar
+        $this->container_number = ContainerNumber::normalize($this->container_number);
         $this->computeDateDiffs();
 
         try {
@@ -1586,6 +1647,7 @@ class CreatePucharseOrder extends Component
                 'currency' => 'required|string',
                 'category' => 'nullable|string',
                 'factory_proforma_number' => 'nullable|string',
+                'container_number' => ['nullable', ContainerNumber::VALIDATION_RULE],
                 'route_label' => 'required|string',
                 'date_theorical_load' => [
                     'required',
@@ -1612,6 +1674,7 @@ class CreatePucharseOrder extends Component
                 'currency.required' => 'La moneda es requerida',
                 'route_label.required' => 'La ruta es requerida',
                 'date_theorical_load.required' => 'La fecha de Carga Lista Teorica es requerida',
+                'container_number.regex' => 'El número de contenedor debe tener 4 letras seguidas de 7 dígitos. Ejemplo: ABCD1234567.',
             ]);
 
             try {
@@ -1633,6 +1696,10 @@ class CreatePucharseOrder extends Component
                 }
 
                 // Preparar los datos para la orden de compra
+                if (! empty($this->date_ata)) {
+                    $this->calculateDeliveryCompliance();
+                }
+
                 $poData = [
                     'company_id' => $companyId,
                     'order_number' => $this->order_number,
@@ -2021,6 +2088,9 @@ class CreatePucharseOrder extends Component
     public function updatePurchaseOrder($id)
     {
         try {
+            $this->restoreEditLockedApiFields((int) $id);
+            $this->restoreEditLockedTrackingDateFields((int) $id);
+
             // Red de seguridad: si estamos editando y date_theorical_load está vacío pero existe en BD, recargar desde la PO
             if ($this->id && empty($this->date_theorical_load)) {
                 $po = $this->purchaseOrder ?? \App\Models\PurchaseOrder::find($id);
@@ -2050,6 +2120,7 @@ class CreatePucharseOrder extends Component
             // Validación alineada con creación + fechas de carga lista
             $companyId = auth()->user()->company_id ?? 1;
             $allowedIncoterms = implode(',', array_keys($this->tiposIncotermArray));
+            $this->container_number = ContainerNumber::normalize($this->container_number);
 
             $this->validate([
                 'order_number' => [
@@ -2065,6 +2136,7 @@ class CreatePucharseOrder extends Component
                 'currency' => 'required|string',
                 'category' => 'nullable|string',
                 'factory_proforma_number' => 'nullable|string',
+                'container_number' => ['nullable', ContainerNumber::VALIDATION_RULE],
                 'route_label' => 'required|string',
                 'date_theorical_load' => [
                     'required',
@@ -2104,6 +2176,7 @@ class CreatePucharseOrder extends Component
                 'currency.required' => 'La moneda es requerida',
                 'route_label.required' => 'La ruta es requerida',
                 'date_theorical_load.required' => 'La fecha de Carga Lista Teorica es requerida',
+                'container_number.regex' => 'El número de contenedor debe tener 4 letras seguidas de 7 dígitos. Ejemplo: ABCD1234567.',
             ]);
 
             $this->computeDateDiffs();
@@ -2263,7 +2336,7 @@ class CreatePucharseOrder extends Component
                 'cbm' => $this->cbm,
                 'consolidator_name' => $this->consolidator_name,
                 'vendor_number' => $this->vendor_number,
-                'dif_load_date' => ! empty($this->dif_load_date) ? $this->dif_load_date : null,
+                'dif_load_date' => $this->dif_load_date !== '' ? $this->dif_load_date : null,
                 'emision_date_po' => ! empty($this->emision_date_po) ? $this->emision_date_po : null,
                 'forwader_date' => ! empty($this->forwader_date) ? $this->forwader_date : null,
             ];
@@ -2276,6 +2349,62 @@ class CreatePucharseOrder extends Component
                 \DB::beginTransaction();
 
                 $purchaseOrder = \App\Models\PurchaseOrder::findOrFail($id);
+
+                if ($this->shouldRequestTrackingNotApplicable($purchaseOrder)) {
+                    if (blank($this->tracking_not_applicable_reason)) {
+                        \DB::rollBack();
+                        $this->addError('tracking_not_applicable_reason', 'Debe indicar un motivo para solicitar No aplica tracking.');
+                        $this->dispatch('show-error', 'Debe indicar un motivo para solicitar No aplica tracking.');
+
+                        return [
+                            'success' => false,
+                            'message' => 'Debe indicar un motivo para solicitar No aplica tracking.',
+                        ];
+                    }
+
+                    app(AuthorizationService::class)->createTrackingNotApplicableRequest(
+                        $purchaseOrder,
+                        $this->tracking_not_applicable_reason
+                    );
+
+                    $this->tracking_not_applicable = false;
+                    $this->trackingNotApplicableApproved = (bool) $purchaseOrder->tracking_not_applicable;
+                    $this->trackingNotApplicablePending = true;
+                    \DB::commit();
+
+                    $this->dispatch('show-success', 'Solicitud de No aplica tracking enviada para aprobación.');
+
+                    return [
+                        'success' => true,
+                        'message' => 'Solicitud de No aplica tracking enviada para aprobación.',
+                        'authorization_pending' => true,
+                    ];
+                }
+
+                $dateAtaChanged = array_key_exists('date_ata', $poData)
+                    && $this->dateValueChanged($purchaseOrder->date_ata, $poData['date_ata']);
+
+                if ($dateAtaChanged) {
+                    $compliance = \App\Models\PurchaseOrder::calculateDeliveryCompliance(
+                        $poData['date_eta_initial'] ?? $purchaseOrder->date_eta_initial,
+                        $poData['date_ata'] ?? null
+                    );
+
+                    $poData['arrival_status'] = $compliance['arrival_status'];
+                    $poData['delay_days'] = $compliance['delay_days'];
+                    $this->arrival_status = $compliance['arrival_status'];
+                    $this->delay_days = $compliance['delay_days'];
+                } else {
+                    unset($poData['arrival_status'], $poData['delay_days']);
+                }
+
+                $poData = $this->withoutEditLockedApiFields($poData);
+                if ($this->hasPorthTrackingActive($purchaseOrder)) {
+                    $poData = $this->withoutEditLockedTrackingDateFields($poData);
+                }
+                if ($this->shouldLockTrackingNotApplicableFields()) {
+                    $poData = $this->withoutTrackingNotApplicableLockedFields($poData);
+                }
 
                 // Log antes de fill para ver el valor original
                 \Log::info('Antes de fill - date_variable_date', [
@@ -2671,7 +2800,7 @@ class CreatePucharseOrder extends Component
         $this->calculateTotals();
     }
 
-    // NUEVO: Listeners para actualizar arrival_status automáticamente cuando cambie la ETA
+    // Listeners para diferencias derivadas. El cumplimiento solo cambia con ATA.
     public function updatedDateEta()
     {
         $this->computeDateDiffs();
@@ -2680,6 +2809,44 @@ class CreatePucharseOrder extends Component
     public function updatedDateEtaInitial()
     {
         $this->computeDateDiffs();
+    }
+
+    public function updatedDateEtd()
+    {
+        $this->computeDateDiffs();
+    }
+
+    public function updatedDateEtdInitial()
+    {
+        $this->computeDateDiffs();
+    }
+
+    public function updatedDateVariableDate()
+    {
+        $this->computeDateDiffs();
+    }
+
+    public function updatedDateTheoricalLoad()
+    {
+        $this->computeDateDiffs();
+    }
+
+    public function updatedDateAta()
+    {
+        $this->calculateDeliveryCompliance();
+    }
+
+    public function updatedTrackingNotApplicable($value): void
+    {
+        if (! $this->id) {
+            return;
+        }
+
+        if (! (bool) $value) {
+            return;
+        }
+
+        $this->restoreTrackingNotApplicableLockedFields((int) $this->id);
     }
 
     protected function computeDateDiffs(): void
@@ -2700,8 +2867,10 @@ class CreatePucharseOrder extends Component
                 ? $etaBase->diffInDays($etaUpdated, true)
                 : null;
 
-            // NUEVO: Calcular automáticamente arrival_status y delay_days
-            $this->calculateArrivalStatus();
+            $this->dif_load_date = \App\Models\PurchaseOrder::calculateLoadDateDifference(
+                $this->date_theorical_load,
+                $this->date_variable_date
+            );
         } catch (\Exception $e) {
             \Log::warning('Error en computeDateDiffs: '.$e->getMessage(), [
                 'date_etd_initial' => $this->date_etd_initial,
@@ -2709,87 +2878,35 @@ class CreatePucharseOrder extends Component
                 'date_eta' => $this->date_eta,
                 'date_eta_initial' => $this->date_eta_initial,
                 'date_eta_updated' => $this->date_eta_updated,
+                'date_theorical_load' => $this->date_theorical_load,
+                'date_variable_date' => $this->date_variable_date,
             ]);
             // No lanzar excepción para no interrumpir el flujo
             $this->etd_dates_difference = null;
             $this->eta_dates_difference = null;
+            $this->dif_load_date = null;
         }
     }
 
-    /**
-     * Calcula automáticamente el estado de llegada y días de retraso
-     * basándose en los tiempos de tránsito esperados por la matriz origen-destino.
-     */
-    protected function calculateArrivalStatus(): void
+    protected function calculateDeliveryCompliance(): void
     {
-        $transitService = app(\App\Services\TransitTimeService::class);
+        $compliance = \App\Models\PurchaseOrder::calculateDeliveryCompliance(
+            $this->date_eta_initial,
+            $this->date_ata
+        );
 
-        // Obtener país de origen (del vendor) y destino (de company)
-        $originCountry = $this->vendor_pais;
-        $destinationCountry = null;
-
-        if ($this->company_id) {
-            $company = \App\Models\Company::find($this->company_id);
-            $destinationCountry = $company?->country;
-        }
-
-        // Obtener tiempo de tránsito esperado
-        $expectedTransitDays = $transitService->getTransitDays($originCountry, $destinationCountry);
-
-        // Fecha de salida real (ATD)
-        $atd = $this->date_atd ?? null;
-
-        // Si tenemos ATD y tiempos esperados, calcular basándose en la matriz
-        if ($atd && $expectedTransitDays !== null) {
-            $expectedArrival = \Carbon\Carbon::parse($atd)->addDays($expectedTransitDays);
-
-            // Usar ATA si existe, si no usar la fecha actual
-            $compareDate = $this->date_ata ? \Carbon\Carbon::parse($this->date_ata) : now();
-
-            if ($compareDate->startOfDay()->gt($expectedArrival->startOfDay())) {
-                // Atrasado respecto al tiempo esperado
-                $delayDays = $expectedArrival->diffInDays($compareDate);
-                $this->arrival_status = 'Atrasado';
-                $this->delay_days = (int) $delayDays;
-
-                return;
-            }
-
-            $this->arrival_status = 'A tiempo';
-            $this->delay_days = 0;
-
-            return;
-        }
-
-        // Fallback: usar ETA si no hay ATD o tiempos esperados
-        $eta = $this->date_eta_initial ?? $this->date_eta ?? null;
-
-        if (! $eta) {
-            $this->arrival_status = null;
-            $this->delay_days = null;
-
-            return;
-        }
-
-        $today = now()->startOfDay();
-        $etaDate = \Carbon\Carbon::parse($eta)->startOfDay();
-
-        if ($today > $etaDate) {
-            // Atrasado respecto a ETA
-            $delayDays = $etaDate->diffInDays($today);
-            $this->arrival_status = 'Atrasado';
-            $this->delay_days = (int) $delayDays;
-        } else {
-            // A tiempo
-            $this->arrival_status = 'A tiempo';
-            $this->delay_days = 0;
-        }
+        $this->arrival_status = $compliance['arrival_status'];
+        $this->delay_days = $compliance['delay_days'];
     }
 
     public function calculateLoadDateDifference()
     {
-        // Esta función ya no es necesaria ya que se eliminó date_carga_po
-        return '-';
+        $this->dif_load_date = \App\Models\PurchaseOrder::calculateLoadDateDifference(
+            $this->date_theorical_load,
+            $this->date_variable_date
+        );
+
+        return $this->dif_load_date ?? '-';
     }
 
     /**
@@ -2868,6 +2985,138 @@ class CreatePucharseOrder extends Component
         }
 
         return $value;
+    }
+
+    protected function dateValueChanged($oldValue, $newValue): bool
+    {
+        $normalize = function ($value) {
+            if (blank($value)) {
+                return null;
+            }
+
+            try {
+                return \Carbon\Carbon::parse($value)->format('Y-m-d');
+            } catch (\Throwable $e) {
+                return $value;
+            }
+        };
+
+        return $normalize($oldValue) !== $normalize($newValue);
+    }
+
+    protected function shouldRequestTrackingNotApplicable(\App\Models\PurchaseOrder $purchaseOrder): bool
+    {
+        if ((bool) $purchaseOrder->tracking_not_applicable) {
+            return false;
+        }
+
+        if (! (bool) $this->tracking_not_applicable) {
+            return false;
+        }
+
+        return ! $purchaseOrder->hasAuthorizationPending('tracking_not_applicable');
+    }
+
+    protected function shouldLockTrackingNotApplicableFields(): bool
+    {
+        return (bool) $this->tracking_not_applicable
+            || (bool) $this->trackingNotApplicableApproved
+            || (bool) $this->trackingNotApplicablePending;
+    }
+
+    protected function restoreEditLockedApiFields(int $purchaseOrderId): void
+    {
+        $purchaseOrder = \App\Models\PurchaseOrder::with('vendor')->find($purchaseOrderId);
+
+        if (! $purchaseOrder) {
+            return;
+        }
+
+        $vendorCode = $purchaseOrder->vendor_number ?? $purchaseOrder->vendor?->vendo_code ?? '';
+
+        $this->order_number = $purchaseOrder->order_number;
+        $this->vendor_id = $vendorCode;
+        $this->vendor_number = $vendorCode;
+        $this->retail_group = $purchaseOrder->retail_group;
+        $this->route_label = $purchaseOrder->route_label;
+        $this->net_total = $purchaseOrder->net_total;
+        $this->total_amount = $purchaseOrder->total_amount;
+        $this->currency = $purchaseOrder->currency;
+        $this->emision_date_po = optional($purchaseOrder->emision_date_po)?->format('Y-m-d');
+        $this->category = $purchaseOrder->category;
+        $this->incoterms = $purchaseOrder->incoterms;
+        $this->date_theorical_load = optional($purchaseOrder->date_theorical_load)?->format('Y-m-d');
+        $this->factory_proforma_number = $purchaseOrder->factory_proforma_number;
+        $this->reason = $purchaseOrder->reason;
+        $this->customer_type = $purchaseOrder->customer_type;
+    }
+
+    protected function withoutEditLockedApiFields(array $poData): array
+    {
+        foreach (self::EDIT_LOCKED_API_FIELDS as $field) {
+            unset($poData[$field]);
+        }
+
+        return $poData;
+    }
+
+    protected function restoreEditLockedTrackingDateFields(int $purchaseOrderId): void
+    {
+        $purchaseOrder = \App\Models\PurchaseOrder::find($purchaseOrderId);
+
+        if (! $purchaseOrder || ! $this->hasPorthTrackingActive($purchaseOrder)) {
+            $this->trackingDatesLocked = false;
+            return;
+        }
+
+        $this->trackingDatesLocked = true;
+        $this->date_etd_initial = optional($purchaseOrder->date_etd_initial)?->format('Y-m-d');
+        $this->date_etd = optional($purchaseOrder->date_etd)?->format('Y-m-d');
+        $this->date_atd = optional($purchaseOrder->date_atd)?->format('Y-m-d');
+        $this->date_eta_initial = optional($purchaseOrder->date_eta_initial)?->format('Y-m-d');
+        $this->date_eta = optional($purchaseOrder->date_eta)?->format('Y-m-d');
+        $this->date_eta_updated = optional($purchaseOrder->date_eta)?->format('Y-m-d');
+        $this->date_ata = optional($purchaseOrder->date_ata)?->format('Y-m-d');
+    }
+
+    protected function withoutEditLockedTrackingDateFields(array $poData): array
+    {
+        foreach (self::EDIT_LOCKED_TRACKING_DATE_FIELDS as $field) {
+            unset($poData[$field]);
+        }
+
+        return $poData;
+    }
+
+    protected function restoreTrackingNotApplicableLockedFields(int $purchaseOrderId): void
+    {
+        $purchaseOrder = \App\Models\PurchaseOrder::find($purchaseOrderId);
+
+        if (! $purchaseOrder) {
+            return;
+        }
+
+        $this->container_type = $purchaseOrder->container_type;
+        $this->container_number = $purchaseOrder->container_number;
+        $this->shipping_line = $purchaseOrder->shipping_line;
+    }
+
+    protected function withoutTrackingNotApplicableLockedFields(array $poData): array
+    {
+        foreach (self::TRACKING_NOT_APPLICABLE_LOCKED_FIELDS as $field) {
+            unset($poData[$field]);
+        }
+
+        return $poData;
+    }
+
+    protected function hasPorthTrackingActive(\App\Models\PurchaseOrder $purchaseOrder): bool
+    {
+        if ((bool) $purchaseOrder->tracking_not_applicable) {
+            return false;
+        }
+
+        return filled($purchaseOrder->porth_id) || filled($purchaseOrder->last_porth_sync_at);
     }
 
     /**

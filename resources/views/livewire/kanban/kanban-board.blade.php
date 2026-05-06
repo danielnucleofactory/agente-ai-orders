@@ -287,15 +287,15 @@
                     <div class="mb-8 pt-2">
                         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-6">
                             <div>
-                                <x-date-picker wire:model="date_atd" label="ETD Real (ATD) <span class='text-red-500'>*</span>" :error="$errors->first('date_atd')" />
+                                <x-date-picker wire:model="date_atd" label="ETD Real (ATD) <span class='text-red-500'>*</span>" :readonly="$trackingDatesLocked" :error="$errors->first('date_atd')" />
                             </div>
 
                             <div>
-                                <x-date-picker wire:model="date_eta_initial" label="ETA Inicial <span class='text-red-500'>*</span>" :error="$errors->first('date_eta_initial')" />
+                                <x-date-picker wire:model="date_eta_initial" label="ETA Inicial <span class='text-red-500'>*</span>" :readonly="$trackingDatesLocked" :error="$errors->first('date_eta_initial')" />
                             </div>
 
                             <div>
-                                <x-date-picker wire:model="date_eta" label="ETA Variable <span class='text-red-500'>*</span>" :error="$errors->first('date_eta')" />
+                                <x-date-picker wire:model="date_eta" label="ETA Variable <span class='text-red-500'>*</span>" :readonly="$trackingDatesLocked" :error="$errors->first('date_eta')" />
                             </div>
                         </div>
                     </div>
@@ -413,7 +413,7 @@
                 {{-- Etapa 6: Puerto (ID 6) --}}
                 <div class="{{ $newColumnId == 6 ? '' : 'hidden' }}">
                     <div class="mb-8 pt-2">
-                        <x-date-picker wire:model="date_ata" label="ETA Real (ATA) <span class='text-red-500'>*</span>" :error="$errors->first('date_ata')" />
+                        <x-date-picker wire:model="date_ata" label="ETA Real (ATA) <span class='text-red-500'>*</span>" :readonly="$trackingDatesLocked" :error="$errors->first('date_ata')" />
                     </div>
                     <div class="mb-8">
                         <x-form-textarea label="" name="comment_stage_06" wireModel="comment" placeholder="Comentarios" />
@@ -429,7 +429,7 @@
                         <x-date-picker wire:model="bonded_warehouse_exit" label="Salida Almacén Fiscal" :error="$errors->first('bonded_warehouse_exit')" />
                     </div>
                     <div class="mb-8">
-                        <x-date-picker wire:model="date_ata" label="ETA Real (ATA) <span class='text-red-500'>*</span>" :error="$errors->first('date_ata')" />
+                        <x-date-picker wire:model="date_ata" label="ETA Real (ATA) <span class='text-red-500'>*</span>" :readonly="$trackingDatesLocked" :error="$errors->first('date_ata')" />
                     </div>
                     <div class="mb-8">
                         <x-form-textarea label="" name="comment_stage_07" wireModel="comment" placeholder="Comentarios" />

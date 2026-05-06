@@ -149,6 +149,51 @@ class PurchaseOrderObserver
     ];
 
     /**
+     * Handle the PurchaseOrder "created" event.
+     */
+    public function created(PurchaseOrder $purchaseOrder): void
+    {
+        try {
+            if (!Auth::check()) {
+                return;
+            }
+
+            $currentUserId = Auth::id();
+            $ipAddress = request()?->ip();
+            $userAgent = request()?->userAgent();
+            $poId = $purchaseOrder->id;
+            $orderNumber = $purchaseOrder->order_number;
+
+            $initialValues = $this->buildInitialAuditValues($purchaseOrder);
+
+            DB::afterCommit(function () use ($poId, $orderNumber, $currentUserId, $ipAddress, $userAgent, $initialValues) {
+                try {
+                    PurchaseOrderComment::create([
+                        'purchase_order_id' => $poId,
+                        'user_id' => $currentUserId,
+                        'comment' => "Se creó la orden de compra {$orderNumber}",
+                        'action_type' => 'record_create',
+                        'old_values' => [],
+                        'new_values' => $initialValues,
+                        'ip_address' => $ipAddress,
+                        'user_agent' => $userAgent,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error("Error creando comentario de creación en PurchaseOrderObserver: " . $e->getMessage(), [
+                        'purchase_order_id' => $poId,
+                        'error' => $e->getTraceAsString(),
+                    ]);
+                }
+            });
+        } catch (\Exception $e) {
+            Log::error("Error en PurchaseOrderObserver::created: " . $e->getMessage(), [
+                'purchase_order_id' => $purchaseOrder->id ?? null,
+                'error' => $e->getTraceAsString(),
+            ]);
+        }
+    }
+
+    /**
      * Handle the PurchaseOrder "updating" event.
      */
     public function updating(PurchaseOrder $purchaseOrder): void
@@ -408,5 +453,35 @@ class PurchaseOrderObserver
         // Para otros tipos, convertir a string
         return (string) $value;
     }
-}
 
+    /**
+     * Construye los valores iniciales visibles en el detalle de actividad para una creación.
+     *
+     * @return array<string, mixed>
+     */
+    protected function buildInitialAuditValues(PurchaseOrder $purchaseOrder): array
+    {
+        $fields = array_unique(array_merge(['order_number'], $this->trackedFields));
+        $values = [];
+
+        foreach ($fields as $field) {
+            $value = $purchaseOrder->{$field} ?? null;
+
+            if ($value instanceof \DateTimeInterface) {
+                $value = $value->format('Y-m-d H:i:s');
+            }
+
+            if (is_array($value) && empty($value)) {
+                continue;
+            }
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $values[$field] = $value;
+        }
+
+        return $values;
+    }
+}

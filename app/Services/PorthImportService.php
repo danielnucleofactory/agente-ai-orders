@@ -144,6 +144,16 @@ class PorthImportService
      */
     protected function updatePurchaseOrder(PurchaseOrder $po, array $data): void
     {
+        if ((bool) $po->tracking_not_applicable) {
+            Log::info('porth_import:po_skipped_tracking_not_applicable', [
+                'purchase_order_id' => $po->id,
+                'order_number' => $po->order_number,
+                'porth_id' => $po->porth_id,
+            ]);
+
+            return;
+        }
+
         // Guardar valores originales antes de actualizar para detectar cambios reales
         $originalValues = [];
         $fieldsToUpdate = [];
@@ -162,7 +172,8 @@ class PorthImportService
             $fieldsToUpdate[$field] = $value;
         }
         
-        // Fechas principales desde payload (ETA inicial: solo si aún no hay valor en la PO)
+        // Fechas principales desde payload. Las fechas iniciales son baseline:
+        // Porth solo las llena si aún no existen.
         $payloadValues = $this->helper->buildPurchaseOrderPayloadValues($data);
         $fieldsMap = $this->helper->getPurchaseOrderFieldsMap();
 
@@ -171,7 +182,7 @@ class PorthImportService
             if ($value === null) {
                 continue;
             }
-            if ($poField === 'date_eta_initial' && $this->purchaseOrderEtaInitialAlreadySet($po)) {
+            if ($this->isInitialDateFieldAlreadySet($po, $poField)) {
                 continue;
             }
             $originalValues[$poField] = $po->$poField;
@@ -196,6 +207,19 @@ class PorthImportService
 
         // Reglas de booleanos según datos de Porth
         $this->applyPorthBooleanRules($po, $data, $fieldsToUpdate, $originalValues);
+
+        if (array_key_exists('date_ata', $fieldsToUpdate)
+            && $this->normalizeValueForComparison($po->date_ata, 'date_ata') !== $this->normalizeValueForComparison($fieldsToUpdate['date_ata'], 'date_ata')) {
+            $compliance = PurchaseOrder::calculateDeliveryCompliance(
+                $fieldsToUpdate['date_eta_initial'] ?? $po->date_eta_initial,
+                $fieldsToUpdate['date_ata']
+            );
+
+            $originalValues['arrival_status'] = $po->arrival_status;
+            $originalValues['delay_days'] = $po->delay_days;
+            $fieldsToUpdate['arrival_status'] = $compliance['arrival_status'];
+            $fieldsToUpdate['delay_days'] = $compliance['delay_days'];
+        }
 
         if (!empty($fieldsToUpdate)) {
             // Detectar cambios reales comparando valores originales con nuevos
@@ -238,8 +262,8 @@ class PorthImportService
 
     /**
      * Automatización: transiciones de Kanban según phase de Porth (solo phase, no fechas).
-     * - 40_in_transit → Consolidador a En tránsito
-     * - 50_at_destination_port → Consolidador o En tránsito a Puerto
+     * - Desde Producción/Booking/Consolidador, 40_in_transit mueve a En tránsito.
+     * - Desde Producción en adelante, cualquier fase desde puerto destino mueve a Puerto.
      */
     protected function applyPorthKanbanTransitions(PurchaseOrder $po, array $data): void
     {
@@ -248,7 +272,7 @@ class PorthImportService
         }
 
         $stages = config('services.porth.kanban_stages', []);
-        if (empty($stages['consolidador']) || empty($stages['en_transito']) || empty($stages['puerto'])) {
+        if (empty($stages['produccion']) || empty($stages['booking']) || empty($stages['consolidador']) || empty($stages['en_transito']) || empty($stages['puerto'])) {
             return;
         }
 
@@ -268,44 +292,54 @@ class PorthImportService
         $currentName = $currentStatus->name ?? '';
         $phase = strtolower(trim($data['phase'] ?? ''));
 
-        // Solo phase, no fechas: 40_in_transit y 50_at_destination_port
         $hasInTransit = in_array($phase, ['in_transit', '40_in_transit'], true);
-        $hasAtDestinationPort = in_array($phase, ['at_destination_port', '50_at_destination_port'], true);
+        $hasReachedDestinationPort = in_array($phase, [
+            'at_destination_port',
+            '50_at_destination_port',
+            'to_final_destination',
+            '60_to_final_destination',
+            'delivered',
+            '70_delivered',
+        ], true);
 
-        // Prioridad 1: En tránsito O Consolidador → Puerto cuando phase = 50_at_destination_port
-        if ($hasAtDestinationPort) {
-            $inConsolidador = $this->statusMatchesNames($currentName, $stages['consolidador']);
-            $inEnTransito = $this->statusMatchesNames($currentName, $stages['en_transito']);
-            if ($inConsolidador || $inEnTransito) {
-                $targetStatus = $this->findStatusByName($board, $stages['puerto']);
-                if ($targetStatus) {
-                    $po->update(['kanban_status_id' => $targetStatus->id]);
-                    Log::info('porth_import:kanban_auto_transition', [
-                        'purchase_order_id' => $po->id,
-                        'order_number' => $po->order_number,
-                        'from' => $currentName,
-                        'to' => $targetStatus->name,
-                        'trigger' => 'porth_phase_50_at_destination_port',
-                    ]);
-                }
-                return;
-            }
+        $automationSourceStages = array_merge(
+            $stages['produccion'],
+            $stages['booking'],
+            $stages['consolidador'],
+            $stages['en_transito'],
+            $stages['puerto'],
+        );
+
+        if (! $this->statusMatchesNames($currentName, $automationSourceStages)) {
+            return;
         }
 
-        // Prioridad 2: Consolidador → En tránsito cuando phase = 40_in_transit
-        if ($hasInTransit && $this->statusMatchesNames($currentName, $stages['consolidador'])) {
-            $targetStatus = $this->findStatusByName($board, $stages['en_transito']);
-            if ($targetStatus) {
-                $po->update(['kanban_status_id' => $targetStatus->id]);
-                Log::info('porth_import:kanban_auto_transition', [
-                    'purchase_order_id' => $po->id,
-                    'order_number' => $po->order_number,
-                    'from' => $currentName,
-                    'to' => $targetStatus->name,
-                    'trigger' => 'porth_phase_40_in_transit',
-                ]);
-            }
+        if ($hasReachedDestinationPort) {
+            $this->movePurchaseOrderToKanbanStage($po, $board, $stages['puerto'], $currentName, 'porth_phase_destination_port_or_later');
+            return;
         }
+
+        if ($hasInTransit && $this->statusMatchesNames($currentName, array_merge($stages['produccion'], $stages['booking'], $stages['consolidador']))) {
+            $this->movePurchaseOrderToKanbanStage($po, $board, $stages['en_transito'], $currentName, 'porth_phase_40_in_transit');
+        }
+    }
+
+    private function movePurchaseOrderToKanbanStage(PurchaseOrder $po, KanbanBoard $board, array $targetStageNames, string $currentName, string $trigger): void
+    {
+        $targetStatus = $this->findStatusByName($board, $targetStageNames);
+
+        if (! $targetStatus || (int) $po->kanban_status_id === (int) $targetStatus->id) {
+            return;
+        }
+
+        $po->update(['kanban_status_id' => $targetStatus->id]);
+        Log::info('porth_import:kanban_auto_transition', [
+            'purchase_order_id' => $po->id,
+            'order_number' => $po->order_number,
+            'from' => $currentName,
+            'to' => $targetStatus->name,
+            'trigger' => $trigger,
+        ]);
     }
 
     /**
@@ -513,11 +547,11 @@ class PorthImportService
     }
 
     /**
-     * Si la PO ya tiene ETA inicial, Porth no debe volver a escribir date_eta_initial.
+     * Si la PO ya tiene una fecha inicial, Porth no debe volver a escribir el baseline.
      */
-    private function purchaseOrderEtaInitialAlreadySet(PurchaseOrder $po): bool
+    private function isInitialDateFieldAlreadySet(PurchaseOrder $po, string $field): bool
     {
-        return filled($po->date_eta_initial);
+        return in_array($field, ['date_etd_initial', 'date_eta_initial'], true) && filled($po->{$field});
     }
 
     /**

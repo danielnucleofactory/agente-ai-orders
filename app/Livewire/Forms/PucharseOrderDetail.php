@@ -5,7 +5,7 @@ namespace App\Livewire\Forms;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderComment;
 use App\Services\AuthorizationService;
-use App\Services\TrackingService;
+use App\Services\PorthTimelineService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
@@ -325,17 +325,17 @@ class PucharseOrderDetail extends Component
                 'container_number' => $containerNumber,
             ]);
 
-            $trackingService = new TrackingService;
-            $this->trackingData = $trackingService->getTracking($trackingId, $mblNumber, $containerNumber, $porthId);
+            $this->trackingData = app(PorthTimelineService::class)->buildForPurchaseOrder($this->purchaseOrder);
 
             if ($this->trackingData) {
-                Log::info('Tracking data loaded successfully (Porth)', [
+                Log::info('Tracking data loaded successfully from local Porth snapshot', [
                     'has_timeline' => isset($this->trackingData['timeline']),
                     'milestone' => $this->trackingData['current_phase'] ?? 'none',
                 ]);
             } else {
-                Log::info('No tracking data available in Porth for this PO', [
+                Log::info('No local Porth tracking data available for this PO', [
                     'purchase_order_id' => $this->purchaseOrder->id ?? null,
+                    'porth_id' => $porthId,
                     'tracking_id' => $trackingId,
                     'mbl_number' => $mblNumber,
                     'container_number' => $containerNumber,
@@ -343,7 +343,7 @@ class PucharseOrderDetail extends Component
                 $this->trackingData = null; // Asegurar que sea null, no array vacío
             }
         } catch (\Throwable $e) {
-            Log::error('Error loading tracking data (Porth)', [
+            Log::error('Error loading tracking data from local Porth snapshot', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
