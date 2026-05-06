@@ -1868,6 +1868,11 @@ class PurchaseOrderController extends Controller
 
         $purchaseOrders = $query->get();
 
+        // Exponer todos los campos del modelo solo para este endpoint.
+        // makeVisible() actúa sobre cada instancia en memoria y no afecta
+        // ningún otro flujo (createFromApi, updateFromApi, web, exports, etc.).
+        $purchaseOrders->each(fn ($po) => $po->makeVisible($po->getHidden()));
+
         // Si no se encontraron POs activas pero hay filtros específicos, verificar si existen eliminadas
         $deletedInfo = null;
         if ($purchaseOrders->isEmpty() && ($request->has('order_number') || $request->has('company'))) {
