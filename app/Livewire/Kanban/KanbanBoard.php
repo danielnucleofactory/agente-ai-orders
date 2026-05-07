@@ -804,12 +804,9 @@ class KanbanBoard extends Component
         $this->resetErrorBag();
         $this->resetValidation();
 
-        // Cerrar el modal y forzar actualización del componente
+        // Mantener cierre programático para otros flujos, pero sin refrescos agresivos
+        // que pueden rehidratar el DOM mientras Alpine está cerrando el modal.
         $this->dispatch('close-modal', 'modal-po-stage-change');
-        $this->dispatch('refreshKanban');
-
-        // Forzar re-render del componente para limpiar el estado en el frontend
-        $this->dispatch('$refresh');
     }
 
     public function setCurrentTask($taskId, $newColumnId)
