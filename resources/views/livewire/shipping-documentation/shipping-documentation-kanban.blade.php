@@ -217,7 +217,7 @@
                         {{-- Equipo / BL / Naviera + montos --}}
                         <x-form-input class="mb-4">
                             <x-slot:label>Número de Contenedor</x-slot:label>
-                            <x-slot:input type="text" wire:model="container_number" placeholder="Ingrese número de contenedor" class="pr-10 {{ $errors->has('container_number') ? 'border-red-500'  : '' }}"></x-slot:input>
+                            <x-slot:input type="text" wire:model="container_number" placeholder="ABCD1234567" class="pr-10 {{ $errors->has('container_number') ? 'border-red-500'  : '' }}"></x-slot:input>
                             <x-slot:error>{{ $errors->first('container_number') }}</x-slot:error>
                         </x-form-input>
 

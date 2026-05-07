@@ -182,7 +182,6 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
             'Fecha Recepción de Factura',
             'Fecha Recepción Doc. Proveedor',
             'CBM (m³)',
-            'Total',
             'Monto Factura',
             'Monto Flete',
             'Costo de Seguro',
@@ -190,9 +189,7 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
             'Monto Total',
             'Cantidad Estimada de Pallets',
             'Cantidad Real de Pallets',
-            'Dropship',
             'Aplica TLC',
-            'Aplica AF',
             'Tiene Factura Mercancía',
             'Tarifa Utilizada OK',
             'Usa Almacén Fiscal',
@@ -259,7 +256,8 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
             }
         };
 
-        $purchaseIncotermValue = $po->price_incoterm ?? $po->payment_terms ?? '';
+        $priceIncotermValue = $po->price_incoterm ?? '';
+        $purchaseIncotermValue = $po->incoterms ?? '';
 
         return [
             $po->kanbanStatus->name ?? '',
@@ -268,7 +266,7 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
             $date($po->emision_date_po),
             $date($po->created_at),
             $po->currency ?? '',
-            $po->incoterms ?? '',
+            $priceIncotermValue,
             $purchaseIncotermValue,
             $po->logistics_incoterm ?? '',
             $po->departure_port ?? '',
@@ -308,7 +306,6 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
             $date($po->date_invoice_received),
             $date($po->date_vendor_document_received),
             $po->cbm ?? '',
-            $po->total ?? '',
             $po->Invoice_amount ?? '',
             $po->freight_amount ?? '',
             $po->insurance_cost ?? '',
@@ -316,9 +313,7 @@ class ActivePurchaseOrdersExport implements FromQuery, WithHeadings, WithMapping
             $po->total_amount ?? '',
             $po->pallet_quantity ?? '',
             $po->pallet_quantity_real ?? '',
-            $bool($po->is_dropship),
             $bool($po->applies_tlc),
-            $bool($po->applies_af),
             $bool($po->has_facture_merca),
             $bool($po->used_rate_ok),
             $bool($po->uses_bonded_warehouse),

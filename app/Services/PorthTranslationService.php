@@ -14,6 +14,7 @@ class PorthTranslationService
      */
     protected ?Collection $portsCache = null;
     protected ?Collection $shippingLinesCache = null;
+    protected ?MaestrosApiService $maestrosApiService = null;
 
     /**
      * Mapeo de códigos de país ISO 2 letras a nombres completos
@@ -151,6 +152,13 @@ class PorthTranslationService
             $port = $this->findPortByName($porthName);
             if ($port) {
                 return $this->formatPortForMaestros($port['name'], $port['country']);
+            }
+        }
+
+        if ($porthName) {
+            $maestroPortName = $this->findMaestroPortByName($porthName, $porthCode);
+            if ($maestroPortName) {
+                return $maestroPortName;
             }
         }
 
@@ -342,11 +350,11 @@ class PorthTranslationService
     protected function findPortByName(string $name): ?array
     {
         $ports = $this->getPortsCache();
-        $normalized = strtoupper(trim($name));
+        $normalized = $this->normalizePortNameForSearch($name);
         
         // Buscar match exacto primero
         $exactMatch = $ports->first(function ($port) use ($normalized) {
-            return strtoupper($port['name']) === $normalized;
+            return $this->normalizePortNameForSearch($port['name']) === $normalized;
         });
         
         if ($exactMatch) {
@@ -355,8 +363,86 @@ class PorthTranslationService
         
         // Buscar match parcial
         return $ports->first(function ($port) use ($normalized) {
-            return str_contains(strtoupper($port['name']), $normalized) 
-                || str_contains($normalized, strtoupper($port['name']));
+            $portName = $this->normalizePortNameForSearch($port['name']);
+
+            return str_contains($portName, $normalized)
+                || str_contains($normalized, $portName);
+        });
+    }
+
+    /**
+     * Busca el nombre canónico del puerto en Maestros cuando el CSV local no alcanza.
+     * Devuelve el nombre exacto del maestro para evitar que el webhook falle en la resolución.
+     */
+    protected function findMaestroPortByName(string $name, ?string $porthCode = null): ?string
+    {
+        $normalizedSearch = $this->normalizePortNameForSearch($name);
+        if ($normalizedSearch === '') {
+            return null;
+        }
+
+        $cacheKey = 'porth_translation_maestro_port_' . md5($normalizedSearch . '|' . (string) $porthCode);
+
+        return Cache::remember($cacheKey, 3600, function () use ($name, $normalizedSearch, $porthCode) {
+            try {
+                $response = $this->getMaestrosApiService()->getPorts([
+                    'search' => $name,
+                    'active' => 'true',
+                    'per_page' => 100,
+                ]);
+
+                $rows = collect($response['data'] ?? []);
+                if ($rows->isEmpty()) {
+                    return null;
+                }
+
+                $expectedCountry = $this->inferCountryNameFromPorthCode($porthCode);
+
+                $exact = $rows->first(function ($row) use ($normalizedSearch, $expectedCountry) {
+                    $rowName = (string) ($row['name'] ?? '');
+                    if ($rowName === '') {
+                        return false;
+                    }
+
+                    if ($this->normalizePortNameForSearch($rowName) !== $normalizedSearch) {
+                        return false;
+                    }
+
+                    return $expectedCountry === null
+                        || str_contains($this->normalizePortNameForSearch($rowName), $expectedCountry);
+                });
+
+                if ($exact && !empty($exact['name'])) {
+                    return $exact['name'];
+                }
+
+                $partial = $rows->first(function ($row) use ($normalizedSearch, $expectedCountry) {
+                    $rowName = (string) ($row['name'] ?? '');
+                    if ($rowName === '') {
+                        return false;
+                    }
+
+                    $normalizedRowName = $this->normalizePortNameForSearch($rowName);
+                    $matchesName = str_contains($normalizedRowName, $normalizedSearch)
+                        || str_contains($normalizedSearch, $normalizedRowName);
+
+                    if (! $matchesName) {
+                        return false;
+                    }
+
+                    return $expectedCountry === null || str_contains($normalizedRowName, $expectedCountry);
+                });
+
+                return !empty($partial['name']) ? $partial['name'] : null;
+            } catch (\Throwable $e) {
+                Log::warning('porth_translation:maestro_port_lookup_failed', [
+                    'porth_code' => $porthCode,
+                    'porth_name' => $name,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return null;
+            }
         });
     }
 
@@ -534,5 +620,37 @@ class PorthTranslationService
         Cache::forget('porth_translation_shipping_lines');
         $this->portsCache = null;
         $this->shippingLinesCache = null;
+    }
+
+    protected function getMaestrosApiService(): MaestrosApiService
+    {
+        if ($this->maestrosApiService === null) {
+            $this->maestrosApiService = app(MaestrosApiService::class);
+        }
+
+        return $this->maestrosApiService;
+    }
+
+    protected function inferCountryNameFromPorthCode(?string $porthCode): ?string
+    {
+        if (empty($porthCode) || strlen($porthCode) < 2) {
+            return null;
+        }
+
+        $countryIso2 = strtoupper(substr(trim($porthCode), 0, 2));
+        $countryName = self::COUNTRY_CODES[$countryIso2] ?? null;
+
+        return $countryName ? $this->normalizePortNameForSearch($countryName) : null;
+    }
+
+    protected function normalizePortNameForSearch(string $value): string
+    {
+        $normalized = $this->removeAccents($value);
+        $normalized = strtoupper(trim($normalized));
+        $normalized = preg_replace('/[.,;:()\-\/]+/', ' ', $normalized) ?? $normalized;
+        $normalized = preg_replace('/\b(PORT OF|PUERTO|HARBOR|HARBOUR|TERMINAL|PORT)\b/', ' ', $normalized) ?? $normalized;
+        $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
+
+        return trim($normalized);
     }
 }

@@ -1,3 +1,11 @@
+@php
+    $lockApiFieldsOnEdit = (bool) $id;
+    $lockTrackingDatesOnEdit = (bool) ($trackingDatesLocked ?? false);
+    $lockTrackingNotApplicableFields = (bool) (($tracking_not_applicable ?? false) || ($trackingNotApplicableApproved ?? false) || ($trackingNotApplicablePending ?? false));
+    $lockedInputClass = $lockApiFieldsOnEdit ? 'bg-gray-100 cursor-not-allowed' : '';
+    $trackingLockedInputClass = $lockTrackingNotApplicableFields ? 'bg-gray-100 cursor-not-allowed' : '';
+@endphp
+
 <div>
     <!-- Notification area for errors, success messages, and loading -->
     <div x-data="{
@@ -146,7 +154,8 @@
     <x-form>
         <div class="p-8 space-y-10 bg-white rounded-2xl">
             <div class="flex gap-4">
-                <div class="space-y-6 w-full">
+                <div class="space-y-6 w-full"
+                     x-data="{ trackingNotApplicableLocked: @js((bool) (($tracking_not_applicable ?? false) || ($trackingNotApplicableApproved ?? false) || ($trackingNotApplicablePending ?? false))) }">
                     <div class="space-y-6">
                         <h2 class="text-lg font-bold text-[#1AAD8A]">Datos generales</h2>
 
@@ -164,14 +173,15 @@
                                     name="order_number"
                                     placeholder="Ingrese número de orden"
                                     wire:model="order_number"
-                                    class="pr-10 {{ $errors->has('order_number') ? 'border-red-500'  : '' }}">
+                                    :readonly="$lockApiFieldsOnEdit"
+                                    class="pr-10 {{ $lockedInputClass }} {{ $errors->has('order_number') ? 'border-red-500'  : '' }}">
                                 </x-slot:input>
                                 <x-slot:error>
                                     {{ $errors->first('order_number') }}
                                 </x-slot:error>
                             </x-form-input>
 
-                            <x-date-picker wire:model="emision_date_po" label="Fecha emisión PO" />
+                            <x-date-picker wire:model="emision_date_po" label="Fecha emisión PO" :readonly="$lockApiFieldsOnEdit" />
 
                             {{-- Fecha de creación --}}
                             <x-form-input>
@@ -198,6 +208,7 @@
                                 :options="$currencyArray"
                                 wire:model="currency"
                                 :error="$errors->has('currency')"
+                                :disabled="$lockApiFieldsOnEdit"
                             />
 
                             {{-- Incoterm Precios --}}
@@ -216,6 +227,7 @@
                                 :options="$tiposIncotermArray"
                                 wire:model="incoterms"
                                 :error="$errors->has('incoterms')"
+                                :disabled="$lockApiFieldsOnEdit"
                             />
 
                             {{-- Planificación logística --}}
@@ -264,7 +276,8 @@
                                     name="category"
                                     placeholder="Categoría de la OC"
                                     wire:model="category"
-                                    class="pr-10 {{ $errors->has('category') ? 'border-red-500' : '' }}">
+                                    :readonly="$lockApiFieldsOnEdit"
+                                    class="pr-10 {{ $lockedInputClass }} {{ $errors->has('category') ? 'border-red-500' : '' }}">
                                 </x-slot:input>
                                 <x-slot:error>
                                     {{ $errors->first('category') }}
@@ -286,7 +299,8 @@
                                         name="reason"
                                         placeholder="Ingrese motivo de la PO"
                                         wire:model="reason"
-                                        class="pr-10 {{ $errors->has('reason') ? 'border-red-500' : '' }}">
+                                        :readonly="$lockApiFieldsOnEdit"
+                                        class="pr-10 {{ $lockedInputClass }} {{ $errors->has('reason') ? 'border-red-500' : '' }}">
                                     </x-slot:input>
                                     <x-slot:error>
                                         {{ $errors->first('reason') }}
@@ -334,6 +348,8 @@
                             wire:model="shipping_line"
                             :options="$shippingLineArray"
                             :error="$errors->has('shipping_line')"
+                            x-bind:disabled="trackingNotApplicableLocked"
+                            x-bind:class="trackingNotApplicableLocked ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''"
                         />
 
                         <!-- Naviera y equipo -->
@@ -347,12 +363,39 @@
                             wire:model="container_type"
                             :options="$containerTypeArray"
                             :error="$errors->has('container_type')"
+                            x-bind:disabled="trackingNotApplicableLocked"
+                            x-bind:class="trackingNotApplicableLocked ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''"
                         />
 
                         <x-form-input>
                             <x-slot:label>Número de Contenedor</x-slot:label>
-                            <x-slot:input name="container_number" wire:model="container_number" placeholder="Ingrese número"></x-slot:input>
+                            <x-slot:input name="container_number" wire:model="container_number" placeholder="ABCD1234567" x-bind:readonly="trackingNotApplicableLocked" x-bind:class="trackingNotApplicableLocked ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''" class="{{ $trackingLockedInputClass }}"></x-slot:input>
+                            <x-slot:error>{{ $errors->first('container_number') }}</x-slot:error>
                         </x-form-input>
+
+                        @if($id)
+                            <div class="col-span-3 rounded-md border border-gray-200 p-4">
+                                <div class="flex items-center gap-3">
+                                    <input
+                                        id="tracking_not_applicable"
+                                        type="checkbox"
+                                        wire:model="tracking_not_applicable"
+                                        x-model="trackingNotApplicableLocked"
+                                        @disabled($trackingNotApplicableApproved || $trackingNotApplicablePending)
+                                        class="w-4 h-4 text-[#28C7A1] bg-gray-100 border-gray-300 rounded focus:ring-[#28C7A1] focus:ring-2">
+                                    <label for="tracking_not_applicable" class="block text-sm font-medium text-gray-700">
+                                        No aplica tracking
+                                    </label>
+                                    @if($trackingNotApplicableApproved)
+                                        <span class="text-xs font-medium text-green-700">Aprobado</span>
+                                    @elseif($trackingNotApplicablePending)
+                                        <span class="text-xs font-medium text-yellow-700">Pendiente de aprobación</span>
+                                    @elseif($tracking_not_applicable)
+                                        <span class="text-xs font-medium text-blue-700">Se solicitará al guardar</span>
+                                    @endif
+                                </div>
+                            </div>
+                        @endif
 
                         <!-- Identificadores de embarque -->
                         <div class="col-span-3">
@@ -366,7 +409,7 @@
 
                         <x-form-input>
                             <x-slot:label>Proforma de Fábrica</x-slot:label>
-                            <x-slot:input name="factory_proforma_number" wire:model="factory_proforma_number" placeholder="Ingrese número" class="pr-10 {{ $errors->has('factory_proforma_number') ? 'border-red-500' : '' }}">
+                            <x-slot:input name="factory_proforma_number" wire:model="factory_proforma_number" placeholder="Ingrese número" :readonly="$lockApiFieldsOnEdit" class="pr-10 {{ $lockedInputClass }} {{ $errors->has('factory_proforma_number') ? 'border-red-500' : '' }}">
                             </x-slot:input>
                             <x-slot:error>{{ $errors->first('factory_proforma_number') }}</x-slot:error>
                         </x-form-input>
@@ -388,7 +431,7 @@
                 <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
                     <x-form-select label="Seleccionar Nombre del Proveedor <span class='text-red-500'>*</span>" name="vendor_id" wireModel="vendor_id"
                         wire:change="onVendorSelected"
-                        :options="$vendorArray" :error="$errors->has('vendor_id') ? true : false" />
+                        :options="$vendorArray" :error="$errors->has('vendor_id') ? true : false" :disabled="$lockApiFieldsOnEdit" />
 
                     <x-form-input>
                         <x-slot:label>Código de Proveedor</x-slot:label>
@@ -396,7 +439,8 @@
                             name="vendor_number"
                             wire:model="vendor_number"
                             placeholder="Seleccione un proveedor"
-                            readonly>
+                            readonly
+                            class="{{ $lockedInputClass }}">
                         </x-slot:input>
                     </x-form-input>
                 </div>
@@ -621,7 +665,7 @@
                     </div>
 
                     <div class="space-y-2">
-                        <x-date-picker wire:model.live="date_etd_initial" label="ETD Inicial" />
+                        <x-date-picker wire:model.live="date_etd_initial" label="ETD Inicial" :readonly="$lockTrackingDatesOnEdit" />
                         <div class="flex items-center">
                             <input id="etd_initial_validated" type="checkbox" wire:model="etd_initial_validated"
                                    class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
@@ -629,9 +673,9 @@
                         </div>
                     </div>
 
-                    <x-date-picker wire:model="date_etd" label="ETD Variable" />
+                    <x-date-picker wire:model="date_etd" label="ETD Variable" :readonly="$lockTrackingDatesOnEdit" />
 
-                    <x-date-picker wire:model="date_atd" label="ATD" />
+                    <x-date-picker wire:model="date_atd" label="ATD" :readonly="$lockTrackingDatesOnEdit" />
 
                     <x-date-picker wire:model="date_estimated_hub_arrival" label="Fecha estimada de llegada al hub" class="hidden" />
 
@@ -643,11 +687,11 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Arribo a destino</h4>
                     </div>
 
-                    <x-date-picker wire:model="date_eta_initial" label="ETA Inicial" />
+                    <x-date-picker wire:model="date_eta_initial" label="ETA Inicial" :readonly="$lockTrackingDatesOnEdit" />
 
-                    <x-date-picker wire:model="date_eta_updated" label="ETA Variable" />
+                    <x-date-picker wire:model="date_eta_updated" label="ETA Variable" :readonly="$lockTrackingDatesOnEdit" />
 
-                    <x-date-picker wire:model="date_ata" label="ATA" />
+                    <x-date-picker wire:model="date_ata" label="ATA" :readonly="$lockTrackingDatesOnEdit" />
 
                     <x-date-picker wire:model="date_required_in_destination" label="Fecha requerida en destino" :error="$errors->first('date_required_in_destination')" class="hidden" />
 
@@ -839,7 +883,7 @@
 
                     <x-form-input>
                         <x-slot:label>Monto Total</x-slot:label>
-                        <x-slot:input type="number" step="0.01" inputmode="decimal" wire:model.live="total_amount"></x-slot:input>
+                        <x-slot:input type="number" step="0.01" inputmode="decimal" wire:model.live="total_amount" :readonly="$lockApiFieldsOnEdit" class="{{ $lockedInputClass }}"></x-slot:input>
                     </x-form-input>
 
                     <!-- Costos logísticos -->
@@ -989,6 +1033,7 @@
                             :options="$routeLabelArray"
                             wire:model="route_label"
                             :error="$errors->has('route_label')"
+                            :disabled="$lockApiFieldsOnEdit"
                         />
 
                         <!-- Segmento / cliente -->
@@ -998,12 +1043,12 @@
 
                         <x-form-input>
                             <x-slot:label>Grupo Repositor</x-slot:label>
-                            <x-slot:input type="text" placeholder="Ingrese grupo repositor" wire:model.live="retail_group"></x-slot:input>
+                            <x-slot:input type="text" placeholder="Ingrese grupo repositor" wire:model.live="retail_group" :readonly="$lockApiFieldsOnEdit" class="{{ $lockedInputClass }}"></x-slot:input>
                         </x-form-input>
 
                         <x-form-input>
                             <x-slot:label>Tipo Cliente</x-slot:label>
-                            <x-slot:input type="text" placeholder="Ingrese tipo de cliente" wire:model.live="customer_type"></x-slot:input>
+                            <x-slot:input type="text" placeholder="Ingrese tipo de cliente" wire:model.live="customer_type" :readonly="$lockApiFieldsOnEdit" class="{{ $lockedInputClass }}"></x-slot:input>
                         </x-form-input>
 
                         <!-- Documentos y referencias -->

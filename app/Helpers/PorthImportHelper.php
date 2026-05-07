@@ -3,6 +3,7 @@
 namespace App\Helpers;
 
 use App\Services\PorthTranslationService;
+use App\Support\ContainerNumber;
 use Carbon\Carbon;
 
 class PorthImportHelper
@@ -317,7 +318,7 @@ class PorthImportHelper
         foreach ($cargoList as $cargo) {
             $number = $cargo['number'] ?? ($cargo['name'] ?? null);
             $normalized = $this->normalize($number);
-            if ($normalized) {
+            if ($normalized && ContainerNumber::isValid($normalized)) {
                 $numbers[] = $normalized;
             }
         }

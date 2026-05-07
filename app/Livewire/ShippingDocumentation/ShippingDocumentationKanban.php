@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Schema;
 use App\Models\ShippingDocumentComment;
 use Livewire\WithFileUploads;
 use App\Services\TrackingService;
+use App\Support\ContainerNumber;
 
 class ShippingDocumentationKanban extends Component
 {
@@ -174,7 +175,7 @@ class ShippingDocumentationKanban extends Component
                     'estimated_arrival_date' => 'required|date', // ETA inicial
                     'date_eta_updated'       => 'required|date', // ETA variable
                     // Al menos uno de estos tres debe estar presente
-                    'container_number'       => 'nullable|required_without_all:tracking_id,bill_of_lading|string|max:50',
+                    'container_number'       => ['nullable', 'required_without_all:tracking_id,bill_of_lading', ContainerNumber::VALIDATION_RULE],
                     'tracking_id'            => 'nullable|required_without_all:container_number,bill_of_lading|string|max:50',
                     'bill_of_lading'         => 'nullable|required_without_all:tracking_id,container_number|string|max:100',
                     // Otros campos requeridos
@@ -236,6 +237,7 @@ class ShippingDocumentationKanban extends Component
             'estimated_arrival_date.required' => 'El campo es obligatorio.',
             'date_eta_updated.required'       => 'El campo es obligatorio.',
             'container_number.required_without_all' => 'Debe proporcionar al menos uno: Número de Booking, Documento de Embarque o Número de Contenedor.',
+            'container_number.regex' => 'El número de contenedor debe tener 4 letras seguidas de 7 dígitos. Ejemplo: ABCD1234567.',
             'tracking_id.required_without_all'      => 'Debe proporcionar al menos uno: Número de Booking, Documento de Embarque o Número de Contenedor.',
             'bill_of_lading.required_without_all'   => 'Debe proporcionar al menos uno: Número de Booking, Documento de Embarque o Número de Contenedor.',
             'shipping_line.required'          => 'El campo es obligatorio.',
@@ -881,7 +883,7 @@ class ShippingDocumentationKanban extends Component
             $this->validate([
                 'tracking_id' => 'nullable|string|max:50',
                 'mbl_number' => 'nullable|string|max:50',
-                'container_number' => 'nullable|string|max:50',
+                'container_number' => ['nullable', ContainerNumber::VALIDATION_RULE],
             ]);
 
             // Verificamos que hay al menos un código de tracking
@@ -1003,6 +1005,8 @@ class ShippingDocumentationKanban extends Component
     // First, add a method that handles everything in one go
     public function saveAndMoveDocument()
     {
+        $this->container_number = ContainerNumber::normalize($this->container_number);
+
         // Validar los datos del formulario - Livewire mostrará los errores automáticamente
         $this->validate($this->getRules(), $this->messages());
 

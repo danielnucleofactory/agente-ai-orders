@@ -200,6 +200,10 @@ class PurchaseOrder extends Model implements HasMedia
         'porth_itinerary',
         'porth_id',
         'last_porth_sync_at',
+        'tracking_not_applicable',
+        'tracking_not_applicable_reason',
+        'tracking_not_applicable_approved_by',
+        'tracking_not_applicable_approved_at',
     ];
 
     /**
@@ -429,7 +433,7 @@ class PurchaseOrder extends Model implements HasMedia
         'date_vendor_document_received' => 'datetime',
         'forwader_date' => 'datetime',
         'cbm' => 'decimal:2',
-        'dif_load_date' => 'datetime',
+        'dif_load_date' => 'integer',
         'emision_date_po' => 'date',
 
         // Casts de Porth
@@ -438,6 +442,8 @@ class PurchaseOrder extends Model implements HasMedia
         'porth_first_eta' => 'datetime',
         'porth_first_etd' => 'datetime',
         'porth_ready' => 'datetime',
+        'tracking_not_applicable' => 'boolean',
+        'tracking_not_applicable_approved_at' => 'datetime',
         'porth_to_origin_port' => 'datetime',
         'porth_at_origin_port' => 'datetime',
         'porth_in_transit' => 'datetime',
@@ -664,87 +670,56 @@ class PurchaseOrder extends Model implements HasMedia
     }
 
     /**
-     * Calcula automáticamente el estado de llegada y días de retraso
-     * basándose en los tiempos de tránsito esperados por la matriz origen-destino.
+     * Calcula cumplimiento de entrega contra la fecha comprometida.
      *
-     * Lógica:
-     * - Si hay ATD (fecha de salida real), calcula la fecha esperada de llegada
-     *   usando la matriz de tiempos de tránsito.
-     * - Compara con ATA (llegada real) o ETA (estimada) o fecha actual.
-     * - Determina si está "A tiempo" o "Atrasado" según los días de diferencia.
-     *
-     * @return array ['arrival_status' => string|null, 'delay_days' => int|null, 'expected_transit_days' => int|null]
+     * @return array{arrival_status: string|null, delay_days: int|null}
      */
-    public function calculateArrivalStatus(): array
+    public static function calculateDeliveryCompliance($etaInitial, $ata): array
     {
-        $transitService = app(\App\Services\TransitTimeService::class);
-
-        // Obtener país de origen (del vendor) y destino (de company)
-        $originCountry = $this->vendor?->country;
-        $destinationCountry = $this->company?->country;
-
-        // Obtener tiempo de tránsito esperado
-        $expectedTransitDays = $transitService->getTransitDays($originCountry, $destinationCountry);
-
-        // Fecha de salida real (ATD)
-        $atd = $this->date_atd;
-
-        // Si tenemos ATD y tiempos esperados, calcular basándose en la matriz
-        if ($atd && $expectedTransitDays !== null) {
-            $expectedArrival = \Illuminate\Support\Carbon::parse($atd)->addDays($expectedTransitDays);
-
-            // Usar ATA si existe, si no usar la fecha actual
-            $compareDate = $this->date_ata ? \Illuminate\Support\Carbon::parse($this->date_ata) : now();
-
-            if ($compareDate->startOfDay()->gt($expectedArrival->startOfDay())) {
-                // Atrasado respecto al tiempo esperado
-                $delayDays = $expectedArrival->diffInDays($compareDate);
-
-                return [
-                    'arrival_status' => 'Atrasado',
-                    'delay_days' => (int) $delayDays,
-                    'expected_transit_days' => $expectedTransitDays,
-                ];
-            }
-
-            return [
-                'arrival_status' => 'A tiempo',
-                'delay_days' => 0,
-                'expected_transit_days' => $expectedTransitDays,
-            ];
-        }
-
-        // Fallback: usar ETA Variable si no hay ATD o tiempos esperados
-        // date_eta_updated no existe en BD, usar date_eta (ETA Variable)
-        $eta = $this->date_eta ?? null;
-
-        if (! $eta) {
+        if (blank($etaInitial) || blank($ata)) {
             return [
                 'arrival_status' => null,
                 'delay_days' => null,
-                'expected_transit_days' => $expectedTransitDays,
             ];
         }
 
-        $today = now()->startOfDay();
-        $etaDate = \Illuminate\Support\Carbon::parse($eta)->startOfDay();
+        $committedDate = \Illuminate\Support\Carbon::parse($etaInitial)->startOfDay();
+        $deliveredDate = \Illuminate\Support\Carbon::parse($ata)->startOfDay();
+        $delayDays = (int) $committedDate->diffInDays($deliveredDate, false);
 
-        if ($today > $etaDate) {
-            // Atrasado respecto a ETA
-            $delayDays = $etaDate->diffInDays($today);
-
+        if ($delayDays > 0) {
             return [
                 'arrival_status' => 'Atrasado',
-                'delay_days' => (int) $delayDays,
-                'expected_transit_days' => $expectedTransitDays,
+                'delay_days' => $delayDays,
             ];
         }
 
         return [
             'arrival_status' => 'A tiempo',
             'delay_days' => 0,
-            'expected_transit_days' => $expectedTransitDays,
         ];
+    }
+
+    /**
+     * Calcula automáticamente el estado de cumplimiento y días de retraso.
+     *
+     * @return array{arrival_status: string|null, delay_days: int|null}
+     */
+    public function calculateArrivalStatus(): array
+    {
+        return self::calculateDeliveryCompliance($this->date_eta_initial, $this->date_ata);
+    }
+
+    public static function calculateLoadDateDifference($theoreticalLoadDate, $variableLoadDate): ?int
+    {
+        if (blank($theoreticalLoadDate) || blank($variableLoadDate)) {
+            return null;
+        }
+
+        $theoretical = \Illuminate\Support\Carbon::parse($theoreticalLoadDate)->startOfDay();
+        $variable = \Illuminate\Support\Carbon::parse($variableLoadDate)->startOfDay();
+
+        return (int) $theoretical->diffInDays($variable, false);
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Models\KanbanStatus;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderComment;
 use App\Services\MaestrosApiService;
+use App\Support\ContainerNumber;
 use Database\Seeders\KanbanBoardSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -17,6 +18,15 @@ use Livewire\WithFileUploads;
 class KanbanBoard extends Component
 {
     use WithFileUploads;
+
+    private const TRACKING_LOCKED_DATE_FIELDS = [
+        'date_etd_initial',
+        'date_etd',
+        'date_atd',
+        'date_eta_initial',
+        'date_eta',
+        'date_ata',
+    ];
 
     public $boardId;
 
@@ -35,6 +45,8 @@ class KanbanBoard extends Component
     public $newColumnId;
 
     public $currentTask = null;
+
+    public bool $trackingDatesLocked = false;
 
     public $actual_hub_id;
 
@@ -757,6 +769,7 @@ class KanbanBoard extends Component
         $this->date_atd = null;
         $this->date_eta = null;
         $this->date_eta_initial = null;
+        $this->trackingDatesLocked = false;
 
         // Limpiar comentarios de todas las etapas
         $this->comment_stage_01 = null;
@@ -777,6 +790,7 @@ class KanbanBoard extends Component
         $this->currentTaskId = null;
         $this->newColumnId = null;
         $this->currentTask = null;
+        $this->trackingDatesLocked = false;
 
         // Limpiar arrays de opciones
         $this->departurePortArray = [];
@@ -814,6 +828,8 @@ class KanbanBoard extends Component
         // NUEVO: Cargar datos de la PO en las propiedades del componente
         $po = PurchaseOrder::find($taskId);
         if ($po) {
+            $this->trackingDatesLocked = $this->hasPorthTrackingActive($po);
+
             // Producción - convertir fechas al formato Y-m-d para campos HTML date
             $this->date_variable_date = $po->date_variable_date ? $po->date_variable_date->format('Y-m-d') : null;
             $this->date_theorical_load = $po->date_theorical_load ? $po->date_theorical_load->format('Y-m-d') : null;
@@ -1336,6 +1352,7 @@ class KanbanBoard extends Component
         }
 
         $fields = $this->fieldsByStage()[$stage] ?? [];
+        $this->container_number = ContainerNumber::normalize($this->container_number);
 
         // Armar payload solo con props existentes y con valor
         $payload = [];
@@ -1353,6 +1370,11 @@ class KanbanBoard extends Component
         $po = PurchaseOrder::find($poId);
         if (! $po) {
             return ['ok' => false, 'message' => 'PO no encontrada.'];
+        }
+
+        if ($this->hasPorthTrackingActive($po)) {
+            $fields = array_values(array_diff($fields, self::TRACKING_LOCKED_DATE_FIELDS));
+            $payload = array_diff_key($payload, array_flip(self::TRACKING_LOCKED_DATE_FIELDS));
         }
 
         $realChanges = [];
@@ -1380,6 +1402,27 @@ class KanbanBoard extends Component
         $dbChanges = $realChanges;
         unset($dbChanges['comments']); // 'comments' no es columna de purchase_orders
 
+        if (array_key_exists('date_variable_date', $dbChanges)) {
+            $dbChanges['dif_load_date'] = PurchaseOrder::calculateLoadDateDifference(
+                $po->date_theorical_load,
+                $dbChanges['date_variable_date']
+            );
+            $oldValues['dif_load_date'] = $po->dif_load_date;
+        }
+
+        if (array_key_exists('date_ata', $dbChanges)) {
+            $compliance = PurchaseOrder::calculateDeliveryCompliance(
+                $po->date_eta_initial,
+                $dbChanges['date_ata']
+            );
+
+            $dbChanges['arrival_status'] = $compliance['arrival_status'];
+            $dbChanges['delay_days'] = $compliance['delay_days'];
+            $oldValues['arrival_status'] = $po->arrival_status;
+            $oldValues['delay_days'] = $po->delay_days;
+            $this->arrival_status = $compliance['arrival_status'];
+        }
+
         try {
             // Solo ejecutar update en BD si hay cambios de columnas reales
             $updated = 0;
@@ -1398,11 +1441,6 @@ class KanbanBoard extends Component
 
                 // Nota: $updated === 0 es válido si los datos ya tenían los mismos valores
                 // No es un error, simplemente no hubo cambios que hacer
-
-                // Actualizar automáticamente arrival_status y delay_days si se actualizó la ETA
-                if ($po && (isset($dbChanges['date_eta']) || isset($dbChanges['date_eta_initial']))) {
-                    $po->updateArrivalStatus();
-                }
 
                 DB::commit();
 
@@ -1534,6 +1572,8 @@ class KanbanBoard extends Component
      */
     private function requiredRulesByStage(): array
     {
+        $containerNumberRules = ['nullable', 'required_without_all:tracking_id,mbl_number', ContainerNumber::VALIDATION_RULE];
+
         return [
             2 => [
                 'date_variable_date' => 'required|date',
@@ -1546,7 +1586,7 @@ class KanbanBoard extends Component
                 'date_variable_date' => 'required|date',
                 'service_provider' => 'nullable|string',
                 // Validación: al menos uno de estos tres campos debe estar presente para habilitar tracking
-                'container_number' => 'nullable|required_without_all:tracking_id,mbl_number|string',
+                'container_number' => $containerNumberRules,
                 'mbl_number' => 'nullable|required_without_all:tracking_id,container_number|string',
                 'tracking_id' => 'nullable|required_without_all:container_number,mbl_number|string',
             ],
@@ -1628,6 +1668,15 @@ class KanbanBoard extends Component
     {
         $rules = $this->requiredRulesByStage()[$stage] ?? [];
 
+        if ($this->currentTaskId) {
+            $po = PurchaseOrder::find((int) $this->currentTaskId);
+            if ($po && $this->hasPorthTrackingActive($po)) {
+                foreach (self::TRACKING_LOCKED_DATE_FIELDS as $field) {
+                    unset($rules[$field]);
+                }
+            }
+        }
+
         if (empty($rules)) {
             return; // no hay requeridos para esta etapa
         }
@@ -1638,9 +1687,19 @@ class KanbanBoard extends Component
             'date' => 'El campo :attribute debe ser una fecha válida.',
             'string' => 'El campo :attribute debe ser texto.',
             'numeric' => 'El campo :attribute debe ser numérico.',
+            'container_number.regex' => 'El número de contenedor debe tener 4 letras seguidas de 7 dígitos. Ejemplo: ABCD1234567.',
         ];
 
         $this->validate($rules, $messages, $this->fieldAttributeLabels());
+    }
+
+    protected function hasPorthTrackingActive(PurchaseOrder $purchaseOrder): bool
+    {
+        if ((bool) $purchaseOrder->tracking_not_applicable) {
+            return false;
+        }
+
+        return filled($purchaseOrder->porth_id) || filled($purchaseOrder->last_porth_sync_at);
     }
 
     /**

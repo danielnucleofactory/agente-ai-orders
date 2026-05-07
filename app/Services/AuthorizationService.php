@@ -33,6 +33,21 @@ class AuthorizationService
         ]);
     }
 
+    public function createPurchaseOrderFieldChangeRequest(\App\Models\PurchaseOrder $purchaseOrder, array $fields, ?string $reason = null): Authorization
+    {
+        return $this->createRequest($purchaseOrder, 'po_field_change', [
+            'fields' => $fields,
+            'reason' => $reason,
+        ]);
+    }
+
+    public function createTrackingNotApplicableRequest(\App\Models\PurchaseOrder $purchaseOrder, ?string $reason = null): Authorization
+    {
+        return $this->createRequest($purchaseOrder, 'tracking_not_applicable', [
+            'reason' => $reason,
+        ]);
+    }
+
     /**
      * Approve an authorization request
      */
@@ -47,6 +62,14 @@ class AuthorizationService
 
         // If the authorization is for a model with status, update the model's status
         if ($result && $authorization->authorizable) {
+            if ($authorization->operation_type === 'po_field_change') {
+                $this->applyPurchaseOrderFieldChanges($authorization);
+            }
+
+            if ($authorization->operation_type === 'tracking_not_applicable') {
+                $this->applyTrackingNotApplicable($authorization);
+            }
+
             // Check for comment with file attachment
             if ($authorization->operation_type === 'attach_file_to_comment') {
                 // Get the data from the authorization
@@ -113,6 +136,52 @@ class AuthorizationService
         }
 
         return $result;
+    }
+
+    private function applyPurchaseOrderFieldChanges(Authorization $authorization): void
+    {
+        $purchaseOrder = $authorization->authorizable;
+
+        if (! $purchaseOrder instanceof \App\Models\PurchaseOrder) {
+            return;
+        }
+
+        $fields = $authorization->data['fields'] ?? [];
+        if (! is_array($fields) || empty($fields)) {
+            return;
+        }
+
+        foreach ($fields as $change) {
+            $field = $change['field'] ?? null;
+            if (! $field || ! array_key_exists('new_value', $change)) {
+                continue;
+            }
+
+            if (! in_array($field, $purchaseOrder->getFillable(), true)) {
+                continue;
+            }
+
+            $purchaseOrder->{$field} = $change['new_value'];
+        }
+
+        $purchaseOrder->save();
+    }
+
+    private function applyTrackingNotApplicable(Authorization $authorization): void
+    {
+        $purchaseOrder = $authorization->authorizable;
+
+        if (! $purchaseOrder instanceof \App\Models\PurchaseOrder) {
+            return;
+        }
+
+        $purchaseOrder->forceFill([
+            'tracking_not_applicable' => true,
+            'tracking_not_applicable_reason' => $authorization->data['reason'] ?? null,
+            'tracking_not_applicable_approved_by' => Auth::id(),
+            'tracking_not_applicable_approved_at' => now(),
+            'porth_manual_tracking' => true,
+        ])->save();
     }
 
     /**
@@ -275,7 +344,7 @@ class AuthorizationService
     /**
      * Find the most recent authorization of a specific type for a model
      */
-    public function findAuthorizationByType(Model $model, string $operationType, string $status = null)
+    public function findAuthorizationByType(Model $model, string $operationType, ?string $status = null)
     {
         // Check if the model uses the HasAuthorizations trait
         if (method_exists($model, 'findAuthorizationByType')) {

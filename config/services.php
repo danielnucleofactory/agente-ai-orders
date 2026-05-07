@@ -59,9 +59,11 @@ return [
         // Automatización de transiciones Kanban según estado Porth
         'kanban_auto_transition' => env('PORTH_KANBAN_AUTO_TRANSITION', true),
         'kanban_stages' => [
-            'consolidador' => ['Consolidador', 'Booking', 'Consolidación', 'Pick Up'], // Etapa 4 → transición a En tránsito cuando Porth in_transit
-            'en_transito' => ['En Tránsito', 'En tránsito', 'En tránsito terrestre'], // Etapa 5 → transición a Puerto cuando Porth at_destination_port
-            'puerto' => ['Puerto', 'Llegada al hub'], // Etapa 6 - destino cuando Porth at_destination_port
+            'produccion' => ['Producción', 'Produccion'],
+            'booking' => ['Booking'],
+            'consolidador' => ['Consolidador', 'Consolidación', 'Consolidacion', 'Pick Up'],
+            'en_transito' => ['En Tránsito', 'En tránsito', 'Transito', 'Tránsito', 'En tránsito terrestre'],
+            'puerto' => ['Puerto', 'Llegada al hub'],
         ],
     ],
 

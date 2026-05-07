@@ -8,6 +8,7 @@ use App\Models\PurchaseOrder;
 use App\Models\Vendor;
 use App\Models\Product;
 use App\Models\KanbanBoard;
+use App\Support\ContainerNumber;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
@@ -248,6 +249,10 @@ class PurchaseOrderController extends Controller
                     // Verificar si el campo existe en el array (incluso si el valor es null)
                     if (array_key_exists($f, $general)) {
                         $value = $general[$f];
+                        if ($f === 'container_number') {
+                            $poData[$f] = $this->validatedContainerNumber($value);
+                            continue;
+                        }
                         // Si viene como string vacío, convertir a null; si tiene valor (incluyendo null explícito), guardarlo
                         $poData[$f] = ($value === '') ? null : $value;
                     }
@@ -274,7 +279,7 @@ class PurchaseOrderController extends Controller
                 }
 
                 // 10) ===== NEW FIELDS FOR OLO (int) =====
-                foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference','pallet_quantity','pallet_quantity_real'] as $f) {
+                foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference','dif_load_date','pallet_quantity','pallet_quantity_real'] as $f) {
                     // Verificar si el campo existe en el array
                     if (array_key_exists($f, $general) || isset($general[$f])) {
                         $v = $general[$f];
@@ -307,7 +312,7 @@ class PurchaseOrderController extends Controller
                              'date_estimated_hub_arrival', 'date_actual_hub_arrival',
                              'inspection_date','vgm_cut_date','balance_payment_date','local_charges_payment_date',
                              'bonded_warehouse_enter','bonded_warehouse_exit','receipt_note_date',
-                             'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','dif_load_date','emision_date_po','forwader_date',
+                             'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','emision_date_po','forwader_date',
                              'date_consolidation','release_date',
                          ] as $f) {
                     // Verificar si el campo existe en el array (usar array_key_exists para verificar existencia real)
@@ -328,6 +333,22 @@ class PurchaseOrderController extends Controller
                     if ($parsedDate !== null) {
                         $poData['date_variable_date'] = $parsedDate;
                     }
+                }
+
+                if (! empty($poData['date_theorical_load']) && ! empty($poData['date_variable_date'])) {
+                    $poData['dif_load_date'] = PurchaseOrder::calculateLoadDateDifference(
+                        $poData['date_theorical_load'],
+                        $poData['date_variable_date']
+                    );
+                }
+
+                if (! empty($poData['date_ata'])) {
+                    $compliance = PurchaseOrder::calculateDeliveryCompliance(
+                        $poData['date_eta_initial'] ?? null,
+                        $poData['date_ata']
+                    );
+                    $poData['arrival_status'] = $compliance['arrival_status'];
+                    $poData['delay_days'] = $compliance['delay_days'];
                 }
 
                 // 13) Cálculo de diferencias (firmadas): positivo = atraso; negativo = adelanto
@@ -353,7 +374,7 @@ class PurchaseOrderController extends Controller
                 $numericFields = ['weight_kg', 'weight_lb', 'cbm', 'Invoice_amount', 'freight_amount', 'other_expenses',
                                  'total_amount', 'estimated_pallet_cost', 'real_cost_estimated_po', 'real_cost_real_po',
                                  'net_total', 'total', 'length_cm', 'width_cm', 'height_cm',
-                                 'pallet_quantity', 'pallet_quantity_real', 'delay_days', 'container_free_days',
+                                 'pallet_quantity', 'pallet_quantity_real', 'delay_days', 'container_free_days', 'dif_load_date',
                                  'etd_dates_difference', 'eta_dates_difference'];
                 // Campos de fecha que deben preservarse incluso si vienen del JSON (pueden ser null si no vienen)
                 $dateFields = ['date_booking_request', 'date_booking_authorized', 'date_theorical_load', 'date_variable_date',
@@ -362,7 +383,7 @@ class PurchaseOrderController extends Controller
                               'date_estimated_hub_arrival', 'date_actual_hub_arrival', 'inspection_date', 'vgm_cut_date',
                               'balance_payment_date', 'local_charges_payment_date', 'bonded_warehouse_enter',
                               'bonded_warehouse_exit', 'receipt_note_date', 'estimated_dc_availability_date',
-                              'date_invoice_received', 'date_vendor_document_received', 'dif_load_date', 'emision_date_po',
+                              'date_invoice_received', 'date_vendor_document_received', 'emision_date_po',
                               'forwader_date', 'date_consolidation', 'release_date', 'date_required_in_destination'];
                 // Campos booleanos que deben preservarse incluso si son false
                 $booleanFields = ['is_dropship', 'applies_tlc', 'applies_af', 'port_of_loading_validated', 'has_facture_merca',
@@ -657,6 +678,10 @@ class PurchaseOrderController extends Controller
             // Verificar si el campo existe en el array (incluso si el valor es null)
             if (array_key_exists($f, $general)) {
                 $value = $general[$f];
+                if ($f === 'container_number') {
+                    $poData[$f] = $this->validatedContainerNumber($value);
+                    continue;
+                }
                 // Si viene como string vacío, convertir a null; si tiene valor (incluyendo null explícito), guardarlo
                 $poData[$f] = ($value === '') ? null : $value;
             }
@@ -683,7 +708,7 @@ class PurchaseOrderController extends Controller
         }
 
         // NEW FIELDS FOR OLO (int)
-        foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference','pallet_quantity','pallet_quantity_real'] as $f) {
+        foreach (['delay_days','container_free_days','etd_dates_difference','eta_dates_difference','dif_load_date','pallet_quantity','pallet_quantity_real'] as $f) {
             // Verificar si el campo existe en el array
             if (array_key_exists($f, $general) || isset($general[$f])) {
                 $v = $general[$f];
@@ -716,7 +741,7 @@ class PurchaseOrderController extends Controller
             'date_estimated_hub_arrival', 'date_actual_hub_arrival',
             'inspection_date','vgm_cut_date','balance_payment_date','local_charges_payment_date',
             'bonded_warehouse_enter','bonded_warehouse_exit','receipt_note_date',
-            'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','dif_load_date','emision_date_po','forwader_date',
+            'estimated_dc_availability_date','date_invoice_received','date_vendor_document_received','emision_date_po','forwader_date',
             'date_consolidation','release_date',
         ];
 
@@ -772,6 +797,22 @@ class PurchaseOrderController extends Controller
             }
         }
 
+        if (! empty($poData['date_theorical_load']) && ! empty($poData['date_variable_date'])) {
+            $poData['dif_load_date'] = PurchaseOrder::calculateLoadDateDifference(
+                $poData['date_theorical_load'],
+                $poData['date_variable_date']
+            );
+        }
+
+        if (! empty($poData['date_ata'])) {
+            $compliance = PurchaseOrder::calculateDeliveryCompliance(
+                $poData['date_eta_initial'] ?? null,
+                $poData['date_ata']
+            );
+            $poData['arrival_status'] = $compliance['arrival_status'];
+            $poData['delay_days'] = $compliance['delay_days'];
+        }
+
         // Cálculo de diferencias
         $etdBase = $poData['date_etd_initial'] ?? $poData['date_etd'] ?? null;
         $etdNew  = $poData['date_etd_updated'] ?? null;
@@ -809,7 +850,7 @@ class PurchaseOrderController extends Controller
         $numericFields = ['weight_kg', 'weight_lb', 'cbm', 'Invoice_amount', 'freight_amount', 'other_expenses',
                          'total_amount', 'estimated_pallet_cost', 'real_cost_estimated_po', 'real_cost_real_po',
                          'net_total', 'total', 'length_cm', 'width_cm', 'height_cm',
-                         'pallet_quantity', 'pallet_quantity_real', 'delay_days', 'container_free_days',
+                         'pallet_quantity', 'pallet_quantity_real', 'delay_days', 'container_free_days', 'dif_load_date',
                          'etd_dates_difference', 'eta_dates_difference', 'company_id'];
 
         // Lista de todos los campos de fecha
@@ -819,7 +860,7 @@ class PurchaseOrderController extends Controller
                       'date_estimated_hub_arrival', 'date_actual_hub_arrival', 'inspection_date', 'vgm_cut_date',
                       'balance_payment_date', 'local_charges_payment_date', 'bonded_warehouse_enter',
                       'bonded_warehouse_exit', 'receipt_note_date', 'estimated_dc_availability_date',
-                      'date_invoice_received', 'date_vendor_document_received', 'dif_load_date', 'emision_date_po',
+                      'date_invoice_received', 'date_vendor_document_received', 'emision_date_po',
                       'forwader_date', 'date_consolidation', 'release_date', 'date_required_in_destination', 'order_date'];
 
         // Campos que siempre deben mantenerse (incluso si son null o false)
@@ -1208,9 +1249,9 @@ class PurchaseOrderController extends Controller
             'local_charges_payment_date' => 'local_charges_payment_date',
             'date_invoice_received'   => 'date_invoice_received',
             'date_vendor_document_received' => 'date_vendor_document_received',
-            'dif_load_date'           => 'dif_load_date',
 
             // Diferencias y enteros
+            'dif_load_date'           => 'dif_load_date',
             'etd_dates_difference'    => 'etd_dates_difference',
             'eta_dates_difference'    => 'eta_dates_difference',
             'container_free_days'     => 'container_free_days',
@@ -1330,8 +1371,7 @@ class PurchaseOrderController extends Controller
                 case 'balance_payment_date':
                 case 'local_charges_payment_date':
                 case 'date_invoice_received':
-                case 'date_vendor_document_received':
-                case 'dif_load_date': {
+                case 'date_vendor_document_received': {
                     $po->$modelField = $value ? \Carbon\Carbon::parse($value) : null;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
                     break;
@@ -1371,6 +1411,7 @@ class PurchaseOrderController extends Controller
                 // Enteros
                 case 'etd_dates_difference':
                 case 'eta_dates_difference':
+                case 'dif_load_date':
                 case 'container_free_days':
                 case 'delay_days':
                 case 'pallet_quantity':
@@ -1398,6 +1439,12 @@ class PurchaseOrderController extends Controller
                     }
                     $po->$modelField = $value;
                     $changes[$apiField] = ['old' => $oldValue, 'new' => $value];
+                    break;
+                }
+                case 'container_number': {
+                    $finalValue = $this->validatedContainerNumber($value);
+                    $po->$modelField = $finalValue;
+                    $changes[$apiField] = ['old' => $oldValue, 'new' => $finalValue];
                     break;
                 }
                 case 'incoterms':
@@ -1435,12 +1482,62 @@ class PurchaseOrderController extends Controller
             $po->order_date = $po->emision_date_po;
         }
 
+        if (isset($changes['date_variable_date']) || isset($changes['date_carga_po']) || isset($changes['date_theorical_load'])) {
+            $oldValue = $po->getOriginal('dif_load_date');
+            $po->dif_load_date = PurchaseOrder::calculateLoadDateDifference(
+                $po->date_theorical_load,
+                $po->date_variable_date
+            );
+            $changes['dif_load_date'] = ['old' => $oldValue, 'new' => $po->dif_load_date];
+        }
+
+        if (isset($changes['date_ata']) && $this->dateValueChanged($changes['date_ata']['old'], $changes['date_ata']['new'])) {
+            $oldArrivalStatus = $po->getOriginal('arrival_status');
+            $oldDelayDays = $po->getOriginal('delay_days');
+            $compliance = PurchaseOrder::calculateDeliveryCompliance($po->date_eta_initial, $po->date_ata);
+
+            $po->arrival_status = $compliance['arrival_status'];
+            $po->delay_days = $compliance['delay_days'];
+            $changes['arrival_status'] = ['old' => $oldArrivalStatus, 'new' => $po->arrival_status];
+            $changes['delay_days'] = ['old' => $oldDelayDays, 'new' => $po->delay_days];
+        }
+
         // Filtrar cambios ruidosos (null→0 en montos) para no reportarlos en respuesta, auditoría ni webhook
         $changes = array_filter($changes, function ($change, $field) {
             return !\App\Helpers\ChangeDescriptionHelper::isNoiseChange($field, $change['old'], $change['new']);
         }, ARRAY_FILTER_USE_BOTH);
 
         return $changes;
+    }
+
+    private function dateValueChanged($oldValue, $newValue): bool
+    {
+        $normalize = function ($value) {
+            if ($value === null || $value === '') {
+                return null;
+            }
+
+            try {
+                return Carbon::parse($value)->format('Y-m-d');
+            } catch (\Throwable $e) {
+                return $value;
+            }
+        };
+
+        return $normalize($oldValue) !== $normalize($newValue);
+    }
+
+    private function validatedContainerNumber($value): ?string
+    {
+        $normalized = ($value === null || $value === '')
+            ? null
+            : ContainerNumber::normalize((string) $value);
+
+        if ($normalized !== null && ! ContainerNumber::isValid($normalized)) {
+            throw new \InvalidArgumentException('El número de contenedor debe tener 4 letras seguidas de 7 dígitos. Ejemplo: ABCD1234567.');
+        }
+
+        return $normalized;
     }
 
     /**
@@ -1908,4 +2005,3 @@ class PurchaseOrderController extends Controller
         ]);
     }
 }
-
