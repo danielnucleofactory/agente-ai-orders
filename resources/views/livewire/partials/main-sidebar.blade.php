@@ -160,6 +160,15 @@
                             </x-sidebar-dropdown-item>
                         </li>
                         @endcan
+
+                        @can('has_view_orders')
+                        <li>
+                            <x-sidebar-dropdown-item href="{{ route('purchase-orders.control-dashboard') }}"
+                                :active="request()->routeIs('purchase-orders.control-dashboard')">
+                                Dashboard de control
+                            </x-sidebar-dropdown-item>
+                        </li>
+                        @endcan
                     </ul>
                 </x-sidebar-dropdown>
             </li>

@@ -603,6 +603,76 @@ class KanbanBoard extends Component
         }
     }
 
+    protected function mapPurchaseOrderToKanbanTask(PurchaseOrder $order, ?int $statusOverride = null, ?string $statusSlugOverride = null): array
+    {
+        $status = $statusOverride ?? $order->kanban_status_id;
+        $statusSlug = $statusSlugOverride ?? ($order->kanbanStatus->slug ?? 'unknown');
+
+        return [
+            'id' => $order->id,
+            'po' => $order->order_number,
+            'vendor' => $order->vendor->name ?? 'N/A',
+            'vendor_id' => $order->vendor_id,
+            'status' => $status,
+            'status_slug' => $statusSlug,
+            'order_date' => $order->order_date ? $order->order_date->format('Y-m-d') : null,
+            'requested_delivery_date' => $order->date_required_in_destination ? $order->date_required_in_destination->format('Y-m-d') : null,
+            'total' => $order->total,
+            'company' => $order->company->name ?? 'N/A',
+            'created_at' => $order->created_at,
+            'currency' => $order->currency,
+            'incoterms' => $order->incoterms,
+            'planned_hub_id' => $order->planned_hub_id,
+            'actual_hub_id' => $order->actual_hub_id,
+            'material_type' => $order->material_type,
+        ];
+    }
+
+    protected function refreshSingleTaskInBoard(int $taskId): void
+    {
+        $order = PurchaseOrder::query()
+            ->select(self::KANBAN_PO_SELECT)
+            ->with([
+                'company:id,name',
+                'kanbanStatus:id,slug',
+                'vendor:id,name',
+            ])
+            ->withTrashed()
+            ->find($taskId);
+
+        if (! $order) {
+            return;
+        }
+
+        $statusIds = collect($this->columns)->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        $anuladaStatusId = optional(
+            collect($this->columns)->first(function ($c) {
+                return (isset($c['slug']) && strtolower($c['slug']) === 'anulada')
+                    || strtolower($c['name']) === 'anulada';
+            })
+        )['id'] ?? 10;
+
+        $taskPayload = $order->trashed()
+            ? $this->mapPurchaseOrderToKanbanTask($order, $anuladaStatusId, 'anulada')
+            : $this->mapPurchaseOrderToKanbanTask($order);
+
+        $visibleInBoard = $order->trashed()
+            ? in_array((int) $anuladaStatusId, $statusIds, true)
+            : in_array((int) $taskPayload['status'], $statusIds, true);
+
+        $this->tasks = array_values(array_filter(
+            $this->tasks,
+            fn (array $task) => (int) $task['id'] !== $taskId
+        ));
+
+        if ($visibleInBoard) {
+            $this->tasks[] = $taskPayload;
+        }
+
+        $this->organizeTasksByColumn();
+    }
+
     public function moveTask($taskId, $newStatus)
     {
         // Log para depuración
@@ -668,9 +738,9 @@ class KanbanBoard extends Component
                 ]);
             }
 
-            // Recargar datos y refrescar vista
-            $this->loadData();
-            $this->dispatch('refreshKanban');
+            // Rehidratar solo la PO movida para evitar reconstruir todo el kanban
+            // en compañías con alto volumen de órdenes.
+            $this->refreshSingleTaskInBoard((int) $taskId);
             $this->dispatch('purchaseOrderStatusUpdated');
             $this->dispatch('notificationsUpdated');
         } catch (\Exception $e) {
