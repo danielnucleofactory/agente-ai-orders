@@ -41,7 +41,6 @@ class CreatePucharseOrder extends Component
         'date_etd_initial',
         'date_etd',
         'date_atd',
-        'date_eta_initial',
         'date_eta',
         'date_eta_updated',
         'date_ata',
@@ -834,6 +833,8 @@ class CreatePucharseOrder extends Component
 
     public bool $trackingDatesLocked = false;
 
+    public bool $etaInitialLocked = false;
+
     public bool $tracking_not_applicable = false;
 
     public $tracking_not_applicable_reason;
@@ -859,7 +860,8 @@ class CreatePucharseOrder extends Component
             $this->purchaseOrder = \App\Models\PurchaseOrder::with('products')->find($this->id);
 
             if ($this->purchaseOrder) {
-                $this->trackingDatesLocked = $this->hasPorthTrackingActive($this->purchaseOrder);
+                $this->trackingDatesLocked = true;
+                $this->etaInitialLocked = filled($this->purchaseOrder->date_eta_initial);
                 $this->tracking_not_applicable = (bool) ($this->purchaseOrder->tracking_not_applicable ?? false);
                 $this->trackingNotApplicableApproved = (bool) ($this->purchaseOrder->tracking_not_applicable ?? false);
                 $this->tracking_not_applicable_reason = $this->purchaseOrder->tracking_not_applicable_reason;
@@ -1795,6 +1797,7 @@ class CreatePucharseOrder extends Component
 
                     'arrival_status' => $this->arrival_status,
                     'delay_days' => $this->delay_days,
+                    'tracking_not_applicable' => (bool) ($this->tracking_not_applicable ?? false),
 
                     'date_eta_initial' => $this->date_eta_initial,
                     'date_eta_updated' => $this->date_eta_updated,
@@ -1848,6 +1851,10 @@ class CreatePucharseOrder extends Component
                 ];
                 // po_amount no está en PurchaseOrder::$fillable ni en la tabla; no enviarlo a create()
                 unset($poData['po_amount']);
+
+                if ($this->shouldLockTrackingNotApplicableFields()) {
+                    $poData = $this->withoutTrackingNotApplicableLockedFields($poData);
+                }
 
                 // Filtrar valores nulos o vacíos para evitar errores
                 // Mantener valores 0, 0.0, false, y strings vacíos que puedan ser necesarios
@@ -2399,8 +2406,9 @@ class CreatePucharseOrder extends Component
                 }
 
                 $poData = $this->withoutEditLockedApiFields($poData);
-                if ($this->hasPorthTrackingActive($purchaseOrder)) {
-                    $poData = $this->withoutEditLockedTrackingDateFields($poData);
+                $poData = $this->withoutEditLockedTrackingDateFields($poData);
+                if ($this->shouldLockEtaInitial($purchaseOrder)) {
+                    unset($poData['date_eta_initial']);
                 }
                 if ($this->shouldLockTrackingNotApplicableFields()) {
                     $poData = $this->withoutTrackingNotApplicableLockedFields($poData);
@@ -2528,6 +2536,11 @@ class CreatePucharseOrder extends Component
                     'date_eta_in_changes' => isset($changes['date_eta']),
                     'date_ata_in_changes' => isset($changes['date_ata']),
                 ]);
+
+                // Rehidratar el modelo antes de guardar para persistir solo los cambios reales
+                // y evitar que "dirty" ruidoso termine enviando valores incompatibles a PostgreSQL.
+                $purchaseOrder = \App\Models\PurchaseOrder::findOrFail($id);
+                $purchaseOrder->fill($changes);
 
                 try {
                     $purchaseOrder->save();
@@ -3024,6 +3037,11 @@ class CreatePucharseOrder extends Component
             || (bool) $this->trackingNotApplicablePending;
     }
 
+    protected function shouldLockEtaInitial(\App\Models\PurchaseOrder $purchaseOrder): bool
+    {
+        return filled($purchaseOrder->date_eta_initial);
+    }
+
     protected function restoreEditLockedApiFields(int $purchaseOrderId): void
     {
         $purchaseOrder = \App\Models\PurchaseOrder::with('vendor')->find($purchaseOrderId);
@@ -3063,12 +3081,12 @@ class CreatePucharseOrder extends Component
     protected function restoreEditLockedTrackingDateFields(int $purchaseOrderId): void
     {
         $purchaseOrder = \App\Models\PurchaseOrder::find($purchaseOrderId);
-
-        if (! $purchaseOrder || ! $this->hasPorthTrackingActive($purchaseOrder)) {
+        if (! $purchaseOrder) {
             $this->trackingDatesLocked = false;
             return;
         }
 
+        $this->etaInitialLocked = (bool) filled($purchaseOrder->date_eta_initial);
         $this->trackingDatesLocked = true;
         $this->date_etd_initial = optional($purchaseOrder->date_etd_initial)?->format('Y-m-d');
         $this->date_etd = optional($purchaseOrder->date_etd)?->format('Y-m-d');

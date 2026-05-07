@@ -254,7 +254,97 @@ Verificacion:
 
 - prueba unitaria pasando para fallback al maestro con variacion por sufijo
 
-## 13. Consideraciones pendientes fuera de este cambio
+## 13. Ajuste de reglas en creacion/edicion para tracking
+
+Se ajustaron las reglas del formulario de PO para reflejar mejor el flujo real
+de captura manual vs. bloqueo posterior.
+
+Incluye:
+
+- `No aplica tracking` ahora tambien aparece en creacion
+- cuando `No aplica tracking` esta activo en creacion, no se guardan:
+  - `shipping_line`
+  - `container_type`
+  - `container_number`
+- `ETA Inicial` se separo del candado general de fechas Porth
+- `ETA Inicial` queda:
+  - editable en creacion
+  - editable en edicion solo si aun no tiene dato
+  - bloqueado en edicion cuando ya existe valor guardado
+- en creacion, el resto de fechas de tracking se mantienen bloqueadas; la unica
+  excepcion editable es `ETA Inicial`
+- correccion del componente `date-picker` para que `:readonly=\"false\"` y `:disabled=\"false\"`
+  no bloqueen el campo por error
+- correccion en `updatePurchaseOrder` para guardar solo cambios reales filtrados y
+  evitar errores de persistencia por campos "ruidosos" al editar una PO
+
+Archivos principales:
+
+- `app/Livewire/Forms/CreatePucharseOrder.php`
+- `resources/views/livewire/forms/create-pucharse-order.blade.php`
+- `resources/views/components/date-picker.blade.php`
+
+## 14. Endurecimiento de sincronizacion del date-picker
+
+Se reforzo la sincronizacion entre Flatpickr, Alpine y Livewire para evitar
+casos donde el usuario selecciona o escribe una fecha, pero el valor no llega
+al submit de edicion.
+
+Incluye:
+
+- `ETA Inicial` ahora usa `wire:model.live`
+- el componente `date-picker` sincroniza el valor no solo en `onChange`, sino
+  tambien en:
+  - `onClose`
+  - `onValueUpdate`
+  - `blur` del `altInput`
+  - `change` del `altInput`
+- se normaliza entrada manual usando tanto el formato visible del usuario como
+  `Y-m-d`
+- se recompilo el bundle de Vite para dejar el JS actualizado en
+  `public/build`
+
+Archivos principales:
+
+- `resources/js/app.js`
+- `resources/views/livewire/forms/create-pucharse-order.blade.php`
+
+Verificacion:
+
+- `php artisan view:clear`
+- `php artisan view:cache`
+- `npm run build`
+
+## 15. Correccion de bloqueo de fechas en edicion de PO
+
+Se ajusto la regla de bloqueo de fechas en edicion para que no dependa de si la
+PO ya tiene tracking activo en Porth.
+
+Incluye:
+
+- en edicion, las fechas de tracking bloqueadas quedan siempre no editables:
+  - `ETD Inicial`
+  - `ETD Variable`
+  - `ATD`
+  - `ETA Variable`
+  - `ATA`
+- `ETA Inicial` se mantiene como la unica excepcion:
+  - editable si no tiene valor guardado
+  - bloqueada si ya fue llenada
+- esto corrige el caso de PO creadas localmente sin `porth_id`, donde esas
+  fechas se estaban habilitando por error al entrar a editar
+
+Archivos principales:
+
+- `app/Livewire/Forms/CreatePucharseOrder.php`
+
+Verificacion:
+
+- `php -l app/Livewire/Forms/CreatePucharseOrder.php`
+- `php artisan view:clear`
+- `php artisan view:cache`
+
+## 16. Consideraciones pendientes fuera de este cambio
 
 Se analizaron pero no se implementaron todavia en este branch:
 

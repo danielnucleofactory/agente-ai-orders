@@ -1,6 +1,7 @@
 @php
     $lockApiFieldsOnEdit = (bool) $id;
-    $lockTrackingDatesOnEdit = (bool) ($trackingDatesLocked ?? false);
+    $lockTrackingDatesOnEdit = ! empty($id) ? (bool) ($trackingDatesLocked ?? false) : true;
+    $lockEtaInitialOnEdit = (bool) ($etaInitialLocked ?? false);
     $lockTrackingNotApplicableFields = (bool) (($tracking_not_applicable ?? false) || ($trackingNotApplicableApproved ?? false) || ($trackingNotApplicablePending ?? false));
     $lockedInputClass = $lockApiFieldsOnEdit ? 'bg-gray-100 cursor-not-allowed' : '';
     $trackingLockedInputClass = $lockTrackingNotApplicableFields ? 'bg-gray-100 cursor-not-allowed' : '';
@@ -108,11 +109,8 @@
                     </span>
                 </x-primary-button>
             @else
-                <div class="grid w-full max-w-xl min-w-0 grid-cols-2 items-stretch gap-3 sm:gap-4">
-                    <div class="flex min-w-0">
-                        <livewire:import-csv-purchase-orders />
-                    </div>
-                    <div class="flex min-w-0">
+                <div class="flex w-full max-w-xl min-w-0">
+                    <div class="flex min-w-0 w-full">
                         <x-primary-button
                             wire:click="createPurchaseOrder"
                             wire:loading.attr="disabled"
@@ -373,29 +371,27 @@
                             <x-slot:error>{{ $errors->first('container_number') }}</x-slot:error>
                         </x-form-input>
 
-                        @if($id)
-                            <div class="col-span-3 rounded-md border border-gray-200 p-4">
-                                <div class="flex items-center gap-3">
-                                    <input
-                                        id="tracking_not_applicable"
-                                        type="checkbox"
-                                        wire:model="tracking_not_applicable"
-                                        x-model="trackingNotApplicableLocked"
-                                        @disabled($trackingNotApplicableApproved || $trackingNotApplicablePending)
-                                        class="w-4 h-4 text-[#28C7A1] bg-gray-100 border-gray-300 rounded focus:ring-[#28C7A1] focus:ring-2">
-                                    <label for="tracking_not_applicable" class="block text-sm font-medium text-gray-700">
-                                        No aplica tracking
-                                    </label>
-                                    @if($trackingNotApplicableApproved)
-                                        <span class="text-xs font-medium text-green-700">Aprobado</span>
-                                    @elseif($trackingNotApplicablePending)
-                                        <span class="text-xs font-medium text-yellow-700">Pendiente de aprobación</span>
-                                    @elseif($tracking_not_applicable)
-                                        <span class="text-xs font-medium text-blue-700">Se solicitará al guardar</span>
-                                    @endif
-                                </div>
+                        <div class="col-span-3 rounded-md border border-gray-200 p-4">
+                            <div class="flex items-center gap-3">
+                                <input
+                                    id="tracking_not_applicable"
+                                    type="checkbox"
+                                    wire:model="tracking_not_applicable"
+                                    x-model="trackingNotApplicableLocked"
+                                    @disabled($trackingNotApplicableApproved || $trackingNotApplicablePending)
+                                    class="w-4 h-4 text-[#28C7A1] bg-gray-100 border-gray-300 rounded focus:ring-[#28C7A1] focus:ring-2">
+                                <label for="tracking_not_applicable" class="block text-sm font-medium text-gray-700">
+                                    No aplica tracking
+                                </label>
+                                @if($trackingNotApplicableApproved)
+                                    <span class="text-xs font-medium text-green-700">Aprobado</span>
+                                @elseif($trackingNotApplicablePending)
+                                    <span class="text-xs font-medium text-yellow-700">Pendiente de aprobación</span>
+                                @elseif($tracking_not_applicable && $id)
+                                    <span class="text-xs font-medium text-blue-700">Se solicitará al guardar</span>
+                                @endif
                             </div>
-                        @endif
+                        </div>
 
                         <!-- Identificadores de embarque -->
                         <div class="col-span-3">
@@ -687,7 +683,7 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Arribo a destino</h4>
                     </div>
 
-                    <x-date-picker wire:model="date_eta_initial" label="ETA Inicial" :readonly="$lockTrackingDatesOnEdit" />
+                    <x-date-picker wire:model.live="date_eta_initial" label="ETA Inicial" :readonly="$lockEtaInitialOnEdit" />
 
                     <x-date-picker wire:model="date_eta_updated" label="ETA Variable" :readonly="$lockTrackingDatesOnEdit" />
 
