@@ -23,7 +23,7 @@ class ControlDashboard extends Component
 
     private const PORT_STAGE_ID = 6;
 
-    public array $expandedStageNames = ['Producción'];
+    public array $expandedStageNames = [];
 
     public array $expandedRuleKeys = [];
 
@@ -32,6 +32,17 @@ class ControlDashboard extends Component
     protected array $ruleDetailsCache = [];
 
     protected ?array $stageTotalsCache = null;
+
+    public array $stageRows = [];
+
+    public array $responsibleSummaryRows = [];
+
+    public bool $responsibleSummaryLoaded = false;
+
+    public function mount(): void
+    {
+        $this->stageRows = $this->buildInitialStageRows();
+    }
 
     public function getRulesCatalogProperty(): Collection
     {
@@ -179,9 +190,19 @@ class ControlDashboard extends Component
                 fn ($key) => $key !== $ruleKey
             ));
 
+            foreach ($this->stageRows as $stageIndex => $stageRow) {
+                foreach ($stageRow['rules'] as $ruleIndex => $ruleRow) {
+                    if ($ruleRow['key'] === $ruleKey) {
+                        $this->stageRows[$stageIndex]['rules'][$ruleIndex]['is_expanded'] = false;
+                        break 2;
+                    }
+                }
+            }
+
             return;
         }
 
+        $this->loadRuleGroupDetails($ruleKey);
         $this->expandedRuleKeys[] = $ruleKey;
     }
 
@@ -193,148 +214,49 @@ class ControlDashboard extends Component
                 fn ($name) => $name !== $stageName
             ));
 
+            foreach ($this->stageRows as $index => $row) {
+                if ($row['stage'] === $stageName) {
+                    $this->stageRows[$index]['is_expanded'] = false;
+                    break;
+                }
+            }
+
             return;
         }
 
+        $this->loadStageData($stageName);
         $this->expandedStageNames[] = $stageName;
     }
 
-    public function getSummaryRowsProperty(): Collection
+    public function loadResponsibleSummary(): void
     {
-        return $this->rulesCatalog
-            ->groupBy('stage')
-            ->map(function (Collection $rules, string $stageName) {
-                $rawRules = $rules->map(function (array $rule) {
-                    $poIds = $this->ruleIds($rule['key']);
-                    $isExpanded = in_array('group_' . md5($rule['key']), $this->expandedRuleKeys, true)
-                        || in_array($rule['key'], $this->expandedRuleKeys, true);
-
-                    return array_merge($rule, [
-                        'po_ids' => $poIds,
-                        'po_count' => $poIds->count(),
-                        'details' => $isExpanded ? $this->ruleDetails($rule['key']) : null,
-                        'is_expanded' => in_array($rule['key'], $this->expandedRuleKeys, true),
-                    ]);
-                })->values();
-
-                $totalPos = $this->totalPurchaseOrdersForStage($stageName);
-                $errorPos = $rawRules
-                    ->pluck('po_ids')
-                    ->flatMap(fn (Collection $ids) => $ids)
-                    ->unique()
-                    ->count();
-
-                $rulesWithCounts = $rawRules
-                    ->groupBy(fn (array $rule) => $rule['title'] . '|' . $rule['responsible'] . '|' . $rule['origin'])
-                    ->map(function (Collection $group) use ($totalPos) {
-                        $first = $group->first();
-                        $groupKey = 'group_' . md5($group->pluck('key')->sort()->implode('|'));
-                        $isExpanded = in_array($groupKey, $this->expandedRuleKeys, true);
-                        $poIds = $group
-                            ->pluck('po_ids')
-                            ->flatMap(fn (Collection $ids) => $ids)
-                            ->unique()
-                            ->values();
-                        $poCount = $poIds->count();
-
-                        $detailRows = $isExpanded
-                            ? $group
-                                ->pluck('key')
-                                ->flatMap(fn (string $key) => $this->ruleDetails($key))
-                                ->groupBy('id')
-                                ->map(function (Collection $poRows) {
-                                    $firstRow = $poRows->first();
-                                    $combinedProblemItems = $poRows
-                                        ->pluck('problem_items')
-                                        ->filter(fn ($items) => is_array($items) && ! empty($items))
-                                        ->flatMap(fn (array $items) => $items)
-                                        ->map(fn (string $item) => trim($item))
-                                        ->filter()
-                                        ->unique()
-                                        ->values();
-
-                                    $combinedProblemData = $combinedProblemItems->isNotEmpty()
-                                        ? $this->formatMissingItems($combinedProblemItems->all())
-                                        : $poRows
-                                            ->pluck('problem_data')
-                                            ->filter()
-                                            ->unique()
-                                            ->implode("\n");
-
-                                    return array_merge($firstRow, [
-                                        'problem_data' => $combinedProblemData,
-                                        'problem_items' => $combinedProblemItems->all(),
-                                        'allowed_days' => $firstRow['allowed_days'] ?? $firstRow['expected_port_days'] ?? null,
-                                        'current_days' => $firstRow['current_days'] ?? $firstRow['current_port_days'] ?? null,
-                                        'delay_days' => $firstRow['delay_days'] ?? null,
-                                    ]);
-                                })
-                                ->values()
-                            : collect();
-
-                        return [
-                            'key' => $groupKey,
-                            'title' => $first['title'],
-                            'stage' => $first['stage'],
-                            'origin' => $first['origin'],
-                            'responsible' => $first['responsible'],
-                            'rule_keys' => $group->pluck('key')->values()->all(),
-                            'po_ids' => $poIds,
-                            'po_count' => $poCount,
-                            'details' => $isExpanded ? $detailRows : null,
-                            'is_expanded' => $isExpanded,
-                            'percentage' => $totalPos > 0
-                                ? round(($poCount / $totalPos) * 100, 1)
-                                : null,
-                        ];
-                    })
-                    ->values();
-
-                return [
-                    'stage' => $stageName,
-                    'total_pos' => $totalPos,
-                    'error_pos' => $errorPos,
-                    'percentage' => $totalPos > 0 ? round(($errorPos / $totalPos) * 100, 1) : 0,
-                    'is_expanded' => in_array($stageName, $this->expandedStageNames, true),
-                    'rules' => $rulesWithCounts,
-                ];
-            })
-            ->values();
-    }
-
-    public function getResponsibleSummaryRowsProperty(): Collection
-    {
-        $rows = [];
-
-        foreach ($this->summaryRows as $stageRow) {
-            foreach ($stageRow['rules'] as $ruleRow) {
-                if (! ($ruleRow['details'] instanceof Collection) || ! is_numeric($ruleRow['po_count'])) {
-                    $poIds = collect($ruleRow['po_ids'] ?? []);
-                } else {
-                    $poIds = collect($ruleRow['po_ids'] ?? $ruleRow['details']->pluck('id')->all());
-                }
-
-                $responsible = $ruleRow['responsible'];
-                if (! isset($rows[$responsible])) {
-                    $rows[$responsible] = [
-                        'responsible' => $responsible,
-                        'po_ids' => [],
-                    ];
-                }
-
-                $rows[$responsible]['po_ids'] = array_values(array_unique(array_merge(
-                    $rows[$responsible]['po_ids'],
-                    $poIds->all()
-                )));
-            }
+        if ($this->responsibleSummaryLoaded) {
+            return;
         }
 
-        $countsByResponsible = collect($rows)
-            ->map(fn (array $row) => count($row['po_ids']));
+        $rows = [];
 
+        foreach ($this->rulesCatalog as $rule) {
+            $poIds = $this->ruleIds($rule['key'])->all();
+            $responsible = $rule['responsible'];
+
+            if (! isset($rows[$responsible])) {
+                $rows[$responsible] = [
+                    'responsible' => $responsible,
+                    'po_ids' => [],
+                ];
+            }
+
+            $rows[$responsible]['po_ids'] = array_values(array_unique(array_merge(
+                $rows[$responsible]['po_ids'],
+                $poIds
+            )));
+        }
+
+        $countsByResponsible = collect($rows)->map(fn (array $row) => count($row['po_ids']));
         $displayedTotalPoCount = $countsByResponsible->sum();
 
-        return collect($rows)
+        $this->responsibleSummaryRows = collect($rows)
             ->map(function (array $row) use ($displayedTotalPoCount) {
                 $poCount = count($row['po_ids']);
 
@@ -347,12 +269,15 @@ class ControlDashboard extends Component
                 ];
             })
             ->sortByDesc('po_count')
-            ->values();
+            ->values()
+            ->all();
+
+        $this->responsibleSummaryLoaded = true;
     }
 
     public function getResponsibleSummaryTotalsProperty(): array
     {
-        $totalPoCount = $this->responsibleSummaryRows->sum('po_count');
+        $totalPoCount = collect($this->responsibleSummaryRows)->sum('po_count');
 
         return [
             'po_count' => $totalPoCount,
@@ -362,40 +287,164 @@ class ControlDashboard extends Component
 
     public function getStageSummaryTotalsProperty(): array
     {
-        $errorPos = $this->summaryRows->sum('error_pos');
-        $totalPos = $this->summaryRows->sum('total_pos');
+        $rows = collect($this->stageRows)->reject(fn (array $row) => $row['stage'] === 'General');
+        $loadedRows = $rows->filter(fn (array $row) => $row['loaded']);
+        $allLoaded = $loadedRows->count() === $rows->count();
+        $errorPos = $allLoaded ? $loadedRows->sum('error_pos') : null;
+        $totalPos = $rows->sum('total_pos');
 
         return [
             'error_pos' => $errorPos,
             'total_pos' => $totalPos,
-            'percentage' => $totalPos > 0
+            'percentage' => $allLoaded && $totalPos > 0
                 ? round(($errorPos / $totalPos) * 100, 1)
-                : 0,
+                : null,
         ];
     }
 
-    public function detailRows(string $ruleKey): Collection
+    private function buildInitialStageRows(): array
     {
-        foreach ($this->summaryRows as $stageRow) {
-            foreach ($stageRow['rules'] as $ruleRow) {
-                if ($ruleRow['key'] === $ruleKey) {
-                    return $ruleRow['details'] instanceof Collection ? $ruleRow['details'] : collect();
-                }
-            }
-        }
+        $stageOrder = ['Producción', 'Booking', 'En tránsito', 'Puerto', 'General'];
 
-        $details = $this->ruleDetails($ruleKey);
-        return $details instanceof Collection ? $details : collect();
+        return collect($stageOrder)->map(function (string $stageName) {
+            return [
+                'stage' => $stageName,
+                'total_pos' => $this->totalPurchaseOrdersForStage($stageName),
+                'error_pos' => null,
+                'percentage' => null,
+                'is_expanded' => false,
+                'loaded' => false,
+                'rules' => [],
+            ];
+        })->all();
     }
 
-    public function shouldShowTimingColumns(string $ruleKey): bool
+    private function loadStageData(string $stageName): void
     {
-        $rows = $this->detailRows($ruleKey);
+        foreach ($this->stageRows as $index => $row) {
+            if ($row['stage'] !== $stageName) {
+                continue;
+            }
 
-        return $rows->contains(function (array $row) {
-            return ! is_null($row['current_days'] ?? null)
-                || ! is_null($row['allowed_days'] ?? null);
-        });
+            if ($row['loaded']) {
+                $this->stageRows[$index]['is_expanded'] = true;
+                return;
+            }
+
+            $rules = $this->rulesCatalog
+                ->where('stage', $stageName)
+                ->groupBy(fn (array $rule) => $rule['title'] . '|' . $rule['responsible'] . '|' . $rule['origin'])
+                ->map(function (Collection $group) use ($row) {
+                    $first = $group->first();
+                    $poIds = $group
+                        ->pluck('key')
+                        ->flatMap(fn (string $key) => $this->ruleIds($key))
+                        ->unique()
+                        ->values();
+                    $groupKey = 'group_' . md5($group->pluck('key')->sort()->implode('|'));
+
+                    return [
+                        'key' => $groupKey,
+                        'title' => $first['title'],
+                        'stage' => $first['stage'],
+                        'origin' => $first['origin'],
+                        'responsible' => $first['responsible'],
+                        'rule_keys' => $group->pluck('key')->values()->all(),
+                        'po_ids' => $poIds->all(),
+                        'po_count' => $poIds->count(),
+                        'details' => null,
+                        'details_loaded' => false,
+                        'is_expanded' => false,
+                        'show_timing_columns' => $group->pluck('key')->contains(fn (string $key) => $this->ruleUsesTimingColumns($key)),
+                        'percentage' => $row['total_pos'] > 0
+                            ? round(($poIds->count() / $row['total_pos']) * 100, 1)
+                            : null,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            $errorPos = collect($rules)
+                ->pluck('po_ids')
+                ->flatMap(fn (array $ids) => $ids)
+                ->unique()
+                ->count();
+
+            $this->stageRows[$index]['loaded'] = true;
+            $this->stageRows[$index]['is_expanded'] = true;
+            $this->stageRows[$index]['error_pos'] = $errorPos;
+            $this->stageRows[$index]['percentage'] = $row['total_pos'] > 0
+                ? round(($errorPos / $row['total_pos']) * 100, 1)
+                : null;
+            $this->stageRows[$index]['rules'] = $rules;
+
+            return;
+        }
+    }
+
+    private function loadRuleGroupDetails(string $groupKey): void
+    {
+        foreach ($this->stageRows as $stageIndex => $stageRow) {
+            foreach ($stageRow['rules'] as $ruleIndex => $ruleRow) {
+                if ($ruleRow['key'] !== $groupKey) {
+                    continue;
+                }
+
+                if ($ruleRow['details_loaded']) {
+                    $this->stageRows[$stageIndex]['rules'][$ruleIndex]['is_expanded'] = true;
+                    return;
+                }
+
+                $detailRows = collect($ruleRow['rule_keys'])
+                    ->flatMap(fn (string $key) => $this->ruleDetails($key))
+                    ->groupBy('id')
+                    ->map(function (Collection $poRows) {
+                        $firstRow = $poRows->first();
+                        $combinedProblemItems = $poRows
+                            ->pluck('problem_items')
+                            ->filter(fn ($items) => is_array($items) && ! empty($items))
+                            ->flatMap(fn (array $items) => $items)
+                            ->map(fn (string $item) => trim($item))
+                            ->filter()
+                            ->unique()
+                            ->values();
+
+                        $combinedProblemData = $combinedProblemItems->isNotEmpty()
+                            ? $this->formatMissingItems($combinedProblemItems->all())
+                            : $poRows
+                                ->pluck('problem_data')
+                                ->filter()
+                                ->unique()
+                                ->implode("\n");
+
+                        return array_merge($firstRow, [
+                            'problem_data' => $combinedProblemData,
+                            'problem_items' => $combinedProblemItems->all(),
+                            'allowed_days' => $firstRow['allowed_days'] ?? $firstRow['expected_port_days'] ?? null,
+                            'current_days' => $firstRow['current_days'] ?? $firstRow['current_port_days'] ?? null,
+                            'delay_days' => $firstRow['delay_days'] ?? null,
+                        ]);
+                    })
+                    ->values()
+                    ->all();
+
+                $this->stageRows[$stageIndex]['rules'][$ruleIndex]['details'] = $detailRows;
+                $this->stageRows[$stageIndex]['rules'][$ruleIndex]['details_loaded'] = true;
+                $this->stageRows[$stageIndex]['rules'][$ruleIndex]['is_expanded'] = true;
+
+                return;
+            }
+        }
+    }
+
+    private function ruleUsesTimingColumns(string $ruleKey): bool
+    {
+        return in_array($ruleKey, [
+            'production_booking_management_delay',
+            'booking_stage_automation',
+            'transit_stage_automation',
+            'port_stage_delay',
+        ], true);
     }
 
     public function missingFields(PurchaseOrder $purchaseOrder): array
@@ -1155,7 +1204,7 @@ class ControlDashboard extends Component
     public function render()
     {
         return view('livewire.dashboards.control-dashboard', [
-            'summaryRows' => $this->summaryRows,
+            'stageRows' => $this->stageRows,
             'stageSummaryTotals' => $this->stageSummaryTotals,
             'responsibleSummaryRows' => $this->responsibleSummaryRows,
             'responsibleSummaryTotals' => $this->responsibleSummaryTotals,
