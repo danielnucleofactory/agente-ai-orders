@@ -17,6 +17,7 @@ Este cambio consolida los ajustes levantados en el war room del dia 1 para OLO, 
 - timeline de tracking alimentado desde BD
 - correcciones de auditoria e historial
 - correccion de exportacion Excel de incoterms
+- robustecimiento del diccionario de puertos Porth -> Maestros
 
 ## 1. Bloqueo de campos en edicion de PO
 
@@ -224,7 +225,36 @@ Archivo principal:
 - `database/migrations/2026_05_05_000004_change_dif_load_date_to_integer.php`
 - `database/migrations/2026_05_05_000005_add_tracking_not_applicable_to_purchase_orders.php`
 
-## 12. Consideraciones pendientes fuera de este cambio
+## 12. Diccionario de puertos Porth -> Maestros
+
+Se fortalecio la traduccion de puertos para reducir casos donde el webhook no envia
+`departure_port` o `arrival_port` porque el nombre recibido desde Porth no coincide
+exactamente con el maestro.
+
+Incluye:
+
+- normalizacion semantica del nombre del puerto para busqueda
+- tolerancia a variantes con:
+  - acentos
+  - puntuacion
+  - sufijos como `Port`, `Port of`, `Puerto`, `Harbor`, `Terminal`
+- fallback al maestro de puertos cuando el CSV local no alcanza
+- devolucion del nombre canonico del maestro cuando se encuentra match
+
+Caso cubierto explicitamente:
+
+- `Shenzen port, China` -> `Shenzen, China`
+
+Archivos principales:
+
+- `app/Services/PorthTranslationService.php`
+- `tests/Unit/PorthTranslationServiceTest.php`
+
+Verificacion:
+
+- prueba unitaria pasando para fallback al maestro con variacion por sufijo
+
+## 13. Consideraciones pendientes fuera de este cambio
 
 Se analizaron pero no se implementaron todavia en este branch:
 
@@ -233,4 +263,3 @@ Se analizaron pero no se implementaron todavia en este branch:
 - cola de fallidos y reintentos Porth
 - scheduler horario por ventana CR y batches de 50
 - uso de `cargoId` para update correcto de contenedor en Porth
-
