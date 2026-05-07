@@ -80,6 +80,33 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            const syncValueFromPicker = (rawValue = null) => {
+                if (!this.fp) return;
+
+                const normalizedRawValue = typeof rawValue === 'string' ? rawValue.trim() : rawValue;
+                let isoValue = null;
+
+                if (this.fp.selectedDates.length > 0) {
+                    isoValue = this.fp.formatDate(this.fp.selectedDates[0], 'Y-m-d');
+                } else if (normalizedRawValue) {
+                    const parsedDate =
+                        this.fp.parseDate(normalizedRawValue, displayFormat) ||
+                        this.fp.parseDate(normalizedRawValue, 'Y-m-d');
+
+                    if (parsedDate) {
+                        isoValue = this.fp.formatDate(parsedDate, 'Y-m-d');
+                        this.fp.setDate(parsedDate, false);
+                    }
+                }
+
+                this.value = isoValue;
+
+                if (!isoValue && this.fp.altInput) {
+                    this.fp.altInput.value = '';
+                    this.fp.altInput.placeholder = placeholder;
+                }
+            };
+
             // --- Modo editable: inicializar Flatpickr ---
             this.fp = flatpickr(input, {
                 dateFormat: 'Y-m-d',
@@ -92,11 +119,19 @@ document.addEventListener('alpine:init', () => {
                 onChange: (selectedDates, dateStr) => {
                     this.value = dateStr || null;
                 },
+                onClose: (selectedDates, dateStr) => {
+                    syncValueFromPicker(dateStr);
+                },
+                onValueUpdate: (selectedDates, dateStr) => {
+                    syncValueFromPicker(dateStr);
+                },
             });
 
             // Configurar placeholder en el input visible (altInput)
             if (this.fp.altInput) {
                 this.fp.altInput.placeholder = placeholder;
+                this.fp.altInput.addEventListener('blur', () => syncValueFromPicker(this.fp.altInput.value));
+                this.fp.altInput.addEventListener('change', () => syncValueFromPicker(this.fp.altInput.value));
             }
 
             // Observar cambios externos (desde Livewire vía @entangle)

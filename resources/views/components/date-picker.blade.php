@@ -15,8 +15,10 @@
 @php
     $wireModel = $attributes->wire('model');
     $hasWireModel = $wireModel && $wireModel->value();
-    $isReadonly = $attributes->has('readonly');
-    $isDisabled = $attributes->has('disabled');
+    $readonlyAttr = $attributes->get('readonly');
+    $disabledAttr = $attributes->get('disabled');
+    $isReadonly = $attributes->has('readonly') && ! in_array($readonlyAttr, [false, 0, '0', 'false', null, ''], true);
+    $isDisabled = $attributes->has('disabled') && ! in_array($disabledAttr, [false, 0, '0', 'false', null, ''], true);
     $inputName = $attributes->get('name', '');
     $inputId = $attributes->get('id', $inputName);
     $containerClass = $attributes->only('class')->get('class', '');
