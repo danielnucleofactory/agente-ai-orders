@@ -27,6 +27,12 @@ class ControlDashboard extends Component
 
     public array $expandedRuleKeys = [];
 
+    protected array $ruleIdsCache = [];
+
+    protected array $ruleDetailsCache = [];
+
+    protected ?array $stageTotalsCache = null;
+
     public function getRulesCatalogProperty(): Collection
     {
         return collect([
@@ -199,20 +205,22 @@ class ControlDashboard extends Component
             ->groupBy('stage')
             ->map(function (Collection $rules, string $stageName) {
                 $rawRules = $rules->map(function (array $rule) {
-                    $details = $this->ruleDetails($rule['key']);
+                    $poIds = $this->ruleIds($rule['key']);
+                    $isExpanded = in_array('group_' . md5($rule['key']), $this->expandedRuleKeys, true)
+                        || in_array($rule['key'], $this->expandedRuleKeys, true);
 
                     return array_merge($rule, [
-                        'po_count' => $details instanceof Collection ? $details->count() : null,
-                        'details' => $details,
+                        'po_ids' => $poIds,
+                        'po_count' => $poIds->count(),
+                        'details' => $isExpanded ? $this->ruleDetails($rule['key']) : null,
                         'is_expanded' => in_array($rule['key'], $this->expandedRuleKeys, true),
                     ]);
                 })->values();
 
                 $totalPos = $this->totalPurchaseOrdersForStage($stageName);
                 $errorPos = $rawRules
-                    ->pluck('details')
-                    ->filter(fn ($details) => $details instanceof Collection)
-                    ->flatMap(fn (Collection $details) => $details->pluck('id'))
+                    ->pluck('po_ids')
+                    ->flatMap(fn (Collection $ids) => $ids)
                     ->unique()
                     ->count();
 
@@ -220,48 +228,49 @@ class ControlDashboard extends Component
                     ->groupBy(fn (array $rule) => $rule['title'] . '|' . $rule['responsible'] . '|' . $rule['origin'])
                     ->map(function (Collection $group) use ($totalPos) {
                         $first = $group->first();
-                        $detailRows = $group
-                            ->pluck('details')
-                            ->filter(fn ($details) => $details instanceof Collection)
-                            ->flatMap(fn (Collection $details) => $details)
-                            ->groupBy('id')
-                            ->map(function (Collection $poRows) {
-                                $firstRow = $poRows->first();
-                                $combinedProblemItems = $poRows
-                                    ->pluck('problem_items')
-                                    ->filter(fn ($items) => is_array($items) && ! empty($items))
-                                    ->flatMap(fn (array $items) => $items)
-                                    ->map(fn (string $item) => trim($item))
-                                    ->filter()
-                                    ->unique()
-                                    ->values();
-
-                                $combinedProblemData = $combinedProblemItems->isNotEmpty()
-                                    ? $this->formatMissingItems($combinedProblemItems->all())
-                                    : $poRows
-                                        ->pluck('problem_data')
-                                        ->filter()
-                                        ->flatMap(function (string $problemData) {
-                                            return collect(explode(',', $problemData))
-                                                ->map(fn (string $item) => trim($item))
-                                                ->filter();
-                                        })
-                                        ->unique()
-                                        ->values()
-                                        ->implode(', ');
-
-                                return array_merge($firstRow, [
-                                    'problem_data' => $combinedProblemData,
-                                    'problem_items' => $combinedProblemItems->all(),
-                                    'allowed_days' => $firstRow['allowed_days'] ?? $firstRow['expected_port_days'] ?? null,
-                                    'current_days' => $firstRow['current_days'] ?? $firstRow['current_port_days'] ?? null,
-                                    'delay_days' => $firstRow['delay_days'] ?? null,
-                                ]);
-                            })
-                            ->values();
-
-                        $poCount = $detailRows->count();
                         $groupKey = 'group_' . md5($group->pluck('key')->sort()->implode('|'));
+                        $isExpanded = in_array($groupKey, $this->expandedRuleKeys, true);
+                        $poIds = $group
+                            ->pluck('po_ids')
+                            ->flatMap(fn (Collection $ids) => $ids)
+                            ->unique()
+                            ->values();
+                        $poCount = $poIds->count();
+
+                        $detailRows = $isExpanded
+                            ? $group
+                                ->pluck('key')
+                                ->flatMap(fn (string $key) => $this->ruleDetails($key))
+                                ->groupBy('id')
+                                ->map(function (Collection $poRows) {
+                                    $firstRow = $poRows->first();
+                                    $combinedProblemItems = $poRows
+                                        ->pluck('problem_items')
+                                        ->filter(fn ($items) => is_array($items) && ! empty($items))
+                                        ->flatMap(fn (array $items) => $items)
+                                        ->map(fn (string $item) => trim($item))
+                                        ->filter()
+                                        ->unique()
+                                        ->values();
+
+                                    $combinedProblemData = $combinedProblemItems->isNotEmpty()
+                                        ? $this->formatMissingItems($combinedProblemItems->all())
+                                        : $poRows
+                                            ->pluck('problem_data')
+                                            ->filter()
+                                            ->unique()
+                                            ->implode("\n");
+
+                                    return array_merge($firstRow, [
+                                        'problem_data' => $combinedProblemData,
+                                        'problem_items' => $combinedProblemItems->all(),
+                                        'allowed_days' => $firstRow['allowed_days'] ?? $firstRow['expected_port_days'] ?? null,
+                                        'current_days' => $firstRow['current_days'] ?? $firstRow['current_port_days'] ?? null,
+                                        'delay_days' => $firstRow['delay_days'] ?? null,
+                                    ]);
+                                })
+                                ->values()
+                            : collect();
 
                         return [
                             'key' => $groupKey,
@@ -270,9 +279,10 @@ class ControlDashboard extends Component
                             'origin' => $first['origin'],
                             'responsible' => $first['responsible'],
                             'rule_keys' => $group->pluck('key')->values()->all(),
+                            'po_ids' => $poIds,
                             'po_count' => $poCount,
-                            'details' => $detailRows,
-                            'is_expanded' => in_array($groupKey, $this->expandedRuleKeys, true),
+                            'details' => $isExpanded ? $detailRows : null,
+                            'is_expanded' => $isExpanded,
                             'percentage' => $totalPos > 0
                                 ? round(($poCount / $totalPos) * 100, 1)
                                 : null,
@@ -299,7 +309,9 @@ class ControlDashboard extends Component
         foreach ($this->summaryRows as $stageRow) {
             foreach ($stageRow['rules'] as $ruleRow) {
                 if (! ($ruleRow['details'] instanceof Collection) || ! is_numeric($ruleRow['po_count'])) {
-                    continue;
+                    $poIds = collect($ruleRow['po_ids'] ?? []);
+                } else {
+                    $poIds = collect($ruleRow['po_ids'] ?? $ruleRow['details']->pluck('id')->all());
                 }
 
                 $responsible = $ruleRow['responsible'];
@@ -312,7 +324,7 @@ class ControlDashboard extends Component
 
                 $rows[$responsible]['po_ids'] = array_values(array_unique(array_merge(
                     $rows[$responsible]['po_ids'],
-                    $ruleRow['details']->pluck('id')->all()
+                    $poIds->all()
                 )));
             }
         }
@@ -435,7 +447,11 @@ class ControlDashboard extends Component
 
     private function ruleDetails(string $ruleKey): ?Collection
     {
-        return match ($ruleKey) {
+        if (array_key_exists($ruleKey, $this->ruleDetailsCache)) {
+            return $this->ruleDetailsCache[$ruleKey];
+        }
+
+        $details = match ($ruleKey) {
             'production_missing_required_fields' => $this->productionMissingRequiredFieldsDetails(),
             'booking_missing_authorization_date' => $this->bookingMissingAuthorizationDateDetails(),
             'transit_missing_tracking_fields' => $this->transitMissingTrackingFieldsDetails(),
@@ -450,10 +466,111 @@ class ControlDashboard extends Component
             'general_date_consistency' => $this->generalDateConsistencyDetails(),
             default => null,
         };
+
+        return $this->ruleDetailsCache[$ruleKey] = $details;
+    }
+
+    private function ruleIds(string $ruleKey): Collection
+    {
+        if (array_key_exists($ruleKey, $this->ruleIdsCache)) {
+            return $this->ruleIdsCache[$ruleKey];
+        }
+
+        $ids = match ($ruleKey) {
+            'production_missing_required_fields' => PurchaseOrder::query()
+                ->where('kanban_status_id', self::PRODUCTION_STAGE_ID)
+                ->where(function ($q) {
+                    $q->whereNull('vendor_id')
+                        ->orWhereNull('date_theorical_load')
+                        ->orWhereNull('date_variable_date');
+                })
+                ->pluck('id'),
+            'booking_missing_authorization_date' => PurchaseOrder::query()
+                ->where('kanban_status_id', self::BOOKING_STAGE_ID)
+                ->whereNull('date_booking_authorized')
+                ->pluck('id'),
+            'production_booking_management_delay' => PurchaseOrder::query()
+                ->where('kanban_status_id', self::PRODUCTION_STAGE_ID)
+                ->where('carga_lista_validada', true)
+                ->whereNotNull('date_variable_date')
+                ->whereDate('date_variable_date', '<=', Carbon::today()->subDays(8))
+                ->pluck('id'),
+            'production_missing_incoterms' => PurchaseOrder::query()
+                ->where('kanban_status_id', self::PRODUCTION_STAGE_ID)
+                ->where(function ($q) {
+                    $q->whereNull('incoterms')
+                        ->orWhere('incoterms', '')
+                        ->orWhereNull('price_incoterm')
+                        ->orWhere('price_incoterm', '')
+                        ->orWhereNull('logistics_incoterm')
+                        ->orWhere('logistics_incoterm', '');
+                })
+                ->pluck('id'),
+            'booking_missing_container_and_carrier' => PurchaseOrder::query()
+                ->where('kanban_status_id', self::BOOKING_STAGE_ID)
+                ->whereNotNull('date_etd_initial')
+                ->whereBetween('date_etd_initial', [Carbon::today(), Carbon::today()->addDays(4)])
+                ->where(function ($q) {
+                    $q->whereNull('container_number')
+                        ->orWhere('container_number', '')
+                        ->orWhereNull('shipping_line')
+                        ->orWhere('shipping_line', '');
+                })
+                ->pluck('id'),
+            'booking_stage_automation' => PurchaseOrder::query()
+                ->where('kanban_status_id', self::BOOKING_STAGE_ID)
+                ->whereNotNull('date_atd')
+                ->pluck('id'),
+            'transit_missing_tracking_fields' => PurchaseOrder::query()
+                ->where('kanban_status_id', self::TRANSIT_STAGE_ID)
+                ->where(function ($q) {
+                    $q->whereNull('container_number')
+                        ->orWhere('container_number', '')
+                        ->orWhereNull('shipping_line')
+                        ->orWhere('shipping_line', '')
+                        ->orWhereNull('mbl_number')
+                        ->orWhere('mbl_number', '')
+                        ->orWhereNull('service_provider')
+                        ->orWhere('service_provider', '')
+                        ->orWhere(function ($freightQuery) {
+                            $freightQuery->where('used_rate_ok', true)
+                                ->where(function ($inner) {
+                                    $inner->whereNull('freight_amount')
+                                        ->orWhere('freight_amount', 0);
+                                });
+                        });
+                })
+                ->pluck('id'),
+            'transit_missing_dates' => PurchaseOrder::query()
+                ->where('kanban_status_id', self::TRANSIT_STAGE_ID)
+                ->where(function ($q) {
+                    $q->whereNull('date_etd_initial')
+                        ->orWhereNull('date_etd')
+                        ->orWhereNull('date_atd')
+                        ->orWhereNull('date_eta_initial')
+                        ->orWhereNull('date_eta');
+                })
+                ->pluck('id'),
+            'transit_stage_automation' => PurchaseOrder::query()
+                ->where('kanban_status_id', self::TRANSIT_STAGE_ID)
+                ->whereNotNull('date_ata')
+                ->pluck('id'),
+            'port_missing_ata' => PurchaseOrder::query()
+                ->where('kanban_status_id', self::PORT_STAGE_ID)
+                ->whereNull('date_ata')
+                ->pluck('id'),
+            'port_stage_delay' => $this->portStageDelayIds(),
+            'general_date_consistency' => $this->generalDateConsistencyIds(),
+            default => collect(),
+        };
+
+        return $this->ruleIdsCache[$ruleKey] = collect($ids)->values();
     }
 
     private function totalPurchaseOrdersForStage(string $stageName): int
     {
+        $totals = $this->stageTotals();
+
         $stageId = match ($stageName) {
             'Producción' => self::PRODUCTION_STAGE_ID,
             'Booking' => self::BOOKING_STAGE_ID,
@@ -468,12 +585,97 @@ class ControlDashboard extends Component
         }
 
         if ($stageId === 'general') {
-            return PurchaseOrder::query()->count();
+            return $totals['all'];
         }
 
+        return $totals[$stageId] ?? 0;
+    }
+
+    private function stageTotals(): array
+    {
+        if ($this->stageTotalsCache !== null) {
+            return $this->stageTotalsCache;
+        }
+
+        $grouped = PurchaseOrder::query()
+            ->selectRaw('kanban_status_id, COUNT(*) as aggregate')
+            ->groupBy('kanban_status_id')
+            ->pluck('aggregate', 'kanban_status_id')
+            ->map(fn ($count) => (int) $count)
+            ->all();
+
+        $grouped['all'] = array_sum($grouped);
+
+        return $this->stageTotalsCache = $grouped;
+    }
+
+    private function portStageDelayIds(): Collection
+    {
+        $transitTimeService = app(TransitTimeService::class);
+
         return PurchaseOrder::query()
-            ->where('kanban_status_id', $stageId)
-            ->count();
+            ->select(['id', 'date_ata', 'porth_pol', 'porth_pod', 'departure_port', 'arrival_port'])
+            ->where('kanban_status_id', self::PORT_STAGE_ID)
+            ->whereNotNull('date_ata')
+            ->get()
+            ->filter(function (PurchaseOrder $purchaseOrder) use ($transitTimeService) {
+                $departureRef = ! empty($purchaseOrder->porth_pol) ? $purchaseOrder->porth_pol : $purchaseOrder->departure_port;
+                $arrivalRef = ! empty($purchaseOrder->porth_pod) ? $purchaseOrder->porth_pod : $purchaseOrder->arrival_port;
+
+                $portDays = $transitTimeService->getPortDaysForPorts($departureRef, $arrivalRef);
+                if ($portDays === null) {
+                    return false;
+                }
+
+                $ataDate = $purchaseOrder->date_ata instanceof Carbon
+                    ? $purchaseOrder->date_ata->copy()
+                    : Carbon::parse($purchaseOrder->date_ata);
+
+                return $ataDate->copy()->addDays($portDays)->startOfDay()->lt(Carbon::today()->startOfDay());
+            })
+            ->pluck('id')
+            ->values();
+    }
+
+    private function generalDateConsistencyIds(): Collection
+    {
+        $dateFields = [
+            'date_etd_initial',
+            'date_etd',
+            'date_atd',
+            'date_eta_initial',
+            'date_eta',
+            'date_ata',
+        ];
+
+        return PurchaseOrder::query()
+            ->select(array_merge(['id', 'date_variable_date'], $dateFields, ['kanban_status_id']))
+            ->whereNotNull('date_variable_date')
+            ->get()
+            ->filter(function (PurchaseOrder $purchaseOrder) use ($dateFields) {
+                $baseDate = $purchaseOrder->date_variable_date instanceof Carbon
+                    ? $purchaseOrder->date_variable_date->copy()->startOfDay()
+                    : Carbon::parse($purchaseOrder->date_variable_date)->startOfDay();
+
+                foreach ($dateFields as $field) {
+                    $value = $purchaseOrder->{$field};
+                    if (blank($value)) {
+                        continue;
+                    }
+
+                    $comparisonDate = $value instanceof Carbon
+                        ? $value->copy()->startOfDay()
+                        : Carbon::parse($value)->startOfDay();
+
+                    if ($comparisonDate->lt($baseDate)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })
+            ->pluck('id')
+            ->values();
     }
 
     private function productionMissingRequiredFieldsDetails(): Collection
