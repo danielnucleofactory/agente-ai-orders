@@ -504,7 +504,10 @@
                     @endif
 
                     <div class="flex gap-[1.875rem]">
-                        <x-secondary-button wire:click="cancelModal" class="w-full">Cancelar</x-secondary-button>
+                        <x-secondary-button
+                            x-on:click="$dispatch('close-modal', 'modal-po-stage-change')"
+                            wire:click="cancelModal"
+                            class="w-full">Cancelar</x-secondary-button>
                         <x-primary-button 
                             wire:click="saveAndMove"
                             wire:loading.attr="disabled"
