@@ -34,7 +34,7 @@
                     @if ($stageRow['is_expanded'])
                         @foreach ($stageRow['rules'] as $ruleRow)
                             @php
-                                $hasDetails = $ruleRow['details'] !== null;
+                                $hasDetails = ($ruleRow['po_count'] ?? 0) > 0;
                             @endphp
                             <tr class="bg-white hover:bg-gray-50">
                                 <td class="px-4 py-4 text-sm text-[#2E2E2E]">
