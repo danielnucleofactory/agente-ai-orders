@@ -175,6 +175,10 @@ Route::middleware(['auth'])->group(function () {
     Route::view('purchase-orders/requests', 'purchase-orders.requests')
         ->name('purchase-orders.requests');
 
+    // Dashboard de control
+    Route::view('purchase-orders/control-dashboard', 'purchase-orders.control-dashboard')
+        ->name('purchase-orders.control-dashboard');
+
     // Kanban de órdenes de compra
     Route::get('purchase-orders/kanban/{boardId?}', \App\Livewire\Kanban\KanbanBoard::class)
         ->name('purchase-orders.kanban');

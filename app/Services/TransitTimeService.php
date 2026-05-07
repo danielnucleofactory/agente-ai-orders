@@ -30,6 +30,13 @@ class TransitTimeService
     private static ?array $transitTimesCache = null;
 
     /**
+     * Matriz indexada por [originISO2][destinationISO2] => días máximos en puerto.
+     *
+     * @var array<string, array<string, int>>|null
+     */
+    private static ?array $portDaysCache = null;
+
+    /**
      * Mapa ISO2 origen -> Región (derivado del CSV en el primer load).
      *
      * @var array<string, string>|null
@@ -230,18 +237,21 @@ class TransitTimeService
         if (!is_string($path) || $path === '' || !is_readable($path)) {
             Log::warning('Transit matrix CSV no encontrado o ilegible', ['path' => $path]);
             self::$transitTimesCache = [];
+            self::$portDaysCache = [];
             self::$originIsoToRegionCache = [];
 
             return;
         }
 
         $matrix = [];
+        $portDaysMatrix = [];
         $regionByIso = [];
 
         $handle = fopen($path, 'r');
         if ($handle === false) {
             Log::warning('No se pudo abrir el CSV de matriz de tránsito', ['path' => $path]);
             self::$transitTimesCache = [];
+            self::$portDaysCache = [];
             self::$originIsoToRegionCache = [];
 
             return;
@@ -251,12 +261,21 @@ class TransitTimeService
             $header = $this->fgetCsvSemicolon($handle);
             if ($header === false) {
                 self::$transitTimesCache = [];
+                self::$portDaysCache = [];
                 self::$originIsoToRegionCache = [];
 
                 return;
             }
 
-            // Esperado: Region;Paises;PaisOrigenISO;Destino;PaisDestinoISO;Dias de tiempo de transito
+            $portDaysIndex = null;
+            foreach ($header as $index => $column) {
+                if (mb_strtolower(trim((string) $column)) === 'dias de puerto') {
+                    $portDaysIndex = $index;
+                    break;
+                }
+            }
+
+            // Esperado: Region;Paises;PaisOrigenISO;Destino;PaisDestinoISO;Dias de tiempo de transito;Dias de puerto
             while (($row = $this->fgetCsvSemicolon($handle)) !== false) {
                 if (count($row) < 6) {
                     continue;
@@ -277,6 +296,13 @@ class TransitTimeService
 
                 $matrix[$originIso][$destIso] = (int) $diasRaw;
 
+                if ($portDaysIndex !== null) {
+                    $portDaysRaw = trim((string) ($row[$portDaysIndex] ?? ''));
+                    if ($portDaysRaw !== '' && is_numeric($portDaysRaw)) {
+                        $portDaysMatrix[$originIso][$destIso] = (int) $portDaysRaw;
+                    }
+                }
+
                 if ($region !== '' && !isset($regionByIso[$originIso])) {
                     $regionByIso[$originIso] = $region;
                 }
@@ -286,6 +312,7 @@ class TransitTimeService
         }
 
         self::$transitTimesCache = $matrix;
+        self::$portDaysCache = $portDaysMatrix;
         self::$originIsoToRegionCache = $regionByIso;
     }
 
@@ -356,6 +383,29 @@ class TransitTimeService
         $times = $this->getTransitTimes();
         if (isset($times[$originIso][$destIso])) {
             return $times[$originIso][$destIso];
+        }
+
+        return null;
+    }
+
+    /**
+     * Días máximos en puerto para una ruta origen-destino.
+     *
+     * Usa la misma resolución flexible que `getTransitDaysForPorts()`.
+     */
+    public function getPortDaysForPorts(?string $departurePort, ?string $arrivalPort): ?int
+    {
+        $originIso = $this->resolvePortToIso2($departurePort);
+        $destIso = $this->resolvePortToIso2($arrivalPort);
+
+        if ($originIso === null || $destIso === null) {
+            return null;
+        }
+
+        $this->getTransitTimes();
+
+        if (isset(self::$portDaysCache[$originIso][$destIso])) {
+            return self::$portDaysCache[$originIso][$destIso];
         }
 
         return null;
