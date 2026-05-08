@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Mail\PorthUnmatchedPortAlertMail;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 class PorthTranslationService
@@ -165,15 +167,18 @@ class PorthTranslationService
         return null;
     }
 
-    public function translatePort(?string $porthCode, ?string $porthName = null): ?string
+    public function translatePort(?string $porthCode, ?string $porthName = null, array $context = []): ?string
     {
         $result = $this->translatePortQuiet($porthCode, $porthName);
 
         if ($result === null && (! empty($porthCode) || ! empty($porthName))) {
-            Log::warning('porth_translation:port_not_found', [
+            $alertContext = array_merge($context, [
                 'porth_code' => $porthCode,
                 'porth_name' => $porthName,
             ]);
+
+            Log::warning('porth_translation:port_not_found', $alertContext);
+            $this->sendUnmatchedPortAlert($alertContext);
         }
 
         return $result;
@@ -258,6 +263,42 @@ class PorthTranslationService
         });
 
         return $partial ? $partial['code'] : null;
+    }
+
+    protected function sendUnmatchedPortAlert(array $context): void
+    {
+        $alertEmail = config('services.porth.unmatched_port_alert_email');
+
+        if (empty($alertEmail)) {
+            return;
+        }
+
+        $ttlHours = (int) config('services.porth.unmatched_port_alert_ttl_hours', 12);
+        $dedupeKey = $this->buildUnmatchedPortAlertCacheKey($context);
+
+        if (! Cache::add($dedupeKey, true, now()->addHours($ttlHours))) {
+            return;
+        }
+
+        Mail::to($alertEmail)->send(new PorthUnmatchedPortAlertMail([
+            'order_number' => $context['order_number'] ?? null,
+            'container_number' => $context['container_number'] ?? null,
+            'port_role' => $context['port_role'] ?? null,
+            'port_role_label' => $context['port_role_label'] ?? (($context['port_role'] ?? null) === 'arrival' ? 'Llegada' : 'Origen'),
+            'port_name' => $context['porth_name'] ?: ($context['porth_code'] ?? null),
+        ]));
+    }
+
+    protected function buildUnmatchedPortAlertCacheKey(array $context): string
+    {
+        $parts = [
+            'porth_unmatched_port_alert',
+            strtolower(trim((string) ($context['port_role'] ?? 'unknown'))),
+            strtolower(trim((string) ($context['porth_code'] ?? ''))),
+            strtolower(trim((string) ($context['porth_name'] ?? ''))),
+        ];
+
+        return implode(':', $parts);
     }
 
     /**

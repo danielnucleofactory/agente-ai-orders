@@ -5,6 +5,9 @@ namespace App\Services;
 use App\Helpers\PorthImportHelper;
 use App\Models\KanbanBoard;
 use App\Models\KanbanStatus;
+use App\Models\PorthCargo;
+use App\Models\PorthItinerary;
+use App\Models\PorthPhase;
 use App\Models\PurchaseOrder;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -57,6 +60,7 @@ class PorthImportService
 
                 foreach ($purchaseOrders as $po) {
                     $this->updatePurchaseOrder($po, $data);
+                    $this->syncPorthStructures($po->fresh(), $data);
 
                     if (!$firstPO) {
                         $firstPO = $po->fresh();
@@ -190,7 +194,7 @@ class PorthImportService
         }
         
         // Campos de maestros traducidos - siempre sobrescribir
-        $maestrosFields = $this->helper->getMaestrosFields($data);
+        $maestrosFields = $this->helper->getMaestrosFields($data, $po);
         foreach ($maestrosFields as $field => $value) {
             if ($value !== null) {
                 $originalValues[$field] = $po->$field;
@@ -258,6 +262,78 @@ class PorthImportService
                 $this->dispatchWebhookForPorthUpdate($po, $actualChanges);
             }
         }
+    }
+
+    protected function syncPorthStructures(PurchaseOrder $po, array $data): void
+    {
+        $shippingDocumentId = $po->shippingDocuments()->value('shipping_documents.id');
+
+        $cargoPayloads = collect($data['cargo'] ?? [])
+            ->filter(fn ($cargo) => is_array($cargo))
+            ->map(function (array $cargo) use ($po, $shippingDocumentId) {
+                return array_merge(
+                    $this->helper->buildCargoPayload($cargo),
+                    [
+                        'purchase_order_id' => $po->id,
+                        'shipping_document_id' => $shippingDocumentId,
+                    ]
+                );
+            })
+            ->values()
+            ->all();
+
+        $phasePayloads = collect($data['phases'] ?? [])
+            ->filter(fn ($phase) => is_array($phase))
+            ->map(function (array $phase) use ($po, $shippingDocumentId) {
+                return array_merge(
+                    $this->helper->buildPhasePayload($phase),
+                    [
+                        'purchase_order_id' => $po->id,
+                        'shipping_document_id' => $shippingDocumentId,
+                    ]
+                );
+            })
+            ->values()
+            ->all();
+
+        $itineraryPayloads = collect($data['itinerary'] ?? [])
+            ->filter(fn ($item) => is_array($item))
+            ->map(function (array $item) use ($po, $shippingDocumentId, $data) {
+                return array_merge(
+                    $this->helper->buildItineraryPayload($item, $data['id'] ?? null),
+                    [
+                        'purchase_order_id' => $po->id,
+                        'shipping_document_id' => $shippingDocumentId,
+                    ]
+                );
+            })
+            ->values()
+            ->all();
+
+        PorthCargo::where('purchase_order_id', $po->id)->delete();
+        PorthPhase::where('purchase_order_id', $po->id)->delete();
+        PorthItinerary::where('purchase_order_id', $po->id)->delete();
+
+        if (!empty($cargoPayloads)) {
+            $po->porthCargos()->createMany($cargoPayloads);
+        }
+
+        if (!empty($phasePayloads)) {
+            $po->porthPhases()->createMany($phasePayloads);
+        }
+
+        if (!empty($itineraryPayloads)) {
+            $po->porthItineraries()->createMany($itineraryPayloads);
+        }
+
+        Log::info('porth_import:structures_synced', [
+            'purchase_order_id' => $po->id,
+            'order_number' => $po->order_number,
+            'shipping_document_id' => $shippingDocumentId,
+            'cargo_count' => count($cargoPayloads),
+            'phase_count' => count($phasePayloads),
+            'itinerary_count' => count($itineraryPayloads),
+        ]);
     }
 
     /**
