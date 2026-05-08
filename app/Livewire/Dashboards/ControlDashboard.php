@@ -398,6 +398,16 @@ class ControlDashboard extends Component
         });
     }
 
+    public function shouldShowElapsedDaysColumn(string $ruleKey): bool
+    {
+        return $ruleKey !== 'group_' . md5('production_booking_management_delay');
+    }
+
+    public function shouldShowAllowedDaysColumn(string $ruleKey): bool
+    {
+        return $ruleKey !== 'group_' . md5('production_booking_management_delay');
+    }
+
     public function missingFields(PurchaseOrder $purchaseOrder): array
     {
         $missing = [];
@@ -443,6 +453,21 @@ class ControlDashboard extends Component
         $delayDays = $baseDate->diffInDays(Carbon::today()->startOfDay(), false) - $allowedDays;
 
         return max(0, $delayDays);
+    }
+
+    private function elapsedDaysFromDueDate(Carbon|string|null $date, int $allowedDays = 0): ?int
+    {
+        if (blank($date)) {
+            return null;
+        }
+
+        $baseDate = $date instanceof Carbon
+            ? $date->copy()->startOfDay()
+            : Carbon::parse($date)->startOfDay();
+
+        $dueDate = $baseDate->copy()->addDays($allowedDays);
+
+        return max(0, $dueDate->diffInDays(Carbon::today()->startOfDay(), false));
     }
 
     private function ruleDetails(string $ruleKey): ?Collection
@@ -740,9 +765,6 @@ class ControlDashboard extends Component
                 $validatedDate = optional($purchaseOrder->date_variable_date)?->format('d/m/Y');
                 $limitDate = optional($purchaseOrder->date_variable_date)?->copy()->addDays(8)->format('d/m/Y');
                 $delayDays = $this->overdueDaysFromDate($purchaseOrder->date_variable_date, 8);
-                $currentDays = blank($purchaseOrder->date_variable_date)
-                    ? null
-                    : Carbon::parse($purchaseOrder->date_variable_date)->startOfDay()->diffInDays(Carbon::today()->startOfDay());
 
                 return [
                     'id' => $purchaseOrder->id,
@@ -750,8 +772,6 @@ class ControlDashboard extends Component
                     'stage' => $purchaseOrder->kanbanStatus->name ?? 'Producción',
                     'responsible' => 'OLO',
                     'problem_data' => 'Carga lista validada: ' . ($validatedDate ?? 'Sin fecha') . ' | Venció: ' . ($limitDate ?? 'Sin fecha'),
-                    'current_days' => $currentDays,
-                    'allowed_days' => 8,
                     'delay_days' => $delayDays,
                     'vendor' => $purchaseOrder->vendor?->name,
                 ];

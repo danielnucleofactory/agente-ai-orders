@@ -74,6 +74,8 @@
                                         @php
                                             $detailRows = $this->detailRows($ruleRow['key']);
                                             $showTimingColumns = $this->shouldShowTimingColumns($ruleRow['key']);
+                                            $showElapsedDaysColumn = $this->shouldShowElapsedDaysColumn($ruleRow['key']);
+                                            $showAllowedDaysColumn = $this->shouldShowAllowedDaysColumn($ruleRow['key']);
                                         @endphp
                                         <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white">
                                             <table class="min-w-full divide-y divide-gray-200">
@@ -83,8 +85,12 @@
                                                         <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#5C5C5C]">Etapa</th>
                                                         <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#5C5C5C]">Datos que generan el problema</th>
                                                         @if ($showTimingColumns)
-                                                            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#5C5C5C]">Días transcurridos</th>
-                                                            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#5C5C5C]">Límite</th>
+                                                            @if ($showElapsedDaysColumn)
+                                                                <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#5C5C5C]">Días transcurridos</th>
+                                                            @endif
+                                                            @if ($showAllowedDaysColumn)
+                                                                <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#5C5C5C]">Límite</th>
+                                                            @endif
                                                             <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#5C5C5C]">Días atraso</th>
                                                         @endif
                                                         <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#5C5C5C]">Responsable</th>
@@ -101,8 +107,12 @@
                                                             <td class="px-4 py-3 text-sm text-[#2E2E2E]">{{ $detail['stage'] }}</td>
                                                             <td class="whitespace-pre-line px-4 py-3 text-sm text-[#2E2E2E]">{{ $detail['problem_data'] }}</td>
                                                             @if ($showTimingColumns)
-                                                                <td class="px-4 py-3 text-sm text-[#2E2E2E]">{{ $detail['current_days'] ?? '-' }}</td>
-                                                                <td class="px-4 py-3 text-sm text-[#2E2E2E]">{{ $detail['allowed_days'] ?? '-' }}</td>
+                                                                @if ($showElapsedDaysColumn)
+                                                                    <td class="px-4 py-3 text-sm text-[#2E2E2E]">{{ $detail['current_days'] ?? '-' }}</td>
+                                                                @endif
+                                                                @if ($showAllowedDaysColumn)
+                                                                    <td class="px-4 py-3 text-sm text-[#2E2E2E]">{{ $detail['allowed_days'] ?? '-' }}</td>
+                                                                @endif
                                                                 <td class="px-4 py-3 text-sm text-[#2E2E2E]">{{ $detail['delay_days'] ?? '-' }}</td>
                                                             @endif
                                                             <td class="px-4 py-3 text-sm text-[#2E2E2E]">{{ $detail['responsible'] }}</td>
