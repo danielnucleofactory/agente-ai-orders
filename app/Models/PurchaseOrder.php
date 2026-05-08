@@ -515,6 +515,21 @@ class PurchaseOrder extends Model implements HasMedia
             ->withTimestamps();
     }
 
+    public function porthCargos(): HasMany
+    {
+        return $this->hasMany(PorthCargo::class);
+    }
+
+    public function porthPhases(): HasMany
+    {
+        return $this->hasMany(PorthPhase::class);
+    }
+
+    public function porthItineraries(): HasMany
+    {
+        return $this->hasMany(PorthItinerary::class);
+    }
+
     /**
      * Get the boarding documents for the purchase order.
      */

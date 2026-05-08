@@ -284,6 +284,7 @@ class PorthSyncService
 
             if (isset($result['data']['id'])) {
                 $porthId = $result['data']['id'];
+                $originalPorthId = $document->porth_id ?? null;
                 
                 // Guardar el estado original antes de la actualización
                 $originalMbl = $document->mbl_number ?? null;
@@ -340,9 +341,37 @@ class PorthSyncService
                     }
                 }
 
-                // Nota: La importación de datos completos se hace mediante el cronjob
-                // 'porth:import-pending' que se ejecuta cada 5 minutos.
-                // Esto evita timeouts en la request del usuario.
+                // Si esta es la primera vez que la PO queda vinculada a un shipment de Porth,
+                // traer inmediatamente la foto completa para poblar estructuras y campos derivados.
+                if ($document instanceof PurchaseOrder && empty($originalPorthId) && !empty($document->porth_id)) {
+                    try {
+                        $porthApi = app(PorthApiService::class);
+                        $freshShipmentData = $porthApi->getShipmentById($document->porth_id);
+
+                        if ($freshShipmentData) {
+                            app(PorthImportService::class)->importShipment($freshShipmentData);
+
+                            Log::info('PorthSyncService: immediate_import_after_first_link_completed', [
+                                'document_id' => $document->id,
+                                'order_number' => $document->order_number ?? null,
+                                'porth_id' => $document->porth_id,
+                            ]);
+                        } else {
+                            Log::warning('PorthSyncService: immediate_import_after_first_link_skipped_missing_shipment_data', [
+                                'document_id' => $document->id,
+                                'order_number' => $document->order_number ?? null,
+                                'porth_id' => $document->porth_id,
+                            ]);
+                        }
+                    } catch (\Throwable $e) {
+                        Log::error('PorthSyncService: immediate_import_after_first_link_failed', [
+                            'document_id' => $document->id,
+                            'order_number' => $document->order_number ?? null,
+                            'porth_id' => $document->porth_id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
             }
         } catch (\Exception $e) {
             Log::error('Error updating document with Porth data', [

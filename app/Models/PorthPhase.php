@@ -12,6 +12,7 @@ class PorthPhase extends Model
 
     protected $fillable = [
         'shipping_document_id',
+        'purchase_order_id',
         'porth_phase_id',
         'name',
         'estimated_dates',
@@ -26,5 +27,10 @@ class PorthPhase extends Model
     public function shippingDocument(): BelongsTo
     {
         return $this->belongsTo(ShippingDocument::class);
+    }
+
+    public function purchaseOrder(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrder::class);
     }
 }

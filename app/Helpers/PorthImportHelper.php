@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Models\PurchaseOrder;
 use App\Services\PorthTranslationService;
 use App\Support\ContainerNumber;
 use Carbon\Carbon;
@@ -137,21 +138,32 @@ class PorthImportHelper
      * 
      * @return array Campos traducidos listos para usar en ShippingDocument
      */
-    public function getMaestrosFields(array $data): array
+    public function getMaestrosFields(array $data, ?PurchaseOrder $purchaseOrder = null): array
     {
         $fields = [];
+        $containerNumber = $this->extractContainerNumbers($data)[0] ?? $purchaseOrder?->container_number;
 
         // Traducir puertos
         $pol = $data['pol'] ?? null;
         $polName = $data['polName'] ?? null;
-        $translatedPol = $this->translationService->translatePort($pol, $polName);
+        $translatedPol = $this->translationService->translatePort($pol, $polName, [
+            'order_number' => $purchaseOrder?->order_number,
+            'container_number' => $containerNumber,
+            'port_role' => 'origin',
+            'port_role_label' => 'Origen',
+        ]);
         if ($translatedPol) {
             $fields['departure_port'] = $translatedPol;
         }
 
         $pod = $data['pod'] ?? null;
         $podName = $data['podName'] ?? null;
-        $translatedPod = $this->translationService->translatePort($pod, $podName);
+        $translatedPod = $this->translationService->translatePort($pod, $podName, [
+            'order_number' => $purchaseOrder?->order_number,
+            'container_number' => $containerNumber,
+            'port_role' => 'arrival',
+            'port_role_label' => 'Llegada',
+        ]);
         if ($translatedPod) {
             $fields['arrival_port'] = $translatedPod;
         }

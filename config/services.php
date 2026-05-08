@@ -56,6 +56,8 @@ return [
         'sync_dry_run' => env('PORTH_SYNC_DRY_RUN', false),
         'sync_lookback_hours' => env('PORTH_SYNC_LOOKBACK_HOURS', 2),
         'notification_user_ids' => env('PORTH_SYNC_NOTIFICATION_USER_IDS', ''),
+        'unmatched_port_alert_email' => env('PORTH_UNMATCHED_PORT_ALERT_EMAIL'),
+        'unmatched_port_alert_ttl_hours' => env('PORTH_UNMATCHED_PORT_ALERT_TTL_HOURS', 12),
         // Automatización de transiciones Kanban según estado Porth
         'kanban_auto_transition' => env('PORTH_KANBAN_AUTO_TRANSITION', true),
         'kanban_stages' => [

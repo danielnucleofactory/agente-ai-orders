@@ -323,7 +323,8 @@ class PurchaseOrderObserver
                     if (!empty($porthChanges) && !empty($purchaseOrder->porth_id)) {
                         try {
                             $porthApi = app(\App\Services\PorthApiService::class);
-                            $porthApi->pushChangesToPorth($purchaseOrder, $porthChanges);
+                            $porthPreviousValues = array_intersect_key($oldValues, array_flip($porthRelevantFields));
+                            $porthApi->pushChangesToPorth($purchaseOrder, $porthChanges, $porthPreviousValues);
                         } catch (\Throwable $e) {
                             Log::error('observer:porth_push_error', [
                                 'purchase_order_id' => $purchaseOrder->id,

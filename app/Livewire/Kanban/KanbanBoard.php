@@ -1545,7 +1545,8 @@ class KanbanBoard extends Component
                 if (! empty($porthChanges)) {
                     try {
                         $porthApi = app(\App\Services\PorthApiService::class);
-                        $porthApi->pushChangesToPorth($po, $porthChanges);
+                        $porthPreviousValues = array_intersect_key($oldValues, array_flip($porthRelevantFields));
+                        $porthApi->pushChangesToPorth($po, $porthChanges, $porthPreviousValues);
                     } catch (\Throwable $e) {
                         \Log::error('kanban:porth_push_error', [
                             'purchase_order_id' => $po->id,
