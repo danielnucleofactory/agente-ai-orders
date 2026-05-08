@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Models\Vendor;
+use App\Support\EmailList;
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Support\Facades\Log;
 
@@ -23,10 +24,13 @@ class BlockVendorConfirmationEmails
         }
 
         $vendorEmails = Vendor::query()
-            ->whereIn('email', $recipientEmails)
+            ->whereNotNull('email')
             ->pluck('email')
-            ->map(fn ($email) => strtolower(trim((string) $email)))
+            ->flatMap(fn ($email) => EmailList::parse($email))
+            ->intersect($recipientEmails)
             ->filter()
+            ->unique()
+            ->values()
             ->all();
 
         if ($vendorEmails === []) {

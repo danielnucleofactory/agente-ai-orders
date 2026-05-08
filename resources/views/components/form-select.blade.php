@@ -8,9 +8,14 @@
     'error' => false,
     'showError' => true,
     'value' => null,
+    'disabled' => false,
     /** Ordenar opciones por etiqueta (excepto placeholder y __no_data__). */
     'alphabetizeOptions' => true,
 ])
+
+@php
+    $disabledSelectClass = $disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : '';
+@endphp
 
 <div class="relative flex flex-col">
     @if ($label)
@@ -18,10 +23,11 @@
             {!! $label !!}
         </label>
     @endif
-    <select id="{{ $name }}" name="{{ $name }}" class="{{ $selectClasses }} {{ $error ? 'border-red-500' : '' }}"
+    <select id="{{ $name }}" name="{{ $name }}" class="{{ $selectClasses }} {{ $disabledSelectClass }} {{ $error ? 'border-red-500' : '' }}"
         @if ($wireModel && !$attributes->has('wire:model') && !$attributes->has('wire:model.live') && !$attributes->has('wire:model.defer') && !$attributes->has('wire:model.lazy'))
             wire:model.live="{{ $wireModel }}"
         @endif
+        @disabled($disabled)
         {{ $attributes }}>
         <option value="">{{ $optionPlaceholder }}</option>
         @php

@@ -3,7 +3,9 @@
 namespace App\Livewire\Forms;
 
 use App\Models\Vendor;
+use App\Support\EmailList;
 use Livewire\Component;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 
 class VendorForm extends Component
@@ -34,7 +36,7 @@ class VendorForm extends Component
     protected $rules = [
         'name' => 'required|string|max:255',
         'vendo_code' => 'nullable|string|max:255',
-        'email' => 'nullable|email|max:255',
+        'email' => 'nullable|string|max:1000',
         'contact_person' => 'nullable|string|max:255',
         'address' => 'nullable|string|max:255',
         'postal_code' => 'nullable|string|max:20',
@@ -75,11 +77,14 @@ class VendorForm extends Component
     public function saveVendor()
     {
         $this->validate();
+        $this->validateEmailList();
+
+        $normalizedEmails = EmailList::normalize($this->email);
 
         $vendorData = [
             'name' => $this->name,
             'vendo_code' => $this->vendo_code,
-            'email' => $this->email,
+            'email' => $normalizedEmails,
             'contact_person' => $this->contact_person,
             'address' => $this->address,
             'postal_code' => $this->postal_code,
@@ -101,6 +106,29 @@ class VendorForm extends Component
         }
 
         return redirect()->route('vendors.index');
+    }
+
+    protected function validateEmailList(): void
+    {
+        $emails = EmailList::parse($this->email);
+
+        if ($this->email !== null && trim((string) $this->email) !== '' && $emails === []) {
+            Validator::make(
+                ['email' => null],
+                ['email' => 'required'],
+                ['email.required' => 'Debe ingresar al menos un correo válido.']
+            )->validate();
+        }
+
+        foreach ($emails as $email) {
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                Validator::make(
+                    ['email' => $email],
+                    ['email' => 'email'],
+                    ['email.email' => "El correo {$email} no es válido."]
+                )->validate();
+            }
+        }
     }
 
     public function render()
