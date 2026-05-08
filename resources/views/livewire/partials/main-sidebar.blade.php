@@ -308,7 +308,7 @@
                             </li>
                         @endcan
 
-                        @if(config('po-confirmation.enabled', true))
+                        @if(config('po-confirmation.enabled', true) && \Illuminate\Support\Facades\Route::has('po-confirmation.settings.index'))
                         <li>
                             <x-sidebar-dropdown-item href="{{ route('po-confirmation.settings.index') }}" :active="request()->routeIs('po-confirmation.settings.*')">
                                 Confirmación PO
@@ -316,7 +316,7 @@
                         </li>
                         @endif
 
-                        @if(config('webhook.enabled', false))
+                        @if(config('webhook.enabled', false) && \Illuminate\Support\Facades\Route::has('webhook.settings.index'))
                         <li>
                             <x-sidebar-dropdown-item href="{{ route('webhook.settings.index') }}" :active="request()->routeIs('webhook.settings.*')">
                                 Webhooks
