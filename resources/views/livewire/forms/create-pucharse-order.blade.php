@@ -792,11 +792,6 @@
                     <div class="col-span-3">
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Opciones</h4>
                         <div class="grid grid-cols-2 gap-y-2 gap-x-6 mt-2 md:grid-cols-3">
-                            <div class="flex hidden items-center">
-                                <input id="is_dropship" type="checkbox" wire:model="is_dropship"
-                                       class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
-                                <label for="is_dropship" class="block ml-2 text-sm text-gray-700">Dropship</label>
-                            </div>
                             <div class="flex items-center">
                                 <input id="applies_tlc" type="checkbox" wire:model="applies_tlc"
                                        class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
@@ -831,7 +826,6 @@
                             </div>
                         </div>
 
-                        @error('is_dropship')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         @error('applies_tlc')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         @error('applies_af')<p class="hidden mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
