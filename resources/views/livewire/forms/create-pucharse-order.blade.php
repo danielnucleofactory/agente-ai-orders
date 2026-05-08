@@ -220,7 +220,7 @@
 
                             {{-- Incoterms (Compra) --}}
                             <x-form-select
-                                label="Incoterm de Compra <span class='text-red-500'>*</span>"
+                                label="Incoterm de Compra"
                                 name="incoterms"
                                 :options="$tiposIncotermArray"
                                 wire:model="incoterms"
