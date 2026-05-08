@@ -2,12 +2,14 @@
 
 namespace App\Livewire\Dashboards;
 
+use App\Exports\ControlDashboardExport;
 use App\Models\PurchaseOrder;
 use App\Services\TransitTimeService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ControlDashboard extends Component
 {
@@ -238,38 +240,7 @@ class ControlDashboard extends Component
                         $poCount = $poIds->count();
 
                         $detailRows = $isExpanded
-                            ? $group
-                                ->pluck('key')
-                                ->flatMap(fn (string $key) => $this->ruleDetails($key))
-                                ->groupBy('id')
-                                ->map(function (Collection $poRows) {
-                                    $firstRow = $poRows->first();
-                                    $combinedProblemItems = $poRows
-                                        ->pluck('problem_items')
-                                        ->filter(fn ($items) => is_array($items) && ! empty($items))
-                                        ->flatMap(fn (array $items) => $items)
-                                        ->map(fn (string $item) => trim($item))
-                                        ->filter()
-                                        ->unique()
-                                        ->values();
-
-                                    $combinedProblemData = $combinedProblemItems->isNotEmpty()
-                                        ? $this->formatMissingItems($combinedProblemItems->all())
-                                        : $poRows
-                                            ->pluck('problem_data')
-                                            ->filter()
-                                            ->unique()
-                                            ->implode("\n");
-
-                                    return array_merge($firstRow, [
-                                        'problem_data' => $combinedProblemData,
-                                        'problem_items' => $combinedProblemItems->all(),
-                                        'allowed_days' => $firstRow['allowed_days'] ?? $firstRow['expected_port_days'] ?? null,
-                                        'current_days' => $firstRow['current_days'] ?? $firstRow['current_port_days'] ?? null,
-                                        'delay_days' => $firstRow['delay_days'] ?? null,
-                                    ]);
-                                })
-                                ->values()
+                            ? $this->buildGroupedRuleDetailRows($group->pluck('key')->all())
                             : collect();
 
                         return [
@@ -300,6 +271,16 @@ class ControlDashboard extends Component
                 ];
             })
             ->values();
+    }
+
+    public function exportControlDashboard()
+    {
+        $filename = 'control-dashboard-' . Carbon::now()->format('Y-m-d_H-i-s') . '.xlsx';
+
+        return Excel::download(
+            new ControlDashboardExport($this->controlDashboardExportRows()->all()),
+            $filename
+        );
     }
 
     public function getResponsibleSummaryRowsProperty(): Collection
@@ -388,6 +369,34 @@ class ControlDashboard extends Component
         return $details instanceof Collection ? $details : collect();
     }
 
+    public function controlDashboardExportRows(): Collection
+    {
+        return $this->summaryRows
+            ->flatMap(function (array $stageRow) {
+                return collect($stageRow['rules'])->flatMap(function (array $ruleRow) {
+                    $detailRows = $this->buildGroupedRuleDetailRows($ruleRow['rule_keys'] ?? []);
+
+                    return $detailRows->map(function (array $detail) use ($ruleRow) {
+                        return [
+                            'po' => $detail['order_number'],
+                            'etapa' => $detail['stage'],
+                            'problema' => $ruleRow['title'],
+                            'datos_que_generan_el_problema' => $detail['problem_data'],
+                            'dias_transcurridos' => $this->shouldShowElapsedDaysColumn($ruleRow['key'])
+                                ? ($detail['current_days'] ?? null)
+                                : null,
+                            'limite' => $this->shouldShowAllowedDaysColumn($ruleRow['key'])
+                                ? ($detail['allowed_days'] ?? null)
+                                : null,
+                            'dias_atraso' => $detail['delay_days'] ?? null,
+                            'responsable' => $detail['responsible'] ?? $ruleRow['responsible'],
+                        ];
+                    });
+                });
+            })
+            ->values();
+    }
+
     public function shouldShowTimingColumns(string $ruleKey): bool
     {
         $rows = $this->detailRows($ruleKey);
@@ -468,6 +477,41 @@ class ControlDashboard extends Component
         $dueDate = $baseDate->copy()->addDays($allowedDays);
 
         return max(0, $dueDate->diffInDays(Carbon::today()->startOfDay(), false));
+    }
+
+    private function buildGroupedRuleDetailRows(array $ruleKeys): Collection
+    {
+        return collect($ruleKeys)
+            ->flatMap(fn (string $key) => $this->ruleDetails($key) ?? collect())
+            ->groupBy('id')
+            ->map(function (Collection $poRows) {
+                $firstRow = $poRows->first();
+                $combinedProblemItems = $poRows
+                    ->pluck('problem_items')
+                    ->filter(fn ($items) => is_array($items) && ! empty($items))
+                    ->flatMap(fn (array $items) => $items)
+                    ->map(fn (string $item) => trim($item))
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                $combinedProblemData = $combinedProblemItems->isNotEmpty()
+                    ? $this->formatMissingItems($combinedProblemItems->all())
+                    : $poRows
+                        ->pluck('problem_data')
+                        ->filter()
+                        ->unique()
+                        ->implode("\n");
+
+                return array_merge($firstRow, [
+                    'problem_data' => $combinedProblemData,
+                    'problem_items' => $combinedProblemItems->all(),
+                    'allowed_days' => $firstRow['allowed_days'] ?? $firstRow['expected_port_days'] ?? null,
+                    'current_days' => $firstRow['current_days'] ?? $firstRow['current_port_days'] ?? null,
+                    'delay_days' => $firstRow['delay_days'] ?? null,
+                ]);
+            })
+            ->values();
     }
 
     private function ruleDetails(string $ruleKey): ?Collection

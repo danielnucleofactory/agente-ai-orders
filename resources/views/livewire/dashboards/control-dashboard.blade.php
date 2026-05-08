@@ -1,4 +1,15 @@
 <div class="rounded-lg bg-white p-6 shadow-sm">
+    <div class="mb-6 flex justify-end">
+        <button
+            type="button"
+            wire:click="exportControlDashboard"
+            class="inline-flex items-center gap-2 rounded-md bg-[#1AAD8A] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#127A62]">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12 4-4m-4 4-4-4M4 20h16" />
+            </svg>
+            Descargar Excel
+        </button>
+    </div>
     <div class="overflow-x-auto rounded-lg border border-gray-200">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-[#D4F5ED]">
