@@ -42,7 +42,7 @@
                 <select wire:model.live="filters.operation" class="border-gray-300 rounded-md">
                     <option value="">Todas las operaciones</option>
                     @foreach(\App\Support\SelectOptions::sortList($requests->pluck('operation_type')->unique()->filter()->values()->all()) as $operation)
-                        <option value="{{ $operation }}">{{ $operation }}</option>
+                        <option value="{{ $operation }}">{{ \App\Models\Authorization::operationTypeLabel($operation) }}</option>
                     @endforeach
                 </select>
             </div>
@@ -77,7 +77,7 @@
                                 {{ $request->requester->name ?? 'Usuario desconocido' }}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                {{ $request->operation_type }}
+                                {{ $request->operation_type_label }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="{{ $statusClasses[$request->status] }}">
@@ -212,7 +212,7 @@
         </x-slot>
 
         <x-slot name="operationType">
-            <p class="text-gray-700">{{ $selectedRequest->operation_type ?? '' }}</p>
+            <p class="text-gray-700">{{ $selectedRequest->operation_type_label ?? '' }}</p>
         </x-slot>
 
         <x-slot name="authorizableInfo">

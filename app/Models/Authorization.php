@@ -11,6 +11,13 @@ class Authorization extends Model
 {
     use HasFactory;
 
+    public const OPERATION_TYPE_LABELS = [
+        'tracking_not_applicable' => 'Solicitud de no aplica tracking',
+        'attach_file_to_comment' => 'Adjuntar archivo a comentario',
+        'upload_file' => 'Carga de archivo',
+        'po_field_change' => 'Cambio de campos de PO',
+    ];
+
     protected $fillable = [
         'operation_id',
         'authorizable_id',
@@ -112,5 +119,20 @@ class Authorization extends Model
     public function isRejected(): bool
     {
         return $this->status === self::STATUS_REJECTED;
+    }
+
+    public static function operationTypeLabel(?string $operationType): string
+    {
+        if (blank($operationType)) {
+            return '';
+        }
+
+        return self::OPERATION_TYPE_LABELS[$operationType]
+            ?? str($operationType)->replace('_', ' ')->headline()->toString();
+    }
+
+    public function getOperationTypeLabelAttribute(): string
+    {
+        return self::operationTypeLabel($this->operation_type);
     }
 }

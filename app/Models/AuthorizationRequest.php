@@ -78,4 +78,9 @@ class AuthorizationRequest extends Model
     {
         return $query->where('status', 'pending');
     }
+
+    public function getOperationTypeLabelAttribute(): string
+    {
+        return Authorization::operationTypeLabel($this->operation_type);
+    }
 }

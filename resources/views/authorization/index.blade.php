@@ -46,7 +46,7 @@
                                             {{ $request->id }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ $request->operation_type }}
+                                            {{ $request->operation_type_label }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             {{ $request->requester->name ?? 'N/A' }}

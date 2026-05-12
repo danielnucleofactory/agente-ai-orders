@@ -1,7 +1,7 @@
 @php
     $lockApiFieldsOnEdit = (bool) $id;
     $lockTrackingDatesOnEdit = ! empty($id) ? (bool) ($trackingDatesLocked ?? false) : true;
-    $lockEtaInitialOnEdit = (bool) ($etaInitialLocked ?? false);
+    $lockEtdInitialOnEdit = (bool) ($etdInitialLocked ?? false);
     $lockTrackingNotApplicableFields = (bool) (($tracking_not_applicable ?? false) || ($trackingNotApplicableApproved ?? false) || ($trackingNotApplicablePending ?? false));
     $lockedInputClass = $lockApiFieldsOnEdit ? 'bg-gray-100 cursor-not-allowed' : '';
     $trackingLockedInputClass = $lockTrackingNotApplicableFields ? 'bg-gray-100 cursor-not-allowed' : '';
@@ -153,7 +153,12 @@
         <div class="p-8 space-y-10 bg-white rounded-2xl">
             <div class="flex gap-4">
                 <div class="space-y-6 w-full"
-                     x-data="{ trackingNotApplicableLocked: @js((bool) (($tracking_not_applicable ?? false) || ($trackingNotApplicableApproved ?? false) || ($trackingNotApplicablePending ?? false))) }">
+                     x-data="{
+                         trackingNotApplicableLocked: @js((bool) (($tracking_not_applicable ?? false) || ($trackingNotApplicableApproved ?? false) || ($trackingNotApplicablePending ?? false))),
+                         trackingNotApplicableApproved: @js((bool) ($trackingNotApplicableApproved ?? false)),
+                         trackingNotApplicablePending: @js((bool) ($trackingNotApplicablePending ?? false)),
+                         isEditing: @js((bool) $id),
+                     }">
                     <div class="space-y-6">
                         <h2 class="text-lg font-bold text-[#1AAD8A]">Datos generales</h2>
 
@@ -387,9 +392,37 @@
                                     <span class="text-xs font-medium text-green-700">Aprobado</span>
                                 @elseif($trackingNotApplicablePending)
                                     <span class="text-xs font-medium text-yellow-700">Pendiente de aprobación</span>
-                                @elseif($tracking_not_applicable && $id)
-                                    <span class="text-xs font-medium text-blue-700">Se solicitará al guardar</span>
+                                @else
+                                    <span
+                                        x-cloak
+                                        x-show="trackingNotApplicableLocked && isEditing"
+                                        class="text-xs font-medium text-blue-700"
+                                    >
+                                        Se solicitará al guardar
+                                    </span>
                                 @endif
+                            </div>
+
+                            <div
+                                x-cloak
+                                x-show="(trackingNotApplicableLocked && isEditing) || trackingNotApplicablePending"
+                                class="mt-4"
+                            >
+                                <div>
+                                    <x-form-input>
+                                        <x-slot:label>Motivo de No aplica tracking</x-slot:label>
+                                        <x-slot:input
+                                            name="tracking_not_applicable_reason"
+                                            wire:model="tracking_not_applicable_reason"
+                                            placeholder="Indique el motivo de la solicitud"
+                                            :readonly="$trackingNotApplicablePending"
+                                            class="{{ $trackingNotApplicablePending ? 'bg-gray-100 cursor-not-allowed' : '' }}">
+                                        </x-slot:input>
+                                        <x-slot:error>
+                                            {{ $errors->first('tracking_not_applicable_reason') }}
+                                        </x-slot:error>
+                                    </x-form-input>
+                                </div>
                             </div>
                         </div>
 
@@ -661,7 +694,7 @@
                     </div>
 
                     <div class="space-y-2">
-                        <x-date-picker wire:model.live="date_etd_initial" label="ETD Inicial" :readonly="$lockTrackingDatesOnEdit" />
+                        <x-date-picker wire:model.live="date_etd_initial" label="ETD Inicial" :readonly="$lockEtdInitialOnEdit" />
                         <div class="flex items-center">
                             <input id="etd_initial_validated" type="checkbox" wire:model="etd_initial_validated"
                                    class="w-4 h-4 text-[#1AAD8A] rounded border-gray-300 focus:ring-[#1AAD8A]">
@@ -683,7 +716,7 @@
                         <h4 class="text-sm font-semibold text-[#1AAD8A]">Arribo a destino</h4>
                     </div>
 
-                    <x-date-picker wire:model.live="date_eta_initial" label="ETA Inicial" :readonly="$lockEtaInitialOnEdit" />
+                    <x-date-picker wire:model.live="date_eta_initial" label="ETA Inicial" :readonly="$lockTrackingDatesOnEdit" />
 
                     <x-date-picker wire:model="date_eta_updated" label="ETA Variable" :readonly="$lockTrackingDatesOnEdit" />
 
