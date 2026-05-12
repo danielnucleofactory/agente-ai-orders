@@ -189,7 +189,7 @@ class RequestsTable extends ReusableTable
         $ops = $q->distinct()->pluck('operation_type')->filter()->values();
         $map = [];
         foreach ($ops as $op) {
-            $map[$op] = $op;
+            $map[$op] = Authorization::operationTypeLabel($op);
         }
         $this->filterOptions['operation'] = SelectOptions::sortAssociative($map);
     }
@@ -278,7 +278,7 @@ class RequestsTable extends ReusableTable
                 'operation_id' => $request->operation_id,
                 'order_number' => $request->order_number ?? $request->authorizable_id,
                 'requester_name' => $request->requester->name ?? 'Usuario desconocido',
-                'operation_type' => $request->operation_type,
+                'operation_type' => $request->operation_type_label,
                 'status' => $request->status,
                 'status_formatted' => '<span class="' . e($cls) . '">' . e($label) . '</span>',
             ];

@@ -50,7 +50,7 @@
         </x-slot>
 
         <x-slot name="operationType">
-            <p class="text-gray-700">{{ $selectedRequest->operation_type ?? '' }}</p>
+            <p class="text-gray-700">{{ $selectedRequest->operation_type_label ?? '' }}</p>
         </x-slot>
 
         <x-slot name="authorizableInfo">

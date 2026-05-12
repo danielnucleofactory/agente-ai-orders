@@ -833,7 +833,7 @@ class CreatePucharseOrder extends Component
 
     public bool $trackingDatesLocked = false;
 
-    public bool $etaInitialLocked = false;
+    public bool $etdInitialLocked = false;
 
     public bool $tracking_not_applicable = false;
 
@@ -861,7 +861,7 @@ class CreatePucharseOrder extends Component
 
             if ($this->purchaseOrder) {
                 $this->trackingDatesLocked = true;
-                $this->etaInitialLocked = filled($this->purchaseOrder->date_eta_initial);
+                $this->etdInitialLocked = filled($this->purchaseOrder->date_etd_initial);
                 $this->tracking_not_applicable = (bool) ($this->purchaseOrder->tracking_not_applicable ?? false);
                 $this->trackingNotApplicableApproved = (bool) ($this->purchaseOrder->tracking_not_applicable ?? false);
                 $this->tracking_not_applicable_reason = $this->purchaseOrder->tracking_not_applicable_reason;
@@ -2356,7 +2356,9 @@ class CreatePucharseOrder extends Component
                 $purchaseOrder = \App\Models\PurchaseOrder::findOrFail($id);
 
                 if ($this->shouldRequestTrackingNotApplicable($purchaseOrder)) {
-                    if (blank($this->tracking_not_applicable_reason)) {
+                    $trackingNotApplicableReason = trim((string) ($this->tracking_not_applicable_reason ?? ''));
+
+                    if (blank($trackingNotApplicableReason)) {
                         \DB::rollBack();
                         $this->addError('tracking_not_applicable_reason', 'Debe indicar un motivo para solicitar No aplica tracking.');
                         $this->dispatch('show-error', 'Debe indicar un motivo para solicitar No aplica tracking.');
@@ -2369,9 +2371,10 @@ class CreatePucharseOrder extends Component
 
                     app(AuthorizationService::class)->createTrackingNotApplicableRequest(
                         $purchaseOrder,
-                        $this->tracking_not_applicable_reason
+                        $trackingNotApplicableReason
                     );
 
+                    $this->tracking_not_applicable_reason = $trackingNotApplicableReason;
                     $this->tracking_not_applicable = false;
                     $this->trackingNotApplicableApproved = (bool) $purchaseOrder->tracking_not_applicable;
                     $this->trackingNotApplicablePending = true;
@@ -3084,7 +3087,7 @@ class CreatePucharseOrder extends Component
             return;
         }
 
-        $this->etaInitialLocked = (bool) filled($purchaseOrder->date_eta_initial);
+        $this->etdInitialLocked = (bool) filled($purchaseOrder->date_etd_initial);
         $this->trackingDatesLocked = true;
         $this->date_etd_initial = optional($purchaseOrder->date_etd_initial)?->format('Y-m-d');
         $this->date_etd = optional($purchaseOrder->date_etd)?->format('Y-m-d');
