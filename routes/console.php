@@ -27,4 +27,11 @@ if (config('services.porth.sync_enabled', true)) {
         ->everyFiveMinutes()
         ->withoutOverlapping()
         ->runInBackground();
+
+    if (config('services.porth.failed_retry_enabled', true)) {
+        Schedule::command('porth:retry-failed --limit=20')
+            ->hourly()
+            ->withoutOverlapping()
+            ->runInBackground();
+    }
 }

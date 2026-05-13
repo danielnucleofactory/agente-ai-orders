@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Services\PorthSyncFailureService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -71,6 +72,8 @@ class PorthImportJob implements ShouldQueue
                     'duration_ms' => $duration,
                     'attempt' => $this->attempts()
                 ]);
+
+                throw new \RuntimeException("PorthImportJob completed with non-imported status: {$status}");
             }
 
         } catch (\Exception $e) {
@@ -99,5 +102,11 @@ class PorthImportJob implements ShouldQueue
             'error' => $exception->getMessage(),
             'attempts' => $this->attempts()
         ]);
+
+        app(PorthSyncFailureService::class)->recordImportJobFailure(
+            $this->porthId,
+            $exception,
+            (int) $this->attempts()
+        );
     }
 }

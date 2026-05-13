@@ -28,6 +28,13 @@ class Kernel extends ConsoleKernel
             ->everyFiveMinutes()
             ->withoutOverlapping()
             ->runInBackground();
+
+        if (config('services.porth.failed_retry_enabled', true)) {
+            $schedule->command('porth:retry-failed --limit=20')
+                ->hourly()
+                ->withoutOverlapping()
+                ->runInBackground();
+        }
     }
 
     /**

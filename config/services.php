@@ -56,6 +56,9 @@ return [
         'sync_dry_run' => env('PORTH_SYNC_DRY_RUN', false),
         'sync_lookback_hours' => env('PORTH_SYNC_LOOKBACK_HOURS', 2),
         'notification_user_ids' => env('PORTH_SYNC_NOTIFICATION_USER_IDS', ''),
+        'failed_retry_enabled' => env('PORTH_FAILED_RETRY_ENABLED', true),
+        'failed_retry_max_attempts' => env('PORTH_FAILED_RETRY_MAX_ATTEMPTS', 5),
+        'failed_retry_base_minutes' => env('PORTH_FAILED_RETRY_BASE_MINUTES', 60),
         'unmatched_port_alert_email' => env('PORTH_UNMATCHED_PORT_ALERT_EMAIL'),
         'unmatched_port_alert_ttl_hours' => env('PORTH_UNMATCHED_PORT_ALERT_TTL_HOURS', 12),
         // Automatización de transiciones Kanban según estado Porth

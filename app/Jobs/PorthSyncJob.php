@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Services\PorthSyncFailureService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -62,6 +63,8 @@ class PorthSyncJob implements ShouldQueue
                     'duration_ms' => $duration,
                     'attempt' => $this->attempts()
                 ]);
+
+                throw new \RuntimeException('PorthSyncJob completed without creating or linking a shipment.');
             }
 
         } catch (\Exception $e) {
@@ -92,5 +95,12 @@ class PorthSyncJob implements ShouldQueue
             'error' => $exception->getMessage(),
             'attempts' => $this->attempts()
         ]);
+
+        app(PorthSyncFailureService::class)->recordSyncJobFailure(
+            (int) $this->documentId,
+            (string) $this->documentType,
+            $exception,
+            (int) $this->attempts()
+        );
     }
 }
