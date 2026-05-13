@@ -24,14 +24,14 @@ class WebhookSettingsRouteFallbackServiceProvider extends ServiceProvider
                 return;
             }
 
-            // try {
-            //     Route::middleware(['web', 'auth'])->group(function () {
-            //         Route::view('settings/webhook', 'webhook-settings')
-            //             ->name('webhook.settings.index');
-            //     });
-            // } catch (\LogicException) {
-            //     // Nombre reservado por otra ruta en el mismo ciclo (defensa en profundidad).
-            // }
+            try {
+                Route::middleware(['web', 'auth'])->group(function () {
+                    Route::view('settings/webhook', 'webhook-settings')
+                        ->name('webhook.settings.index');
+                });
+            } catch (\LogicException) {
+                // Nombre reservado por otra ruta en el mismo ciclo (defensa en profundidad).
+            }
         });
     }
 }
