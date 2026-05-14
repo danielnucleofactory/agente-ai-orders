@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use RagaOrders\Webhook\Http\Controllers\WebhookSettingsController;
 
 /**
  * Registra la ruta informativa de Webhooks solo si ningún otro proveedor (p. ej. módulo interno)
@@ -26,6 +27,23 @@ class WebhookSettingsRouteFallbackServiceProvider extends ServiceProvider
 
             try {
                 Route::middleware(['web', 'auth'])->group(function () {
+                    if (class_exists(WebhookSettingsController::class)) {
+                        Route::prefix('webhook/settings')->group(function () {
+                            Route::get('/', [WebhookSettingsController::class, 'index'])->name('webhook.settings.index');
+                            Route::post('/endpoints', [WebhookSettingsController::class, 'store'])->name('webhook.settings.endpoints.store');
+                            Route::put('/endpoints/{id}', [WebhookSettingsController::class, 'update'])->name('webhook.settings.endpoints.update');
+                            Route::delete('/endpoints/{id}', [WebhookSettingsController::class, 'destroy'])->name('webhook.settings.endpoints.destroy');
+                            Route::post('/events/{eventName}/toggle', [WebhookSettingsController::class, 'toggleEvent'])->name('webhook.settings.events.toggle');
+                            Route::post('/endpoints/{id}/toggle', [WebhookSettingsController::class, 'toggleEndpoint'])->name('webhook.settings.endpoints.toggle');
+                            Route::post('/endpoints/{id}/test', [WebhookSettingsController::class, 'test'])->name('webhook.settings.endpoints.test');
+                            Route::get('/logs', [WebhookSettingsController::class, 'logs'])->name('webhook.settings.logs');
+                            Route::get('/events/{eventName}/logs', [WebhookSettingsController::class, 'eventLogs'])->name('webhook.settings.events.logs');
+                        });
+
+                        Route::redirect('settings/webhook', '/webhook/settings');
+                        return;
+                    }
+
                     Route::view('settings/webhook', 'webhook-settings')
                         ->name('webhook.settings.index');
                 });
