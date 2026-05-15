@@ -3,6 +3,8 @@
 namespace App\Livewire\Kanban;
 
 use App\Exports\ActivePurchaseOrdersExport;
+use App\Exports\InternalTransitReportExport;
+use App\Services\InternalTransitReportService;
 use App\Support\SelectOptions;
 use App\Models\Hub;
 use App\Models\PurchaseOrder;
@@ -24,6 +26,8 @@ class KanbanFilters extends Component
     public $selectedPlannedHub = null;
     public $selectedActualHub = null;
     public $selectedMaterialType = null;
+    public $ataDateFrom = null;
+    public $ataDateTo = null;
 
     // Nuevo filtro de búsqueda por texto
     public $searchText = '';
@@ -146,6 +150,8 @@ class KanbanFilters extends Component
         $this->selectedPlannedHub = null;
         $this->selectedActualHub = null;
         $this->selectedMaterialType = null;
+        $this->ataDateFrom = null;
+        $this->ataDateTo = null;
         $this->searchText = '';
 
         $this->filtersApplied = false;
@@ -165,6 +171,8 @@ class KanbanFilters extends Component
                $this->selectedPlannedHub ||
                $this->selectedActualHub ||
                $this->selectedMaterialType ||
+               $this->ataDateFrom ||
+               $this->ataDateTo ||
                !empty(trim($this->searchText));
     }
 
@@ -177,6 +185,8 @@ class KanbanFilters extends Component
         if ($this->selectedPlannedHub) $this->filterCount++;
         if ($this->selectedActualHub) $this->filterCount++;
         if ($this->selectedMaterialType) $this->filterCount++;
+        if ($this->ataDateFrom) $this->filterCount++;
+        if ($this->ataDateTo) $this->filterCount++;
         if (!empty(trim($this->searchText))) $this->filterCount++;
     }
 
@@ -204,6 +214,14 @@ class KanbanFilters extends Component
             $filters['material_type'] = $this->selectedMaterialType;
         }
 
+        if ($this->ataDateFrom) {
+            $filters['date_from'] = $this->ataDateFrom;
+        }
+
+        if ($this->ataDateTo) {
+            $filters['date_to'] = $this->ataDateTo;
+        }
+
         if (!empty(trim($this->searchText))) {
             $filters['search_text'] = trim($this->searchText);
         }
@@ -219,6 +237,8 @@ class KanbanFilters extends Component
             'planned_hub' => $this->selectedPlannedHub,
             'actual_hub' => $this->selectedActualHub,
             'material_type' => $this->selectedMaterialType,
+            'ata_date_from' => $this->ataDateFrom,
+            'ata_date_to' => $this->ataDateTo,
             'search_text' => $this->searchText,
         ]);
     }
@@ -233,6 +253,8 @@ class KanbanFilters extends Component
             $this->selectedPlannedHub = $filters['planned_hub'] ?? null;
             $this->selectedActualHub = $filters['actual_hub'] ?? null;
             $this->selectedMaterialType = $filters['material_type'] ?? null;
+            $this->ataDateFrom = $filters['ata_date_from'] ?? null;
+            $this->ataDateTo = $filters['ata_date_to'] ?? null;
             $this->searchText = $filters['search_text'] ?? '';
 
             if ($this->hasActiveFilters()) {
@@ -254,9 +276,31 @@ class KanbanFilters extends Component
         );
     }
 
+    public function downloadInternalTransitReport(InternalTransitReportService $service): BinaryFileResponse
+    {
+        abort_unless(auth()->user()?->can('access-raga-transit-report'), 403);
+
+        $companyId = auth()->user()->company_id ?? 0;
+        $filters = $this->getActiveFilters();
+        $report = $service->build($companyId, [
+            'search' => $filters['search_text'] ?? null,
+            'vendor' => null,
+            'date_from' => $filters['date_from'] ?? null,
+            'date_to' => $filters['date_to'] ?? null,
+            'trading_company' => null,
+        ]);
+
+        $from = $filters['date_from'] ?? 'all';
+        $to = $filters['date_to'] ?? 'all';
+
+        return Excel::download(
+            new InternalTransitReportExport($report),
+            'reporte_transito_ata_' . str_replace('-', '', (string) $from) . '_a_' . str_replace('-', '', (string) $to) . '_' . now()->format('Ymd_His') . '.xlsx'
+        );
+    }
+
     public function render()
     {
         return view('livewire.kanban.kanban-filters');
     }
 }
-
