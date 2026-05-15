@@ -171,6 +171,26 @@ class User extends Authenticatable implements HasMedia, CanResetPassword
     }
 
     /**
+     * Reportes internos restringidos para equipo Raga.
+     */
+    public function isInternalRagaUser(): bool
+    {
+        $email = strtolower(trim((string) $this->email));
+
+        if ($email === '' || !str_contains($email, '@')) {
+            return false;
+        }
+
+        $domain = substr(strrchr($email, '@') ?: '', 1);
+        $allowedDomains = array_map(
+            static fn ($value) => strtolower(trim((string) $value)),
+            (array) config('internal-reports.allowed_email_domains', [])
+        );
+
+        return $domain !== '' && in_array($domain, $allowedDomains, true);
+    }
+
+    /**
      * Send the password reset notification.
      *
      * @param  string  $token

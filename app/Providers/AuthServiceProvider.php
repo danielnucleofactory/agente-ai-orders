@@ -31,6 +31,22 @@ class AuthServiceProvider extends ServiceProvider
             return true; // Todos los usuarios pueden actualizar sus preferencias
         });
 
+        Gate::define('access-raga-transit-report', function ($user) {
+            if (app()->environment(['local', 'testing'])) {
+                return true;
+            }
+
+            $email = strtolower(trim((string) ($user->email ?? '')));
+
+            if ($email !== '' && str_ends_with($email, '@raga-x.ai')) {
+                return true;
+            }
+
+            return $user->can('has_export_internal_transit_report')
+                && method_exists($user, 'isInternalRagaUser')
+                && $user->isInternalRagaUser();
+        });
+
         // Registrar gates dinámicamente basados en permisos
         $this->registerPermissionGates();
     }

@@ -58,6 +58,7 @@ class PermissionsSeeder extends Seeder
             // Histórico de Datos
             'has_view_historical_data' => 'Ver histórico de datos',
             'has_import_historical_data' => 'Importar datos históricos desde CSV',
+            'has_export_internal_transit_report' => 'Exportar reporte interno de tránsito (solo Raga)',
 
             // Documentación de Envío
             'has_view_shipping_docs' => 'Ver documentación de envío',
