@@ -32,6 +32,8 @@ final class InternalTransitReportExport implements WithMultipleSheets
                     'Contenedores 40',
                     'Total contenedores',
                     'Promedio días de tránsito',
+                    'Precio promedio flete 20',
+                    'Precio promedio flete 40',
                 ],
                 $this->report['full'] ?? []
             ),

@@ -28,7 +28,7 @@ $login = function () {
     ]);
 
     // Autenticación manual en lugar de usar el método del formulario
-    if (Auth::attempt(['email' => $this->form->email, 'password' => $this->form->password])) {
+    if (Auth::attempt(['email' => $this->form->email, 'password' => $this->form->password], $this->form->remember)) {
         Session::regenerate();
         return $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
     }
@@ -87,7 +87,7 @@ $login = function () {
 
         <div class="flex items-center justify-between mb-8">
             <div class="flex items-center">
-                <input type="checkbox" id="remember" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-[#1AAD8A]">
+                <input type="checkbox" id="remember" wire:model="form.remember" class="w-4 h-4 text-[#1AAD8A] border-gray-300 rounded focus:ring-[#1AAD8A]">
                 <label for="remember" class="block ml-2 text-sm text-gray-600">Recordarme</label>
             </div>
 
