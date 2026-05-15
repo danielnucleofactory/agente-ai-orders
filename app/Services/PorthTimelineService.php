@@ -68,7 +68,7 @@ class PorthTimelineService
         $timeline = [];
 
         foreach (self::PHASES as $phaseKey => $phaseConfig) {
-            $date = $this->resolvePhaseDate($purchaseOrder, $phaseKey);
+            $date = $this->resolvePhaseDate($purchaseOrder, $phaseKey, $currentPhase);
             $timeline[] = [
                 'id' => $phaseKey,
                 'name' => $phaseConfig['label'],
@@ -105,8 +105,12 @@ class PorthTimelineService
         );
     }
 
-    private function resolvePhaseDate(PurchaseOrder $purchaseOrder, string $phaseKey): ?Carbon
+    private function resolvePhaseDate(PurchaseOrder $purchaseOrder, string $phaseKey, ?string $currentPhase = null): ?Carbon
     {
+        if ($currentPhase !== null && $this->phaseOrder($phaseKey) > $this->phaseOrder($currentPhase)) {
+            return null;
+        }
+
         $dateField = self::PHASES[$phaseKey]['date_field'] ?? null;
         if ($dateField !== null) {
             $directDate = $this->normalizeDateValue($purchaseOrder->{$dateField} ?? null);
