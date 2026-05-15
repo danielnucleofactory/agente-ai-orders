@@ -156,6 +156,7 @@ final class InternalTransitReportService
             'atd' => $atd->format('Y-m-d'),
             'ata' => $ata->format('Y-m-d'),
             'transit_days' => $transitDays,
+            'freight_amount' => $po->freight_amount !== null ? (float) $po->freight_amount : null,
         ];
     }
 
@@ -208,16 +209,25 @@ final class InternalTransitReportService
                     $base[] = (string) ($first[$dimension] ?? '');
                 }
 
-                $count20 = $group->where('container_bucket', '20')->count();
-                $count40 = $group->where('container_bucket', '40')->count();
+                $group20 = $group->where('container_bucket', '20');
+                $group40 = $group->where('container_bucket', '40');
+                $count20 = $group20->count();
+                $count40 = $group40->count();
                 $total = $group->count();
                 $average = round((float) $group->avg('transit_days'), 1);
+
+                $freights20 = $group20->pluck('freight_amount')->filter(fn ($v) => $v !== null);
+                $freights40 = $group40->pluck('freight_amount')->filter(fn ($v) => $v !== null);
+                $avgFreight20 = $freights20->isNotEmpty() ? round((float) $freights20->avg(), 2) : null;
+                $avgFreight40 = $freights40->isNotEmpty() ? round((float) $freights40->avg(), 2) : null;
 
                 return array_merge($base, [
                     $count20,
                     $count40,
                     $total,
                     $average,
+                    $avgFreight20,
+                    $avgFreight40,
                 ]);
             })
             ->sortBy(function (array $row) use ($dimensions) {
