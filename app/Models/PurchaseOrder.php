@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
@@ -757,12 +758,10 @@ class PurchaseOrder extends Model implements HasMedia
     {
         parent::boot();
 
-        // Disparar sincronización automática cuando se crea o actualiza
+        // Disparar sincronización automática una sola vez por guardado.
+        // El sync con Porth debe ocurrir después del commit y después de responder,
+        // para no contaminar la respuesta del API principal de POs.
         static::saved(function ($purchaseOrder) {
-            static::dispatchPorthSync($purchaseOrder);
-        });
-
-        static::updated(function ($purchaseOrder) {
             static::dispatchPorthSync($purchaseOrder);
         });
     }
@@ -795,6 +794,17 @@ class PurchaseOrder extends Model implements HasMedia
             return;
         }
 
+        // Si la PO fue aprobada como "No aplica tracking", no debe intentar
+        // vincular ni crear embarques en Porth al guardar cambios manuales.
+        if ((bool) $purchaseOrder->tracking_not_applicable) {
+            \Log::info('Porth sync skipped for PurchaseOrder with approved no-tracking', [
+                'purchase_order_id' => $purchaseOrder->id,
+                'order_number' => $purchaseOrder->order_number,
+            ]);
+
+            return;
+        }
+
         // Verificar si hay campos que requieren sincronización
         // Solo container_number activa creación/vinculación en Porth (mbl_number y tracking_id son solo datos de la PO)
         $syncFields = ['container_number'];
@@ -817,17 +827,24 @@ class PurchaseOrder extends Model implements HasMedia
         // 1. Cambió un campo relevante Y no tiene porth_id, O
         // 2. Tiene un identificador válido pero no tiene porth_id (por si acaso no se sincronizó antes)
         if (($hasChanges || $hasValidIdentifier) && empty($purchaseOrder->porth_id)) {
-            \Log::info('Dispatching Porth sync job for PurchaseOrder', [
-                'purchase_order_id' => $purchaseOrder->id,
-                'changed_fields' => array_filter($syncFields, function ($field) use ($purchaseOrder) {
-                    return $purchaseOrder->isDirty($field) && ! empty($purchaseOrder->$field);
-                }),
-            ]);
+            $purchaseOrderId = $purchaseOrder->id;
+            $purchaseOrderClass = get_class($purchaseOrder);
+            $changedFields = array_filter($syncFields, function ($field) use ($purchaseOrder) {
+                return $purchaseOrder->isDirty($field) && ! empty($purchaseOrder->$field);
+            });
 
-            // Disparar job de sincronización con delay
-            \App\Jobs\PorthSyncJob::dispatch($purchaseOrder->id, get_class($purchaseOrder))
-                ->onQueue('porth-sync')
-                ->delay(now()->addSeconds(5));
+            DB::afterCommit(function () use ($purchaseOrderId, $purchaseOrderClass, $changedFields) {
+                \Log::info('Dispatching Porth sync job for PurchaseOrder', [
+                    'purchase_order_id' => $purchaseOrderId,
+                    'changed_fields' => $changedFields,
+                    'after_response' => true,
+                ]);
+
+                \App\Jobs\PorthSyncJob::dispatch($purchaseOrderId, $purchaseOrderClass)
+                    ->onQueue('porth-sync')
+                    ->delay(now()->addSeconds(5))
+                    ->afterResponse();
+            });
         }
     }
 }

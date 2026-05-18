@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
@@ -239,12 +240,9 @@ class ShippingDocument extends Model implements HasMedia
     {
         parent::boot();
 
-        // Disparar sincronización automática cuando se crea o actualiza
+        // Disparar sincronización automática una sola vez por guardado.
+        // El sync con Porth debe ocurrir fuera de la respuesta principal.
         static::saved(function ($document) {
-            static::dispatchPorthSync($document);
-        });
-
-        static::updated(function ($document) {
             static::dispatchPorthSync($document);
         });
     }
@@ -276,17 +274,24 @@ class ShippingDocument extends Model implements HasMedia
         }
 
         if ($hasChanges) {
-            \Log::info('Dispatching Porth sync job', [
-                'document_id' => $document->id,
-                'changed_fields' => array_filter($syncFields, function($field) use ($document) {
-                    return $document->isDirty($field) && !empty($document->$field);
-                })
-            ]);
+            $documentId = $document->id;
+            $documentClass = get_class($document);
+            $changedFields = array_filter($syncFields, function($field) use ($document) {
+                return $document->isDirty($field) && !empty($document->$field);
+            });
 
-            // Disparar job de sincronización con delay
-            \App\Jobs\PorthSyncJob::dispatch($document->id, get_class($document))
-                ->onQueue('porth-sync')
-                ->delay(now()->addSeconds(5));
+            DB::afterCommit(function () use ($documentId, $documentClass, $changedFields) {
+                \Log::info('Dispatching Porth sync job', [
+                    'document_id' => $documentId,
+                    'changed_fields' => $changedFields,
+                    'after_response' => true,
+                ]);
+
+                \App\Jobs\PorthSyncJob::dispatch($documentId, $documentClass)
+                    ->onQueue('porth-sync')
+                    ->delay(now()->addSeconds(5))
+                    ->afterResponse();
+            });
         }
     }
 
