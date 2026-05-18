@@ -810,15 +810,16 @@ class PurchaseOrder extends Model implements HasMedia
         $syncFields = ['container_number'];
         $hasChanges = false;
         $hasValidIdentifier = false;
+        $changedFields = [];
 
         // Verificar si hay algún identificador válido
         foreach ($syncFields as $field) {
             if (! empty($purchaseOrder->$field)) {
                 $hasValidIdentifier = true;
-                // Si este campo cambió, es un cambio válido
-                if ($purchaseOrder->isDirty($field)) {
+                // En el evento saved usamos wasChanged para detectar cambios persistidos.
+                if ($purchaseOrder->wasChanged($field)) {
                     $hasChanges = true;
-                    break;
+                    $changedFields[] = $field;
                 }
             }
         }
@@ -829,10 +830,6 @@ class PurchaseOrder extends Model implements HasMedia
         if (($hasChanges || $hasValidIdentifier) && empty($purchaseOrder->porth_id)) {
             $purchaseOrderId = $purchaseOrder->id;
             $purchaseOrderClass = get_class($purchaseOrder);
-            $changedFields = array_filter($syncFields, function ($field) use ($purchaseOrder) {
-                return $purchaseOrder->isDirty($field) && ! empty($purchaseOrder->$field);
-            });
-
             DB::afterCommit(function () use ($purchaseOrderId, $purchaseOrderClass, $changedFields) {
                 \Log::info('Dispatching Porth sync job for PurchaseOrder', [
                     'purchase_order_id' => $purchaseOrderId,
