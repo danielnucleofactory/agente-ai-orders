@@ -15,6 +15,7 @@
 @php
     $wireModel = $attributes->wire('model');
     $hasWireModel = $wireModel && $wireModel->value();
+    $wireModelName = $hasWireModel ? $wireModel->value() : null;
     $readonlyAttr = $attributes->get('readonly');
     $disabledAttr = $attributes->get('disabled');
     $isReadonly = $attributes->has('readonly') && ! in_array($readonlyAttr, [false, 0, '0', 'false', null, ''], true);
@@ -32,7 +33,10 @@
 
     <div wire:ignore>
         <div
-            x-data="datePicker(@if($hasWireModel)@entangle($attributes->wire('model'))@else'{{ addslashes($value ?? '') }}'@endif)"
+            x-data="datePicker(
+                @if($hasWireModel)@entangle($attributes->wire('model'))@else'{{ addslashes($value ?? '') }}'@endif,
+                @js($wireModelName)
+            )"
         >
             <input
                 x-ref="picker"
