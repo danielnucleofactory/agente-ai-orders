@@ -58,9 +58,18 @@ window.flatpickrConfig = { getUserDateConfig, formatDateForDisplay, dateFormatMa
 // Se usa dentro del Blade component <x-date-picker> y también inline en vistas
 // =============================================================================
 document.addEventListener('alpine:init', () => {
-    Alpine.data('datePicker', (modelValue) => ({
+    Alpine.data('datePicker', (modelValue, modelName = null) => ({
         value: modelValue,
+        modelName,
         fp: null,
+
+        syncLivewireValue(isoValue) {
+            if (!this.modelName || !this.$wire || typeof this.$wire.set !== 'function') {
+                return;
+            }
+
+            this.$wire.set(this.modelName, isoValue);
+        },
 
         init() {
             const { displayFormat, placeholder } = getUserDateConfig();
@@ -100,11 +109,20 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 this.value = isoValue;
+                this.syncLivewireValue(isoValue);
 
                 if (!isoValue && this.fp.altInput) {
                     this.fp.altInput.value = '';
                     this.fp.altInput.placeholder = placeholder;
                 }
+            };
+
+            const scheduleSyncFromAltInput = () => {
+                if (!this.fp || !this.fp.altInput) return;
+
+                window.requestAnimationFrame(() => {
+                    syncValueFromPicker(this.fp.altInput.value);
+                });
             };
 
             // --- Modo editable: inicializar Flatpickr ---
@@ -118,6 +136,7 @@ document.addEventListener('alpine:init', () => {
                 defaultDate: this.value || null,
                 onChange: (selectedDates, dateStr) => {
                     this.value = dateStr || null;
+                    this.syncLivewireValue(this.value);
                 },
                 onClose: (selectedDates, dateStr) => {
                     syncValueFromPicker(dateStr);
@@ -132,6 +151,8 @@ document.addEventListener('alpine:init', () => {
                 this.fp.altInput.placeholder = placeholder;
                 this.fp.altInput.addEventListener('blur', () => syncValueFromPicker(this.fp.altInput.value));
                 this.fp.altInput.addEventListener('change', () => syncValueFromPicker(this.fp.altInput.value));
+                this.fp.altInput.addEventListener('input', scheduleSyncFromAltInput);
+                this.fp.altInput.addEventListener('paste', scheduleSyncFromAltInput);
             }
 
             // Observar cambios externos (desde Livewire vía @entangle)
