@@ -17,6 +17,7 @@ class ReplayPendingPurchaseOrderWebhooks extends Command
                             {--offset=0 : Desplazamiento para procesar el siguiente lote}
                             {--company= : Filtrar por company_id}
                             {--po-id= : Filtrar una PO específica}
+                            {--preserve-timestamp : Reutilizar el timestamp original del evento auditado}
                             {--dry-run : Solo listar eventos candidatos, no enviar}';
 
     protected $description = 'Reenvía webhooks purchase_order.updated pendientes a partir de la auditoría de purchase_order_comments, en lotes controlados.';
@@ -39,6 +40,7 @@ class ReplayPendingPurchaseOrderWebhooks extends Command
         $offset = max(0, (int) $this->option('offset'));
         $companyId = $this->option('company') ? (int) $this->option('company') : null;
         $poId = $this->option('po-id') ? (int) $this->option('po-id') : null;
+        $preserveTimestamp = (bool) $this->option('preserve-timestamp');
         $dryRun = (bool) $this->option('dry-run');
 
         $query = PurchaseOrderComment::query()
@@ -100,9 +102,13 @@ class ReplayPendingPurchaseOrderWebhooks extends Command
                 continue;
             }
 
-            $timestamp = function_exists('format_webhook_date')
+            $originalTimestamp = function_exists('format_webhook_date')
                 ? format_webhook_date($comment->created_at)
                 : $comment->created_at?->utc()->format('Y-m-d\TH:i:s.v\Z');
+            $replayedAt = function_exists('format_webhook_date')
+                ? format_webhook_date(now())
+                : now()->utc()->format('Y-m-d\TH:i:s.v\Z');
+            $timestamp = $preserveTimestamp ? $originalTimestamp : $replayedAt;
 
             $this->line(sprintf(
                 'Comment #%d | PO #%d %s | %s | campos=%s',
@@ -127,6 +133,8 @@ class ReplayPendingPurchaseOrderWebhooks extends Command
                     'order_number' => $purchaseOrder->order_number,
                     'source' => 'pending_updates_replay',
                     'timestamp' => $timestamp,
+                    'original_timestamp' => $originalTimestamp,
+                    'replayed_at' => $replayedAt,
                     'changes' => $changes,
                     'data' => $poData,
                 ]);
@@ -137,6 +145,8 @@ class ReplayPendingPurchaseOrderWebhooks extends Command
                     'order_number' => $purchaseOrder->order_number,
                     'changes_keys' => array_keys($changes),
                     'timestamp' => $timestamp,
+                    'original_timestamp' => $originalTimestamp,
+                    'replayed_at' => $replayedAt,
                 ]);
 
                 $sent++;

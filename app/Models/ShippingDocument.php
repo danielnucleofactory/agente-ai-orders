@@ -265,20 +265,23 @@ class ShippingDocument extends Model implements HasMedia
         // Verificar si hay campos que requieren sincronización
         $syncFields = ['tracking_id', 'mbl_number', 'container_number', 'booking_code'];
         $hasChanges = false;
+        $hasValidIdentifier = false;
+        $changedFields = [];
 
         foreach ($syncFields as $field) {
-            if ($document->isDirty($field) && !empty($document->$field)) {
+            if (!empty($document->$field)) {
+                $hasValidIdentifier = true;
+            }
+
+            if ($document->wasChanged($field) && !empty($document->$field)) {
                 $hasChanges = true;
-                break;
+                $changedFields[] = $field;
             }
         }
 
-        if ($hasChanges) {
+        if ($hasChanges || ($hasValidIdentifier && empty($document->porth_id))) {
             $documentId = $document->id;
             $documentClass = get_class($document);
-            $changedFields = array_filter($syncFields, function($field) use ($document) {
-                return $document->isDirty($field) && !empty($document->$field);
-            });
 
             DB::afterCommit(function () use ($documentId, $documentClass, $changedFields) {
                 \Log::info('Dispatching Porth sync job', [

@@ -7,7 +7,7 @@ use Illuminate\Support\ServiceProvider;
 use RagaOrders\Webhook\Http\Controllers\WebhookSettingsController;
 
 /**
- * Registra la ruta informativa de Webhooks solo si ningún otro proveedor (p. ej. módulo interno)
+ * Registra rutas informativas de Webhooks solo si ningún otro proveedor (p. ej. módulo interno)
  * definió ya el nombre. Debe cargarse el último en bootstrap/providers.php para que el callback
  * booted quede al final de la cola y Route::has sea fiable.
  */
@@ -30,12 +30,6 @@ class WebhookSettingsRouteFallbackServiceProvider extends ServiceProvider
                     if (class_exists(WebhookSettingsController::class)) {
                         Route::prefix('webhook/settings')->group(function () {
                             Route::get('/', [WebhookSettingsController::class, 'index'])->name('webhook.settings.index');
-                            Route::post('/endpoints', [WebhookSettingsController::class, 'store'])->name('webhook.settings.endpoints.store');
-                            Route::put('/endpoints/{id}', [WebhookSettingsController::class, 'update'])->name('webhook.settings.endpoints.update');
-                            Route::delete('/endpoints/{id}', [WebhookSettingsController::class, 'destroy'])->name('webhook.settings.endpoints.destroy');
-                            Route::post('/events/{eventName}/toggle', [WebhookSettingsController::class, 'toggleEvent'])->name('webhook.settings.events.toggle');
-                            Route::post('/endpoints/{id}/toggle', [WebhookSettingsController::class, 'toggleEndpoint'])->name('webhook.settings.endpoints.toggle');
-                            Route::post('/endpoints/{id}/test', [WebhookSettingsController::class, 'test'])->name('webhook.settings.endpoints.test');
                             Route::get('/logs', [WebhookSettingsController::class, 'logs'])->name('webhook.settings.logs');
                             Route::get('/events/{eventName}/logs', [WebhookSettingsController::class, 'eventLogs'])->name('webhook.settings.events.logs');
                         });
