@@ -860,12 +860,12 @@ class CreatePucharseOrder extends Component
             $this->purchaseOrder = \App\Models\PurchaseOrder::with('products')->find($this->id);
 
             if ($this->purchaseOrder) {
-                $this->trackingDatesLocked = true;
-                $this->etdInitialLocked = filled($this->purchaseOrder->date_etd_initial);
                 $this->tracking_not_applicable = (bool) ($this->purchaseOrder->tracking_not_applicable ?? false);
                 $this->trackingNotApplicableApproved = (bool) ($this->purchaseOrder->tracking_not_applicable ?? false);
                 $this->tracking_not_applicable_reason = $this->purchaseOrder->tracking_not_applicable_reason;
                 $this->trackingNotApplicablePending = $this->purchaseOrder->hasAuthorizationPending('tracking_not_applicable');
+                $this->trackingDatesLocked = $this->shouldLockTrackingDateFields($this->purchaseOrder);
+                $this->etdInitialLocked = $this->shouldLockEtdInitial($this->purchaseOrder);
                 if ($this->trackingNotApplicablePending && blank($this->tracking_not_applicable_reason)) {
                     $pendingTrackingAuthorization = $this->purchaseOrder->findAuthorizationByType('tracking_not_applicable', \App\Models\Authorization::STATUS_PENDING);
                     $this->tracking_not_applicable_reason = $pendingTrackingAuthorization?->data['reason'] ?? null;
@@ -2407,7 +2407,9 @@ class CreatePucharseOrder extends Component
                 }
 
                 $poData = $this->withoutEditLockedApiFields($poData);
-                $poData = $this->withoutEditLockedTrackingDateFields($poData);
+                if ($this->shouldLockTrackingDateFields($purchaseOrder)) {
+                    $poData = $this->withoutEditLockedTrackingDateFields($poData);
+                }
                 if ($this->shouldLockEtaInitial($purchaseOrder)) {
                     unset($poData['date_eta_initial']);
                 }
@@ -3038,8 +3040,26 @@ class CreatePucharseOrder extends Component
             || (bool) $this->trackingNotApplicablePending;
     }
 
+    protected function shouldLockTrackingDateFields(\App\Models\PurchaseOrder $purchaseOrder): bool
+    {
+        return ! (bool) $purchaseOrder->tracking_not_applicable;
+    }
+
+    protected function shouldLockEtdInitial(\App\Models\PurchaseOrder $purchaseOrder): bool
+    {
+        if ((bool) $purchaseOrder->tracking_not_applicable) {
+            return false;
+        }
+
+        return filled($purchaseOrder->date_etd_initial);
+    }
+
     protected function shouldLockEtaInitial(\App\Models\PurchaseOrder $purchaseOrder): bool
     {
+        if ((bool) $purchaseOrder->tracking_not_applicable) {
+            return false;
+        }
+
         return filled($purchaseOrder->date_eta_initial);
     }
 
@@ -3087,8 +3107,8 @@ class CreatePucharseOrder extends Component
             return;
         }
 
-        $this->etdInitialLocked = (bool) filled($purchaseOrder->date_etd_initial);
-        $this->trackingDatesLocked = true;
+        $this->etdInitialLocked = $this->shouldLockEtdInitial($purchaseOrder);
+        $this->trackingDatesLocked = $this->shouldLockTrackingDateFields($purchaseOrder);
         $this->date_etd_initial = optional($purchaseOrder->date_etd_initial)?->format('Y-m-d');
         $this->date_etd = optional($purchaseOrder->date_etd)?->format('Y-m-d');
         $this->date_atd = optional($purchaseOrder->date_atd)?->format('Y-m-d');
