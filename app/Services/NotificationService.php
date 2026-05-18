@@ -243,6 +243,16 @@ class NotificationService
                 'category' => 'proveedores',
                 'description' => 'Notificaciones cuando se crea un nuevo proveedor sin correo electrónico'
             ],
+            'authorization_approved' => [
+                'name' => 'Solicitud aprobada',
+                'category' => 'autorizaciones',
+                'description' => 'Notificaciones cuando una solicitud es aprobada'
+            ],
+            'authorization_rejected' => [
+                'name' => 'Solicitud rechazada',
+                'category' => 'autorizaciones',
+                'description' => 'Notificaciones cuando una solicitud es rechazada'
+            ],
         ];
 
         $typeData = $typeMap[$type] ?? [
