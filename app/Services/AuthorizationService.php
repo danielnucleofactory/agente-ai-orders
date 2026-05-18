@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\Authorization;
+use App\Models\PurchaseOrder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Collection;
@@ -135,6 +137,10 @@ class AuthorizationService
             }
         }
 
+        if ($result) {
+            $this->notifyRequesterOfDecision($authorization, Authorization::STATUS_APPROVED);
+        }
+
         return $result;
     }
 
@@ -262,7 +268,62 @@ class AuthorizationService
             }
         }
 
+        if ($result) {
+            $this->notifyRequesterOfDecision($authorization, Authorization::STATUS_REJECTED);
+        }
+
         return $result;
+    }
+
+    private function notifyRequesterOfDecision(Authorization $authorization, string $status): void
+    {
+        $requester = $authorization->requester;
+
+        if (! $requester) {
+            return;
+        }
+
+        try {
+            $notificationService = app(NotificationService::class);
+            $purchaseOrder = $authorization->authorizable instanceof PurchaseOrder
+                ? $authorization->authorizable
+                : null;
+            $operationLabel = Authorization::operationTypeLabel($authorization->operation_type);
+            $statusLabel = $status === Authorization::STATUS_APPROVED ? 'aprobada' : 'rechazada';
+            $title = $status === Authorization::STATUS_APPROVED
+                ? 'Solicitud aprobada'
+                : 'Solicitud rechazada';
+            $orderNumber = $purchaseOrder?->order_number;
+
+            $message = $orderNumber
+                ? "Tu solicitud \"{$operationLabel}\" para la orden de compra {$orderNumber} fue {$statusLabel}."
+                : "Tu solicitud \"{$operationLabel}\" fue {$statusLabel}.";
+
+            $notificationService->createForUser(
+                $requester,
+                $status === Authorization::STATUS_APPROVED ? 'authorization_approved' : 'authorization_rejected',
+                $title,
+                $message,
+                [
+                    'authorization_id' => $authorization->id,
+                    'operation_type' => $authorization->operation_type,
+                    'operation_label' => $operationLabel,
+                    'status' => $status,
+                    'purchase_order_id' => $purchaseOrder?->id,
+                    'order_id' => $purchaseOrder?->id,
+                    'order_number' => $orderNumber,
+                    'authorized_by' => Auth::user()?->name,
+                    'authorized_at' => now()->toIso8601String(),
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::error('Error enviando notificación de autorización', [
+                'authorization_id' => $authorization->id,
+                'status' => $status,
+                'requester_id' => $authorization->requester_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
