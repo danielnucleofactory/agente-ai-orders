@@ -3109,13 +3109,21 @@ class CreatePucharseOrder extends Component
 
         $this->etdInitialLocked = $this->shouldLockEtdInitial($purchaseOrder);
         $this->trackingDatesLocked = $this->shouldLockTrackingDateFields($purchaseOrder);
-        $this->date_etd_initial = optional($purchaseOrder->date_etd_initial)?->format('Y-m-d');
-        $this->date_etd = optional($purchaseOrder->date_etd)?->format('Y-m-d');
-        $this->date_atd = optional($purchaseOrder->date_atd)?->format('Y-m-d');
-        $this->date_eta_initial = optional($purchaseOrder->date_eta_initial)?->format('Y-m-d');
-        $this->date_eta = optional($purchaseOrder->date_eta)?->format('Y-m-d');
-        $this->date_eta_updated = optional($purchaseOrder->date_eta)?->format('Y-m-d');
-        $this->date_ata = optional($purchaseOrder->date_ata)?->format('Y-m-d');
+        if ($this->etdInitialLocked) {
+            $this->date_etd_initial = optional($purchaseOrder->date_etd_initial)?->format('Y-m-d');
+        }
+
+        if ($this->trackingDatesLocked) {
+            $this->date_etd = optional($purchaseOrder->date_etd)?->format('Y-m-d');
+            $this->date_atd = optional($purchaseOrder->date_atd)?->format('Y-m-d');
+            $this->date_eta = optional($purchaseOrder->date_eta)?->format('Y-m-d');
+            $this->date_eta_updated = optional($purchaseOrder->date_eta)?->format('Y-m-d');
+            $this->date_ata = optional($purchaseOrder->date_ata)?->format('Y-m-d');
+        }
+
+        if ($this->shouldLockEtaInitial($purchaseOrder)) {
+            $this->date_eta_initial = optional($purchaseOrder->date_eta_initial)?->format('Y-m-d');
+        }
     }
 
     protected function withoutEditLockedTrackingDateFields(array $poData): array
