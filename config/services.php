@@ -80,6 +80,14 @@ return [
         'base_url' => env('MAESTROS_API_BASE_URL', 'https://olo.md.orders.raga-x.ai'),
     ],
 
+    'pricing' => [
+        'base_url' => env('PRICING_API_BASE_URL', ''),
+        'margins_endpoint' => env('PRICING_MARGINS_ENDPOINT', '/api/margins'),
+        'api_token' => env('PRICING_API_TOKEN'),
+        'timeout' => env('PRICING_API_TIMEOUT', 60),
+        'user_id' => env('PRICING_USER_ID', 16),
+    ],
+
     'transit_matrix' => [
         'csv_path' => env(
             'TRANSIT_MATRIX_CSV_PATH',

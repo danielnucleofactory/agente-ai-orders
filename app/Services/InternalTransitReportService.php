@@ -17,12 +17,7 @@ final class InternalTransitReportService
      */
     public function build(int $companyId, array $filters = []): array
     {
-        $movements = $this->buildBaseQuery($companyId, $filters)
-            ->get()
-            ->map(fn (PurchaseOrder $po) => $this->mapMovement($po))
-            ->filter()
-            ->unique('movement_key')
-            ->values();
+        $movements = $this->getMovements($companyId, $filters);
 
         return [
             'meta' => [
@@ -52,6 +47,56 @@ final class InternalTransitReportService
                 ['shipping_line']
             ),
         ];
+    }
+
+    /**
+     * Payload técnico para el endpoint /api/margins de Pricing.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    public function buildPricingPayload(int $companyId, array $filters = []): array
+    {
+        $pricingUserId = config('services.pricing.user_id');
+        $allMovements = $this->getMovements($companyId, $filters);
+        $pricingMovements = $allMovements
+            ->filter(static fn (array $row) => isset($row['freight_amount']) && (float) $row['freight_amount'] > 0)
+            ->values();
+        $rows = $this->aggregatePricingRows(
+            $pricingMovements,
+            $filters['date_from'] ?? null,
+            $filters['date_to'] ?? null,
+            $pricingUserId !== null ? (int) $pricingUserId : null,
+        );
+
+        return [
+            'meta' => [
+                'source' => 'raga',
+                'notes' => 'orders',
+                'company_id' => $companyId,
+                'ata_from' => $filters['date_from'] ?? null,
+                'ata_to' => $filters['date_to'] ?? null,
+                'generated_at' => now()->toISOString(),
+                'movements_count' => $allMovements->count(),
+                'pricing_movements_count' => $pricingMovements->count(),
+                'groups_count' => count($rows),
+            ],
+            'margins' => $rows,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function getMovements(int $companyId, array $filters): Collection
+    {
+        return $this->buildBaseQuery($companyId, $filters)
+            ->get()
+            ->map(fn (PurchaseOrder $po) => $this->mapMovement($po))
+            ->filter()
+            ->unique('movement_key')
+            ->values();
     }
 
     /**
@@ -267,6 +312,64 @@ final class InternalTransitReportService
                 $row['trading_company'],
                 $row['order_number'],
             ])
+            ->all();
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $movements
+     * @return array<int, array<string, string|int|float|bool|null>>
+     */
+    private function aggregatePricingRows(
+        Collection $movements,
+        ?string $effectiveDate = null,
+        ?string $expireDate = null,
+        ?int $pricingUserId = null
+    ): array
+    {
+        return $movements
+            ->groupBy(function (array $row) {
+                return implode("\x1F", [
+                    (string) ($row['departure_port'] ?? ''),
+                    (string) ($row['arrival_port'] ?? ''),
+                    (string) ($row['shipping_line'] ?? ''),
+                    (string) ($row['service_provider'] ?? ''),
+                    (string) ($row['container_bucket'] ?? ''),
+                ]);
+            })
+            ->map(function (Collection $group) use ($effectiveDate, $expireDate, $pricingUserId) {
+                /** @var array<string, mixed> $first */
+                $first = $group->first();
+                $bucket = (string) ($first['container_bucket'] ?? '');
+                $freightTotal = round((float) $group->sum('freight_amount'), 2);
+
+                return [
+                    'origin_port' => (string) ($first['departure_port'] ?? ''),
+                    'destination_port' => (string) ($first['arrival_port'] ?? ''),
+                    'carrier' => (string) ($first['shipping_line'] ?? ''),
+                    'supplier' => (string) ($first['service_provider'] ?? ''),
+                    'container_qty' => $bucket === '20' ? $group->count() : 0,
+                    'container_qty_40' => $bucket === '40' ? $group->count() : 0,
+                    'transit_time_days' => (int) round((float) $group->avg('transit_days')),
+                    '20std' => $bucket === '20' && $freightTotal > 0 ? $freightTotal : null,
+                    '40std' => $bucket === '40' && $freightTotal > 0 ? $freightTotal : null,
+                    'effective_date' => $effectiveDate,
+                    'expire_date' => $expireDate,
+                    'source' => 'raga',
+                    'notes' => 'orders',
+                    'status' => true,
+                    'user_id' => $pricingUserId,
+                ];
+            })
+            ->sortBy(function (array $row) {
+                return implode('|', [
+                    $row['origin_port'] ?? '',
+                    $row['destination_port'] ?? '',
+                    $row['carrier'] ?? '',
+                    $row['supplier'] ?? '',
+                    (($row['container_qty'] ?? 0) > 0) ? '20' : '40',
+                ]);
+            }, SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
             ->all();
     }
 }
