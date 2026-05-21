@@ -113,10 +113,14 @@ class ModuleServiceProvider extends ServiceProvider
             return;
         }
 
-        // Registrar el Service Provider del módulo
+        // Registrar el Service Provider del módulo si todavía no está cargado.
         if (isset($config['provider']) && class_exists($config['provider'])) {
-            \Log::info("ModuleServiceProvider: Registrando {$config['provider']} para módulo {$moduleName}");
-            $this->app->register($config['provider']);
+            if ($this->app->providerIsLoaded($config['provider'])) {
+                \Log::info("ModuleServiceProvider: {$config['provider']} ya estaba cargado para módulo {$moduleName}");
+            } else {
+                \Log::info("ModuleServiceProvider: Registrando {$config['provider']} para módulo {$moduleName}");
+                $this->app->register($config['provider']);
+            }
         }
 
         // Cargar configuración del módulo

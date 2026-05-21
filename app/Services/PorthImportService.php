@@ -258,8 +258,17 @@ class PorthImportService
             $this->applyPorthKanbanTransitions($po->fresh(), $data);
 
             // Disparar webhook solo si hay cambios reales
-            if (!empty($actualChanges) && function_exists('dispatch_webhook')) {
-                $this->dispatchWebhookForPorthUpdate($po, $actualChanges);
+            if (!empty($actualChanges)) {
+                if (function_exists('dispatch_webhook')) {
+                    $this->dispatchWebhookForPorthUpdate($po, $actualChanges);
+                } else {
+                    Log::warning('porth_import:webhook_function_missing', [
+                        'purchase_order_id' => $po->id,
+                        'order_number' => $po->order_number,
+                        'actual_changes_count' => count($actualChanges),
+                        'actual_changes_keys' => array_keys($actualChanges),
+                    ]);
+                }
             }
         }
     }
