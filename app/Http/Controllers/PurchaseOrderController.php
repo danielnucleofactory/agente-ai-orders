@@ -1906,6 +1906,13 @@ class PurchaseOrderController extends Controller
                         'changes' => $changes,
                         'data' => $poData,
                     ]);
+                } else {
+                    \Log::warning('dispatch_webhook function is not available for bulk updated PO', [
+                        'po_id' => $po->id,
+                        'order_number' => $po->order_number,
+                        'changes_count' => count($changes),
+                        'changes_keys' => array_keys($changes),
+                    ]);
                 }
 
                 $results[] = [

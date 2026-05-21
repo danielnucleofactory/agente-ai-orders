@@ -2626,6 +2626,13 @@ class CreatePucharseOrder extends Component
                         ]);
                         // No lanzar la excepción para no interrumpir el flujo principal
                     }
+                } else {
+                    \Log::warning('dispatch_webhook function is not available after Livewire PO update', [
+                        'po_id' => $purchaseOrder->id,
+                        'order_number' => $purchaseOrder->order_number,
+                        'changes_count' => count($changes),
+                        'changes_keys' => array_keys($changes),
+                    ]);
                 }
 
                 // Check if actual hub is different from planned hub
