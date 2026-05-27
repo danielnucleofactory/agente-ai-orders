@@ -1546,21 +1546,30 @@ class KanbanBoard extends Component
                 }
             }
 
-            // Push cambios relevantes a Porth (solo container_number y shipping_line)
+            // Push cambios relevantes a Porth fuera de la respuesta HTTP para no bloquear la UI
             if ($po && ! empty($po->porth_id) && ! empty($dbChanges)) {
                 $porthRelevantFields = ['container_number', 'shipping_line'];
                 $porthChanges = array_intersect_key($dbChanges, array_flip($porthRelevantFields));
                 if (! empty($porthChanges)) {
-                    try {
-                        $porthApi = app(\App\Services\PorthApiService::class);
-                        $porthPreviousValues = array_intersect_key($oldValues, array_flip($porthRelevantFields));
-                        $porthApi->pushChangesToPorth($po, $porthChanges, $porthPreviousValues);
-                    } catch (\Throwable $e) {
-                        \Log::error('kanban:porth_push_error', [
-                            'purchase_order_id' => $po->id,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
+                    $purchaseOrderId = $po->id;
+                    $porthPreviousValues = array_intersect_key($oldValues, array_flip($porthRelevantFields));
+
+                    dispatch(function () use ($purchaseOrderId, $porthChanges, $porthPreviousValues) {
+                        $freshPo = PurchaseOrder::find($purchaseOrderId);
+                        if (! $freshPo || empty($freshPo->porth_id)) {
+                            return;
+                        }
+
+                        try {
+                            $porthApi = app(\App\Services\PorthApiService::class);
+                            $porthApi->pushChangesToPorth($freshPo, $porthChanges, $porthPreviousValues);
+                        } catch (\Throwable $e) {
+                            \Log::error('kanban:porth_push_error', [
+                                'purchase_order_id' => $purchaseOrderId,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    })->afterResponse();
                 }
             }
 
