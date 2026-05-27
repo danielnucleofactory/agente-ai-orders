@@ -8,6 +8,8 @@
 @endphp
 
 <div>
+    <div class="hidden" wire:poll.keep-alive.60s="keepSessionAlive" aria-hidden="true"></div>
+
     <!-- Notification area for errors, success messages, and loading -->
     <div x-data="{
             showNotification: false,
