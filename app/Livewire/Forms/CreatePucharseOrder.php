@@ -2752,6 +2752,14 @@ class CreatePucharseOrder extends Component
         return view('livewire.forms.create-pucharse-order');
     }
 
+    /**
+     * Ping liviano para evitar expiración de sesión durante ediciones largas de PO.
+     */
+    public function keepSessionAlive(): void
+    {
+        // No-op intencional. La petición Livewire renueva sesión y token CSRF.
+    }
+
     public function updatedCostOfrEstimated()
     {
         $this->calculateTotals();

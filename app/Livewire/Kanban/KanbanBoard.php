@@ -1314,6 +1314,14 @@ class KanbanBoard extends Component
     }
 
     /**
+     * Ping liviano para mantener viva la sesión mientras el usuario trabaja en el kanban.
+     */
+    public function keepSessionAlive(): void
+    {
+        // No-op intencional. La petición Livewire renueva sesión y token CSRF.
+    }
+
+    /**
      * Mapeo de campos por etapa del kanban.
      *
      * NOTA: Los índices (2, 3, 4, etc.) corresponden a los IDs de las columnas KanbanStatus

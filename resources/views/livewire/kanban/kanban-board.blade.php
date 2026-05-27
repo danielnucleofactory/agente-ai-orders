@@ -45,7 +45,7 @@
     </div>
     @endif
 
-    <div class="flex overflow-x-auto gap-4 pb-4 w-full kanban-container" wire:poll.30000ms>
+    <div class="flex overflow-x-auto gap-4 pb-4 w-full kanban-container" wire:poll.keep-alive.30000ms="keepSessionAlive">
         @if (!$board)
             <div class="p-6 bg-white rounded-lg shadow-md">
                 <h3 class="text-lg font-semibold text-gray-700">No hay tableros Kanban disponibles</h3>
