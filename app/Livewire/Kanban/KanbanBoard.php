@@ -37,8 +37,6 @@ class KanbanBoard extends Component
 
     public $tasks = [];
 
-    public $tasksByColumn = [];
-
     public $boardType;
 
     public $currentTaskId;
@@ -162,6 +160,8 @@ class KanbanBoard extends Component
 
     // Estado de carga del modal
     public $isLoadingModalData = false;
+
+    public bool $isLoadingStageMaestros = false;
 
     protected bool $suppressStageMasterReload = false;
 
@@ -311,7 +311,6 @@ class KanbanBoard extends Component
         try {
             $this->loadColumns();
             $this->loadTasks();
-            $this->organizeTasksByColumn();
         } finally {
             $this->js('window.poKanbanOverlayHide && window.poKanbanOverlayHide()');
         }
@@ -617,28 +616,30 @@ class KanbanBoard extends Component
         $this->dispatch('refreshKanban');
     }
 
-    public function organizeTasksByColumn()
+    protected function buildTasksByColumn(): array
     {
-        $this->tasksByColumn = [];
+        $tasksByColumn = [];
 
         // Inicializar un array vacío para cada columna
         foreach ($this->columns as $column) {
-            $this->tasksByColumn[$column['id']] = [];
+            $tasksByColumn[$column['id']] = [];
         }
 
         // Organizar las tareas por columna
         foreach ($this->tasks as $task) {
-            if (isset($this->tasksByColumn[$task['status']])) {
-                $this->tasksByColumn[$task['status']][] = $task;
+            if (isset($tasksByColumn[$task['status']])) {
+                $tasksByColumn[$task['status']][] = $task;
             }
         }
 
         // Ordenar las tareas por fecha de creación (de más nueva a más antigua) en cada columna
-        foreach ($this->tasksByColumn as $columnId => $tasks) {
-            usort($this->tasksByColumn[$columnId], function ($a, $b) {
+        foreach ($tasksByColumn as $columnId => $tasks) {
+            usort($tasksByColumn[$columnId], function ($a, $b) {
                 return $b['created_at'] <=> $a['created_at'];
             });
         }
+
+        return $tasksByColumn;
     }
 
     protected function mapPurchaseOrderToKanbanTask(PurchaseOrder $order, ?int $statusOverride = null, ?string $statusSlugOverride = null): array
@@ -708,7 +709,6 @@ class KanbanBoard extends Component
             $this->tasks[] = $taskPayload;
         }
 
-        $this->organizeTasksByColumn();
     }
 
     public function moveTask($taskId, $newStatus)
@@ -923,6 +923,7 @@ class KanbanBoard extends Component
         $this->suppressStageMasterReload = true;
         $this->currentTaskId = $taskId;
         $this->newColumnId = $newColumnId;
+        $this->resetStageMaestroArrays();
 
         // Buscar la tarea actual entre las tareas cargadas
         foreach ($this->tasks as $task) {
@@ -990,12 +991,14 @@ class KanbanBoard extends Component
 
             // Ingresada
             $this->receipt_note = $po->receipt_note;
-
-            $this->loadStageMaestrosForPo($po, (int) $newColumnId);
         }
 
         $this->suppressStageMasterReload = false;
         $this->isLoadingModalData = false;
+
+        if ($po && $this->stageRequiresMaestros((int) $newColumnId)) {
+            $this->dispatch('kanban:load-maestros', taskId: (int) $po->id, stage: (int) $newColumnId);
+        }
     }
 
     /**
@@ -1018,9 +1021,52 @@ class KanbanBoard extends Component
             return;
         }
 
-        $this->isLoadingModalData = true;
-        $this->loadStageMaestrosForPo($po, (int) ($value ?? 0));
-        $this->isLoadingModalData = false;
+        $stage = (int) ($value ?? 0);
+        $this->resetStageMaestroArrays();
+
+        if (! $this->stageRequiresMaestros($stage)) {
+            return;
+        }
+
+        $this->dispatch('kanban:load-maestros', taskId: (int) $po->id, stage: $stage);
+    }
+
+    public function loadMaestrosAsync(?int $taskId = null, ?int $stage = null): void
+    {
+        $taskId ??= (int) ($this->currentTaskId ?? 0);
+        $stage ??= (int) ($this->newColumnId ?? 0);
+
+        if (! $taskId || ! $stage || ! $this->stageRequiresMaestros($stage)) {
+            return;
+        }
+
+        $po = PurchaseOrder::find($taskId);
+        if (! $po || ! $po->trading_company) {
+            return;
+        }
+
+        $this->isLoadingStageMaestros = true;
+
+        try {
+            $this->loadStageMaestrosForPo($po, $stage);
+        } finally {
+            $this->isLoadingStageMaestros = false;
+        }
+    }
+
+    protected function stageRequiresMaestros(int $stage): bool
+    {
+        return in_array($stage, [2, 3, 5], true);
+    }
+
+    protected function resetStageMaestroArrays(): void
+    {
+        $this->serviceProviderArray = [];
+        $this->shippingLineArray = [];
+        $this->departurePortArray = [];
+        $this->arrivalPortArray = [];
+        $this->containerTypeArray = [];
+        $this->transportTypeArray = [];
     }
 
     protected function loadStageMaestrosForPo(PurchaseOrder $po, int $stage): void
@@ -1330,7 +1376,7 @@ class KanbanBoard extends Component
     public function render()
     {
         return view('livewire.kanban.kanban-board', [
-            'tasksByColumn' => $this->tasksByColumn,
+            'tasksByColumn' => $this->buildTasksByColumn(),
             'boardType' => $this->boardType,
             'hasActiveFilters' => ! empty($this->activeFilters),
         ])->layout('layouts.app');
