@@ -85,14 +85,18 @@
                                     if (evt.from.getAttribute('data-column-id') !== newColumn) {
                                         // Guardamos la tarjeta actual para moverla si el usuario confirma
                                         window.kanbanCurrentTask = evt.item;
+                                        window.poKanbanOverlayShow && window.poKanbanOverlayShow('Cargando datos del formulario…');
 
-                                        // Abrir el modal inmediatamente con estado de carga
-                                        $dispatch('open-modal', 'modal-po-stage-change');
-                                        
-                                        // Cargar los datos de la tarea en segundo plano
-                                        $wire.setCurrentTask(taskId, newColumn).catch(function(error) {
-                                            console.error('Error al cargar datos de la tarea:', error);
-                                        });
+                                        // Cargar los datos primero y abrir el modal solo cuando el estado esté listo.
+                                        $wire.setCurrentTask(taskId, newColumn)
+                                            .then(function() {
+                                                window.poKanbanOverlayHide && window.poKanbanOverlayHide();
+                                                $dispatch('open-modal', 'modal-po-stage-change');
+                                            })
+                                            .catch(function(error) {
+                                                window.poKanbanOverlayHide && window.poKanbanOverlayHide();
+                                                console.error('Error al cargar datos de la tarea:', error);
+                                            });
                                     }
                                 }
                             })">
@@ -561,6 +565,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             window.addEventListener('open-modal', function(event) {
                 if (event.detail === 'modal-po-stage-change') {
+                    window.poKanbanOverlayHide && window.poKanbanOverlayHide();
                     setTimeout(function() {
                         const scrollableContent = document.querySelector('[name="modal-po-stage-change"]')?.closest('div[x-data]')?.querySelector('.overflow-y-auto');
                         if (scrollableContent) {
