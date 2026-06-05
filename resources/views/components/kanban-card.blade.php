@@ -10,16 +10,8 @@
 ])
 
 @php
-    use App\Models\PurchaseOrder;
-    use App\Services\TrackingService;
-
-    // Trae también las anuladas (soft-deleted)
-    // NO cargar shippingDocuments aquí para evitar consultas N+1 en el kanban
-    $purchaseOrder = PurchaseOrder::withTrashed()
-        ->with(['actualHub', 'vendor'])
-        ->find($id);
-
-    $isTrashed = $purchaseOrder?->trashed() ?? false;
+    $purchaseOrder = is_array($purchaseOrder ?? null) ? $purchaseOrder : [];
+    $isTrashed = (bool)($purchaseOrder['is_trashed'] ?? false);
 
     // Fechas ETD/ETA/ATA/ATD: calendario según valor guardado (sin TZ del perfil de usuario)
     $fmt = function ($date) {
@@ -27,31 +19,31 @@
     };
 
     // Valores seguros
-    $hubId          = $purchaseOrder?->actual_hub_id;
-    $hub            = $purchaseOrder?->actualHub?->name ?? 'Sin Hub';
+    $hubId          = $purchaseOrder['actual_hub_id'] ?? null;
+    $hub            = $purchaseOrder['actual_hub_name'] ?? 'Sin Hub';
 
-    $dangerLevel    = $purchaseOrder?->material_type ?? null;
-    $materialTypeRaw = $purchaseOrder?->material_type ?? '';
+    $dangerLevel    = $purchaseOrder['material_type'] ?? null;
+    $materialTypeRaw = $purchaseOrder['material_type'] ?? '';
     $materialType    = strtolower(trim((string) $materialTypeRaw));
-    $trackingIdCode = $purchaseOrder?->tracking_id ?? 'N/A';
+    $trackingIdCode = $purchaseOrder['tracking_id'] ?? 'N/A';
 
-    $eta            = $fmt($purchaseOrder?->date_eta);
-    $ata            = $fmt($purchaseOrder?->date_ata);
-    $atd            = $fmt($purchaseOrder?->date_atd);
-    $etaEstimado    = $fmt($purchaseOrder?->date_eta_initial ?? $purchaseOrder?->date_eta);
-    $puertoDestino  = $purchaseOrder?->arrival_port ?? 'N/A';
-    $proveedorServicio = $purchaseOrder?->service_provider ?? 'N/A';
-    $cliente        = $purchaseOrder?->trading_company ?? 'N/A';
+    $eta            = $fmt($purchaseOrder['date_eta'] ?? null);
+    $ata            = $fmt($purchaseOrder['date_ata'] ?? null);
+    $atd            = $fmt($purchaseOrder['date_atd'] ?? null);
+    $etaEstimado    = $fmt(($purchaseOrder['date_eta_initial'] ?? null) ?: ($purchaseOrder['date_eta'] ?? null));
+    $puertoDestino  = $purchaseOrder['arrival_port'] ?? 'N/A';
+    $proveedorServicio = $purchaseOrder['service_provider'] ?? 'N/A';
+    $cliente        = $purchaseOrder['trading_company'] ?? 'N/A';
 
     // Obtener mbl_number y container_number directamente de la PO
     // No cargar shippingDocuments para evitar consultas N+1 en el kanban
-    $mblNumber = $purchaseOrder?->mbl_number ?? null;
-    $containerNumber = $purchaseOrder?->container_number ?? null;
+    $mblNumber = $purchaseOrder['mbl_number'] ?? null;
+    $containerNumber = $purchaseOrder['container_number'] ?? null;
 
     // NO cargar datos de tracking en el kanban - esto causa timeouts
     // La línea de tiempo se mostrará solo si hay datos disponibles sin hacer llamadas HTTP
     // Los datos de tracking se cargarán de forma lazy/asíncrona cuando sea necesario
-    $kanbanStatusId = $purchaseOrder?->kanban_status_id ?? 0;
+    $kanbanStatusId = $purchaseOrder['kanban_status_id'] ?? 0;
     $shouldShowTimeline = false;
     $trackingData = null;
     // La línea de tiempo se mostrará solo si hay datos disponibles sin hacer llamadas HTTP

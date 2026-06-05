@@ -184,6 +184,10 @@ class KanbanBoard extends Component
         'kanban_status_id',
         'order_date',
         'date_required_in_destination',
+        'date_eta',
+        'date_eta_initial',
+        'date_ata',
+        'date_atd',
         'total',
         'created_at',
         'currency',
@@ -192,6 +196,11 @@ class KanbanBoard extends Component
         'actual_hub_id',
         'material_type',
         'tracking_id',
+        'arrival_port',
+        'service_provider',
+        'trading_company',
+        'mbl_number',
+        'container_number',
     ];
 
     // Agregar los listeners para los eventos
@@ -473,6 +482,18 @@ class KanbanBoard extends Component
                 'planned_hub_id' => $order->planned_hub_id,
                 'actual_hub_id' => $order->actual_hub_id,
                 'material_type' => $order->material_type,
+                'date_eta' => $order->date_eta,
+                'date_eta_initial' => $order->date_eta_initial,
+                'date_ata' => $order->date_ata,
+                'date_atd' => $order->date_atd,
+                'arrival_port' => $order->arrival_port,
+                'service_provider' => $order->service_provider,
+                'trading_company' => $order->trading_company,
+                'mbl_number' => $order->mbl_number,
+                'container_number' => $order->container_number,
+                'vendor_name' => $order->vendor->name ?? 'N/A',
+                'actual_hub_name' => $order->actualHub->name ?? 'Sin Hub',
+                'is_trashed' => false,
             ];
         }
 
@@ -505,6 +526,18 @@ class KanbanBoard extends Component
                 'planned_hub_id' => $order->planned_hub_id,
                 'actual_hub_id' => $order->actual_hub_id,
                 'material_type' => $order->material_type,
+                'date_eta' => $order->date_eta,
+                'date_eta_initial' => $order->date_eta_initial,
+                'date_ata' => $order->date_ata,
+                'date_atd' => $order->date_atd,
+                'arrival_port' => $order->arrival_port,
+                'service_provider' => $order->service_provider,
+                'trading_company' => $order->trading_company,
+                'mbl_number' => $order->mbl_number,
+                'container_number' => $order->container_number,
+                'vendor_name' => $order->vendor->name ?? 'N/A',
+                'actual_hub_name' => $order->actualHub->name ?? 'Sin Hub',
+                'is_trashed' => true,
             ];
         }
     }
