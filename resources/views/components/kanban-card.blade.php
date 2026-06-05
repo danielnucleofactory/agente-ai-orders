@@ -52,9 +52,9 @@
     $trackingData = null;
 
     // Cálculos con guardas (mantenidos para posibles usos futuros)
-    $delayDays = ($purchaseOrder?->date_eta && $purchaseOrder?->date_ata)
-        ? \Carbon\Carbon::parse($purchaseOrder->date_eta)
-            ->diffInDays(\Carbon\Carbon::parse($purchaseOrder->date_ata), false) // ATA - ETA (con signo)
+    $delayDays = (($purchaseOrder['date_eta'] ?? null) && ($purchaseOrder['date_ata'] ?? null))
+        ? \Carbon\Carbon::parse($purchaseOrder['date_eta'])
+            ->diffInDays(\Carbon\Carbon::parse($purchaseOrder['date_ata']), false) // ATA - ETA (con signo)
         : null;
 @endphp
 
