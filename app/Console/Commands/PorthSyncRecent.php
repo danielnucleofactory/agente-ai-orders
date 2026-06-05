@@ -17,6 +17,8 @@ class PorthSyncRecent extends Command
     
     protected $description = 'Sincroniza shipments recientes desde Porth, registra el run y notifica el detalle.';
 
+    protected const SCHEDULE_TRIGGER = 'schedule';
+
     public function __construct(
         protected PorthSyncUpdatedService $syncService,
         protected NotificationService $notificationService
@@ -54,7 +56,9 @@ class PorthSyncRecent extends Command
         ]);
 
         try {
-            $summary = $this->syncService->syncRecent($hours, $dryRun);
+            $summary = $trigger === self::SCHEDULE_TRIGGER && ! $this->option('hours')
+                ? $this->syncService->syncRecentIncremental($hours, $dryRun)
+                : $this->syncService->syncRecent($hours, $dryRun);
             $ids = $summary['ids'] ?? [];
             $results = $summary['results'] ?? [];
 

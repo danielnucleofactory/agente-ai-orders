@@ -320,7 +320,7 @@ class PurchaseOrderObserver
                     // Solo si la PO tiene porth_id y los campos relevantes cambiaron
                     $porthRelevantFields = ['container_number', 'shipping_line'];
                     $porthChanges = array_intersect_key($trackedChanges, array_flip($porthRelevantFields));
-                    if (!empty($porthChanges) && !empty($purchaseOrder->porth_id)) {
+                    if (!empty($porthChanges) && !empty($purchaseOrder->porth_id) && ! $this->isPorthSyncUser()) {
                         try {
                             $porthApi = app(\App\Services\PorthApiService::class);
                             $porthPreviousValues = array_intersect_key($oldValues, array_flip($porthRelevantFields));
