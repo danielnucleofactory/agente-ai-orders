@@ -3,10 +3,14 @@
 namespace App\Services;
 
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class PorthSyncUpdatedService
 {
+    protected const LAST_RECENT_SYNC_CACHE_KEY = 'porth:sync_recent:last_end_at';
+    protected const RECENT_SYNC_OVERLAP_MINUTES = 2;
+
     public function __construct(
         protected PorthApiService $api,
         protected PorthImportService $importer
@@ -145,6 +149,57 @@ class PorthSyncUpdatedService
         ]);
 
         return $this->syncRange($start, $end, $dryRun);
+    }
+
+    /**
+     * Sincroniza de forma incremental para evitar reescaneos completos
+     * de la misma ventana en cada corrida programada.
+     */
+    public function syncRecentIncremental(?int $lookbackHours = null, ?bool $dryRun = null): array
+    {
+        $hours = $lookbackHours ?? (int) config('services.porth.sync_lookback_hours', 2);
+        if ($hours < 1) {
+            $hours = 1;
+        }
+
+        $dryRun = $dryRun ?? (bool) config('services.porth.sync_dry_run', false);
+        $end = Carbon::now();
+        $fallbackStart = $end->copy()->subHours($hours);
+        $cachedLastEnd = Cache::get(self::LAST_RECENT_SYNC_CACHE_KEY);
+
+        $start = $fallbackStart;
+        if ($cachedLastEnd) {
+            try {
+                $start = Carbon::parse($cachedLastEnd)->subMinutes(self::RECENT_SYNC_OVERLAP_MINUTES);
+            } catch (\Throwable $e) {
+                Log::warning('porth_sync_recent_incremental:invalid_cached_last_end', [
+                    'cached_value' => $cachedLastEnd,
+                    'error' => $e->getMessage(),
+                ]);
+                $start = $fallbackStart;
+            }
+        }
+
+        if ($start->greaterThan($end)) {
+            $start = $fallbackStart;
+        }
+
+        Log::info('porth_sync_recent_incremental:starting', [
+            'hours' => $hours,
+            'start' => $start->toIso8601String(),
+            'end' => $end->toIso8601String(),
+            'dry_run' => $dryRun,
+            'cached_last_end' => $cachedLastEnd,
+            'overlap_minutes' => self::RECENT_SYNC_OVERLAP_MINUTES,
+        ]);
+
+        $summary = $this->syncRange($start, $end, $dryRun);
+
+        if (! $dryRun) {
+            Cache::forever(self::LAST_RECENT_SYNC_CACHE_KEY, $end->toIso8601String());
+        }
+
+        return $summary;
     }
 
     /**
