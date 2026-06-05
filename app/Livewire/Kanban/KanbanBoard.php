@@ -10,6 +10,7 @@ use App\Models\PurchaseOrderComment;
 use App\Services\MaestrosApiService;
 use App\Support\ContainerNumber;
 use Database\Seeders\KanbanBoardSeeder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Livewire\Component;
@@ -161,6 +162,10 @@ class KanbanBoard extends Component
 
     // Estado de carga del modal
     public $isLoadingModalData = false;
+
+    protected bool $suppressStageMasterReload = false;
+
+    private const MAESTROS_CACHE_TTL_SECONDS = 86400;
 
     /**
      * Estado Kanban por defecto del tablero actual (evita query extra en loadTasks).
@@ -881,6 +886,8 @@ class KanbanBoard extends Component
 
     public function setCurrentTask($taskId, $newColumnId)
     {
+        $this->isLoadingModalData = true;
+        $this->suppressStageMasterReload = true;
         $this->currentTaskId = $taskId;
         $this->newColumnId = $newColumnId;
 
@@ -902,35 +909,6 @@ class KanbanBoard extends Component
             $this->date_theorical_load = $po->date_theorical_load ? $po->date_theorical_load->format('Y-m-d') : null;
             $this->service_provider = $po->service_provider;
             $this->forwarder_name = $po->forwarder_name;
-
-            // Cargar proveedores de servicio si estamos en la etapa de producción o booking
-            // IMPORTANTE: Cargar service_provider ANTES de llamar a loadServiceProviders
-            // para que el método pueda agregar el valor guardado al array si la API no devuelve datos
-            if (($newColumnId == 2 || $newColumnId == 3) && $po->trading_company) {
-                $this->loadServiceProviders($po->trading_company, $po->service_provider);
-            }
-
-            // Cargar transport types y shipping lines si estamos en la etapa "Booking"
-            if ($newColumnId == 3 && $po->trading_company) {
-                $this->mode = $po->mode;
-                $this->shipping_line = $po->shipping_line;
-                $this->loadTransportTypes($po->trading_company, $po->mode);
-                $this->loadShippingLines($po->trading_company, $po->shipping_line);
-            }
-
-            // Cargar shipping lines, puertos y container types si estamos en la etapa "En Tránsito"
-            // IMPORTANTE: Cargar los valores ANTES de llamar a los métodos de carga
-            // para que los métodos puedan agregar los valores guardados al array si la API no devuelve datos
-            if ($newColumnId == 5 && $po->trading_company) {
-                $this->shipping_line = $po->shipping_line;
-                $this->departure_port = $po->departure_port;
-                $this->arrival_port = $po->arrival_port;
-                $this->container_type = $po->container_type;
-
-                $this->loadShippingLines($po->trading_company, $po->shipping_line);
-                $this->loadPorts($po->trading_company, $po->departure_port, $po->arrival_port);
-                $this->loadContainerTypes($po->trading_company, $po->container_type);
-            }
 
             // Booking - convertir fechas al formato Y-m-d
             $this->date_booking_request = $po->date_booking_request ? $po->date_booking_request->format('Y-m-d') : null;
@@ -979,7 +957,12 @@ class KanbanBoard extends Component
 
             // Ingresada
             $this->receipt_note = $po->receipt_note;
+
+            $this->loadStageMaestrosForPo($po, (int) $newColumnId);
         }
+
+        $this->suppressStageMasterReload = false;
+        $this->isLoadingModalData = false;
     }
 
     /**
@@ -988,6 +971,10 @@ class KanbanBoard extends Component
      */
     public function updatedNewColumnId($value)
     {
+        if ($this->suppressStageMasterReload) {
+            return;
+        }
+
         // Solo cargar maestros si hay una tarea actual y una PO válida
         if (! $this->currentTaskId) {
             return;
@@ -998,9 +985,13 @@ class KanbanBoard extends Component
             return;
         }
 
-        $newStage = (int) ($value ?? 0);
+        $this->isLoadingModalData = true;
+        $this->loadStageMaestrosForPo($po, (int) ($value ?? 0));
+        $this->isLoadingModalData = false;
+    }
 
-        // Limpiar arrays de maestros antes de cargar nuevos
+    protected function loadStageMaestrosForPo(PurchaseOrder $po, int $stage): void
+    {
         $this->serviceProviderArray = [];
         $this->shippingLineArray = [];
         $this->departurePortArray = [];
@@ -1008,28 +999,27 @@ class KanbanBoard extends Component
         $this->containerTypeArray = [];
         $this->transportTypeArray = [];
 
-        // Cargar maestros según la nueva etapa
-        // Etapa 2 (Producción) o 3 (Booking): service_provider
-        if ($newStage == 2 || $newStage == 3) {
+        if (! $po->trading_company) {
+            return;
+        }
+
+        if ($stage === 2 || $stage === 3) {
             $this->service_provider = $po->service_provider;
             $this->loadServiceProviders($po->trading_company, $po->service_provider);
         }
 
-        // Etapa 3 (Booking): transport_types y shipping_line
-        if ($newStage == 3) {
+        if ($stage === 3) {
             $this->mode = $po->mode;
             $this->shipping_line = $po->shipping_line;
             $this->loadTransportTypes($po->trading_company, $po->mode);
             $this->loadShippingLines($po->trading_company, $po->shipping_line);
         }
 
-        // Etapa 5 (En Tránsito): shipping_line, puertos, container_type
-        if ($newStage == 5) {
+        if ($stage === 5) {
             $this->shipping_line = $po->shipping_line;
             $this->departure_port = $po->departure_port;
             $this->arrival_port = $po->arrival_port;
             $this->container_type = $po->container_type;
-
             $this->loadShippingLines($po->trading_company, $po->shipping_line);
             $this->loadPorts($po->trading_company, $po->departure_port, $po->arrival_port);
             $this->loadContainerTypes($po->trading_company, $po->container_type);
@@ -1831,8 +1821,15 @@ class KanbanBoard extends Component
                 'per_page' => 1000,
             ];
 
-            $serviceProvidersResponse = $this->getServiceProvidersWithCustomTimeout($apiService, $apiParams, 8);
-            $serviceProvidersArray = $this->processApiResponse($serviceProvidersResponse, 'name', 'name');
+            $serviceProvidersArray = $this->getCachedMaestrosOptions(
+                'service-providers',
+                $tradingCompanyValue,
+                fn () => $this->processApiResponse(
+                    $this->getServiceProvidersWithCustomTimeout($apiService, $apiParams, 8),
+                    'name',
+                    'name'
+                )
+            );
 
             // Combinar resultados de la API con el valor guardado (sin sobrescribir)
             foreach ($serviceProvidersArray as $key => $value) {
@@ -1896,8 +1893,15 @@ class KanbanBoard extends Component
             ];
 
             // Intentar solo una vez con timeout más corto (8 segundos)
-            $shippingLinesResponse = $this->getShippingLinesWithCustomTimeout($apiService, $apiParams, 8);
-            $shippingLinesArray = $this->processApiResponse($shippingLinesResponse, 'name', 'name');
+            $shippingLinesArray = $this->getCachedMaestrosOptions(
+                'shipping-lines',
+                $tradingCompanyValue,
+                fn () => $this->processApiResponse(
+                    $this->getShippingLinesWithCustomTimeout($apiService, $apiParams, 8),
+                    'name',
+                    'name'
+                )
+            );
 
             // Combinar los valores de la API con el valor guardado (sin duplicar)
             foreach ($shippingLinesArray as $key => $value) {
@@ -1963,8 +1967,15 @@ class KanbanBoard extends Component
             ];
 
             // Intentar solo una vez con timeout más corto (8 segundos)
-            $portsResponse = $this->getPortsWithCustomTimeout($apiService, $apiParams, 8);
-            $portsArray = $this->processApiResponse($portsResponse, 'name', 'name');
+            $portsArray = $this->getCachedMaestrosOptions(
+                'ports',
+                $tradingCompanyValue,
+                fn () => $this->processApiResponse(
+                    $this->getPortsWithCustomTimeout($apiService, $apiParams, 8),
+                    'name',
+                    'name'
+                )
+            );
 
             // Combinar los valores de la API con los valores guardados (sin duplicar)
             foreach ($portsArray as $key => $value) {
@@ -2022,8 +2033,15 @@ class KanbanBoard extends Component
                 'per_page' => 1000,
             ];
 
-            $containerTypesResponse = $this->getContainerTypesWithCustomTimeout($apiService, $apiParams, 8);
-            $containerTypesArray = $this->processApiResponse($containerTypesResponse, 'name', 'name');
+            $containerTypesArray = $this->getCachedMaestrosOptions(
+                'container-types',
+                $tradingCompanyValue,
+                fn () => $this->processApiResponse(
+                    $this->getContainerTypesWithCustomTimeout($apiService, $apiParams, 8),
+                    'name',
+                    'name'
+                )
+            );
 
             foreach ($containerTypesArray as $key => $value) {
                 if (! isset($this->containerTypeArray[$key])) {
@@ -2076,8 +2094,15 @@ class KanbanBoard extends Component
                 'per_page' => 1000,
             ];
 
-            $transportTypesResponse = $this->getTransportTypesWithCustomTimeout($apiService, $apiParams, 8);
-            $transportTypesArray = $this->processApiResponse($transportTypesResponse, 'name', 'name');
+            $transportTypesArray = $this->getCachedMaestrosOptions(
+                'transport-types',
+                $tradingCompanyValue,
+                fn () => $this->processApiResponse(
+                    $this->getTransportTypesWithCustomTimeout($apiService, $apiParams, 8),
+                    'name',
+                    'name'
+                )
+            );
 
             foreach ($transportTypesArray as $key => $value) {
                 if (! isset($this->transportTypeArray[$key])) {
@@ -2123,6 +2148,21 @@ class KanbanBoard extends Component
 
             return null;
         }
+    }
+
+    protected function getCachedMaestrosOptions(string $resource, string $tradingCompany, callable $resolver): array
+    {
+        $cacheKey = sprintf(
+            'kanban:maestros:%s:%s',
+            $resource,
+            strtolower(trim($tradingCompany))
+        );
+
+        return Cache::remember($cacheKey, self::MAESTROS_CACHE_TTL_SECONDS, function () use ($resolver) {
+            $result = $resolver();
+
+            return is_array($result) ? $result : [];
+        });
     }
 
     /**
