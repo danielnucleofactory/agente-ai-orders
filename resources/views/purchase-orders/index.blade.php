@@ -80,6 +80,7 @@
                         {{-- Mount y loadData del tablero se difieren al cliente (Livewire lazy on-load). --}}
                         <livewire:kanban.kanban-board embed-board-type="po_stages" lazy="on-load" />
                     </div>
+                    <livewire:kanban.stage-change-modal embed-board-type="po_stages" />
                 </div>
             </div>
 

@@ -139,6 +139,7 @@
         </div>
         <div class="flex overflow-auto gap-x-10 w-full">
             <livewire:kanban.kanban-board />
+            <livewire:kanban.stage-change-modal />
         </div>
     </div>
     </div>
