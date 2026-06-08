@@ -1,4 +1,5 @@
 @props([
+    'purchaseOrder' => [],
     'po' => '12345a',
     'trackingId' => '11111',
     'hubLocation' => 'New Jersey',
