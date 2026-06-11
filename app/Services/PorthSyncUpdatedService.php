@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Exceptions\PorthTemporarilyBlockedException;
+use App\Models\PurchaseOrder;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -25,11 +27,12 @@ class PorthSyncUpdatedService
      * @param bool|null $dryRun Modo prueba (no modifica datos)
      * @return array Resumen con ids procesados y resultados por id
      */
-    public function syncRange(Carbon $start, Carbon $end, ?bool $dryRun = null): array
+    public function syncRange(Carbon $start, Carbon $end, ?bool $dryRun = null, bool $linkedOnly = true, ?int $maxShipments = null): array
     {
         $dryRun = $dryRun ?? (bool) config('services.porth.sync_dry_run', false);
         $startIso = $start->toIso8601String();
         $endIso = $end->toIso8601String();
+        $maxShipments = $maxShipments ?? (int) config('services.porth.sync_max_shipments_per_run', 100);
 
         $ids = $this->api->listLastUpdated($startIso, $endIso);
 
@@ -49,19 +52,59 @@ class PorthSyncUpdatedService
             return ['ids' => [], 'results' => []];
         }
 
+        $candidateIds = array_values(array_filter($ids, fn ($id) => is_string($id) && $id !== ''));
+        $filteredOut = 0;
+
+        if ($linkedOnly) {
+            $linkedIds = $this->linkedPurchaseOrderPorthIds($candidateIds);
+            $linkedLookup = array_flip($linkedIds);
+            $filteredIds = array_values(array_filter($candidateIds, fn (string $id) => isset($linkedLookup[$id])));
+            $filteredOut = count($candidateIds) - count($filteredIds);
+            $candidateIds = $filteredIds;
+        }
+
+        if ($maxShipments > 0 && count($candidateIds) > $maxShipments) {
+            $candidateIds = array_slice($candidateIds, 0, $maxShipments);
+        }
+
+        Log::info('porth_sync_range:ids_selected', [
+            'fetched_count' => count($ids),
+            'candidate_count' => count($candidateIds),
+            'filtered_out_unlinked' => $filteredOut,
+            'linked_only' => $linkedOnly,
+            'max_shipments' => $maxShipments,
+        ]);
+
         $results = [];
 
-        foreach ($ids as $id) {
-            if (!is_string($id)) {
-                continue;
-            }
+        foreach ($candidateIds as $id) {
+            try {
+                $result = $this->processShipment($id, $dryRun);
+                $results[$id] = $result;
+            } catch (PorthTemporarilyBlockedException $e) {
+                Log::warning('porth_sync_range:stopped_temporarily_blocked', [
+                    'porth_id' => $id,
+                    'retry_after_seconds' => $e->retryAfterSeconds(),
+                    'processed_count' => count($results),
+                    'remaining_count' => max(count($candidateIds) - count($results), 0),
+                ]);
 
-            $result = $this->processShipment($id, $dryRun);
-            $results[$id] = $result;
+                $results[$id] = [
+                    'status' => 'temporarily_blocked',
+                    'purchase_order_id' => null,
+                    'order_number' => null,
+                    'porth_payload' => null,
+                    'retry_after_seconds' => $e->retryAfterSeconds(),
+                ];
+
+                break;
+            }
         }
 
         return [
-            'ids' => $ids,
+            'ids' => $candidateIds,
+            'fetched_ids_count' => count($ids),
+            'filtered_out_unlinked' => $filteredOut,
             'results' => $results,
         ];
     }
@@ -131,7 +174,7 @@ class PorthSyncUpdatedService
      * @param bool|null $dryRun Modo prueba
      * @return array Resumen de la sincronización
      */
-    public function syncRecent(?int $lookbackHours = null, ?bool $dryRun = null): array
+    public function syncRecent(?int $lookbackHours = null, ?bool $dryRun = null, bool $linkedOnly = true, ?int $maxShipments = null): array
     {
         $hours = $lookbackHours ?? (int) config('services.porth.sync_lookback_hours', 2);
         if ($hours < 1) {
@@ -148,14 +191,14 @@ class PorthSyncUpdatedService
             'dry_run' => $dryRun,
         ]);
 
-        return $this->syncRange($start, $end, $dryRun);
+        return $this->syncRange($start, $end, $dryRun, $linkedOnly, $maxShipments);
     }
 
     /**
      * Sincroniza de forma incremental para evitar reescaneos completos
      * de la misma ventana en cada corrida programada.
      */
-    public function syncRecentIncremental(?int $lookbackHours = null, ?bool $dryRun = null): array
+    public function syncRecentIncremental(?int $lookbackHours = null, ?bool $dryRun = null, bool $linkedOnly = true, ?int $maxShipments = null): array
     {
         $hours = $lookbackHours ?? (int) config('services.porth.sync_lookback_hours', 2);
         if ($hours < 1) {
@@ -193,9 +236,9 @@ class PorthSyncUpdatedService
             'overlap_minutes' => self::RECENT_SYNC_OVERLAP_MINUTES,
         ]);
 
-        $summary = $this->syncRange($start, $end, $dryRun);
+        $summary = $this->syncRange($start, $end, $dryRun, $linkedOnly, $maxShipments);
 
-        if (! $dryRun) {
+        if (! $dryRun && ! $this->hasTemporaryBlock($summary)) {
             Cache::forever(self::LAST_RECENT_SYNC_CACHE_KEY, $end->toIso8601String());
         }
 
@@ -222,5 +265,24 @@ class PorthSyncUpdatedService
             'ids' => [$porthId],
             'results' => [$porthId => $result],
         ];
+    }
+
+    protected function hasTemporaryBlock(array $summary): bool
+    {
+        foreach (($summary['results'] ?? []) as $result) {
+            if (($result['status'] ?? null) === 'temporarily_blocked') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function linkedPurchaseOrderPorthIds(array $ids): array
+    {
+        return PurchaseOrder::query()
+            ->whereIn('porth_id', $ids)
+            ->pluck('porth_id')
+            ->all();
     }
 }
