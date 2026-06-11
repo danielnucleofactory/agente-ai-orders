@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\PorthTemporarilyBlockedException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -123,6 +124,22 @@ class PorthApiService
                 return $data;
             }
 
+            $body = $response->json();
+            if (
+                $response->status() === 403
+                && is_array($body)
+                && ($body['error'] ?? null) === 'temporarily_blocked'
+            ) {
+                $retryAfterSeconds = isset($body['retryAfterSeconds']) ? (int) $body['retryAfterSeconds'] : null;
+
+                Log::warning('porth_api:temporarily_blocked', [
+                    'id' => $id,
+                    'retry_after_seconds' => $retryAfterSeconds,
+                ]);
+
+                throw new PorthTemporarilyBlockedException($retryAfterSeconds);
+            }
+
             Log::error('porth_api:get_by_id_failed', [
                 'id' => $id,
                 'status' => $response->status(),
@@ -130,6 +147,8 @@ class PorthApiService
             ]);
             return null;
 
+        } catch (PorthTemporarilyBlockedException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('porth_api:getShipmentById_exception', [
                 'id' => $id,

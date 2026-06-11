@@ -12,6 +12,8 @@ class PorthSyncRecent extends Command
 {
     protected $signature = 'porth:sync-recent 
                             {--hours= : Horas hacia atrás para buscar actualizaciones}
+                            {--max= : Máximo de shipments a consultar por corrida}
+                            {--include-unlinked : También consulta shipments que no están vinculados a POs locales}
                             {--dry-run : Modo prueba, no modifica datos}
                             {--trigger=manual : Origen de la ejecución (manual, schedule, webhook)}';
     
@@ -37,10 +39,13 @@ class PorthSyncRecent extends Command
 
         $hours = $this->option('hours');
         $hours = $hours !== null ? max(1, (int) $hours) : (int) config('services.porth.sync_lookback_hours', 2);
+        $max = $this->option('max');
+        $max = $max !== null ? max(1, (int) $max) : (int) config('services.porth.sync_max_shipments_per_run', 100);
+        $linkedOnly = ! (bool) $this->option('include-unlinked');
         $dryRun = (bool) ($this->option('dry-run') ?? config('services.porth.sync_dry_run', false));
         $trigger = $this->option('trigger') ?: 'manual';
 
-        $this->info("Iniciando sync Porth (hours={$hours}, dryRun=" . ($dryRun ? 'true' : 'false') . ", trigger={$trigger})");
+        $this->info("Iniciando sync Porth (hours={$hours}, max={$max}, linkedOnly=" . ($linkedOnly ? 'true' : 'false') . ", dryRun=" . ($dryRun ? 'true' : 'false') . ", trigger={$trigger})");
         $startedAt = now();
 
         // Registrar corrida
@@ -51,14 +56,16 @@ class PorthSyncRecent extends Command
             'started_at' => $startedAt,
             'meta' => [
                 'hours' => $hours,
+                'max' => $max,
+                'linked_only' => $linkedOnly,
                 'dry_run' => $dryRun,
             ],
         ]);
 
         try {
             $summary = $trigger === self::SCHEDULE_TRIGGER && ! $this->option('hours')
-                ? $this->syncService->syncRecentIncremental($hours, $dryRun)
-                : $this->syncService->syncRecent($hours, $dryRun);
+                ? $this->syncService->syncRecentIncremental($hours, $dryRun, $linkedOnly, $max)
+                : $this->syncService->syncRecent($hours, $dryRun, $linkedOnly, $max);
             $ids = $summary['ids'] ?? [];
             $results = $summary['results'] ?? [];
 
