@@ -4,7 +4,9 @@ namespace App\Livewire\Kanban;
 
 use App\Exports\ActivePurchaseOrdersExport;
 use App\Exports\InternalTransitReportExport;
+use App\Exports\PorthPurchaseOrderReportExport;
 use App\Services\InternalTransitReportService;
+use App\Services\PorthPurchaseOrderReportService;
 use App\Support\SelectOptions;
 use App\Models\Hub;
 use App\Models\PurchaseOrder;
@@ -296,6 +298,19 @@ class KanbanFilters extends Component
         return Excel::download(
             new InternalTransitReportExport($report),
             'reporte_transito_ata_' . str_replace('-', '', (string) $from) . '_a_' . str_replace('-', '', (string) $to) . '_' . now()->format('Ymd_His') . '.xlsx'
+        );
+    }
+
+    public function downloadPorthPurchaseOrderReport(PorthPurchaseOrderReportService $service): BinaryFileResponse
+    {
+        abort_unless(auth()->user()?->can('access-raga-transit-report'), 403);
+
+        $companyId = auth()->user()->company_id ?? 0;
+        $rows = $service->rows($companyId, $this->getActiveFilters());
+
+        return Excel::download(
+            new PorthPurchaseOrderReportExport($rows),
+            'reporte_porth_pos_' . now()->format('Ymd_His') . '.xlsx'
         );
     }
 

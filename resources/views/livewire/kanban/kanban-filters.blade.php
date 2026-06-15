@@ -21,6 +21,24 @@
 
     @can('access-raga-transit-report')
         <button
+            wire:click="downloadPorthPurchaseOrderReport"
+            wire:loading.attr="disabled"
+            wire:target="downloadPorthPurchaseOrderReport"
+            title="Descargar reporte interno de campos Porth por PO"
+            class="flex items-center gap-2 rounded-md border border-[#1AAD8A] bg-white px-3 py-2 text-sm font-medium text-[#1AAD8A] transition-colors duration-200 hover:bg-[#E6F9F4] disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+            <svg wire:loading.remove wire:target="downloadPorthPurchaseOrderReport" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <svg wire:loading wire:target="downloadPorthPurchaseOrderReport" class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <span wire:loading.remove wire:target="downloadPorthPurchaseOrderReport">Reporte Porth</span>
+            <span wire:loading wire:target="downloadPorthPurchaseOrderReport">Descargando...</span>
+        </button>
+
+        <button
             wire:click="downloadInternalTransitReport"
             wire:loading.attr="disabled"
             wire:target="downloadInternalTransitReport"
