@@ -311,15 +311,17 @@ class PorthSyncUpdatedService
     {
         $results = [];
 
-        foreach ($ids as $id) {
+        foreach ($ids as $index => $id) {
             try {
                 $result = $this->processShipment($id, $dryRun);
             } catch (PorthTemporarilyBlockedException $e) {
+                $remainingIds = array_slice($ids, $index + 1);
+
                 Log::warning('porth_sync_range:stopped_temporarily_blocked', [
                     'porth_id' => $id,
                     'retry_after_seconds' => $e->retryAfterSeconds(),
                     'processed_count' => count($results),
-                    'remaining_count' => max(count($ids) - count($results), 0),
+                    'remaining_count' => count($remainingIds),
                 ]);
 
                 $result = [
@@ -333,6 +335,7 @@ class PorthSyncUpdatedService
                 $results[$id] = $result;
                 if (! $dryRun) {
                     $this->finishBacklogItem($id, $result);
+                    $this->releaseUnprocessedClaimedIds($remainingIds, $e->retryAfterSeconds());
                 }
                 break;
             }
@@ -379,6 +382,8 @@ class PorthSyncUpdatedService
 
     protected function claimPendingBacklogIds(int $limit): array
     {
+        $this->releaseStaleProcessingItems();
+
         return DB::transaction(function () use ($limit) {
             $items = PorthSyncBacklog::query()
                 ->whereIn('status', [PorthSyncBacklog::STATUS_PENDING, PorthSyncBacklog::STATUS_FAILED])
@@ -406,6 +411,47 @@ class PorthSyncUpdatedService
 
             return $ids;
         });
+    }
+
+    protected function releaseUnprocessedClaimedIds(array $ids, ?int $retryAfterSeconds = null): int
+    {
+        $ids = $this->normalizePorthIds($ids);
+        if (empty($ids)) {
+            return 0;
+        }
+
+        $nextAttemptAt = $retryAfterSeconds
+            ? now()->addSeconds($retryAfterSeconds)
+            : now()->addMinutes($this->processingTimeoutMinutes());
+
+        return PorthSyncBacklog::whereIn('porth_id', $ids)
+            ->where('status', PorthSyncBacklog::STATUS_PROCESSING)
+            ->update([
+                'status' => PorthSyncBacklog::STATUS_PENDING,
+                'next_attempt_at' => $nextAttemptAt,
+                'processing_started_at' => null,
+                'last_error' => 'released_after_temporary_block',
+                'updated_at' => now(),
+            ]);
+    }
+
+    protected function releaseStaleProcessingItems(): int
+    {
+        $cutoff = now()->subMinutes($this->processingTimeoutMinutes());
+
+        return PorthSyncBacklog::query()
+            ->where('status', PorthSyncBacklog::STATUS_PROCESSING)
+            ->where(function ($query) use ($cutoff) {
+                $query->whereNull('processing_started_at')
+                    ->orWhere('processing_started_at', '<=', $cutoff);
+            })
+            ->update([
+                'status' => PorthSyncBacklog::STATUS_PENDING,
+                'next_attempt_at' => now(),
+                'processing_started_at' => null,
+                'last_error' => 'released_stale_processing',
+                'updated_at' => now(),
+            ]);
     }
 
     protected function peekPendingBacklogIds(int $limit): array
@@ -500,6 +546,11 @@ class PorthSyncUpdatedService
     protected function retryDelayMinutes(int $attempts): int
     {
         return min(240, max(10, $attempts * 30));
+    }
+
+    protected function processingTimeoutMinutes(): int
+    {
+        return max(5, (int) config('services.porth.sync_processing_timeout_minutes', 30));
     }
 
     protected function hasTemporaryBlock(array $summary): bool

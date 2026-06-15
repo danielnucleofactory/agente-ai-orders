@@ -56,6 +56,7 @@ return [
         'sync_dry_run' => env('PORTH_SYNC_DRY_RUN', false),
         'sync_lookback_hours' => env('PORTH_SYNC_LOOKBACK_HOURS', 2),
         'sync_max_shipments_per_run' => env('PORTH_SYNC_MAX_SHIPMENTS_PER_RUN', 100),
+        'sync_processing_timeout_minutes' => env('PORTH_SYNC_PROCESSING_TIMEOUT_MINUTES', 30),
         'notification_user_ids' => env('PORTH_SYNC_NOTIFICATION_USER_IDS', ''),
         'failed_retry_enabled' => env('PORTH_FAILED_RETRY_ENABLED', true),
         'failed_retry_max_attempts' => env('PORTH_FAILED_RETRY_MAX_ATTEMPTS', 5),
