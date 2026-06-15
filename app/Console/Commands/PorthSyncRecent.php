@@ -12,8 +12,9 @@ class PorthSyncRecent extends Command
 {
     protected $signature = 'porth:sync-recent 
                             {--hours= : Horas hacia atrás para buscar actualizaciones}
-                            {--max= : Máximo de shipments a consultar por corrida}
-                            {--include-unlinked : También consulta shipments que no están vinculados a POs locales}
+                            {--max= : Máximo de embarques a procesar desde la cola en esta ejecución}
+                            {--include-unlinked : También encola IDs que no tienen PO vinculada localmente}
+                            {--backlog-only : No consulta lastUpdated, solo procesa la cola pendiente}
                             {--dry-run : Modo prueba, no modifica datos}
                             {--trigger=manual : Origen de la ejecución (manual, schedule, webhook)}';
     
@@ -39,44 +40,52 @@ class PorthSyncRecent extends Command
 
         $hours = $this->option('hours');
         $hours = $hours !== null ? max(1, (int) $hours) : (int) config('services.porth.sync_lookback_hours', 2);
-        $max = $this->option('max');
-        $max = $max !== null ? max(1, (int) $max) : (int) config('services.porth.sync_max_shipments_per_run', 100);
+        $max = $this->option('max') !== null
+            ? max(1, (int) $this->option('max'))
+            : (int) config('services.porth.sync_max_shipments_per_run', 100);
         $linkedOnly = ! (bool) $this->option('include-unlinked');
+        $backlogOnly = (bool) $this->option('backlog-only');
         $dryRun = (bool) ($this->option('dry-run') ?? config('services.porth.sync_dry_run', false));
         $trigger = $this->option('trigger') ?: 'manual';
 
-        $this->info("Iniciando sync Porth (hours={$hours}, max={$max}, linkedOnly=" . ($linkedOnly ? 'true' : 'false') . ", dryRun=" . ($dryRun ? 'true' : 'false') . ", trigger={$trigger})");
+        $this->info("Iniciando sync Porth (hours={$hours}, max={$max}, linkedOnly=" . ($linkedOnly ? 'true' : 'false') . ", backlogOnly=" . ($backlogOnly ? 'true' : 'false') . ", dryRun=" . ($dryRun ? 'true' : 'false') . ", trigger={$trigger})");
         $startedAt = now();
 
-        // Registrar corrida
         $run = PorthSyncRun::create([
             'trigger' => $trigger,
-            'scope' => "recent:{$hours}h",
+            'scope' => $backlogOnly ? 'backlog' : "recent:{$hours}h",
             'status' => 'running',
             'started_at' => $startedAt,
             'meta' => [
                 'hours' => $hours,
                 'max' => $max,
                 'linked_only' => $linkedOnly,
+                'backlog_only' => $backlogOnly,
                 'dry_run' => $dryRun,
             ],
         ]);
 
         try {
-            $summary = $trigger === self::SCHEDULE_TRIGGER && ! $this->option('hours')
-                ? $this->syncService->syncRecentIncremental($hours, $dryRun, $linkedOnly, $max)
-                : $this->syncService->syncRecent($hours, $dryRun, $linkedOnly, $max);
+            if ($backlogOnly) {
+                $summary = $this->syncService->processBacklog($max, $dryRun);
+            } else {
+                $summary = $trigger === self::SCHEDULE_TRIGGER && ! $this->option('hours')
+                    ? $this->syncService->syncRecentIncremental($hours, $dryRun, $max, $linkedOnly)
+                    : $this->syncService->syncRecent($hours, $dryRun, $max, $linkedOnly);
+            }
+
             $ids = $summary['ids'] ?? [];
             $results = $summary['results'] ?? [];
+            $meta = array_merge($run->meta ?? [], $summary['meta'] ?? []);
 
             $counts = $this->calculateCounts($ids, $results);
-
             $status = $this->determineStatus($counts);
 
             $run->fill(array_merge($counts, [
                 'status' => $status,
                 'finished_at' => now(),
                 'duration_ms' => abs((int) now()->diffInMilliseconds($startedAt, false)),
+                'meta' => $meta,
             ]))->save();
 
             Log::info('porth_sync_run_completed', [
@@ -85,10 +94,7 @@ class PorthSyncRecent extends Command
                 'counts' => $counts,
             ]);
 
-            // Enviar notificaciones
             $this->sendNotifications($run, $results);
-
-            // Mostrar resumen
             $this->displaySummary($run, $counts);
 
             $this->info("Sync Porth finalizado. Run #{$run->id} status={$status}");
@@ -113,9 +119,6 @@ class PorthSyncRecent extends Command
         return self::SUCCESS;
     }
 
-    /**
-     * Calcula los contadores de resultados
-     */
     private function calculateCounts(array $ids, array $results): array
     {
         $counts = [
@@ -146,9 +149,6 @@ class PorthSyncRecent extends Command
         return $counts;
     }
 
-    /**
-     * Determina el estado final de la corrida
-     */
     private function determineStatus(array $counts): string
     {
         if ($counts['failed'] > 0) {
@@ -157,31 +157,30 @@ class PorthSyncRecent extends Command
         return 'success';
     }
 
-    /**
-     * Muestra resumen en consola
-     */
     private function displaySummary(PorthSyncRun $run, array $counts): void
     {
+        $meta = $run->meta ?? [];
         $this->newLine();
         $this->table(
             ['Métrica', 'Valor'],
             [
                 ['Run ID', $run->id],
                 ['Total IDs', $counts['total']],
+                ['IDs Porth recibidos', $meta['fetched_count'] ?? 'N/A'],
+                ['IDs candidatos', $meta['candidate_count'] ?? 'N/A'],
+                ['IDs encolados', $meta['enqueued_count'] ?? 'N/A'],
                 ['Procesados', $counts['processed']],
                 ['Actualizados', $counts['updated']],
                 ['Sin cambios', $counts['no_change']],
                 ['Omitidos', $counts['skipped']],
                 ['Fallidos', $counts['failed']],
                 ['Dry Run', $counts['dry_run']],
+                ['Backlog pendiente', $meta['backlog_remaining'] ?? 'N/A'],
                 ['Duración', ($run->duration_ms ?? 0) . 'ms'],
             ]
         );
     }
 
-    /**
-     * Envía notificaciones a usuarios configurados
-     */
     private function sendNotifications(PorthSyncRun $run, array $results): void
     {
         $userIds = $this->notificationUserIds();
@@ -207,9 +206,6 @@ class PorthSyncRecent extends Command
         $this->info("Notificaciones enviadas a " . count($userIds) . " usuario(s).");
     }
 
-    /**
-     * Construye datos de notificación
-     */
     private function buildNotificationData(PorthSyncRun $run, $porthId, array $result): array
     {
         $status = $result['status'] ?? 'unknown';
@@ -234,9 +230,6 @@ class PorthSyncRecent extends Command
         ];
     }
 
-    /**
-     * Construye mensaje de notificación
-     */
     private function buildNotificationMessage(array $data): string
     {
         $status = $data['result']['status'] ?? 'unknown';
@@ -249,6 +242,7 @@ class PorthSyncRecent extends Command
             'skipped' => 'no tuvo coincidencia en Raga',
             'dry_run' => 'se revisó en modo prueba',
             'no_change' => 'no tuvo cambios',
+            'temporarily_blocked' => 'quedó pendiente por bloqueo temporal de Porth',
             'failed' => 'falló al procesar',
             default => "tiene estado {$status}",
         };
@@ -264,21 +258,18 @@ class PorthSyncRecent extends Command
         return implode(' ', $parts) . " {$statusText}.";
     }
 
-    /**
-     * Obtiene IDs de usuarios a notificar desde configuración
-     */
     private function notificationUserIds(): array
     {
-        $configured = config('services.porth.notification_user_ids');
-
-        if (is_string($configured)) {
-            $configured = array_filter(array_map('trim', explode(',', $configured)));
-        }
-
-        if (!is_array($configured)) {
+        $raw = (string) config('services.porth.notification_user_ids', '');
+        if (trim($raw) === '') {
             return [];
         }
 
-        return array_values(array_filter(array_map('intval', $configured)));
+        return collect(explode(',', $raw))
+            ->map(fn ($id) => (int) trim($id))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 }

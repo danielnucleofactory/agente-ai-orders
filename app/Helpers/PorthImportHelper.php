@@ -47,7 +47,7 @@ class PorthImportHelper
     {
         $fields = [];
 
-        if (array_key_exists('cargo', $data) && !empty($data['cargo'])) {
+        if (!empty($this->getCargoItems($data))) {
             $containers = $this->extractContainerNumbers($data);
             if (!empty($containers) && !empty($containers[0])) {
                 $fields['container_number'] = $containers[0];
@@ -184,7 +184,7 @@ class PorthImportHelper
 
         // Traducir tipo de contenedor (container_type)
         $modality = $data['modality'] ?? null;
-        $cargo = $data['cargo'] ?? null;
+        $cargo = $this->getCargoItems($data);
         $translatedContainerType = $this->translationService->translateContainerType($modality, $cargo);
         if ($translatedContainerType) {
             $fields['container_type'] = $translatedContainerType;
@@ -303,6 +303,21 @@ class PorthImportHelper
         ];
     }
 
+    public function getCargoItems(array $data): array
+    {
+        return $this->payloadList($data['cargo'] ?? ($data['cargos'] ?? []));
+    }
+
+    public function getPhaseItems(array $data): array
+    {
+        return $this->payloadList($data['phases'] ?? ($data['phaseList'] ?? []));
+    }
+
+    public function getItineraryItems(array $data): array
+    {
+        return $this->payloadList($data['itinerary'] ?? ($data['itineraries'] ?? []));
+    }
+
     // ========== MÉTODOS AUXILIARES PRIVADOS ==========
 
     /**
@@ -321,7 +336,7 @@ class PorthImportHelper
      */
     private function extractContainerNumbers(array $data): array
     {
-        $cargoList = $data['cargo'] ?? [];
+        $cargoList = $this->getCargoItems($data);
         if (empty($cargoList)) {
             return [];
         }
@@ -336,6 +351,19 @@ class PorthImportHelper
         }
 
         return array_values(array_unique($numbers));
+    }
+
+    private function payloadList($value): array
+    {
+        if (!is_array($value) || empty($value)) {
+            return [];
+        }
+
+        if (!array_is_list($value)) {
+            return [$value];
+        }
+
+        return array_values(array_filter($value, fn ($item) => is_array($item)));
     }
 
     /**

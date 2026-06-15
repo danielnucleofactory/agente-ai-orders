@@ -20,6 +20,13 @@ if (config('services.porth.sync_enabled', true)) {
         ->withoutOverlapping()
         ->runInBackground();
 
+    // Drenar backlog en lotes controlados. Esto evita perder IDs cuando Porth
+    // devuelve más embarques actualizados que el máximo procesable por corrida.
+    Schedule::command('porth:sync-recent --trigger=schedule --backlog-only')
+        ->everyFifteenMinutes()
+        ->withoutOverlapping()
+        ->runInBackground();
+
     // Importar datos de POs recién vinculadas cada 5 minutos
     // Busca POs con porth_id pero sin last_porth_sync_at (pendientes de primera importación)
     // Manual por lotes: php artisan porth:import-pending --limit=50

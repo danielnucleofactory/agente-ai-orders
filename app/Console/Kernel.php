@@ -16,9 +16,15 @@ class Kernel extends ConsoleKernel
             return;
         }
 
-        // Sincronizar embarques actualizados desde Porth cada 2 horas
+        // Sincronizar embarques actualizados desde Porth cada 2 horas.
         $schedule->command('porth:sync-recent --trigger=schedule')
             ->everyTwoHours()
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Drenar backlog en lotes controlados.
+        $schedule->command('porth:sync-recent --trigger=schedule --backlog-only')
+            ->everyFifteenMinutes()
             ->withoutOverlapping()
             ->runInBackground();
 

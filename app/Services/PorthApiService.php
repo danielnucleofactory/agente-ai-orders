@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\PorthTemporarilyBlockedException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 class PorthApiService
 {
@@ -38,11 +39,9 @@ class PorthApiService
      */
     public function listLastUpdated(string $startIso, string $endIso): array
     {
-        $data = [];
-
         if (!$this->isEnabled()) {
             Log::warning('porth_api:disabled_missing_key');
-            return $data;
+            throw new RuntimeException('Porth API key is not configured.');
         }
 
         try {
@@ -67,24 +66,26 @@ class PorthApiService
             if ($response->successful()) {
                 $responseData = $response->json();
                 if (is_array($responseData)) {
-                    $data = $responseData;
                     Log::info('porth_api:listLastUpdated_success', [
-                        'count' => count($data),
+                        'count' => count($responseData),
                     ]);
+                    return $responseData;
                 }
+
+                throw new RuntimeException('Porth lastUpdated returned a non-array response.');
             } else {
                 Log::error('porth_api:lastUpdated_failed', [
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
+                throw new RuntimeException("Porth lastUpdated failed with HTTP {$response->status()}.");
             }
         } catch (\Exception $e) {
             Log::error('porth_api:listLastUpdated_exception', [
                 'error' => $e->getMessage(),
             ]);
+            throw $e;
         }
-
-        return $data;
     }
 
     /**
