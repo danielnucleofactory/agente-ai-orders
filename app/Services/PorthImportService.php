@@ -277,7 +277,7 @@ class PorthImportService
     {
         $shippingDocumentId = $po->shippingDocuments()->value('shipping_documents.id');
 
-        $cargoPayloads = collect($data['cargo'] ?? [])
+        $cargoPayloads = collect($this->helper->getCargoItems($data))
             ->filter(fn ($cargo) => is_array($cargo))
             ->map(function (array $cargo) use ($po, $shippingDocumentId) {
                 return array_merge(
@@ -291,7 +291,7 @@ class PorthImportService
             ->values()
             ->all();
 
-        $phasePayloads = collect($data['phases'] ?? [])
+        $phasePayloads = collect($this->helper->getPhaseItems($data))
             ->filter(fn ($phase) => is_array($phase))
             ->map(function (array $phase) use ($po, $shippingDocumentId) {
                 return array_merge(
@@ -305,7 +305,7 @@ class PorthImportService
             ->values()
             ->all();
 
-        $itineraryPayloads = collect($data['itinerary'] ?? [])
+        $itineraryPayloads = collect($this->helper->getItineraryItems($data))
             ->filter(fn ($item) => is_array($item))
             ->map(function (array $item) use ($po, $shippingDocumentId, $data) {
                 return array_merge(
