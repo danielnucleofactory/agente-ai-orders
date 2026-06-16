@@ -22,8 +22,8 @@ final class InternalTransitReportService
         return [
             'meta' => [
                 'company_id' => $companyId,
-                'ata_from' => $filters['date_from'] ?? null,
-                'ata_to' => $filters['date_to'] ?? null,
+                'atd_from' => $filters['date_from'] ?? null,
+                'atd_to' => $filters['date_to'] ?? null,
                 'vendor_id' => $filters['vendor'] ?? null,
                 'trading_company' => $filters['trading_company'] ?? null,
                 'search' => $filters['search'] ?? null,
@@ -60,7 +60,7 @@ final class InternalTransitReportService
         $pricingUserId = config('services.pricing.user_id');
         $allMovements = $this->getMovements($companyId, $filters);
         $pricingMovements = $allMovements
-            ->filter(static fn (array $row) => isset($row['freight_amount']) && (float) $row['freight_amount'] > 0)
+            ->filter(static fn (array $row) => isset($row['freight_amount'], $row['transit_days']) && (float) $row['freight_amount'] > 0)
             ->values();
         $rows = $this->aggregatePricingRows(
             $pricingMovements,
@@ -74,8 +74,8 @@ final class InternalTransitReportService
                 'source' => 'raga',
                 'notes' => 'orders',
                 'company_id' => $companyId,
-                'ata_from' => $filters['date_from'] ?? null,
-                'ata_to' => $filters['date_to'] ?? null,
+                'atd_from' => $filters['date_from'] ?? null,
+                'atd_to' => $filters['date_to'] ?? null,
                 'generated_at' => now()->toISOString(),
                 'movements_count' => $allMovements->count(),
                 'pricing_movements_count' => $pricingMovements->count(),
@@ -91,11 +91,46 @@ final class InternalTransitReportService
      */
     private function getMovements(int $companyId, array $filters): Collection
     {
-        return $this->buildBaseQuery($companyId, $filters)
+        $movements = $this->buildBaseQuery($companyId, $filters)
             ->get()
             ->map(fn (PurchaseOrder $po) => $this->mapMovement($po))
             ->filter()
-            ->unique('movement_key')
+            ->values();
+
+        return $this->consolidateMovements($movements);
+    }
+
+    /**
+     * Mantiene un solo movimiento por contenedor/ruta/fechas, pero suma el flete de todas las POs asociadas.
+     *
+     * @param  Collection<int, array<string, mixed>>  $movements
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function consolidateMovements(Collection $movements): Collection
+    {
+        return $movements
+            ->groupBy('movement_key')
+            ->map(function (Collection $group) {
+                /** @var array<string, mixed> $first */
+                $first = $group->first();
+                $freights = $group->pluck('freight_amount')->filter(fn ($value) => $value !== null);
+
+                $first['freight_amount'] = $freights->isNotEmpty()
+                    ? round((float) $freights->sum(), 2)
+                    : null;
+
+                $orderNumbers = $group
+                    ->pluck('order_number')
+                    ->filter(fn ($value) => trim((string) $value) !== '')
+                    ->unique()
+                    ->values();
+
+                if ($orderNumbers->isNotEmpty()) {
+                    $first['order_number'] = $orderNumbers->implode(', ');
+                }
+
+                return $first;
+            })
             ->values();
     }
 
@@ -109,15 +144,14 @@ final class InternalTransitReportService
             ->with('vendor:id,name')
             ->where('company_id', $companyId)
             ->whereNotNull('container_number')
-            ->whereNotNull('date_ata')
             ->whereNotNull('date_atd');
 
         if (!empty($filters['date_from'])) {
-            $query->whereDate('date_ata', '>=', $filters['date_from']);
+            $query->whereDate('date_atd', '>=', $filters['date_from']);
         }
 
         if (!empty($filters['date_to'])) {
-            $query->whereDate('date_ata', '<=', $filters['date_to']);
+            $query->whereDate('date_atd', '<=', $filters['date_to']);
         }
 
         if (!empty($filters['vendor'])) {
@@ -169,19 +203,19 @@ final class InternalTransitReportService
         }
 
         $atd = Carbon::parse($po->date_atd)->startOfDay();
-        $ata = Carbon::parse($po->date_ata)->startOfDay();
+        $ata = $po->date_ata ? Carbon::parse($po->date_ata)->startOfDay() : null;
 
-        if ($ata->lt($atd)) {
+        if ($ata !== null && $ata->lt($atd)) {
             return null;
         }
 
-        $transitDays = $atd->diffInDays($ata);
+        $transitDays = $ata !== null ? $atd->diffInDays($ata) : null;
 
         return [
             'movement_key' => implode('|', [
                 $containerNumber,
                 $atd->format('Y-m-d'),
-                $ata->format('Y-m-d'),
+                $ata?->format('Y-m-d') ?? 'sin-ata',
                 $departurePort,
                 $arrivalPort,
                 $serviceProvider,
@@ -199,7 +233,7 @@ final class InternalTransitReportService
             'service_provider' => $serviceProvider,
             'shipping_line' => $shippingLine,
             'atd' => $atd->format('Y-m-d'),
-            'ata' => $ata->format('Y-m-d'),
+            'ata' => $ata?->format('Y-m-d'),
             'transit_days' => $transitDays,
             'freight_amount' => $po->freight_amount !== null ? (float) $po->freight_amount : null,
         ];
@@ -234,7 +268,7 @@ final class InternalTransitReportService
     /**
      * @param Collection<int, array<string, mixed>> $movements
      * @param array<int, string> $dimensions
-     * @return array<int, array<int, string|int|float>>
+     * @return array<int, array<int, string|int|float|null>>
      */
     private function aggregate(Collection $movements, array $dimensions): array
     {
@@ -259,7 +293,9 @@ final class InternalTransitReportService
                 $count20 = $group20->count();
                 $count40 = $group40->count();
                 $total = $group->count();
-                $average = round((float) $group->avg('transit_days'), 1);
+                $transitDays = $group->pluck('transit_days')->filter(fn ($v) => $v !== null);
+                $average = $transitDays->isNotEmpty() ? round((float) $transitDays->avg(), 1) : null;
+                $atdDates = $group->pluck('atd')->filter();
 
                 $freights20 = $group20->pluck('freight_amount')->filter(fn ($v) => $v !== null);
                 $freights40 = $group40->pluck('freight_amount')->filter(fn ($v) => $v !== null);
@@ -267,6 +303,8 @@ final class InternalTransitReportService
                 $avgFreight40 = $freights40->isNotEmpty() ? round((float) $freights40->avg(), 2) : null;
 
                 return array_merge($base, [
+                    (string) $atdDates->min(),
+                    (string) $atdDates->max(),
                     $count20,
                     $count40,
                     $total,
@@ -285,13 +323,13 @@ final class InternalTransitReportService
 
     /**
      * @param Collection<int, array<string, mixed>> $movements
-     * @return array<int, array<int, string|int>>
+     * @return array<int, array<int, string|int|null>>
      */
     private function baseRows(Collection $movements): array
     {
         return $movements
             ->sortBy([
-                ['ata', 'asc'],
+                ['atd', 'asc'],
                 ['departure_port', 'asc'],
                 ['arrival_port', 'asc'],
                 ['container_number', 'asc'],

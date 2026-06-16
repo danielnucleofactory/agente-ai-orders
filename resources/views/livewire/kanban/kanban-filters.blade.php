@@ -123,11 +123,11 @@
 
             @can('access-raga-transit-report')
                 <div>
-                    <x-date-picker wire:model.live="ataDateFrom" label="ATA desde" />
+                    <x-date-picker wire:model.live="ataDateFrom" label="ATD desde" />
                 </div>
 
                 <div>
-                    <x-date-picker wire:model.live="ataDateTo" label="ATA hasta" />
+                    <x-date-picker wire:model.live="ataDateTo" label="ATD hasta" />
                 </div>
             @endcan
 

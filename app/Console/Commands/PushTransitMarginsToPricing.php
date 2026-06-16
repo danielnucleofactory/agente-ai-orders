@@ -11,8 +11,8 @@ final class PushTransitMarginsToPricing extends Command
 {
     protected $signature = 'pricing:push-transit-margins
                             {company_id : Company ID de Orders}
-                            {--date-from= : Fecha ATA desde (YYYY-MM-DD)}
-                            {--date-to= : Fecha ATA hasta (YYYY-MM-DD)}
+                            {--date-from= : Fecha ATD desde (YYYY-MM-DD)}
+                            {--date-to= : Fecha ATD hasta (YYYY-MM-DD)}
                             {--vendor= : Vendor ID}
                             {--trading-company= : Trading company}
                             {--search= : Búsqueda libre}
@@ -42,8 +42,8 @@ final class PushTransitMarginsToPricing extends Command
 
         $this->info('Resumen del payload');
         $this->line('  - Company ID: ' . $companyId);
-        $this->line('  - ATA desde: ' . ($meta['ata_from'] ?? 'N/A'));
-        $this->line('  - ATA hasta: ' . ($meta['ata_to'] ?? 'N/A'));
+        $this->line('  - ATD desde: ' . ($meta['atd_from'] ?? 'N/A'));
+        $this->line('  - ATD hasta: ' . ($meta['atd_to'] ?? 'N/A'));
         $this->line('  - Movimientos deduplicados: ' . ($meta['movements_count'] ?? 0));
         $this->line('  - Grupos agregados: ' . ($meta['groups_count'] ?? 0));
         $this->line('  - Márgenes a enviar: ' . (is_array($margins) ? count($margins) : 0));

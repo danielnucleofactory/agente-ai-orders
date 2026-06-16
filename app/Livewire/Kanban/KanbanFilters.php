@@ -297,7 +297,7 @@ class KanbanFilters extends Component
 
         return Excel::download(
             new InternalTransitReportExport($report),
-            'reporte_transito_ata_' . str_replace('-', '', (string) $from) . '_a_' . str_replace('-', '', (string) $to) . '_' . now()->format('Ymd_His') . '.xlsx'
+            'reporte_transito_atd_' . str_replace('-', '', (string) $from) . '_a_' . str_replace('-', '', (string) $to) . '_' . now()->format('Ymd_His') . '.xlsx'
         );
     }
 
