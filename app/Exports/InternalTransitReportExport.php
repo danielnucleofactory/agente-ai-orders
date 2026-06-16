@@ -28,6 +28,8 @@ final class InternalTransitReportExport implements WithMultipleSheets
                     'Ruta',
                     'Proveedor de Servicio',
                     'Línea Naviera',
+                    'Primer ATD',
+                    'Último ATD',
                     'Contenedores 20',
                     'Contenedores 40',
                     'Total contenedores',
