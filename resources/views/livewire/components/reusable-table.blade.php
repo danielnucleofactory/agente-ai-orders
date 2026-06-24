@@ -7,7 +7,7 @@
 
     {{-- Búsqueda / filtros a la izquierda; registros por página arriba a la derecha --}}
     <div class="flex shrink-0 flex-wrap items-end justify-between gap-4">
-        <div class="flex min-w-0 flex-1 flex-wrap items-center gap-4">
+        <div class="flex flex-1 flex-wrap items-center gap-3">
             @if ($showSearch && !empty($searchable))
                 <div class="relative w-full max-w-xs sm:w-64">
                     <input
@@ -28,7 +28,8 @@
                     @foreach ($filterable as $filter)
                         @if (isset($filterOptions[$filter]))
                             <select wire:model.live="filters.{{ $filter }}"
-                                class="rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                class="rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                style="white-space: nowrap; min-width: 220px;">
                                 <option value="">Todos</option>
                                 @foreach (\App\Support\SelectOptions::forSelectAssociative($filterOptions[$filter] ?? []) as $value => $label)
                                     <option value="{{ $value }}">{{ $label }}</option>
@@ -41,10 +42,11 @@
         </div>
 
         @if ($showPerPage)
-            <div class="ml-auto w-full shrink-0 sm:w-auto">
+            <div class="ml-auto shrink-0">
                 <label class="sr-only">Registros por página</label>
                 <select wire:model.live="perPage"
-                    class="ml-auto block w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:ml-0 sm:inline-block sm:w-auto">
+                    class="block rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style="white-space: nowrap; min-width: 130px;">
                     <option value="10">10 por página</option>
                     <option value="25">25 por página</option>
                     <option value="50">50 por página</option>
@@ -298,12 +300,14 @@
                     </button>
                 @endif
 
-                @foreach ($processedRows->getUrlRange(max(1, $processedRows->currentPage() - 3), min($processedRows->lastPage(), $processedRows->currentPage() + 3)) as $page => $url)
+                @foreach ($processedRows->getUrlRange(max(1, $processedRows->currentPage() - 2), min($processedRows->lastPage(), $processedRows->currentPage() + 2)) as $page => $url)
                     @if ($page == $processedRows->currentPage())
-                        <span class="rounded-md bg-[#1AAD8A] px-3 py-1 text-white">{{ $page }}</span>
+                        <span class="rounded-md bg-[#1AAD8A] px-3 py-1 font-medium text-white">{{ $page }}</span>
                     @else
                         <button wire:click="gotoPage({{ $page }})" type="button"
-                            class="rounded-md border border-gray-300 bg-white px-3 py-1 text-gray-700 hover:bg-gray-50">{{ $page }}</button>
+                            class="rounded-md border border-gray-300 bg-white px-3 py-1 text-gray-700 hover:bg-gray-50">
+                            {{ $page }}
+                        </button>
                     @endif
                 @endforeach
 
@@ -324,15 +328,12 @@
     @endif
 
     @if ($showSelectColumn && $showSelectAllModal)
-        <div class="fixed inset-0 z-[60] flex items-center justify-center px-4 py-6 sm:px-0" x-data="{ show: true }" x-show="show"
-            x-transition>
-            <div class="fixed inset-0 bg-[#171717] opacity-40" wire:click="dismissSelectAllModal"></div>
-            <div class="relative z-10 mx-auto w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" @click.stop>
-                <h3 class="mb-2 text-lg font-bold text-gray-900">Selección ampliada</h3>
-                <p class="mb-4 text-sm text-gray-600">
-                    Se seleccionaron los <strong>{{ $selectAllPageCount }}</strong> registros visibles en esta página.
-                    ¿Desea seleccionar también <strong>los {{ $selectAllModalTotal }} registros</strong> que coinciden con la
-                    búsqueda y filtros actuales?
+        <div class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-4 py-6 sm:px-0">
+            <div class="fixed inset-0 bg-[#171717] opacity-25" wire:click="dismissSelectAllModal"></div>
+            <div class="relative z-10 mx-auto mb-6 w-full max-w-lg overflow-hidden rounded-xl bg-white p-9 shadow-[8px_8px_30px_0_rgba(0,0,0,0.28)]">
+                <p class="mb-6 text-center text-gray-700">
+                    Has seleccionado {{ $processedRows->count() }} registros en esta página.
+                    ¿Deseas seleccionar los {{ $processedRows->total() }} registros que coinciden con los filtros actuales?
                 </p>
                 <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
                     <button type="button" wire:click="dismissSelectAllModal"

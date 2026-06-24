@@ -367,3 +367,8 @@ Route::get('/po-confirmation-test', function () {
 })->name('po.confirmation.test');
 
 require __DIR__.'/auth.php';
+Route::middleware(['auth'])->group(function () {
+    Route::get('/agent', function () {
+        return view('agent.index');
+    })->name('agent.index');
+});

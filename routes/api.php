@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\DashboardKPIController;
+use App\Http\Controllers\AgentOrdersController;
 
 // Rutas públicas (sin autenticación)
 Route::get('/status', function () {
@@ -24,11 +25,9 @@ Route::post('/purchase-orders/search', [PurchaseOrderController::class, 'index']
 Route::post('/purchase-orders/bulk', [PurchaseOrderController::class, 'bulk']);
 Route::post('/purchase-orders/bulk-update', [PurchaseOrderController::class, 'bulkUpdate']);
 
-
 // Rutas protegidas con autenticación de token API
 Route::middleware('api.token')->group(function () {
 
-    // Información del usuario autenticado
     Route::get('/user', function (Request $request) {
         return response()->json([
             'user' => $request->user(),
@@ -36,7 +35,6 @@ Route::middleware('api.token')->group(function () {
         ]);
     });
 
-    // Ejemplo: Obtener órdenes de compra del usuario
     Route::get('/my-purchase-orders', function (Request $request) {
         $user = $request->user();
         $orders = $user->company ?
@@ -50,7 +48,6 @@ Route::middleware('api.token')->group(function () {
         ]);
     });
 
-    // Ejemplo: Crear una nueva orden de compra
     Route::post('/my-purchase-orders', function (Request $request) {
         $validated = $request->validate([
             'vendor_id' => 'required|exists:vendors,id',
@@ -58,7 +55,6 @@ Route::middleware('api.token')->group(function () {
             'total_amount' => 'required|numeric|min:0'
         ]);
 
-        // Aquí iría la lógica para crear la orden
         return response()->json([
             'message' => 'Orden de compra creada exitosamente',
             'data' => $validated,
@@ -66,7 +62,6 @@ Route::middleware('api.token')->group(function () {
         ], 201);
     });
 
-    // Ejemplo: Obtener estadísticas del usuario
     Route::get('/dashboard-stats', function (Request $request) {
         $user = $request->user();
 
@@ -84,7 +79,6 @@ Route::middleware('api.token')->group(function () {
         ]);
     });
 
-    // Ejemplo: Actualizar perfil del usuario
     Route::put('/profile', function (Request $request) {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -106,10 +100,7 @@ Route::middleware('api.token')->group(function () {
 // Dashboard KPI Routes (con autenticación web)
 // ============================================
 Route::middleware('auth:sanctum')->prefix('dashboard-kpi')->group(function () {
-    // Datos generales del dashboard
     Route::get('/', [DashboardKPIController::class, 'index']);
-    
-    // Vista Tendencia - Cantidad de PO
     Route::get('/pos-by-stage', [DashboardKPIController::class, 'posByStage']);
     Route::get('/pos-delay-cl', [DashboardKPIController::class, 'posDelayCL']);
     Route::get('/pos-advance-cl', [DashboardKPIController::class, 'posAdvanceCL']);
@@ -117,19 +108,24 @@ Route::middleware('auth:sanctum')->prefix('dashboard-kpi')->group(function () {
     Route::get('/transshipment', [DashboardKPIController::class, 'transshipment']);
     Route::get('/pos-with-ata', [DashboardKPIController::class, 'posWithATA']);
     Route::get('/transit-time', [DashboardKPIController::class, 'transitTime']);
-    
-    // Vista Comparativo
     Route::post('/compare-atd', [DashboardKPIController::class, 'compareATD']);
     Route::post('/compare-ata', [DashboardKPIController::class, 'compareATA']);
     Route::post('/compare-delay-cl', [DashboardKPIController::class, 'compareDelayCL']);
     Route::post('/compare-advance-cl', [DashboardKPIController::class, 'compareAdvanceCL']);
-    
-    // Vista PO vs TEUs
     Route::get('/po-vs-teus/stage', [DashboardKPIController::class, 'poVsTeusByStage']);
     Route::get('/po-vs-teus/period', [DashboardKPIController::class, 'poVsTeusByPeriod']);
     Route::get('/po-vs-teus/vendor', [DashboardKPIController::class, 'poVsTeusByVendor']);
     Route::get('/po-vs-teus/shipping-line', [DashboardKPIController::class, 'poVsTeusByShippingLine']);
-    
-    // Vista Proyección
     Route::get('/future-arrivals', [DashboardKPIController::class, 'futureArrivals']);
+});
+
+// ============================================
+// Agente IA — endpoints REST internos
+// ============================================
+Route::prefix('agent')->middleware(\App\Http\Middleware\AgentTokenAuth::class)->group(function () {
+    Route::get('orders',                    [AgentOrdersController::class, 'orders']);
+    Route::get('orders/ata',                [AgentOrdersController::class, 'ordersByAta']);
+    Route::get('orders/delayed-in-transit', [AgentOrdersController::class, 'ordersDelayedInTransit']);
+    Route::get('shipments',                 [AgentOrdersController::class, 'shipments']);
+    Route::get('shipments/{id}',            [AgentOrdersController::class, 'shipmentById']);
 });

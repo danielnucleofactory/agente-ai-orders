@@ -75,7 +75,11 @@
 .tabs-container {
     background: white;
     border-bottom: 2px solid #e8edec;
-    padding: 0 32px;
+    padding: 0;
+    margin-left: -2.5rem;
+    margin-right: -2.5rem;
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
 }
 
 .tabs {
@@ -104,8 +108,9 @@
 
 .tab.active {
     color: #1AAD8A;
-    border-bottom-color: #1AAD8A;
+    border-bottom: 3px solid #1AAD8A;
     background: #f8faf9;
+    margin-bottom: -2px;
 }
 
 /* Sub-tabs */
@@ -209,12 +214,16 @@
 
 /* Tables */
 .table-section {
-    margin-bottom: 40px;
-    background: #fff;
-    border: 1px solid #e5e7eb;
+    background: white;
     border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+    padding: 20px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 .table-header {
@@ -675,11 +684,76 @@
     background: #f8faf9;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* ============================================
+   RESPONSIVE - Mobile, Tablet, Desktop
+   ============================================ */
+
+/* Tablet (640px - 1024px) */
+@media (max-width: 1024px) {
+    .filters-section {
+        gap: 12px;
+    }
+
+    .filter-group {
+        width: 140px;
+    }
+
+    .filter-group select,
+    .filter-group input[type="date"],
+    .filter-group input[type="text"] {
+        width: 140px;
+        font-size: 14px;
+    }
+
+    .kpi-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+
+    .tabs-container {
+        padding: 0 16px;
+        overflow-x: auto;
+    }
+
+    .tabs {
+        min-width: max-content;
+    }
+
+    .tab {
+        padding: 14px 20px;
+        font-size: 14px;
+    }
+
+    .trend-table-section {
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .trend-table-section > div {
+        flex-direction: column !important;
+    }
+
+    .trend-table-section .table-card,
+    .trend-table-section .filters-panel {
+        width: 100% !important;
+    }
+}
+
+/* Móvil (menos de 640px) */
+@media (max-width: 640px) {
+    .dashboard-kpi-container {
+        padding: 0;
+    }
+
+    /* Filtros en columna */
     .filters-section {
         flex-direction: column;
         align-items: stretch;
+        gap: 10px;
+        margin-bottom: 16px;
     }
 
     .filter-group {
@@ -687,20 +761,177 @@
     }
 
     .filter-group select,
-    .filter-group input {
+    .filter-group input[type="date"],
+    .filter-group input[type="text"] {
         width: 100% !important;
+        font-size: 15px;
+        height: 44px;
+    }
+
+    .action-buttons {
+        flex-direction: row;
+        width: 100%;
+        gap: 10px;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        flex: 1;
+        height: 44px;
+        font-size: 15px;
+    }
+
+    /* Tabs scroll horizontal */
+    .tabs-container {
+        padding: 0 8px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .tabs {
+        min-width: max-content;
+        gap: 2px;
+    }
+
+    .tab {
+        padding: 12px 14px;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    /* Subtabs */
+    .subtabs-container {
+        padding: 10px 8px;
         overflow-x: auto;
+    }
+
+    .subtabs {
+        min-width: max-content;
+    }
+
+    /* KPI Cards — 2 columnas en móvil */
+    .kpi-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .kpi-card {
+        padding: 14px;
+    }
+
+    .kpi-card-title {
+        font-size: 11px;
+        margin-bottom: 8px;
+    }
+
+    .kpi-card-value {
+        font-size: 24px;
+        margin-bottom: 4px;
+    }
+
+    .kpi-card-subtitle {
+        font-size: 11px;
+    }
+
+    /* Tablas con scroll horizontal */
+    .table-section {
+        padding: 14px 10px;
+        overflow-x: auto;
+    }
+
+    .table-section > div {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .data-table {
         font-size: 12px;
+        min-width: 500px;
     }
 
-    .content-area {
-        padding: 16px;
+    .data-table th,
+    .data-table td {
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
+    .table-title {
+        font-size: 15px;
+    }
+
+    .table-description {
+        font-size: 12px;
+    }
+
+    /* Trend table section */
+    .trend-table-section {
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .trend-table-section > div {
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+
+    .trend-table-section .table-card,
+    .trend-table-section .filters-panel {
+        width: 100% !important;
+    }
+
+    /* Filtros adicionales en móvil */
+    .additional-filters-buttons {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .filter-button {
+        min-height: 50px;
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+
+    .filter-button-title {
+        font-size: 13px;
+    }
+
+    .filter-button-subtitle {
+        font-size: 11px;
+        display: none;
+    }
+
+    /* Comparación de períodos en móvil */
+    .comparison-period-filters {
+        padding: 14px !important;
+    }
+
+    .comparison-period-filters > div > div:last-child {
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+
+    /* Proyección tabla */
+    #proy-table {
+        min-width: 600px;
+    }
+
+    .table-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+}
+
+/* Ajuste para el layout con sidebar */
+@media (max-width: 640px) {
+    .w-full.px-10 {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
     }
 }
 
@@ -721,4 +952,48 @@
 .comparison-period-filters input.flatpickr-input.flatpickr-initialized {
     width: 150px !important;
     height: 40px !important;
+}
+/* Móvil — Trend section apilada */
+@media (max-width: 640px) {
+    .trend-table-section {
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    /* Apilar tabla y filtros adicionales en columna */
+    .trend-table-section > div[style*="display: flex"],
+    .trend-table-section > div[style*="display:flex"] {
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+
+    .trend-table-section .table-card,
+    .trend-table-section .filters-panel,
+    div[style*="width: 66.67%"],
+    div[style*="width: 33.33%"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    /* Filtros adicionales en grid de 2 columnas */
+    .additional-filters-buttons,
+    div[style*="flex-direction: column"][style*="gap: 12px"] {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+
+    /* Botones de filtro más compactos */
+    div[style*="min-height: 60px"] {
+        min-height: 48px !important;
+        padding: 8px 10px !important;
+    }
+
+    /* Ocultar subtítulos en botones para ahorrar espacio */
+    div[style*="font-size: 12px; color: #6b7280"] {
+        display: none !important;
+    }
 }

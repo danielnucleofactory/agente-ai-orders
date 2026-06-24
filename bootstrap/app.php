@@ -16,8 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ForceSpanishLocale::class,
         ]);
         $middleware->alias([
-            'permission' => \App\Http\Middleware\CheckPermission::class,
-            'api.token' => \App\Http\Middleware\ApiTokenAuth::class,
+            'permission'  => \App\Http\Middleware\CheckPermission::class,
+            'api.token'   => \App\Http\Middleware\ApiTokenAuth::class,
+            'agent.token' => \App\Http\Middleware\AgentTokenAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
