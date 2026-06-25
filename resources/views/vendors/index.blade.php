@@ -3,7 +3,7 @@
 @endphp
 
 <x-app-layout>
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <x-view-title>
             <x-slot:title>
                 Gestión de Proveedores
@@ -15,8 +15,8 @@
         </x-view-title>
 
         @can('has_create_vendors')
-            <a href="{{ route('vendors.create') }}">
-                <x-primary-button>
+            <a href="{{ route('vendors.create') }}" class="w-full sm:w-auto">
+                <x-primary-button class="w-full sm:w-auto">
                     Nuevo Proveedor
                 </x-primary-button>
             </a>
@@ -44,7 +44,6 @@
                 $filterable = [];
                 $filterOptions = [];
             @endphp
-
 
             <livewire:components.reusable-table
                 :headers="$headers"

@@ -11,10 +11,10 @@
         <!-- Settings Dropdown -->
         <div class="hidden space-x-4 sm:flex sm:items-center sm:ms-6">
             <!-- Company Selector -->
-            <div class="min-w-[200px]">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
-                <livewire:partials.company-selector/>
-            </div>
+            <div class="flex items-center gap-2">
+            <label class="text-sm font-medium text-gray-500 whitespace-nowrap">Cliente:</label>
+            <livewire:partials.company-selector/>
+        </div>
 
             <div class="h-10 bg-[#B9B9B9] w-[1px]"></div>
 

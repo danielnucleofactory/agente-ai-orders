@@ -1,3 +1,33 @@
+<style>
+@media (max-width: 767px) {
+    .po-form-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+    }
+    .po-form-grid > * {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    .po-form-grid input,
+    .po-form-grid select {
+        max-width: 280px !important;
+    }
+    .po-form-grid > div > div,
+    .po-form-grid > div {
+        grid-column: span 1 !important;
+    }
+
+    /* Botón crear orden en móvil */
+    .po-header-actions {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        width: 100% !important;
+    }
+    .po-header-actions > * {
+        width: 100% !important;
+    }
+}
+</style>
 @php
     $lockApiFieldsOnEdit = (bool) $id;
     $lockTrackingDatesOnEdit = ! empty($id) ? (bool) ($trackingDatesLocked ?? false) : true;
@@ -72,7 +102,7 @@
         </div>
     </div>
 
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <x-view-title>
             <x-slot:title>
                 {{ isset($id) ? 'Editar Orden de compra: ' . $order_number : 'Generar nueva orden de compra' }}
@@ -317,7 +347,7 @@
                     </div>
 
                     <h3 class="text-lg font-bold text-[#1AAD8A]">Identificadores y transporte</h3>
-                    <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
+                    <div class="po-form-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-6">
 
                         <!-- Itinerario -->
                         <div class="col-span-3">
@@ -459,7 +489,7 @@
             <div class="space-y-6 w-full">
                 <h3 class="text-lg font-bold text-[#1AAD8A]">Datos Proveedor</h3>
 
-                <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
+                <div class="po-form-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-6">
                     <x-form-select label="Seleccionar Nombre del Proveedor <span class='text-red-500'>*</span>" name="vendor_id" wireModel="vendor_id"
                         wire:change="onVendorSelected"
                         :options="$vendorArray" :error="$errors->has('vendor_id') ? true : false" :disabled="$lockApiFieldsOnEdit" />
@@ -480,7 +510,7 @@
             <div class="hidden space-y-6 w-full">
                 <h3 class="text-lg font-bold text-[#1AAD8A]">Datos Ship to</h3>
 
-                <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
+                <div class="po-form-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-6">
                     <x-form-select label="Seleccionar Ship to" name="ship_to_id" wireModel="ship_to_id"
                         :options="$shipToArray" :error="$errors->has('ship_to_id') ? true : false" />
                 </div>
@@ -488,7 +518,7 @@
 
             <div class="hidden space-y-6 w-full">
                 <h3 class="text-lg font-bold text-[#1AAD8A]">Datos de facturación</h3>
-                <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
+                <div class="po-form-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-6">
                     <x-form-select label="Seleccionar Bill to" class="hidden" name="bill_to_id" wireModel="bill_to_id"
                         :options="$billToArray" :error="$errors->has('bill_to_id') ? true : false" />
                 </div>
@@ -496,7 +526,7 @@
 
             <div class="hidden space-y-6 w-full">
                 <h3 class="text-lg font-bold text-[#1AAD8A]">Dimensiones en centímetros</h3>
-                <div class="grid grid-cols-[1fr,1fr,1fr,1fr] gap-x-5 gap-y-6">
+                <div class="po-form-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-6">
                     <x-form-input class="hidden">
                         <x-slot:label>
                             Largo (in)
@@ -548,7 +578,7 @@
 
             <div class="space-y-6 w-full">
                 <h3 class="text-lg font-bold text-[#1AAD8A]">Dimensiones</h3>
-                <div class="grid grid-cols-[1fr,1fr,1fr,1fr] gap-x-5 gap-y-6">
+                <div class="po-form-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-6">
                     <x-form-input>
                         <x-slot:label>CBM (m³)</x-slot:label>
                         <x-slot:input
@@ -623,7 +653,7 @@
             <div class="space-y-6 w-full">
                 <h3 class="text-lg font-bold text-[#1AAD8A]">Fechas</h3>
 
-                <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
+                <div class="po-form-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-6">
 
                     <!-- Booking y coordinación -->
                     <div class="col-span-3">
@@ -775,7 +805,7 @@
             <div class="space-y-6 w-full">
                 <h3 class="text-lg font-bold text-[#1AAD8A]">Información Adicional</h3>
 
-                <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
+                <div class="po-form-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-6">
 
                     <!-- Configuración del envío -->
                     <div class="col-span-3">
@@ -994,7 +1024,7 @@
                 <div class="space-y-6 w-full">
                     <h3 class="text-lg font-bold text-[#1AAD8A]">Datos de negocio</h3>
 
-                    <div class="grid grid-cols-[1fr,1fr,1fr] gap-x-5 gap-y-6">
+                    <div class="po-form-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-6">
 
                         <!-- Proveedores y contratación -->
                         <div class="col-span-3">
@@ -1134,7 +1164,7 @@
 
             <div class="mb-10 space-y-6 w-full">
                 <h3 class="text-lg font-bold text-[#1AAD8A]">Estado de llegada</h3>
-                <div class="grid grid-cols-[1fr,1fr] gap-x-5 gap-y-f6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6">
                     <x-form-input>
                         <x-slot:label>Estado</x-slot:label>
                         <x-slot:input name="arrival_status" wire:model="arrival_status" placeholder="Se calcula automáticamente" readonly class="bg-gray-100"></x-slot:input>

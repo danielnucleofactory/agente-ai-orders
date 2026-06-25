@@ -15,7 +15,7 @@
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-800">Asistente IA</h1>
+                    <h1 class="text-2xl font-bold text-gray-800">Asistente de IA</h1>
                     <p class="text-sm text-gray-500">Consulta información de tus órdenes en lenguaje natural</p>
                 </div>
                 <div class="ml-auto flex items-center gap-2">

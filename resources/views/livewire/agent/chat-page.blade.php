@@ -48,12 +48,13 @@
                     </svg>
                 </div>
                 <div class="rounded-tl-sm rounded-tr-2xl rounded-br-2xl rounded-bl-2xl bg-white px-5 py-3 shadow-sm" style="border: 1px solid #e5e7eb;">
-                    <div class="flex gap-1 items-center">
-                        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:0ms"></span>
-                        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:150ms"></span>
-                        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:300ms"></span>
-                    </div>
-                </div>
+        <div class="flex gap-2 items-center">
+        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:0ms"></span>
+        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:150ms"></span>
+        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:300ms"></span>
+        <span class="text-xs text-gray-400 ml-1">Procesando tu consulta...</span>
+    </div>
+</div>
             </div>
         @endif
     </div>

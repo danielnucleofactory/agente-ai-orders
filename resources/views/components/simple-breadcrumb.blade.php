@@ -28,6 +28,7 @@
                     'ship-to' => 'Direcciones de envío',
                     'bill-to' => 'Facturación',
                     'authorizations' => 'Autorizaciones',
+                    'agent' => 'Agente',
                 ];
 
                 echo $translations[$lastSegment] ?? ucfirst(str_replace(['-', '_'], ' ', $lastSegment));

@@ -74,10 +74,16 @@ TOOLS DISPONIBLES:
 - get_orders_in_transshipment: órdenes en puerto de transbordo
 - get_orders_with_alerts: órdenes con alertas o retrasos activos
 - get_orders_by_ata: órdenes filtradas por fecha ATA
-- get_shipment_eta: ETA/ATA de un embarque específico por número DOC
+- get_shipment_eta: ETA/ATA de un embarque específico. SOLO usar con números de documento DOC-XXXX, NUNCA con números de orden PO-XXXX
 - get_orders_summary: resumen general de todas las órdenes
 - get_orders_pending_confirmation: órdenes pendientes de confirmación
-- get_orders_delayed_in_transit: órdenes retrasadas Y en tránsito simultáneamente";
+- get_orders_delayed_in_transit: órdenes retrasadas Y en tránsito simultáneamente
+
+REGLAS PARA CONSULTAS DE ÓRDENES ESPECÍFICAS:
+- Si el usuario pide detalles de una orden PO-XXXX específica, usa get_orders_in_transit o get_orders_summary y filtra el resultado por ese número de orden
+- NUNCA uses get_shipment_eta para buscar una orden de compra PO-XXXX
+- get_shipment_eta es EXCLUSIVAMENTE para documentos de embarque con formato DOC-XXXX
+- Si el usuario menciona un número de orden con texto adicional (ej: 'PO-2026-001: ETA 20/07/2026'), extrae solo el número de orden (PO-2026-001) e ignora el texto extra";
 
         $apiMessages = [['role' => 'system', 'content' => $systemPrompt]];
 

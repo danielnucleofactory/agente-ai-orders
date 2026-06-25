@@ -13,7 +13,11 @@
                 box-sizing: border-box !important;
                 margin: 0 !important;
             }
-
+            @media (min-width: 640px) {
+    .period-separator {
+        display: block !important;
+    }
+}
             @keyframes spin {
                 from { transform: rotate(0deg); }
                 to { transform: rotate(360deg); }
@@ -381,7 +385,7 @@
 
                 <div class="comparison-period-filters" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 24px;">
     <h4 style="font-size: 16px; font-weight: 600; color: #374151; margin: 0 0 20px 0; font-family: 'Lato', sans-serif;">Períodos de Comparación</h4>
-    <div style="display: flex; align-items: flex-end; gap: 40px; flex-wrap: wrap;">
+    <div style="display: flex; align-items: flex-end; gap: 40px; flex-wrap: wrap; row-gap: 16px;">
 
         {{-- Período A --}}
         <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -401,7 +405,7 @@
         </div>
 
         {{-- Separador --}}
-        <div style="width: 1px; height: 60px; background: #e5e7eb; margin-bottom: 4px;"></div>
+        <div style="width: 1px; height: 60px; background: #e5e7eb; margin-bottom: 4px; display: none;" class="period-separator"></div>
 
         {{-- Período B --}}
         <div style="display: flex; flex-direction: column; gap: 8px;">
