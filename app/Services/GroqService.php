@@ -14,7 +14,7 @@ class GroqService
     public function __construct()
     {
         $this->apiKey = config('services.groq.api_key');
-        $this->model  = 'llama-3.3-70b-versatile';
+        $this->model  = config('agent.models.primary.model', 'llama-3.3-70b-versatile');
         $this->apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
     }
 
@@ -23,8 +23,8 @@ class GroqService
         $payload = [
             'model'       => $this->model,
             'messages'    => $messages,
-            'max_tokens'  => 1024,
-            'temperature' => 0.3,
+            'max_tokens'  => config('agent.generation.max_tokens', 1024),
+            'temperature' => config('agent.generation.temperature', 0.3),
         ];
 
         if (!empty($tools)) {
@@ -38,12 +38,24 @@ class GroqService
                 'Content-Type'  => 'application/json',
             ])->timeout(30)->post($this->apiUrl, $payload);
 
+            // Rate limit — Gemini fallback desactivado temporalmente
+            // Para reactivar: reemplazar el return por:
+            // return app(GeminiService::class)->chat($messages, $tools);
+            if ($response->status() === 429) {
+                Log::warning('Groq rate limit alcanzado — fallback desactivado temporalmente');
+                return config('agent.error_messages.rate_limit_gemini',
+                    'Estoy experimentando alta demanda en este momento. Por favor espera un momento e intenta de nuevo.'
+                );
+            }
+
             if ($response->failed()) {
                 Log::error('Groq API error', [
                     'status' => $response->status(),
                     'body'   => $response->body(),
                 ]);
-                return 'Lo siento, hubo un error al procesar tu consulta. Por favor intenta de nuevo.';
+                return config('agent.error_messages.query_error',
+                    'Lo siento, hubo un error al procesar tu consulta. Por favor intenta de nuevo.'
+                );
             }
 
             $data    = $response->json();
@@ -53,29 +65,42 @@ class GroqService
                 return 'No pude obtener una respuesta. Por favor intenta de nuevo.';
             }
 
-            if (isset($message['tool_calls'])) {
-                return $this->handleToolCalls($message['tool_calls'], $messages, $tools);
+            // Soporte para múltiples tool calls
+            if (isset($message['tool_calls']) && !empty($message['tool_calls'])) {
+                return $this->handleMultipleToolCalls($message['tool_calls'], $messages, $tools);
             }
 
             return $message['content'] ?? 'Sin respuesta.';
 
         } catch (\Exception $e) {
             Log::error('Groq Service exception', ['error' => $e->getMessage()]);
-            return 'Ocurrió un error de conexión. Por favor intenta de nuevo.';
+            return config('agent.error_messages.query_error',
+                'Ocurrió un error de conexión. Por favor intenta de nuevo.'
+            );
         }
     }
 
-    private function handleToolCalls(array $toolCalls, array $messages, array $tools): string
+    /**
+     * Maneja una o múltiples tool calls de Groq en una sola respuesta.
+     */
+    private function handleMultipleToolCalls(array $toolCalls, array $messages, array $tools): string
     {
+        // Agregar mensaje del asistente con todas las tool calls
         $messages[] = [
             'role'       => 'assistant',
             'tool_calls' => $toolCalls,
         ];
 
+        // Ejecutar todas las tools y agregar sus resultados
         foreach ($toolCalls as $toolCall) {
             $toolName = $toolCall['function']['name'];
             $args     = json_decode($toolCall['function']['arguments'], true) ?? [];
             $result   = $this->executeTool($toolName, $args);
+
+            Log::info('[Groq] Tool ejecutada', [
+                'tool'   => $toolName,
+                'result' => array_keys($result),
+            ]);
 
             $messages[] = [
                 'role'         => 'tool',
@@ -84,11 +109,12 @@ class GroqService
             ];
         }
 
+        // Segunda llamada con todos los resultados
         $payload = [
             'model'       => $this->model,
             'messages'    => $messages,
-            'max_tokens'  => 1024,
-            'temperature' => 0.3,
+            'max_tokens'  => config('agent.generation.max_tokens', 1024),
+            'temperature' => config('agent.generation.temperature', 0.3),
         ];
 
         try {
@@ -97,12 +123,24 @@ class GroqService
                 'Content-Type'  => 'application/json',
             ])->timeout(30)->post($this->apiUrl, $payload);
 
+            // Rate limit en segunda llamada — Gemini fallback desactivado temporalmente
+            // Para reactivar: reemplazar el return por:
+            // return app(GeminiService::class)->chat($messages, $tools);
+            if ($response->status() === 429) {
+                Log::warning('Groq rate limit en segunda llamada — fallback desactivado temporalmente');
+                return config('agent.error_messages.rate_limit_gemini',
+                    'Estoy experimentando alta demanda en este momento. Por favor espera un momento e intenta de nuevo.'
+                );
+            }
+
             if ($response->failed()) {
                 Log::error('Groq API error (segunda llamada)', [
                     'status' => $response->status(),
                     'body'   => $response->body(),
                 ]);
-                return 'Lo siento, hubo un error al procesar tu consulta. Por favor intenta de nuevo.';
+                return config('agent.error_messages.query_error',
+                    'Lo siento, hubo un error al procesar tu consulta. Por favor intenta de nuevo.'
+                );
             }
 
             $data    = $response->json();
@@ -116,8 +154,10 @@ class GroqService
             return $content;
 
         } catch (\Exception $e) {
-            Log::error('Groq handleToolCalls exception', ['error' => $e->getMessage()]);
-            return 'Ocurrió un error de conexión. Por favor intenta de nuevo.';
+            Log::error('Groq handleMultipleToolCalls exception', ['error' => $e->getMessage()]);
+            return config('agent.error_messages.query_error',
+                'Ocurrió un error de conexión. Por favor intenta de nuevo.'
+            );
         }
     }
 

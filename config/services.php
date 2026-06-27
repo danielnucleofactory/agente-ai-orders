@@ -47,10 +47,10 @@ return [
     'porth' => [
         'api_key'                          => env('PORTH_API_KEY'),
         'api_url'                          => env('PORTH_API_URL', 'https://api.porth.app'),
-        'base_url'                         => env('PORTH_BASE_URL', 'https://porth-api.fly.dev'), // Legacy
+        'base_url'                         => env('PORTH_BASE_URL', 'https://porth-api.fly.dev'),
         'auth_header'                      => env('PORTH_AUTH_HEADER', 'apikey'),
         'enabled'                          => env('PORTH_SYNC_ENABLED', true),
-        'sync_enabled'                     => env('PORTH_SYNC_ENABLED', true), // Legacy
+        'sync_enabled'                     => env('PORTH_SYNC_ENABLED', true),
         'max_retries'                      => env('PORTH_MAX_RETRIES', 5),
         'timeout'                          => env('PORTH_TIMEOUT', 90),
         'sync_dry_run'                     => env('PORTH_SYNC_DRY_RUN', false),
@@ -63,14 +63,13 @@ return [
         'failed_retry_base_minutes'        => env('PORTH_FAILED_RETRY_BASE_MINUTES', 60),
         'unmatched_port_alert_email'       => env('PORTH_UNMATCHED_PORT_ALERT_EMAIL'),
         'unmatched_port_alert_ttl_hours'   => env('PORTH_UNMATCHED_PORT_ALERT_TTL_HOURS', 12),
-        // Automatización de transiciones Kanban según estado Porth
         'kanban_auto_transition' => env('PORTH_KANBAN_AUTO_TRANSITION', true),
         'kanban_stages' => [
-            'produccion'  => ['Producción', 'Produccion'],
-            'booking'     => ['Booking'],
-            'consolidador'=> ['Consolidador', 'Consolidación', 'Consolidacion', 'Pick Up'],
-            'en_transito' => ['En Tránsito', 'En tránsito', 'Transito', 'Tránsito', 'En tránsito terrestre'],
-            'puerto'      => ['Puerto', 'Llegada al hub'],
+            'produccion'   => ['Producción', 'Produccion'],
+            'booking'      => ['Booking'],
+            'consolidador' => ['Consolidador', 'Consolidación', 'Consolidacion', 'Pick Up'],
+            'en_transito'  => ['En Tránsito', 'En tránsito', 'Transito', 'Tránsito', 'En tránsito terrestre'],
+            'puerto'       => ['Puerto', 'Llegada al hub'],
         ],
     ],
 
@@ -99,6 +98,10 @@ return [
 
     'groq' => [
         'api_key' => env('GROQ_API_KEY'),
+    ],
+
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
     ],
 
     // -------------------------------------------------------------------------
