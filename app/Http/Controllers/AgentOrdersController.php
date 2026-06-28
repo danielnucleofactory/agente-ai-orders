@@ -126,6 +126,52 @@ class AgentOrdersController extends Controller
         ]);
     }
 
+    public function ordersByEta(Request $request): JsonResponse
+{
+    $companyId  = $this->getCompanyId($request);
+    $dateFrom   = $request->query('date_from');
+    $dateTo     = $request->query('date_to');
+    $month      = $request->query('month');
+    $year       = $request->query('year');
+
+    $query = DB::table('purchase_orders')
+        ->where('company_id', $companyId)
+        ->where('status', '!=', 'cancelled')
+        ->whereNotNull('porth_first_eta');
+
+    if ($month && $year) {
+        $query->whereMonth('porth_first_eta', (int)$month)
+              ->whereYear('porth_first_eta', (int)$year);
+    } elseif ($dateFrom && $dateTo) {
+        $query->whereBetween('porth_first_eta', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59']);
+    } elseif ($dateFrom) {
+        $query->whereDate('porth_first_eta', $dateFrom);
+    } else {
+        return response()->json(['error' => 'Necesito al menos una fecha o mes/año para buscar por ETA.'], 422);
+    }
+
+    $orders = $query
+        ->select('order_number', 'porth_first_eta', 'porth_phase', 'arrival_status', 'delay_days')
+        ->orderBy('porth_first_eta', 'asc')
+        ->get();
+
+    $total = $orders->count();
+
+    if ($month && $year) {
+        $label = "en {$month}/{$year}";
+    } elseif ($dateFrom && $dateTo) {
+        $label = "entre $dateFrom y $dateTo";
+    } else {
+        $label = "el $dateFrom";
+    }
+
+    return response()->json([
+        'total'   => $total,
+        'orders'  => $orders,
+        'message' => "$total órdenes con ETA $label.",
+    ]);
+}
+
     public function shipments(Request $request): JsonResponse
     {
         $companyId = $this->getCompanyId($request);
@@ -210,6 +256,58 @@ class AgentOrdersController extends Controller
             'total'   => $orders->count(),
             'orders'  => $orders,
             'message' => $orders->count() . ' órdenes retrasadas en tránsito.',
+        ]);
+    }
+
+    public function teusSummary(Request $request): JsonResponse
+    {
+        $companyId = $this->getCompanyId($request);
+        $status    = $request->query('status');
+
+        $query = DB::table('purchase_orders')
+            ->where('company_id', $companyId)
+            ->where('status', '!=', 'cancelled')
+            ->whereNotNull('container_type');
+
+        if ($status === 'in_transit') {
+            $query->whereIn('porth_phase', [
+                '40_in_transit',
+                '30_in_transit',
+                'in_transit',
+                'shipped',
+                'on_vessel',
+            ]);
+        }
+
+        $orders = $query->select('order_number', 'container_type', 'porth_phase')->get();
+
+        $totalTeus = 0;
+        $breakdown = [];
+
+        foreach ($orders as $order) {
+            $containerType = strtolower($order->container_type ?? '');
+            $teus = 1;
+
+            if (str_contains($containerType, '40') || str_contains($containerType, 'hc') || str_contains($containerType, 'hq')) {
+                $teus = 2;
+            } elseif (str_contains($containerType, '45')) {
+                $teus = 2.25;
+            } elseif (str_contains($containerType, '20')) {
+                $teus = 1;
+            }
+
+            $totalTeus += $teus;
+            $breakdown[$order->container_type] = ($breakdown[$order->container_type] ?? 0) + $teus;
+        }
+
+        $totalOrders = $orders->count();
+        $label       = $status === 'in_transit' ? 'en tránsito' : 'activas';
+
+        return response()->json([
+            'total_teus'   => round($totalTeus, 2),
+            'total_orders' => $totalOrders,
+            'breakdown'    => $breakdown,
+            'message'      => "Tienes $totalTeus TEUs en $totalOrders órdenes $label.",
         ]);
     }
 }

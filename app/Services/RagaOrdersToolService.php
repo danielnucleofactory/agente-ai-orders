@@ -40,25 +40,25 @@ class RagaOrdersToolService
     // -----------------------------------------------------------------------
 
     private function queryOperationalData(array $args): array
-    {
-        try {
-            $service = app(OperationalDataQueryService::class);
-            $result  = $service->run($args, $this->companyId);
+{
+    try {
+        $service = app(OperationalDataQueryService::class);
+        $result  = $service->run($args, $this->companyId);
 
-            if (!$result['success']) {
-                return ['error' => $result['error']];
-            }
-
-            return $result['data'];
-
-        } catch (\Throwable $e) {
-            Log::error('queryOperationalData exception', [
-                'error' => $e->getMessage(),
-                'args'  => $args,
-            ]);
-            return ['error' => 'Error al procesar la consulta operativa.'];
+        if (!$result['success']) {
+            return ['error' => $result['error']];
         }
+
+        return $result['data'];
+
+    } catch (\Throwable $e) {
+        Log::error('queryOperationalData exception', [
+            'error' => $e->getMessage(),
+            'args'  => $args,
+        ]);
+        return ['error' => 'Error al procesar la consulta operativa.'];
     }
+}
 
     // -----------------------------------------------------------------------
     // Tools específicas existentes (sin cambios)

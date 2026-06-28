@@ -48,13 +48,13 @@
                     </svg>
                 </div>
                 <div class="rounded-tl-sm rounded-tr-2xl rounded-br-2xl rounded-bl-2xl bg-white px-5 py-3 shadow-sm" style="border: 1px solid #e5e7eb;">
-        <div class="flex gap-2 items-center">
-        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:0ms"></span>
-        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:150ms"></span>
-        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:300ms"></span>
-        <span class="text-xs text-gray-400 ml-1">Procesando tu consulta...</span>
-    </div>
-</div>
+                    <div class="flex gap-2 items-center">
+                        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:0ms"></span>
+                        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:150ms"></span>
+                        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:300ms"></span>
+                        <span class="text-xs text-gray-400 ml-1">Procesando tu consulta...</span>
+                    </div>
+                </div>
             </div>
         @endif
     </div>
@@ -98,6 +98,15 @@
                 <path d="M3 6h18M19 6l-1 14H6L5 6M8 6V4h8v2"/>
             </svg>
         </button>
+
+        {{-- Selector de zona horaria --}}
+        <select
+            wire:model.live="timezone"
+            class="flex-shrink-0 rounded-full border px-3 py-2 text-xs outline-none transition"
+            style="border-color: #e5e7eb; background: #F7F7F7; color: #6b7280;">
+            <option value="America/Costa_Rica">🇨🇷 Costa Rica</option>
+            <option value="America/Santiago">🇨🇱 Chile</option>
+        </select>
 
         <input
             wire:model="input"
