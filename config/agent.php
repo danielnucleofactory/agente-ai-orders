@@ -6,16 +6,13 @@ return [
     |--------------------------------------------------------------------------
     | Configuración del Agente IA — RAGA Orders
     |--------------------------------------------------------------------------
-    |
-    | Configuración centralizada para el agente IA. Incluye modelos,
-    | límites, catálogo de consultas operativas y reglas de seguridad.
-    |
     */
 
     /*
     |--------------------------------------------------------------------------
     | Modelos de IA — Cadena de fallback
-    | Orden: Groq → Gemini
+    | Orden actual: Groq (activo)
+    | Pendiente aprobación del jefe: Gemini y Cerebras
     |--------------------------------------------------------------------------
     */
     'models' => [
@@ -23,9 +20,17 @@ return [
             'provider' => 'groq',
             'model'    => 'llama-3.3-70b-versatile',
         ],
+        // Fallback desactivado — pendiente aprobación del jefe
+        // Para reactivar: conectar en GroqService.php
         'fallback' => [
             'provider' => 'gemini',
             'model'    => 'gemini-2.5-flash',
+        ],
+        // Terciario desactivado — pendiente aprobación del jefe
+        // Para reactivar: conectar en GeminiService.php
+        'tertiary' => [
+            'provider' => 'cerebras',
+            'model'    => 'gpt-oss-120b',
         ],
     ],
 

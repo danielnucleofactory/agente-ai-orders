@@ -82,9 +82,11 @@ class GeminiService
                 ]);
 
                 if ($response->status() === 429 || $response->status() === 503) {
-                    Log::warning('Gemini rate limit alcanzado — ambas APIs no disponibles');
-                    return config('agent.error_messages.rate_limit_gemini',
-                        'Estoy experimentando alta demanda en este momento. Por favor espera un momento e intenta de nuevo.'
+                    Log::warning('Gemini rate limit alcanzado — Cerebras fallback desactivado temporalmente');
+                    // Para reactivar cuando el jefe apruebe modelos adicionales:
+                    // return app(CerebrasService::class)->chat($messages, $tools);
+                    return config('agent.error_messages.both_unavailable',
+                        'El servicio de IA no está disponible temporalmente. Por favor intenta en unos minutos.'
                     );
                 }
 
@@ -97,12 +99,13 @@ class GeminiService
             $candidate = $data['candidates'][0] ?? null;
 
             if (!$candidate) {
+                Log::warning('Gemini sin candidato — Cerebras fallback desactivado temporalmente');
+                // Para reactivar: return app(CerebrasService::class)->chat($messages, $tools);
                 return 'No pude obtener una respuesta. Por favor intenta de nuevo.';
             }
 
             $parts = $candidate['content']['parts'] ?? [];
 
-            // Manejar múltiples tool calls
             $toolCallParts = array_filter($parts, fn($p) => isset($p['functionCall']));
 
             if (!empty($toolCallParts)) {
@@ -110,17 +113,20 @@ class GeminiService
                     array_values($toolCallParts),
                     $contents,
                     $tools,
-                    $systemPrompt
+                    $systemPrompt,
+                    $messages
                 );
             }
 
             foreach ($parts as $part) {
-                if (isset($part['text'])) {
+                if (isset($part['text']) && !empty(trim($part['text']))) {
                     return $part['text'];
                 }
             }
 
-            return 'Sin respuesta.';
+            Log::warning('Gemini respuesta vacía — Cerebras fallback desactivado temporalmente');
+            // Para reactivar: return app(CerebrasService::class)->chat($messages, $tools);
+            return 'Lo siento, no pude generar una respuesta. Por favor intenta de nuevo.';
 
         } catch (\Exception $e) {
             Log::error('Gemini Service exception', ['error' => $e->getMessage()]);
@@ -130,14 +136,12 @@ class GeminiService
         }
     }
 
-    /**
-     * Maneja una o múltiples tool calls de Gemini en una sola respuesta.
-     */
     private function handleMultipleToolCalls(
         array $toolCallParts,
         array $contents,
         array $tools,
-        string $systemPrompt
+        string $systemPrompt,
+        array $originalMessages = []
     ): string {
         $modelParts = [];
         foreach ($toolCallParts as $part) {
@@ -201,9 +205,10 @@ class GeminiService
                 ]);
 
                 if ($response->status() === 429 || $response->status() === 503) {
-                    Log::warning('Gemini rate limit en segunda llamada');
-                    return config('agent.error_messages.rate_limit_gemini',
-                        'Estoy experimentando alta demanda en este momento. Por favor espera un momento e intenta de nuevo.'
+                    Log::warning('Gemini rate limit en segunda llamada — Cerebras fallback desactivado temporalmente');
+                    // Para reactivar: return app(CerebrasService::class)->chat($originalMessages, $tools);
+                    return config('agent.error_messages.both_unavailable',
+                        'El servicio de IA no está disponible temporalmente. Por favor intenta en unos minutos.'
                     );
                 }
 
@@ -216,12 +221,14 @@ class GeminiService
             $parts = $data['candidates'][0]['content']['parts'] ?? [];
 
             foreach ($parts as $part) {
-                if (isset($part['text'])) {
+                if (isset($part['text']) && !empty(trim($part['text']))) {
                     return $part['text'];
                 }
             }
 
-            return 'Sin respuesta.';
+            Log::warning('Gemini respuesta vacía en tool call — Cerebras fallback desactivado temporalmente');
+            // Para reactivar: return app(CerebrasService::class)->chat($originalMessages, $tools);
+            return 'Lo siento, no pude generar una respuesta. Por favor intenta de nuevo.';
 
         } catch (\Exception $e) {
             Log::error('Gemini handleMultipleToolCalls exception', ['error' => $e->getMessage()]);

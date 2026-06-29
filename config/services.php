@@ -96,12 +96,19 @@ return [
         ),
     ],
 
+    // Modelo principal del agente IA — activo
     'groq' => [
         'api_key' => env('GROQ_API_KEY'),
     ],
 
+    // Modelo fallback — desactivado
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
+    ],
+
+    // Modelo terciario — desactivado
+    'cerebras' => [
+        'api_key' => env('CEREBRAS_API_KEY'),
     ],
 
     // -------------------------------------------------------------------------

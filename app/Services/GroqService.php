@@ -38,8 +38,8 @@ class GroqService
                 'Content-Type'  => 'application/json',
             ])->timeout(30)->post($this->apiUrl, $payload);
 
-            // Rate limit — Gemini fallback desactivado temporalmente
-            // Para reactivar: reemplazar el return por:
+            // Rate limit → Gemini fallback desactivado temporalmente
+            // Para reactivar cuando el jefe apruebe modelos adicionales:
             // return app(GeminiService::class)->chat($messages, $tools);
             if ($response->status() === 429) {
                 Log::warning('Groq rate limit alcanzado — fallback desactivado temporalmente');
@@ -65,7 +65,6 @@ class GroqService
                 return 'No pude obtener una respuesta. Por favor intenta de nuevo.';
             }
 
-            // Soporte para múltiples tool calls
             if (isset($message['tool_calls']) && !empty($message['tool_calls'])) {
                 return $this->handleMultipleToolCalls($message['tool_calls'], $messages, $tools);
             }
@@ -80,18 +79,13 @@ class GroqService
         }
     }
 
-    /**
-     * Maneja una o múltiples tool calls de Groq en una sola respuesta.
-     */
     private function handleMultipleToolCalls(array $toolCalls, array $messages, array $tools): string
     {
-        // Agregar mensaje del asistente con todas las tool calls
         $messages[] = [
             'role'       => 'assistant',
             'tool_calls' => $toolCalls,
         ];
 
-        // Ejecutar todas las tools y agregar sus resultados
         foreach ($toolCalls as $toolCall) {
             $toolName = $toolCall['function']['name'];
             $args     = json_decode($toolCall['function']['arguments'], true) ?? [];
@@ -109,7 +103,6 @@ class GroqService
             ];
         }
 
-        // Segunda llamada con todos los resultados
         $payload = [
             'model'       => $this->model,
             'messages'    => $messages,
@@ -123,8 +116,8 @@ class GroqService
                 'Content-Type'  => 'application/json',
             ])->timeout(30)->post($this->apiUrl, $payload);
 
-            // Rate limit en segunda llamada — Gemini fallback desactivado temporalmente
-            // Para reactivar: reemplazar el return por:
+            // Rate limit en segunda llamada → Gemini fallback desactivado temporalmente
+            // Para reactivar cuando el jefe apruebe modelos adicionales:
             // return app(GeminiService::class)->chat($messages, $tools);
             if ($response->status() === 429) {
                 Log::warning('Groq rate limit en segunda llamada — fallback desactivado temporalmente');
