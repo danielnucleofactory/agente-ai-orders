@@ -30,6 +30,7 @@ class RagaOrdersToolService
             'get_orders_pending_confirmation' => $this->getOrdersPendingConfirmation(),
             'get_orders_delayed_in_transit'   => $this->getOrdersDelayedInTransit(),
             'get_teus_summary'                => $this->getTeusSummary($args['status'] ?? null),
+            'get_full_summary'                => $this->getFullSummary(),
             'query_operational_data'          => $this->queryOperationalData($args),
             default                           => ['error' => 'Tool no reconocida: ' . $toolName],
         };
@@ -40,25 +41,25 @@ class RagaOrdersToolService
     // -----------------------------------------------------------------------
 
     private function queryOperationalData(array $args): array
-{
-    try {
-        $service = app(OperationalDataQueryService::class);
-        $result  = $service->run($args, $this->companyId);
+    {
+        try {
+            $service = app(OperationalDataQueryService::class);
+            $result  = $service->run($args, $this->companyId);
 
-        if (!$result['success']) {
-            return ['error' => $result['error']];
+            if (!$result['success']) {
+                return ['error' => $result['error']];
+            }
+
+            return $result['data'];
+
+        } catch (\Throwable $e) {
+            Log::error('queryOperationalData exception', [
+                'error' => $e->getMessage(),
+                'args'  => $args,
+            ]);
+            return ['error' => 'Error al procesar la consulta operativa.'];
         }
-
-        return $result['data'];
-
-    } catch (\Throwable $e) {
-        Log::error('queryOperationalData exception', [
-            'error' => $e->getMessage(),
-            'args'  => $args,
-        ]);
-        return ['error' => 'Error al procesar la consulta operativa.'];
     }
-}
 
     // -----------------------------------------------------------------------
     // Tools específicas existentes (sin cambios)
@@ -74,12 +75,13 @@ class RagaOrdersToolService
             $controller = app(AgentOrdersController::class);
             $response   = match(true) {
                 str_starts_with($method, 'shipments/') => $controller->shipmentById($request, substr($method, 10)),
-                $method === 'shipments'                => $controller->shipments($request),
-                $method === 'orders/ata'               => $controller->ordersByAta($request),
-                $method === 'orders/eta'               => $controller->ordersByEta($request),
-                $method === 'orders/delayed-in-transit'=> $controller->ordersDelayedInTransit($request),
-                $method === 'orders/teus'              => $controller->teusSummary($request),
-                default                                => $controller->orders($request),
+                $method === 'shipments'                 => $controller->shipments($request),
+                $method === 'orders/ata'                => $controller->ordersByAta($request),
+                $method === 'orders/eta'                => $controller->ordersByEta($request),
+                $method === 'orders/delayed-in-transit' => $controller->ordersDelayedInTransit($request),
+                $method === 'orders/teus'               => $controller->teusSummary($request),
+                $method === 'orders/full-summary'       => $controller->fullSummary($request),
+                default                                 => $controller->orders($request),
             };
 
             return $response->getData(true);
@@ -151,6 +153,11 @@ class RagaOrdersToolService
         return $this->call('orders/teus', $query);
     }
 
+    private function getFullSummary(): array
+    {
+        return $this->call('orders/full-summary');
+    }
+
     // -----------------------------------------------------------------------
     // Definiciones de tools para Groq
     // -----------------------------------------------------------------------
@@ -161,6 +168,14 @@ class RagaOrdersToolService
             // ----------------------------------------------------------------
             // Tools específicas existentes
             // ----------------------------------------------------------------
+            [
+                'type'     => 'function',
+                'function' => [
+                    'name'        => 'get_full_summary',
+                    'description' => 'Obtiene un resumen COMPLETO de todas las operaciones logísticas en una sola llamada: total de órdenes activas, retrasadas, con ATA confirmado, en tránsito, en transbordo y TEUs totales. USAR SIEMPRE cuando el usuario pida un resumen general, resumen completo, o pregunte por múltiples métricas al mismo tiempo como órdenes activas + atrasadas + en tránsito + TEUs.',
+                    'parameters'  => ['type' => 'object', 'properties' => new \stdClass()],
+                ],
+            ],
             [
                 'type'     => 'function',
                 'function' => [
@@ -251,7 +266,7 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'get_orders_summary',
-                    'description' => 'Obtiene un resumen general de las órdenes del usuario: total activas, con retraso y con ATA confirmado.',
+                    'description' => 'Obtiene un resumen básico de las órdenes: total activas, con retraso y con ATA confirmado. Para resúmenes completos con TEUs y fases usar get_full_summary.',
                     'parameters'  => ['type' => 'object', 'properties' => new \stdClass()],
                 ],
             ],
@@ -275,7 +290,7 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'get_teus_summary',
-                    'description' => 'Obtiene el total de TEUs calculado a partir del tipo de contenedor. Usar cuando el usuario pregunte por TEUs, contenedores equivalentes o volumen de carga.',
+                    'description' => 'Obtiene el total de TEUs calculado a partir del tipo de contenedor. Usar cuando el usuario pregunte SOLO por TEUs.',
                     'parameters'  => [
                         'type'       => 'object',
                         'properties' => [
@@ -287,7 +302,6 @@ class RagaOrdersToolService
                     ],
                 ],
             ],
-
             // ----------------------------------------------------------------
             // Tool generalista — query_operational_data
             // ----------------------------------------------------------------
@@ -295,7 +309,7 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'query_operational_data',
-                    'description' => 'Consulta métricas operativas de órdenes de compra usando filtros, agrupaciones y métricas permitidas. Úsala para preguntas analíticas como: agrupar por semana, proveedor, ruta, naviera, cliente, estado o fechas. También úsala para preguntas como: ¿qué proveedor tiene más retrasos?, ¿cuántas PO hay por ruta?, ¿cuántos TEUs por naviera?, ¿cuántas órdenes llegan esta semana?',
+                    'description' => 'Consulta métricas operativas de órdenes de compra usando filtros, agrupaciones y métricas permitidas. Úsala para preguntas analíticas como: agrupar por semana, proveedor, ruta, naviera, cliente, estado o fechas.',
                     'parameters'  => [
                         'type'       => 'object',
                         'properties' => [
@@ -306,12 +320,12 @@ class RagaOrdersToolService
                             ],
                             'metric' => [
                                 'type'        => 'string',
-                                'description' => 'Métrica a calcular. Valores permitidos: count_orders, sum_teus, avg_delay_days, max_delay_days, sum_delay_days',
+                                'description' => 'Métrica a calcular.',
                                 'enum'        => ['count_orders', 'sum_teus', 'avg_delay_days', 'max_delay_days', 'sum_delay_days'],
                             ],
                             'group_by' => [
                                 'type'        => 'string',
-                                'description' => 'Agrupar resultados por: date_ata_week, date_eta_week, date_atd_week, shipping_line, vendor, trading_company, route_label, arrival_status, porth_phase, container_type',
+                                'description' => 'Agrupar resultados por campo.',
                                 'enum'        => [
                                     'date_ata_week',
                                     'date_eta_week',
@@ -327,27 +341,20 @@ class RagaOrdersToolService
                             ],
                             'filters' => [
                                 'type'        => 'object',
-                                'description' => 'Filtros opcionales. Cada clave es un campo permitido y el valor puede ser un string directo (ej: "not_null") o un objeto con "operator" y "value". Campos permitidos: date_ata, date_eta, date_atd, shipping_line, vendor_id, vendor_name, trading_company, route_label, arrival_status, delay_days, porth_phase, container_type',
+                                'description' => 'Filtros opcionales.',
                                 'properties'  => new \stdClass(),
                             ],
                             'sort' => [
                                 'type'        => 'object',
                                 'description' => 'Ordenamiento del resultado.',
                                 'properties'  => [
-                                    'field'     => [
-                                        'type'        => 'string',
-                                        'description' => 'Campo por el que ordenar (alias del group_by o de la métrica).',
-                                    ],
-                                    'direction' => [
-                                        'type'        => 'string',
-                                        'description' => 'Dirección: asc o desc.',
-                                        'enum'        => ['asc', 'desc'],
-                                    ],
+                                    'field'     => ['type' => 'string'],
+                                    'direction' => ['type' => 'string', 'enum' => ['asc', 'desc']],
                                 ],
                             ],
                             'limit' => [
                                 'type'        => 'string',
-                                'description' => 'Límite de resultados a retornar. Máximo 100. Default 30.',
+                                'description' => 'Límite de resultados. Máximo 100. Default 30.',
                             ],
                         ],
                         'required' => ['entity'],

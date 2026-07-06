@@ -16,7 +16,7 @@
                             <path d="M12 7v4"/>
                         </svg>
                     </div>
-                    <div style="max-width: 65%;">
+                    <div style="max-width: 70%;">
                         <div class="rounded-tl-sm rounded-tr-2xl rounded-br-2xl rounded-bl-2xl bg-white px-4 py-3 text-sm text-gray-800 shadow-sm" style="border: 1px solid #e5e7eb;">
                             {!! nl2br(e($message['content'])) !!}
                         </div>
@@ -39,7 +39,7 @@
         @endforeach
 
         @if($isLoading)
-            <div class="flex gap-3 items-end">
+            <div class="flex gap-3 items-end" id="thinking-indicator">
                 <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full" style="background: #E1F5EE;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1AAD8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="11" width="18" height="10" rx="2"/>
@@ -47,12 +47,14 @@
                         <path d="M12 7v4"/>
                     </svg>
                 </div>
-                <div class="rounded-tl-sm rounded-tr-2xl rounded-br-2xl rounded-bl-2xl bg-white px-5 py-3 shadow-sm" style="border: 1px solid #e5e7eb;">
-                    <div class="flex gap-2 items-center">
-                        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:0ms"></span>
-                        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:150ms"></span>
-                        <span class="h-2 w-2 rounded-full animate-bounce" style="background:#1AAD8A; animation-delay:300ms"></span>
-                        <span class="text-xs text-gray-400 ml-1">Procesando tu consulta...</span>
+                <div class="rounded-tl-sm rounded-tr-2xl rounded-br-2xl rounded-bl-2xl bg-white px-5 py-4 shadow-sm" style="border: 1px solid #e5e7eb; min-width: 120px;">
+                    <div class="flex flex-col gap-2">
+                        <div class="flex gap-1.5 items-center">
+                            <span class="thinking-dot" style="width:8px;height:8px;border-radius:50%;background:#1AAD8A;display:inline-block;animation:thinkingBounce 1.2s ease-in-out infinite;animation-delay:0ms;"></span>
+                            <span class="thinking-dot" style="width:8px;height:8px;border-radius:50%;background:#1AAD8A;display:inline-block;animation:thinkingBounce 1.2s ease-in-out infinite;animation-delay:200ms;"></span>
+                            <span class="thinking-dot" style="width:8px;height:8px;border-radius:50%;background:#1AAD8A;display:inline-block;animation:thinkingBounce 1.2s ease-in-out infinite;animation-delay:400ms;"></span>
+                        </div>
+                        <span class="text-xs font-medium" style="color:#1AAD8A;">IA Orders está pensando...</span>
                     </div>
                 </div>
             </div>
@@ -129,6 +131,13 @@
             </svg>
         </button>
     </div>
+
+    <style>
+        @keyframes thinkingBounce {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-6px); opacity: 1; }
+        }
+    </style>
 
     <script>
         document.addEventListener('livewire:updated', () => {

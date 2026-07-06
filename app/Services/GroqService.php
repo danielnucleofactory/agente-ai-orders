@@ -38,9 +38,8 @@ class GroqService
                 'Content-Type'  => 'application/json',
             ])->timeout(30)->post($this->apiUrl, $payload);
 
-            // Rate limit → Gemini fallback desactivado temporalmente
-            // Para reactivar cuando el jefe apruebe modelos adicionales:
-            // return app(GeminiService::class)->chat($messages, $tools);
+            // Rate limit — fallback desactivado, pendiente aprobación
+            // Para reactivar: return app(GeminiService::class)->chat($messages, $tools);
             if ($response->status() === 429) {
                 Log::warning('Groq rate limit alcanzado — fallback desactivado temporalmente');
                 return config('agent.error_messages.rate_limit_gemini',
@@ -69,7 +68,7 @@ class GroqService
                 return $this->handleMultipleToolCalls($message['tool_calls'], $messages, $tools);
             }
 
-            return $message['content'] ?? 'Sin respuesta.';
+            return $this->cleanResponse($message['content'] ?? 'Sin respuesta.');
 
         } catch (\Exception $e) {
             Log::error('Groq Service exception', ['error' => $e->getMessage()]);
@@ -116,9 +115,8 @@ class GroqService
                 'Content-Type'  => 'application/json',
             ])->timeout(30)->post($this->apiUrl, $payload);
 
-            // Rate limit en segunda llamada → Gemini fallback desactivado temporalmente
-            // Para reactivar cuando el jefe apruebe modelos adicionales:
-            // return app(GeminiService::class)->chat($messages, $tools);
+            // Rate limit en segunda llamada — fallback desactivado, pendiente aprobación
+            // Para reactivar: return app(GeminiService::class)->chat($messages, $tools);
             if ($response->status() === 429) {
                 Log::warning('Groq rate limit en segunda llamada — fallback desactivado temporalmente');
                 return config('agent.error_messages.rate_limit_gemini',
@@ -144,7 +142,7 @@ class GroqService
                 return 'Lo siento, no pude generar una respuesta. Por favor intenta de nuevo.';
             }
 
-            return $content;
+            return $this->cleanResponse($content);
 
         } catch (\Exception $e) {
             Log::error('Groq handleMultipleToolCalls exception', ['error' => $e->getMessage()]);
@@ -152,6 +150,76 @@ class GroqService
                 'Ocurrió un error de conexión. Por favor intenta de nuevo.'
             );
         }
+    }
+
+    /**
+     * Limpia la respuesta eliminando artefactos técnicos y JSON crudo.
+     */
+    private function cleanResponse(string $content): string
+    {
+        // 1. Eliminar JSON anidado iterativamente
+        $maxIterations = 5;
+        for ($i = 0; $i < $maxIterations; $i++) {
+            $cleaned = preg_replace('/\{[^{}]*\}/', '', $content);
+            if ($cleaned === $content) break;
+            $content = $cleaned;
+        }
+
+        // 2. Limpiar línea por línea
+        $lines = explode("\n", $content);
+        $cleanLines = [];
+
+        $debugPhrases = [
+            'We need to call',
+            'We need to simulate',
+            'We need to actually call',
+            'We need to get result',
+            'We need to wait',
+            'We need TEUs',
+            'I need to call',
+            'Let me call',
+            'Calling tool',
+            'Tool call:',
+            'tool_call',
+            'get_teus_summary',
+            'get_orders',
+            'query_operational',
+            'get_full_summary',
+        ];
+
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if (empty($trimmed)) {
+                $cleanLines[] = '';
+                continue;
+            }
+
+            $isDebug = false;
+            foreach ($debugPhrases as $phrase) {
+                if (stripos($trimmed, $phrase) !== false) {
+                    $isDebug = true;
+                    break;
+                }
+            }
+
+            if (str_starts_with($trimmed, '{') || str_starts_with($trimmed, '[')) {
+                $isDebug = true;
+            }
+
+            if (!$isDebug) {
+                $cleanLines[] = $line;
+            }
+        }
+
+        $content = implode("\n", $cleanLines);
+        $content = preg_replace('/\n{3,}/', "\n\n", $content);
+        $content = trim($content);
+
+        if (empty($content) || strlen($content) < 10) {
+            return 'Lo siento, no pude generar una respuesta. Por favor intenta de nuevo.';
+        }
+
+        return $content;
     }
 
     private function executeTool(string $toolName, array $args): array

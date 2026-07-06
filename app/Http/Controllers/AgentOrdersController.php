@@ -64,21 +64,24 @@ class AgentOrdersController extends Controller
         }
 
         if ($flag === 'alert') {
-            $orders = $query
-                ->where(function ($q) {
-                    $q->where('arrival_status', 'delayed')
-                      ->orWhere('arrival_status', 'Atrasado')
-                      ->orWhere('delay_days', '>', 0)
-                      ->orWhere('porth_priority', 'high');
-                })
-                ->select('order_number', 'arrival_status', 'delay_days', 'porth_first_eta')
+            $alertQuery = $query->where(function ($q) {
+                $q->where('arrival_status', 'delayed')
+                  ->orWhere('arrival_status', 'Atrasado')
+                  ->orWhere('delay_days', '>', 0)
+                  ->orWhere('porth_priority', 'high');
+            });
+
+            $total  = (clone $alertQuery)->count();
+            $sample = (clone $alertQuery)
+                ->select('order_number', 'arrival_status', 'delay_days', 'porth_first_eta', 'porth_phase')
+                ->orderBy('delay_days', 'desc')
                 ->limit(10)
                 ->get();
 
             return response()->json([
-                'total'   => $orders->count(),
-                'orders'  => $orders,
-                'message' => $orders->count() . ' órdenes tienen alertas o incidencias activas.',
+                'total'   => $total,
+                'sample'  => $sample,
+                'message' => "$total órdenes tienen alertas o incidencias activas.",
             ]);
         }
 
@@ -127,50 +130,50 @@ class AgentOrdersController extends Controller
     }
 
     public function ordersByEta(Request $request): JsonResponse
-{
-    $companyId  = $this->getCompanyId($request);
-    $dateFrom   = $request->query('date_from');
-    $dateTo     = $request->query('date_to');
-    $month      = $request->query('month');
-    $year       = $request->query('year');
+    {
+        $companyId  = $this->getCompanyId($request);
+        $dateFrom   = $request->query('date_from');
+        $dateTo     = $request->query('date_to');
+        $month      = $request->query('month');
+        $year       = $request->query('year');
 
-    $query = DB::table('purchase_orders')
-        ->where('company_id', $companyId)
-        ->where('status', '!=', 'cancelled')
-        ->whereNotNull('porth_first_eta');
+        $query = DB::table('purchase_orders')
+            ->where('company_id', $companyId)
+            ->where('status', '!=', 'cancelled')
+            ->whereNotNull('porth_first_eta');
 
-    if ($month && $year) {
-        $query->whereMonth('porth_first_eta', (int)$month)
-              ->whereYear('porth_first_eta', (int)$year);
-    } elseif ($dateFrom && $dateTo) {
-        $query->whereBetween('porth_first_eta', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59']);
-    } elseif ($dateFrom) {
-        $query->whereDate('porth_first_eta', $dateFrom);
-    } else {
-        return response()->json(['error' => 'Necesito al menos una fecha o mes/año para buscar por ETA.'], 422);
+        if ($month && $year) {
+            $query->whereMonth('porth_first_eta', (int)$month)
+                  ->whereYear('porth_first_eta', (int)$year);
+        } elseif ($dateFrom && $dateTo) {
+            $query->whereBetween('porth_first_eta', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59']);
+        } elseif ($dateFrom) {
+            $query->whereDate('porth_first_eta', $dateFrom);
+        } else {
+            return response()->json(['error' => 'Necesito al menos una fecha o mes/año para buscar por ETA.'], 422);
+        }
+
+        $orders = $query
+            ->select('order_number', 'porth_first_eta', 'porth_phase', 'arrival_status', 'delay_days')
+            ->orderBy('porth_first_eta', 'asc')
+            ->get();
+
+        $total = $orders->count();
+
+        if ($month && $year) {
+            $label = "en {$month}/{$year}";
+        } elseif ($dateFrom && $dateTo) {
+            $label = "entre $dateFrom y $dateTo";
+        } else {
+            $label = "el $dateFrom";
+        }
+
+        return response()->json([
+            'total'   => $total,
+            'orders'  => $orders,
+            'message' => "$total órdenes con ETA $label.",
+        ]);
     }
-
-    $orders = $query
-        ->select('order_number', 'porth_first_eta', 'porth_phase', 'arrival_status', 'delay_days')
-        ->orderBy('porth_first_eta', 'asc')
-        ->get();
-
-    $total = $orders->count();
-
-    if ($month && $year) {
-        $label = "en {$month}/{$year}";
-    } elseif ($dateFrom && $dateTo) {
-        $label = "entre $dateFrom y $dateTo";
-    } else {
-        $label = "el $dateFrom";
-    }
-
-    return response()->json([
-        'total'   => $total,
-        'orders'  => $orders,
-        'message' => "$total órdenes con ETA $label.",
-    ]);
-}
 
     public function shipments(Request $request): JsonResponse
     {
@@ -308,6 +311,73 @@ class AgentOrdersController extends Controller
             'total_orders' => $totalOrders,
             'breakdown'    => $breakdown,
             'message'      => "Tienes $totalTeus TEUs en $totalOrders órdenes $label.",
+        ]);
+    }
+
+    public function fullSummary(Request $request): JsonResponse
+    {
+        $companyId = $this->getCompanyId($request);
+
+        $base = DB::table('purchase_orders')
+            ->where('company_id', $companyId)
+            ->where('status', '!=', 'cancelled');
+
+        // Total de órdenes activas
+        $totalActive = (clone $base)->count();
+
+        // Órdenes retrasadas
+        $delayed = (clone $base)
+            ->where(function ($q) {
+                $q->where('arrival_status', 'delayed')
+                  ->orWhere('arrival_status', 'Atrasado');
+            })
+            ->count();
+
+        // Órdenes con ATA confirmado
+        $withAta = (clone $base)->whereNotNull('date_ata')->count();
+
+        // Órdenes en tránsito
+        $inTransit = (clone $base)
+            ->whereIn('porth_phase', ['40_in_transit', '30_in_transit', 'in_transit', 'shipped', 'on_vessel'])
+            ->count();
+
+        // Órdenes en transbordo
+        $inTransshipment = (clone $base)
+            ->whereIn('porth_phase', ['transshipment', 'in_transshipment', '20_transshipment'])
+            ->count();
+
+        // TEUs totales
+        $orders = (clone $base)
+            ->whereNotNull('container_type')
+            ->select('container_type')
+            ->get();
+
+        $totalTeus = 0;
+        foreach ($orders as $order) {
+            $containerType = strtolower($order->container_type ?? '');
+            $teus = 1;
+
+            if (str_contains($containerType, '40') || str_contains($containerType, 'hc') || str_contains($containerType, 'hq')) {
+                $teus = 2;
+            } elseif (str_contains($containerType, '45')) {
+                $teus = 2.25;
+            } elseif (str_contains($containerType, '20')) {
+                $teus = 1;
+            }
+
+            $totalTeus += $teus;
+        }
+
+        $totalTeus = round($totalTeus, 2);
+
+        return response()->json([
+            'total_active'     => $totalActive,
+            'delayed'          => $delayed,
+            'with_ata'         => $withAta,
+            'in_transit'       => $inTransit,
+            'in_transshipment' => $inTransshipment,
+            'total_teus'       => $totalTeus,
+            'message'          => "Resumen completo: $totalActive órdenes activas, $delayed retrasadas, $withAta con ATA confirmado, $inTransit en tránsito, $inTransshipment en transbordo y $totalTeus TEUs totales.",
         ]);
     }
 }

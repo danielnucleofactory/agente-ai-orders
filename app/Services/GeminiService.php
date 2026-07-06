@@ -82,12 +82,8 @@ class GeminiService
                 ]);
 
                 if ($response->status() === 429 || $response->status() === 503) {
-                    Log::warning('Gemini rate limit alcanzado — Cerebras fallback desactivado temporalmente');
-                    // Para reactivar cuando el jefe apruebe modelos adicionales:
-                    // return app(CerebrasService::class)->chat($messages, $tools);
-                    return config('agent.error_messages.both_unavailable',
-                        'El servicio de IA no está disponible temporalmente. Por favor intenta en unos minutos.'
-                    );
+                    Log::warning('Gemini no disponible, usando Cerebras como fallback');
+                    return app(CerebrasService::class)->chat($messages, $tools);
                 }
 
                 return config('agent.error_messages.query_error',
@@ -99,9 +95,8 @@ class GeminiService
             $candidate = $data['candidates'][0] ?? null;
 
             if (!$candidate) {
-                Log::warning('Gemini sin candidato — Cerebras fallback desactivado temporalmente');
-                // Para reactivar: return app(CerebrasService::class)->chat($messages, $tools);
-                return 'No pude obtener una respuesta. Por favor intenta de nuevo.';
+                Log::warning('Gemini sin candidato, usando Cerebras como fallback');
+                return app(CerebrasService::class)->chat($messages, $tools);
             }
 
             $parts = $candidate['content']['parts'] ?? [];
@@ -124,9 +119,8 @@ class GeminiService
                 }
             }
 
-            Log::warning('Gemini respuesta vacía — Cerebras fallback desactivado temporalmente');
-            // Para reactivar: return app(CerebrasService::class)->chat($messages, $tools);
-            return 'Lo siento, no pude generar una respuesta. Por favor intenta de nuevo.';
+            Log::warning('Gemini devolvió respuesta vacía, usando Cerebras como fallback');
+            return app(CerebrasService::class)->chat($messages, $tools);
 
         } catch (\Exception $e) {
             Log::error('Gemini Service exception', ['error' => $e->getMessage()]);
@@ -205,11 +199,8 @@ class GeminiService
                 ]);
 
                 if ($response->status() === 429 || $response->status() === 503) {
-                    Log::warning('Gemini rate limit en segunda llamada — Cerebras fallback desactivado temporalmente');
-                    // Para reactivar: return app(CerebrasService::class)->chat($originalMessages, $tools);
-                    return config('agent.error_messages.both_unavailable',
-                        'El servicio de IA no está disponible temporalmente. Por favor intenta en unos minutos.'
-                    );
+                    Log::warning('Gemini no disponible en segunda llamada, usando Cerebras como fallback');
+                    return app(CerebrasService::class)->chat($originalMessages, $tools);
                 }
 
                 return config('agent.error_messages.query_error',
@@ -226,9 +217,8 @@ class GeminiService
                 }
             }
 
-            Log::warning('Gemini respuesta vacía en tool call — Cerebras fallback desactivado temporalmente');
-            // Para reactivar: return app(CerebrasService::class)->chat($originalMessages, $tools);
-            return 'Lo siento, no pude generar una respuesta. Por favor intenta de nuevo.';
+            Log::warning('Gemini devolvió respuesta vacía en tool call, usando Cerebras como fallback');
+            return app(CerebrasService::class)->chat($originalMessages, $tools);
 
         } catch (\Exception $e) {
             Log::error('Gemini handleMultipleToolCalls exception', ['error' => $e->getMessage()]);

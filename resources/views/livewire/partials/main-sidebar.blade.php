@@ -203,7 +203,7 @@
                         </svg>
                     </div>
                     <div class="link-text {{ request()->routeIs('agent.*') ? 'text-[#1AAD8A]' : 'group-hover:text-black' }} transition-colors duration-500">
-                        <span>Asistente de IA</span>
+                        <span>RAGA-x</span>
                     </div>
                 </x-sidebar-link>
             </li>
