@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use App\Services\DashboardKPIService;
 
 class AgentOrdersController extends Controller
 {
@@ -15,13 +16,32 @@ class AgentOrdersController extends Controller
 
     public function orders(Request $request): JsonResponse
     {
-        $companyId = $this->getCompanyId($request);
-        $status    = $request->query('status');
-        $flag      = $request->query('flag');
+        $companyId      = $this->getCompanyId($request);
+        $status         = $request->query('status');
+        $flag           = $request->query('flag');
+        $tradingCompany = $request->query('trading_company');
+        $shippingLine   = $request->query('shipping_line');
+        $vendorName     = $request->query('vendor_name');
 
         $query = DB::table('purchase_orders')
             ->where('company_id', $companyId)
             ->where('status', '!=', 'cancelled');
+
+        // Filtros opcionales globales
+        if ($tradingCompany) {
+            $query->where('trading_company', $tradingCompany);
+        }
+        if ($shippingLine) {
+            $query->where('shipping_line', $shippingLine);
+        }
+        if ($vendorName) {
+            $query->whereExists(function ($sub) use ($vendorName) {
+                $sub->select(DB::raw(1))
+                    ->from('vendors')
+                    ->whereColumn('vendors.id', 'purchase_orders.vendor_id')
+                    ->where('vendors.name', $vendorName);
+            });
+        }
 
         if ($status === 'in_transit') {
             $query->whereNotNull('porth_phase')
@@ -71,33 +91,44 @@ class AgentOrdersController extends Controller
                   ->orWhere('porth_priority', 'high');
             });
 
-            $total  = (clone $alertQuery)->count();
-            $sample = (clone $alertQuery)
-                ->select('order_number', 'arrival_status', 'delay_days', 'porth_first_eta', 'porth_phase')
-                ->orderBy('delay_days', 'desc')
-                ->limit(10)
-                ->get();
+            $total = (clone $alertQuery)->count();
+
+            // Si se pide listado completo, devolver todas sin límite
+            $all = $request->query('all') === 'true';
+
+            $ordersQuery = (clone $alertQuery)
+                ->select('order_number', 'arrival_status', 'delay_days', 'porth_first_eta', 'porth_phase', 'trading_company', 'shipping_line')
+                ->orderBy('delay_days', 'desc');
+
+            if (!$all) {
+                $ordersQuery->limit(10);
+            }
+
+            $orders = $ordersQuery->get();
+
+            $filterLabel = '';
+            if ($tradingCompany) $filterLabel = " de $tradingCompany";
+            if ($shippingLine)   $filterLabel = " de $shippingLine";
+            if ($vendorName)     $filterLabel = " de $vendorName";
 
             return response()->json([
                 'total'   => $total,
-                'sample'  => $sample,
-                'message' => "$total órdenes tienen alertas o incidencias activas.",
+                'orders'  => $orders,
+                'message' => $all
+                    ? "$total órdenes{$filterLabel} tienen alertas o incidencias activas. Listado completo devuelto."
+                    : "$total órdenes{$filterLabel} tienen alertas o incidencias activas. Se muestran las 10 más críticas.",
             ]);
         }
 
         // Sin parámetros → resumen general
         $total   = (clone $query)->count();
-        $delayed = DB::table('purchase_orders')
-            ->where('company_id', $companyId)
+        $delayed = (clone $query)
             ->where(function ($q) {
                 $q->where('arrival_status', 'delayed')
                   ->orWhere('arrival_status', 'Atrasado');
             })
             ->count();
-        $withAta = DB::table('purchase_orders')
-            ->where('company_id', $companyId)
-            ->whereNotNull('date_ata')
-            ->count();
+        $withAta = (clone $query)->whereNotNull('date_ata')->count();
 
         return response()->json([
             'total_active' => $total,
@@ -181,7 +212,36 @@ class AgentOrdersController extends Controller
         $status    = $request->query('status');
 
         if ($status === 'transshipment') {
-            $count = DB::table('purchase_orders')
+            // Usar DashboardKPIService para lógica correcta basada en porth_itinerary
+            try {
+                $kpiService = app(DashboardKPIService::class);
+                $result     = $kpiService->getPOsInTransshipment([
+                    'include_details' => true,
+                ]);
+
+                $totalFromItinerary = $result['summary']['total_pos'] ?? 0;
+                $byPort             = $result['by_port'] ?? [];
+                $details            = $result['details'] ?? [];
+
+                if ($totalFromItinerary > 0) {
+                    $portsSummary = collect($byPort)->map(function ($p) {
+                        return $p['port_label'] ?? $p['port'];
+                    })->implode(', ');
+
+                    return response()->json([
+                        'total'     => $totalFromItinerary,
+                        'by_port'   => $byPort,
+                        'details'   => $details,
+                        'has_ports' => count($byPort) > 0,
+                        'message'   => "$totalFromItinerary órdenes en transbordo, distribuidas en los siguientes puertos: $portsSummary.",
+                    ]);
+                }
+            } catch (\Exception $e) {
+                // fallback
+            }
+
+            // Fallback: usar porth_phase cuando no hay datos de itinerario
+            $orders = DB::table('purchase_orders')
                 ->where('company_id', $companyId)
                 ->where('status', '!=', 'cancelled')
                 ->where(function ($q) {
@@ -189,11 +249,32 @@ class AgentOrdersController extends Controller
                       ->orWhere('porth_phase', 'in_transshipment')
                       ->orWhere('porth_phase', '20_transshipment');
                 })
-                ->count();
+                ->select(
+                    'order_number',
+                    'porth_phase',
+                    'arrival_port',
+                    'departure_port',
+                    'porth_pol_name',
+                    'porth_pod_name',
+                    'shipping_line',
+                    'arrival_status',
+                    'delay_days'
+                )
+                ->get();
+
+            $count = $orders->count();
+
+            $hasPorts = $orders->filter(function ($o) {
+                return !empty($o->arrival_port) || !empty($o->porth_pol_name) || !empty($o->porth_pod_name);
+            })->count() > 0;
 
             return response()->json([
-                'total'   => $count,
-                'message' => "Hay $count embarques en puerto de transbordo.",
+                'total'     => $count,
+                'orders'    => $orders,
+                'has_ports' => $hasPorts,
+                'message'   => $hasPorts
+                    ? "$count órdenes en transbordo con información de puertos disponible."
+                    : "$count órdenes en transbordo. La información de puertos específicos no está disponible en este momento.",
             ]);
         }
 
@@ -322,10 +403,8 @@ class AgentOrdersController extends Controller
             ->where('company_id', $companyId)
             ->where('status', '!=', 'cancelled');
 
-        // Total de órdenes activas
         $totalActive = (clone $base)->count();
 
-        // Órdenes retrasadas
         $delayed = (clone $base)
             ->where(function ($q) {
                 $q->where('arrival_status', 'delayed')
@@ -333,20 +412,28 @@ class AgentOrdersController extends Controller
             })
             ->count();
 
-        // Órdenes con ATA confirmado
         $withAta = (clone $base)->whereNotNull('date_ata')->count();
 
-        // Órdenes en tránsito
         $inTransit = (clone $base)
             ->whereIn('porth_phase', ['40_in_transit', '30_in_transit', 'in_transit', 'shipped', 'on_vessel'])
             ->count();
 
-        // Órdenes en transbordo
-        $inTransshipment = (clone $base)
-            ->whereIn('porth_phase', ['transshipment', 'in_transshipment', '20_transshipment'])
-            ->count();
+        // Transbordo: usar DashboardKPIService para lógica correcta
+        $inTransshipment = 0;
+        try {
+            $kpiService      = app(DashboardKPIService::class);
+            $transshipResult = $kpiService->getPOsInTransshipment();
+            $inTransshipment = $transshipResult['summary']['total_pos'] ?? 0;
+        } catch (\Exception $e) {
+            // fallback
+        }
 
-        // TEUs totales
+        if ($inTransshipment === 0) {
+            $inTransshipment = (clone $base)
+                ->whereIn('porth_phase', ['transshipment', 'in_transshipment', '20_transshipment'])
+                ->count();
+        }
+
         $orders = (clone $base)
             ->whereNotNull('container_type')
             ->select('container_type')

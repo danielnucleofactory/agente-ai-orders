@@ -7,18 +7,47 @@ use Illuminate\Support\Facades\Log;
 
 class GroqService
 {
-    private string $apiKey;
+    private array $apiKeys;
     private string $model;
     private string $apiUrl;
+    private int $maxToolIterations = 6;
 
     public function __construct()
     {
-        $this->apiKey = config('services.groq.api_key');
+        // Cascada de API keys — cuando una se agota, pasa a la siguiente
+        // NOTA: Para producción solo usar GROQ_API_KEY principal
+        // Las keys 2-5 son para desarrollo/pruebas intensivas únicamente
+        $this->apiKeys = array_values(array_filter([
+            config('services.groq.api_key'),
+            // config('services.groq.api_key_2'), // DEV ONLY — desactivado para producción
+            // config('services.groq.api_key_3'), // DEV ONLY — desactivado para producción
+            // config('services.groq.api_key_4'), // DEV ONLY — desactivado para producción
+            // config('services.groq.api_key_5'), // DEV ONLY — desactivado para producción
+        ]));
+
         $this->model  = config('agent.models.primary.model', 'llama-3.3-70b-versatile');
         $this->apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
     }
 
     public function chat(array $messages, array $tools = []): string
+    {
+        foreach ($this->apiKeys as $index => $apiKey) {
+            $keyNumber = $index + 1;
+            $result = $this->tryWithKey($apiKey, $keyNumber, $messages, $tools);
+
+            if ($result !== null) {
+                return $result;
+            }
+        }
+
+        // Todas las keys de Groq agotadas
+        // Fallback desactivado para producción — reactivar si se aprueba
+        // return app(GeminiService::class)->chat($messages, $tools);
+        Log::warning('Todas las keys de Groq agotadas — fallback desactivado');
+        return 'El servicio de IA no está disponible temporalmente. Por favor intenta en unos minutos.';
+    }
+
+    private function tryWithKey(string $apiKey, int $keyNumber, array $messages, array $tools): ?string
     {
         $payload = [
             'model'       => $this->model,
@@ -34,21 +63,17 @@ class GroqService
 
         try {
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Authorization' => 'Bearer ' . $apiKey,
                 'Content-Type'  => 'application/json',
             ])->timeout(30)->post($this->apiUrl, $payload);
 
-            // Rate limit — fallback desactivado, pendiente aprobación
-            // Para reactivar: return app(GeminiService::class)->chat($messages, $tools);
             if ($response->status() === 429) {
-                Log::warning('Groq rate limit alcanzado — fallback desactivado temporalmente');
-                return config('agent.error_messages.rate_limit_gemini',
-                    'Estoy experimentando alta demanda en este momento. Por favor espera un momento e intenta de nuevo.'
-                );
+                Log::warning("Groq key #{$keyNumber} agotada, probando siguiente key");
+                return null;
             }
 
             if ($response->failed()) {
-                Log::error('Groq API error', [
+                Log::error("Groq API error con key #{$keyNumber}", [
                     'status' => $response->status(),
                     'body'   => $response->body(),
                 ]);
@@ -65,99 +90,153 @@ class GroqService
             }
 
             if (isset($message['tool_calls']) && !empty($message['tool_calls'])) {
-                return $this->handleMultipleToolCalls($message['tool_calls'], $messages, $tools);
+                return $this->runToolLoop($message, $messages, $tools, $apiKey, $keyNumber);
             }
 
             return $this->cleanResponse($message['content'] ?? 'Sin respuesta.');
 
         } catch (\Exception $e) {
-            Log::error('Groq Service exception', ['error' => $e->getMessage()]);
+            Log::error("Groq Service exception con key #{$keyNumber}", ['error' => $e->getMessage()]);
             return config('agent.error_messages.query_error',
                 'Ocurrió un error de conexión. Por favor intenta de nuevo.'
             );
         }
     }
 
-    private function handleMultipleToolCalls(array $toolCalls, array $messages, array $tools): string
+    private function runToolLoop(array $firstMessage, array $messages, array $tools, string $currentKey, int $keyNumber): string
     {
-        $messages[] = [
-            'role'       => 'assistant',
-            'tool_calls' => $toolCalls,
-        ];
+        $currentMessage = $firstMessage;
+        $iteration      = 0;
 
-        foreach ($toolCalls as $toolCall) {
-            $toolName = $toolCall['function']['name'];
-            $args     = json_decode($toolCall['function']['arguments'], true) ?? [];
-            $result   = $this->executeTool($toolName, $args);
+        while ($iteration < $this->maxToolIterations) {
+            $iteration++;
 
-            Log::info('[Groq] Tool ejecutada', [
-                'tool'   => $toolName,
-                'result' => array_keys($result),
-            ]);
+            if (!isset($currentMessage['tool_calls']) || empty($currentMessage['tool_calls'])) {
+                $content = $currentMessage['content'] ?? null;
+                if (!empty($content)) {
+                    return $this->cleanResponse($content);
+                }
+                break;
+            }
+
+            $toolCalls = $currentMessage['tool_calls'];
 
             $messages[] = [
-                'role'         => 'tool',
-                'tool_call_id' => $toolCall['id'],
-                'content'      => json_encode($result),
+                'role'       => 'assistant',
+                'tool_calls' => $toolCalls,
             ];
-        }
 
-        $payload = [
-            'model'       => $this->model,
-            'messages'    => $messages,
-            'max_tokens'  => config('agent.generation.max_tokens', 1024),
-            'temperature' => config('agent.generation.temperature', 0.3),
-        ];
+            foreach ($toolCalls as $toolCall) {
+                $toolName = $toolCall['function']['name'];
+                $args     = json_decode($toolCall['function']['arguments'], true) ?? [];
+                $result   = $this->executeTool($toolName, $args);
 
-        try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
-                'Content-Type'  => 'application/json',
-            ])->timeout(30)->post($this->apiUrl, $payload);
+                Log::info('[Groq] Tool ejecutada', [
+                    'tool'      => $toolName,
+                    'key'       => $keyNumber,
+                    'iteration' => $iteration,
+                    'result'    => array_keys($result),
+                ]);
 
-            // Rate limit en segunda llamada — fallback desactivado, pendiente aprobación
-            // Para reactivar: return app(GeminiService::class)->chat($messages, $tools);
-            if ($response->status() === 429) {
-                Log::warning('Groq rate limit en segunda llamada — fallback desactivado temporalmente');
-                return config('agent.error_messages.rate_limit_gemini',
-                    'Estoy experimentando alta demanda en este momento. Por favor espera un momento e intenta de nuevo.'
-                );
+                $messages[] = [
+                    'role'         => 'tool',
+                    'tool_call_id' => $toolCall['id'],
+                    'content'      => json_encode($result),
+                ];
             }
 
-            if ($response->failed()) {
-                Log::error('Groq API error (segunda llamada)', [
-                    'status' => $response->status(),
-                    'body'   => $response->body(),
+            $payload = [
+                'model'       => $this->model,
+                'messages'    => $messages,
+                'max_tokens'  => config('agent.generation.max_tokens', 1024),
+                'temperature' => config('agent.generation.temperature', 0.3),
+                'tools'       => $tools,
+                'tool_choice' => 'auto',
+            ];
+
+            try {
+                $response = Http::withHeaders([
+                    'Authorization' => 'Bearer ' . $currentKey,
+                    'Content-Type'  => 'application/json',
+                ])->timeout(30)->post($this->apiUrl, $payload);
+
+                if ($response->status() === 429) {
+                    Log::warning("Groq key #{$keyNumber} agotada en bucle, buscando siguiente key");
+                    $nextKey = $this->getNextAvailableKey($keyNumber);
+
+                    if ($nextKey !== null) {
+                        $currentKey = $nextKey['key'];
+                        $keyNumber  = $nextKey['number'];
+                        Log::info("Groq continuando bucle con key #{$keyNumber}");
+                        continue;
+                    }
+
+                    // No hay más keys
+                    Log::warning('Todas las keys de Groq agotadas en bucle — fallback desactivado');
+                    return 'El servicio de IA no está disponible temporalmente. Por favor intenta en unos minutos.';
+                }
+
+                if ($response->failed()) {
+                    Log::error('Groq API error en bucle tool calls', [
+                        'status'    => $response->status(),
+                        'key'       => $keyNumber,
+                        'iteration' => $iteration,
+                    ]);
+                    return config('agent.error_messages.query_error',
+                        'Lo siento, hubo un error al procesar tu consulta. Por favor intenta de nuevo.'
+                    );
+                }
+
+                $data           = $response->json();
+                $currentMessage = $data['choices'][0]['message'] ?? null;
+
+                if (!$currentMessage) {
+                    break;
+                }
+
+                if (empty($currentMessage['tool_calls']) && !empty($currentMessage['content'])) {
+                    Log::info('[Groq] Respuesta final obtenida', [
+                        'iteration' => $iteration,
+                        'key'       => $keyNumber,
+                    ]);
+                    return $this->cleanResponse($currentMessage['content']);
+                }
+
+            } catch (\Exception $e) {
+                Log::error('Groq runToolLoop exception', [
+                    'iteration' => $iteration,
+                    'key'       => $keyNumber,
+                    'error'     => $e->getMessage(),
                 ]);
                 return config('agent.error_messages.query_error',
-                    'Lo siento, hubo un error al procesar tu consulta. Por favor intenta de nuevo.'
+                    'Ocurrió un error de conexión. Por favor intenta de nuevo.'
                 );
             }
-
-            $data    = $response->json();
-            $content = $data['choices'][0]['message']['content'] ?? null;
-
-            if (empty($content)) {
-                Log::warning('Groq segunda llamada sin contenido', ['data' => $data]);
-                return 'Lo siento, no pude generar una respuesta. Por favor intenta de nuevo.';
-            }
-
-            return $this->cleanResponse($content);
-
-        } catch (\Exception $e) {
-            Log::error('Groq handleMultipleToolCalls exception', ['error' => $e->getMessage()]);
-            return config('agent.error_messages.query_error',
-                'Ocurrió un error de conexión. Por favor intenta de nuevo.'
-            );
         }
+
+        Log::warning('Groq runToolLoop: máximo de iteraciones alcanzado');
+        return 'Lo siento, no pude completar la consulta. Por favor intenta de nuevo.';
     }
 
-    /**
-     * Limpia la respuesta eliminando artefactos técnicos y JSON crudo.
-     */
+    private function getNextAvailableKey(int $currentKeyNumber): ?array
+    {
+        $keys = array_values($this->apiKeys);
+        $currentIndex = $currentKeyNumber - 1;
+
+        for ($i = $currentIndex + 1; $i < count($keys); $i++) {
+            if (!empty($keys[$i])) {
+                return [
+                    'key'    => $keys[$i],
+                    'number' => $i + 1,
+                ];
+            }
+        }
+
+        return null;
+    }
+
     private function cleanResponse(string $content): string
     {
-        // 1. Eliminar JSON anidado iterativamente
         $maxIterations = 5;
         for ($i = 0; $i < $maxIterations; $i++) {
             $cleaned = preg_replace('/\{[^{}]*\}/', '', $content);
@@ -165,8 +244,7 @@ class GroqService
             $content = $cleaned;
         }
 
-        // 2. Limpiar línea por línea
-        $lines = explode("\n", $content);
+        $lines      = explode("\n", $content);
         $cleanLines = [];
 
         $debugPhrases = [

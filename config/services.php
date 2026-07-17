@@ -45,25 +45,25 @@ return [
     ],
 
     'porth' => [
-        'api_key'                          => env('PORTH_API_KEY'),
-        'api_url'                          => env('PORTH_API_URL', 'https://api.porth.app'),
-        'base_url'                         => env('PORTH_BASE_URL', 'https://porth-api.fly.dev'),
-        'auth_header'                      => env('PORTH_AUTH_HEADER', 'apikey'),
-        'enabled'                          => env('PORTH_SYNC_ENABLED', true),
-        'sync_enabled'                     => env('PORTH_SYNC_ENABLED', true),
-        'max_retries'                      => env('PORTH_MAX_RETRIES', 5),
-        'timeout'                          => env('PORTH_TIMEOUT', 90),
-        'sync_dry_run'                     => env('PORTH_SYNC_DRY_RUN', false),
-        'sync_lookback_hours'              => env('PORTH_SYNC_LOOKBACK_HOURS', 2),
-        'sync_max_shipments_per_run'       => env('PORTH_SYNC_MAX_SHIPMENTS_PER_RUN', 100),
-        'sync_processing_timeout_minutes'  => env('PORTH_SYNC_PROCESSING_TIMEOUT_MINUTES', 30),
-        'notification_user_ids'            => env('PORTH_SYNC_NOTIFICATION_USER_IDS', ''),
-        'failed_retry_enabled'             => env('PORTH_FAILED_RETRY_ENABLED', true),
-        'failed_retry_max_attempts'        => env('PORTH_FAILED_RETRY_MAX_ATTEMPTS', 5),
-        'failed_retry_base_minutes'        => env('PORTH_FAILED_RETRY_BASE_MINUTES', 60),
-        'unmatched_port_alert_email'       => env('PORTH_UNMATCHED_PORT_ALERT_EMAIL'),
-        'unmatched_port_alert_ttl_hours'   => env('PORTH_UNMATCHED_PORT_ALERT_TTL_HOURS', 12),
-        'kanban_auto_transition' => env('PORTH_KANBAN_AUTO_TRANSITION', true),
+        'api_key'                         => env('PORTH_API_KEY'),
+        'api_url'                         => env('PORTH_API_URL', 'https://api.porth.app'),
+        'base_url'                        => env('PORTH_BASE_URL', 'https://porth-api.fly.dev'),
+        'auth_header'                     => env('PORTH_AUTH_HEADER', 'apikey'),
+        'enabled'                         => env('PORTH_SYNC_ENABLED', true),
+        'sync_enabled'                    => env('PORTH_SYNC_ENABLED', true),
+        'max_retries'                     => env('PORTH_MAX_RETRIES', 5),
+        'timeout'                         => env('PORTH_TIMEOUT', 90),
+        'sync_dry_run'                    => env('PORTH_SYNC_DRY_RUN', false),
+        'sync_lookback_hours'             => env('PORTH_SYNC_LOOKBACK_HOURS', 2),
+        'sync_max_shipments_per_run'      => env('PORTH_SYNC_MAX_SHIPMENTS_PER_RUN', 100),
+        'sync_processing_timeout_minutes' => env('PORTH_SYNC_PROCESSING_TIMEOUT_MINUTES', 30),
+        'notification_user_ids'           => env('PORTH_SYNC_NOTIFICATION_USER_IDS', ''),
+        'failed_retry_enabled'            => env('PORTH_FAILED_RETRY_ENABLED', true),
+        'failed_retry_max_attempts'       => env('PORTH_FAILED_RETRY_MAX_ATTEMPTS', 5),
+        'failed_retry_base_minutes'       => env('PORTH_FAILED_RETRY_BASE_MINUTES', 60),
+        'unmatched_port_alert_email'      => env('PORTH_UNMATCHED_PORT_ALERT_EMAIL'),
+        'unmatched_port_alert_ttl_hours'  => env('PORTH_UNMATCHED_PORT_ALERT_TTL_HOURS', 12),
+        'kanban_auto_transition'          => env('PORTH_KANBAN_AUTO_TRANSITION', true),
         'kanban_stages' => [
             'produccion'   => ['Producción', 'Produccion'],
             'booking'      => ['Booking'],
@@ -97,16 +97,21 @@ return [
     ],
 
     // Modelo principal del agente IA — activo
+    // Cascada de keys: cuando una se agota, pasa a la siguiente
     'groq' => [
-        'api_key' => env('GROQ_API_KEY'),
+        'api_key'   => env('GROQ_API_KEY'),
+        'api_key_2' => env('GROQ_API_KEY_2'),
+        'api_key_3' => env('GROQ_API_KEY_3'),
+        'api_key_4' => env('GROQ_API_KEY_4'),
+        'api_key_5' => env('GROQ_API_KEY_5'),
     ],
 
-    // Modelo fallback — desactivado
+    // Modelo fallback — desactivado, pendiente aprobación del jefe
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
     ],
 
-    // Modelo terciario — desactivado
+    // Modelo terciario — desactivado, pendiente aprobación del jefe
     'cerebras' => [
         'api_key' => env('CEREBRAS_API_KEY'),
     ],
