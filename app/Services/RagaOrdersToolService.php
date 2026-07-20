@@ -24,7 +24,8 @@ class RagaOrdersToolService
             'get_orders_in_transshipment'     => $this->getOrdersInTransshipment(),
             'get_orders_with_alerts'          => $this->getOrdersWithAlerts($args),
             'get_all_delayed_orders'          => $this->getAllDelayedOrders($args),
-            'get_orders_by_ata'               => $this->getOrdersByAta($args['date'] ?? null),
+            'get_orders_by_ata'               => $this->getOrdersByAta($args),
+            'get_orders_by_atd'               => $this->getOrdersByAtd($args),
             'get_orders_by_eta'               => $this->getOrdersByEta($args),
             'get_shipment_eta'                => $this->getShipmentEta($args['shipment_id'] ?? null),
             'get_orders_summary'              => $this->getOrdersSummary(),
@@ -37,34 +38,18 @@ class RagaOrdersToolService
         };
     }
 
-    // -----------------------------------------------------------------------
-    // Tool generalista — query_operational_data
-    // -----------------------------------------------------------------------
-
     private function queryOperationalData(array $args): array
     {
         try {
             $service = app(OperationalDataQueryService::class);
             $result  = $service->run($args, $this->companyId);
-
-            if (!$result['success']) {
-                return ['error' => $result['error']];
-            }
-
+            if (!$result['success']) return ['error' => $result['error']];
             return $result['data'];
-
         } catch (\Throwable $e) {
-            Log::error('queryOperationalData exception', [
-                'error' => $e->getMessage(),
-                'args'  => $args,
-            ]);
+            Log::error('queryOperationalData exception', ['error' => $e->getMessage()]);
             return ['error' => 'Error al procesar la consulta operativa.'];
         }
     }
-
-    // -----------------------------------------------------------------------
-    // Tools específicas
-    // -----------------------------------------------------------------------
 
     private function call(string $method, array $query = []): array
     {
@@ -78,6 +63,7 @@ class RagaOrdersToolService
                 str_starts_with($method, 'shipments/') => $controller->shipmentById($request, substr($method, 10)),
                 $method === 'shipments'                 => $controller->shipments($request),
                 $method === 'orders/ata'                => $controller->ordersByAta($request),
+                $method === 'orders/atd'                => $controller->ordersByAtd($request),
                 $method === 'orders/eta'                => $controller->ordersByEta($request),
                 $method === 'orders/delayed-in-transit' => $controller->ordersDelayedInTransit($request),
                 $method === 'orders/teus'               => $controller->teusSummary($request),
@@ -86,25 +72,14 @@ class RagaOrdersToolService
             };
 
             return $response->getData(true);
-
         } catch (\Exception $e) {
-            Log::error('RagaOrdersToolService exception', [
-                'method' => $method,
-                'error'  => $e->getMessage(),
-            ]);
+            Log::error('RagaOrdersToolService exception', ['method' => $method, 'error' => $e->getMessage()]);
             return ['error' => 'Error al consultar los datos.'];
         }
     }
 
-    private function getOrdersInTransit(): array
-    {
-        return $this->call('orders', ['status' => 'in_transit']);
-    }
-
-    private function getOrdersInTransshipment(): array
-    {
-        return $this->call('shipments', ['status' => 'transshipment']);
-    }
+    private function getOrdersInTransit(): array { return $this->call('orders', ['status' => 'in_transit']); }
+    private function getOrdersInTransshipment(): array { return $this->call('shipments', ['status' => 'transshipment']); }
 
     private function getOrdersWithAlerts(array $args = []): array
     {
@@ -124,10 +99,24 @@ class RagaOrdersToolService
         return $this->call('orders', $query);
     }
 
-    private function getOrdersByAta(?string $date): array
+    private function getOrdersByAta(array $args): array
     {
-        if (!$date) return ['error' => 'Necesito una fecha para buscar por ATA.'];
-        return $this->call('orders/ata', ['date' => $date]);
+        $query = [];
+        if (!empty($args['date']))      $query['date']      = $args['date'];
+        if (!empty($args['date_from'])) $query['date_from'] = $args['date_from'];
+        if (!empty($args['date_to']))   $query['date_to']   = $args['date_to'];
+        if (empty($query)) return ['error' => 'Necesito una fecha para buscar por ATA.'];
+        return $this->call('orders/ata', $query);
+    }
+
+    private function getOrdersByAtd(array $args): array
+    {
+        $query = [];
+        if (!empty($args['date']))      $query['date']      = $args['date'];
+        if (!empty($args['date_from'])) $query['date_from'] = $args['date_from'];
+        if (!empty($args['date_to']))   $query['date_to']   = $args['date_to'];
+        if (empty($query)) return ['error' => 'Necesito una fecha para buscar por ATD.'];
+        return $this->call('orders/atd', $query);
     }
 
     private function getOrdersByEta(array $args): array
@@ -142,39 +131,15 @@ class RagaOrdersToolService
 
     private function getShipmentEta(?string $shipmentId): array
     {
-        if (!$shipmentId) return ['error' => 'Necesito el número o ID del embarque.'];
+        if (!$shipmentId) return ['error' => 'Necesito el número del embarque.'];
         return $this->call('shipments/' . $shipmentId);
     }
 
-    private function getOrdersSummary(): array
-    {
-        return $this->call('orders');
-    }
-
-    private function getOrdersPendingConfirmation(): array
-    {
-        return $this->call('orders', ['status' => 'pending_confirmation']);
-    }
-
-    private function getOrdersDelayedInTransit(): array
-    {
-        return $this->call('orders/delayed-in-transit');
-    }
-
-    private function getTeusSummary(?string $status): array
-    {
-        $query = $status ? ['status' => $status] : [];
-        return $this->call('orders/teus', $query);
-    }
-
-    private function getFullSummary(): array
-    {
-        return $this->call('orders/full-summary');
-    }
-
-    // -----------------------------------------------------------------------
-    // Definiciones de tools para Groq
-    // -----------------------------------------------------------------------
+    private function getOrdersSummary(): array { return $this->call('orders'); }
+    private function getOrdersPendingConfirmation(): array { return $this->call('orders', ['status' => 'pending_confirmation']); }
+    private function getOrdersDelayedInTransit(): array { return $this->call('orders/delayed-in-transit'); }
+    private function getTeusSummary(?string $status): array { return $this->call('orders/teus', $status ? ['status' => $status] : []); }
+    private function getFullSummary(): array { return $this->call('orders/full-summary'); }
 
     public function getToolDefinitions(): array
     {
@@ -183,7 +148,7 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'get_full_summary',
-                    'description' => 'Obtiene un resumen COMPLETO de todas las operaciones logísticas en una sola llamada: total de órdenes activas, retrasadas, con ATA confirmado, en tránsito, en transbordo y TEUs totales. USAR SIEMPRE cuando el usuario pida un resumen general, resumen completo, o pregunte por múltiples métricas al mismo tiempo.',
+                    'description' => 'Resumen COMPLETO: total activas, retrasadas, ATA, en tránsito, transbordo y TEUs. USAR SIEMPRE para resumen general o múltiples métricas.',
                     'parameters'  => ['type' => 'object', 'properties' => new \stdClass()],
                 ],
             ],
@@ -191,7 +156,7 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'get_orders_in_transit',
-                    'description' => 'Obtiene el número de órdenes de compra actualmente en tránsito.',
+                    'description' => 'Número de órdenes actualmente en tránsito.',
                     'parameters'  => ['type' => 'object', 'properties' => new \stdClass()],
                 ],
             ],
@@ -199,7 +164,7 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'get_orders_in_transshipment',
-                    'description' => 'Obtiene embarques actualmente en puerto de transbordo.',
+                    'description' => 'Órdenes en puerto de transbordo.',
                     'parameters'  => ['type' => 'object', 'properties' => new \stdClass()],
                 ],
             ],
@@ -207,22 +172,13 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'get_orders_with_alerts',
-                    'description' => 'Obtiene el total de órdenes con alertas o retrasos activos. Acepta filtros opcionales por cliente, naviera o proveedor. Usar para saber CUÁNTAS órdenes están atrasadas, con o sin filtro.',
+                    'description' => 'Total de órdenes con alertas o retrasos (delayed + Atrasado). Acepta filtros opcionales.',
                     'parameters'  => [
                         'type'       => 'object',
                         'properties' => [
-                            'trading_company' => [
-                                'type'        => 'string',
-                                'description' => 'Filtrar por nombre exacto del cliente. Ejemplo: PriceSmart',
-                            ],
-                            'shipping_line' => [
-                                'type'        => 'string',
-                                'description' => 'Filtrar por nombre exacto de la naviera. Ejemplo: Hapag-Lloyd',
-                            ],
-                            'vendor_name' => [
-                                'type'        => 'string',
-                                'description' => 'Filtrar por nombre exacto del proveedor. Ejemplo: Proveedor Asia Pacific',
-                            ],
+                            'trading_company' => ['type' => 'string'],
+                            'shipping_line'   => ['type' => 'string'],
+                            'vendor_name'     => ['type' => 'string'],
                         ],
                     ],
                 ],
@@ -231,22 +187,13 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'get_all_delayed_orders',
-                    'description' => 'Obtiene el LISTADO COMPLETO de todas las órdenes con alertas o retrasos activos, sin límite. Acepta filtros opcionales por cliente, naviera o proveedor. USAR cuando el usuario pida ver todas las órdenes atrasadas, el listado completo, o quiera ver las órdenes atrasadas de un cliente/naviera/proveedor específico.',
+                    'description' => 'LISTADO COMPLETO de órdenes atrasadas sin límite. Acepta filtros opcionales por cliente, naviera o proveedor.',
                     'parameters'  => [
                         'type'       => 'object',
                         'properties' => [
-                            'trading_company' => [
-                                'type'        => 'string',
-                                'description' => 'Filtrar por nombre exacto del cliente. Ejemplo: PriceSmart',
-                            ],
-                            'shipping_line' => [
-                                'type'        => 'string',
-                                'description' => 'Filtrar por nombre exacto de la naviera. Ejemplo: Hapag-Lloyd',
-                            ],
-                            'vendor_name' => [
-                                'type'        => 'string',
-                                'description' => 'Filtrar por nombre exacto del proveedor. Ejemplo: Proveedor Asia Pacific',
-                            ],
+                            'trading_company' => ['type' => 'string'],
+                            'shipping_line'   => ['type' => 'string'],
+                            'vendor_name'     => ['type' => 'string'],
                         ],
                     ],
                 ],
@@ -255,16 +202,29 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'get_orders_by_ata',
-                    'description' => 'Busca órdenes por fecha ATA exacta (fecha real de arribo YA confirmado). Solo usar cuando el usuario especifique una fecha exacta.',
+                    'description' => 'Busca órdenes por fecha real de llegada (ATA). Acepta fecha exacta o rango. USAR cuando el usuario quiera ver CUÁLES órdenes llegaron en una fecha o mes específico.',
                     'parameters'  => [
                         'type'       => 'object',
                         'properties' => [
-                            'date' => [
-                                'type'        => 'string',
-                                'description' => 'Fecha exacta en formato YYYY-MM-DD.',
-                            ],
+                            'date'      => ['type' => 'string', 'description' => 'Fecha exacta YYYY-MM-DD.'],
+                            'date_from' => ['type' => 'string', 'description' => 'Fecha inicio del rango YYYY-MM-DD.'],
+                            'date_to'   => ['type' => 'string', 'description' => 'Fecha fin del rango YYYY-MM-DD.'],
                         ],
-                        'required' => ['date'],
+                    ],
+                ],
+            ],
+            [
+                'type'     => 'function',
+                'function' => [
+                    'name'        => 'get_orders_by_atd',
+                    'description' => 'Busca órdenes por fecha real de salida de origen (ATD). Acepta fecha exacta o rango. USAR cuando el usuario quiera ver CUÁLES órdenes salieron en una fecha o mes específico.',
+                    'parameters'  => [
+                        'type'       => 'object',
+                        'properties' => [
+                            'date'      => ['type' => 'string', 'description' => 'Fecha exacta YYYY-MM-DD.'],
+                            'date_from' => ['type' => 'string', 'description' => 'Fecha inicio del rango YYYY-MM-DD.'],
+                            'date_to'   => ['type' => 'string', 'description' => 'Fecha fin del rango YYYY-MM-DD.'],
+                        ],
                     ],
                 ],
             ],
@@ -272,14 +232,14 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'get_orders_by_eta',
-                    'description' => 'Busca órdenes por fecha ETA estimada de llegada. USAR SIEMPRE para preguntas de cuántas órdenes llegan en los próximos X días, esta semana, próxima semana, este mes o cualquier rango de fechas.',
+                    'description' => 'Busca órdenes por fecha estimada de llegada (ETA). USAR SIEMPRE para próximos X días, semanas, meses.',
                     'parameters'  => [
                         'type'       => 'object',
                         'properties' => [
-                            'month'     => ['type' => 'string', 'description' => 'Número del mes (1-12).'],
-                            'year'      => ['type' => 'string', 'description' => 'Año en formato YYYY.'],
-                            'date_from' => ['type' => 'string', 'description' => 'Fecha inicio YYYY-MM-DD.'],
-                            'date_to'   => ['type' => 'string', 'description' => 'Fecha fin YYYY-MM-DD.'],
+                            'month'     => ['type' => 'string'],
+                            'year'      => ['type' => 'string'],
+                            'date_from' => ['type' => 'string'],
+                            'date_to'   => ['type' => 'string'],
                         ],
                     ],
                 ],
@@ -288,13 +248,11 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'get_shipment_eta',
-                    'description' => 'Obtiene el ETA o ATA de un embarque específico por su número DOC-XXXX.',
+                    'description' => 'ETA/ATA de un embarque DOC-XXXX específico.',
                     'parameters'  => [
                         'type'       => 'object',
-                        'properties' => [
-                            'shipment_id' => ['type' => 'string', 'description' => 'Número DOC-XXXX del embarque.'],
-                        ],
-                        'required' => ['shipment_id'],
+                        'properties' => ['shipment_id' => ['type' => 'string']],
+                        'required'   => ['shipment_id'],
                     ],
                 ],
             ],
@@ -302,7 +260,7 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'get_orders_summary',
-                    'description' => 'Obtiene un resumen básico: total activas, con retraso y con ATA confirmado.',
+                    'description' => 'Resumen básico: total activas, con retraso y con ATA.',
                     'parameters'  => ['type' => 'object', 'properties' => new \stdClass()],
                 ],
             ],
@@ -310,7 +268,7 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'get_orders_pending_confirmation',
-                    'description' => 'Obtiene las órdenes de compra pendientes de confirmación.',
+                    'description' => 'Órdenes pendientes de confirmación.',
                     'parameters'  => ['type' => 'object', 'properties' => new \stdClass()],
                 ],
             ],
@@ -318,7 +276,7 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'get_orders_delayed_in_transit',
-                    'description' => 'Obtiene las órdenes que están retrasadas Y en tránsito al mismo tiempo.',
+                    'description' => 'Órdenes retrasadas Y en tránsito simultáneamente.',
                     'parameters'  => ['type' => 'object', 'properties' => new \stdClass()],
                 ],
             ],
@@ -326,12 +284,10 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'get_teus_summary',
-                    'description' => 'Obtiene el total de TEUs. Usar cuando el usuario pregunte únicamente por TEUs.',
+                    'description' => 'Total general de TEUs activos sin filtros.',
                     'parameters'  => [
                         'type'       => 'object',
-                        'properties' => [
-                            'status' => ['type' => 'string', 'description' => 'Filtro opcional: in_transit.'],
-                        ],
+                        'properties' => ['status' => ['type' => 'string']],
                     ],
                 ],
             ],
@@ -339,18 +295,18 @@ class RagaOrdersToolService
                 'type'     => 'function',
                 'function' => [
                     'name'        => 'query_operational_data',
-                    'description' => 'Consulta métricas operativas con agrupaciones. Usar para: proveedor con más retrasos, naviera con más PO, órdenes por ruta, TEUs por naviera, promedio de retraso por cliente. NO usar para: contar total de atrasadas, listado de atrasadas, rangos de fechas ETA. NUNCA usar limit:1 — siempre limit:30 mínimo.',
+                    'description' => 'Métricas con agrupaciones y filtros. Usar para: distribución por semana, rankings, TEUs despachados, órdenes a tiempo, conteos por mes. NUNCA limit:1. group_by y sort son opcionales.',
                     'parameters'  => [
                         'type'       => 'object',
                         'properties' => [
                             'entity'   => ['type' => 'string', 'enum' => ['purchase_orders']],
                             'metric'   => ['type' => 'string', 'enum' => ['count_orders', 'sum_teus', 'avg_delay_days', 'max_delay_days', 'sum_delay_days']],
-                            'group_by' => ['type' => 'string', 'enum' => ['date_ata_week', 'date_eta_week', 'date_atd_week', 'shipping_line', 'vendor', 'trading_company', 'route_label', 'arrival_status', 'porth_phase', 'container_type']],
-                            'filters'  => ['type' => 'object', 'properties' => new \stdClass()],
-                            'sort'     => ['type' => 'object', 'properties' => ['field' => ['type' => 'string'], 'direction' => ['type' => 'string', 'enum' => ['asc', 'desc']]]],
+                            'group_by' => ['type' => 'string', 'description' => 'Opcional: date_ata_week, date_eta_week, date_atd_week, shipping_line, vendor, trading_company, route_label, arrival_status, porth_phase, container_type'],
+                            'filters'  => ['type' => 'object', 'description' => 'Filtros opcionales. Para between: {campo:{operator:between,value_from:FECHA,value_to:FECHA}}', 'properties' => new \stdClass()],
+                            'sort'     => ['type' => 'object', 'description' => 'Opcional.', 'properties' => ['field' => ['type' => 'string'], 'direction' => ['type' => 'string']]],
                             'limit'    => ['type' => 'string', 'description' => 'Mínimo 30, máximo 100.'],
                         ],
-                        'required' => ['entity'],
+                        'required' => ['entity', 'metric'],
                     ],
                 ],
             ],

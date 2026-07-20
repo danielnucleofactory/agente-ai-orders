@@ -125,6 +125,7 @@ Route::middleware('auth:sanctum')->prefix('dashboard-kpi')->group(function () {
 Route::prefix('agent')->middleware(\App\Http\Middleware\AgentTokenAuth::class)->group(function () {
     Route::get('orders',                    [AgentOrdersController::class, 'orders']);
     Route::get('orders/ata',                [AgentOrdersController::class, 'ordersByAta']);
+    Route::get('orders/atd',                [AgentOrdersController::class, 'ordersByAtd']);
     Route::get('orders/eta',                [AgentOrdersController::class, 'ordersByEta']);
     Route::get('orders/delayed-in-transit', [AgentOrdersController::class, 'ordersDelayedInTransit']);
     Route::get('orders/full-summary',       [AgentOrdersController::class, 'fullSummary']);
